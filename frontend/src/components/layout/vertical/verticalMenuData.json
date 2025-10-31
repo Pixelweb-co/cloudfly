@@ -1,0 +1,98 @@
+[
+  {
+    "label": "Equipos",
+    "icon": "box",
+    "route": "/productos/list",
+    "roles": [
+      "SUPERADMIN",
+      "ADMIN",
+      "BIOMEDICAL",
+      "USER"
+    ]
+  },
+  {
+    "label": "Solicitudes",
+    "icon": "clock",
+    "route": "/solicitudes/list",
+    "roles": [
+      "SUPERADMIN",
+      "ADMIN",
+      "BIOMEDICAL"
+    ]
+  },
+  {
+    "label": "Por hacer",
+    "icon": "report",
+    "route": "/solicitudes/worklist",
+    "roles": [
+      "SUPERADMIN",
+      "BIOMEDICAL"
+    ]
+  },
+  {
+    "label": "Cronograma",
+    "icon": "calendar",
+    "route": "/calendar",
+    "roles": [
+      "SUPERADMIN",
+      "BIOMEDICAL",
+      "ADMIN",
+      "USER"
+    ]
+  },
+  {
+    "label": "Usuarios y Roles",
+    "icon": "users",
+    "roles": [
+      "SUPERADMIN",
+      "ADMIN"
+    ],
+    "children": [
+      {
+        "label": "Gestión de Usuarios",
+        "route": "/accounts/user/list",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN"
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Administracion",
+    "icon": "settings",
+    "roles": [
+      "SUPERADMIN"
+    ],
+    "children": [
+      {
+        "label": "Clientes",
+        "route": "/administracion/clientes/list",
+        "roles": [
+          "SUPERADMIN"
+        ]
+      },
+      {
+        "label": "Tipos de servicio",
+        "route": "/administracion/tiposervicio/list",
+        "roles": [
+          "SUPERADMIN"
+        ]
+      },
+      {
+        "label": "Tipos de dispositivos",
+        "route": "/administracion/tipodispositivo/list",
+        "roles": [
+          "SUPERADMIN"
+        ]
+      },
+      {
+        "label": "Plantillas de verificación",
+        "route": "/administracion/plantillasverificacion/list",
+        "roles": [
+          "SUPERADMIN"
+        ]
+      }
+    ]
+  }
+]

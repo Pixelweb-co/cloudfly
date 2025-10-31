@@ -1,0 +1,7 @@
+[
+    { "dbname": "ingenieriadb" },
+    { "dbname": "hardware" },
+    { "dbname": "systemebm" },
+    { "dbname": "ebm_2023" },
+    {"dbname":"GM2"}
+  ]
