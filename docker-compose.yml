@@ -360,6 +360,7 @@ volumes:
   mongo_evolution_data:
   evolution_instances:
   chatwoot_storage:
+  persistent:
 
 networks:
   app-net:
