@@ -114,14 +114,19 @@ services:
         build:
             context: ./frontend
             dockerfile: Dockerfile
-        ports:
-            - "5000:3000"
         environment:
             - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co:8080
         
         restart: unless-stopped
         networks:
             - app-net
+            - traefik
+        labels:
+            - traefik.enable=true
+            - traefik.http.routers.frontend.rule=Host(`dashboard.cloudfly.com.co`)
+            - traefik.http.routers.frontend.entrypoints=websecure
+            - traefik.http.routers.frontend.tls.certresolver=le
+            - traefik.http.services.frontend.loadbalancer.server.port=3000
 
 
   redis-insight:
@@ -262,9 +267,14 @@ services:
     image: chatwoot/chatwoot:latest
     container_name: chatwoot
     restart: always
-    ports:
-      - "3020:3000"
+    
     command: /bin/sh -lc "bundle exec rails db:chatwoot_prepare && mkdir -p tmp/pids && bundle exec puma -C config/puma.rb"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.chatwoot.rule=Host(`chatcenter.cloudfly.com.co`)
+      - traefik.http.routers.chatwoot.entrypoints=websecure
+      - traefik.http.routers.chatwoot.tls.certresolver=le
+      - traefik.http.services.chatwoot.loadbalancer.server.port=3000
     environment:
       RAILS_ENV: production
       SECRET_KEY_BASE: "44d4f95c1b13aa70fd34dd6453a121fd962d9c1b748b28f21ac36cd1f481714a"
@@ -287,6 +297,7 @@ services:
       - redis
     networks:
       - app-net
+      - traefik
 
   # =========================
   #    CHATWOOT (WORKER)
