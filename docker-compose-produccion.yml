@@ -268,7 +268,7 @@ services:
     environment:
       RAILS_ENV: production
       SECRET_KEY_BASE: "44d4f95c1b13aa70fd34dd6453a121fd962d9c1b748b28f21ac36cd1f481714a"
-      FRONTEND_URL: "http://185.135.137.38:3020"
+      FRONTEND_URL: "https://chatcenter.cloudfly.com.co"
       INSTALLATION_NAME: "Chatwoot"
       ENABLE_ACCOUNT_SIGNUP: "true"
       ACTIVE_STORAGE_SERVICE: "local"
@@ -299,7 +299,7 @@ services:
     environment:
       RAILS_ENV: production
       SECRET_KEY_BASE: "44d4f95c1b13aa70fd34dd6453a121fd962d9c1b748b28f21ac36cd1f481714a"
-      FRONTEND_URL: "http://185.135.137.38:3020"
+      FRONTEND_URL: "https://chatcenter.cloudfly.com.co"
       ACTIVE_STORAGE_SERVICE: "local"
       DATABASE_URL: "postgres://chatbot_user:chatbot_pass@postgresql:5432/chatwoot_production"
       REDIS_URL: "redis://redis:6379/1"
