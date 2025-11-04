@@ -10,7 +10,7 @@ services:
             MYSQL_PASSWORD: widowmaker
             MYSQL_ROOT_PASSWORD: widowmaker 
     volumes:
-            - persistent:/var/lib/mysql
+            - persistent_master:/var/lib/mysql
     networks:
             - default
             - kafka-net
@@ -360,7 +360,7 @@ volumes:
   mongo_evolution_data:
   evolution_instances:
   chatwoot_storage:
-  persistent:
+  persistent_master:
 
 networks:
   app-net:
