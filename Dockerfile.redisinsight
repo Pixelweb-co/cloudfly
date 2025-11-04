@@ -1,0 +1,3 @@
+FROM redis/redisinsight:latest
+USER root
+RUN apk update && apk add libsecret
