@@ -1,0 +1,33 @@
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 
+ENV PIP_NO_CACHE_DIR=1 
+ENV TTS_MODEL="tts_models/multilingual/multi-dataset/xtts_v2" 
+ENV SAMPLE_RATE=24000 
+ENV COQUI_TTS_CACHE_PATH="/root/.local/share/tts" 
+ENV API_KEY="sellerbot2025" 
+ENV DEFAULT_LANG="es" 
+ENV OUTPUT_DIR="/data/outputs"
+
+# Dependencias del sistema
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg libsndfile1 build-essential curl ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+# Python deps (Torch CPU + servidor + TTS + utilidades)
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu \
+    torch torchvision torchaudio
+RUN pip install --no-cache-dir fastapi uvicorn[standard] TTS soundfile pydantic[dotenv] numpy requests
+
+# Crear directorios de cache y salida
+RUN mkdir -p ${COQUI_TTS_CACHE_PATH} ${OUTPUT_DIR}
+
+# Precarga del modelo (acelera el primer arranque)
+#RUN python3 -c "from TTS.api import TTS; import os; model_name = os.environ.get('TTS_MODEL', 'tts_models/multilingual/multi-dataset/xtts_v2'); print('Preloading model:', model_name); _ = TTS(model_name); print('Model cached.')"
+
+# App
+WORKDIR /app
+COPY app.py /app/app.py
+
+EXPOSE 8000
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
