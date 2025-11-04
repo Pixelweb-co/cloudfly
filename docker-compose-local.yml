@@ -1,16 +1,16 @@
 services:
-  db:
+  db_master:
         image: mysql:8.0
         container_name: mysql
         restart: always
         ports: 
             - "3306:3306"
         environment:
-            MYSQL_DATABASE: GM2
-            MYSQL_PASSWORD: widowmaker
-            MYSQL_ROOT_PASSWORD: widowmaker 
+            MYSQL_DATABASE: cloud_master
+            MYSQL_PASSWORD: cloud2020#
+            MYSQL_ROOT_PASSWORD: Elian2020# 
         volumes:
-            - persistent:/var/lib/mysql
+            - persistent_db:/var/lib/mysql
         networks:
             - default
             - kafka-net
@@ -21,13 +21,14 @@ services:
     image: phpmyadmin/phpmyadmin
     restart: always
     links: 
-      - db:db
+      - db_master:db_master
     ports:
       - 8000:80
     environment:
       MYSQL_USER: root
-      MYSQL_PASSWORD: widowmaker
-      MYSQL_ROOT_PASSWORD: widowmaker
+      MYSQL_PASSWORD: cloud2020#
+      MYSQL_HOST: db_master
+      MYSQL_ROOT_PASSWORD: Elian2020#
 
   kafka:
     image: confluentinc/cp-kafka:7.4.0
@@ -54,18 +55,18 @@ services:
     networks:
       - kafka-net
 
-  backend-spring:
+  backend-cloud:
     build:
       context: ./backend
       dockerfile: Dockerfile
     depends_on:
       - kafka
-      - db
+      - db_master
     restart: always
     ports:
       - "8080:8080"
     links:
-      - db:db
+      - db_master:db_master
     volumes:
       - ./backend/documents:/app/documents
       - ./backend/firma_soporte:/app/firma_soporte
@@ -76,11 +77,11 @@ services:
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_PROFILES_ACTIVE: default
-      DB_HOST: db
+      DB_HOST: db_master
       DB_PORT: 3306
-      DB_DATABASE: GM2
+      DB_DATABASE: cloud_master
       DB_USERNAME: root
-      DB_PASSWORD: widowmaker
+      DB_PASSWORD: cloud2020#
     networks:
       - kafka-net
       - mired
@@ -111,8 +112,8 @@ services:
     networks:
       - kafka-net
 
-  gm2:
-    container_name: gm2_app
+  cloudfly-frontend:
+    container_name: cloudfly-frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -133,9 +134,7 @@ services:
   #       - db
 
 volumes:
-  db_data:
-  db_data2:
-  persistent:
+  persistent_db:
 
 networks:
   kafka-net:
