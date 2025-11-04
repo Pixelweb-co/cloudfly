@@ -367,3 +367,5 @@ networks:
     driver: bridge
   traefik:
     external: false
+  kafka-net:
+    driver: bridge
