@@ -1,0 +1,357 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    ports: 
+      - "3306:3306"
+    environment:
+            MYSQL_DATABASE: cludfly_main
+            MYSQL_PASSWORD: widowmaker
+            MYSQL_ROOT_PASSWORD: widowmaker 
+    volumes:
+            - persistent:/var/lib/mysql
+    networks:
+            - default
+            - kafka-net
+            - app-net
+
+  phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        restart: always
+        links: 
+            - db:db
+        ports:
+            - 8000:80
+        environment:
+            MYSQL_USER: root
+            MYSQL_PASSWORD: widowmaker
+            MYSQL_ROOT_PASSWORD: widowmaker
+  kafka:
+        image: confluentinc/cp-kafka:7.4.0
+        ports:
+            - "9092:9092"
+        environment:
+            KAFKA_BROKER_ID: 1
+            KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+            KAFKA_LISTENERS: PLAINTEXT_INTERNAL://0.0.0.0:9092,PLAINTEXT_EXTERNAL://0.0.0.0:9093
+            KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_INTERNAL://kafka:9092,PLAINTEXT_EXTERNAL://127.0.0.1:9093
+            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT_INTERNAL:PLAINTEXT,PLAINTEXT_EXTERNAL:PLAINTEXT
+            KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+            KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+        networks:
+            - kafka-net
+
+  zookeeper:
+        image: confluentinc/cp-zookeeper:7.4.0
+        ports:
+            - "2181:2181"
+        environment:
+            ZOOKEEPER_CLIENT_PORT: 2181
+            ZOOKEEPER_TICK_TIME: 2000
+        networks:
+            - kafka-net
+
+  backend-api:
+        build:
+            context: ./backend
+            dockerfile: Dockerfile
+        depends_on:
+            - kafka
+            - db
+        restart: always
+        ports:
+            - "8080:8080"
+        links:
+            - db:db
+        volumes:
+            - ./backend/documents:/app/documents
+            - ./backend/firma_soporte:/app/firma_soporte
+            - ./backend/firmas/:/app/firmas
+            - ./backend/images:/app/images
+            - ./backend/uploads:/app/uploads
+    
+        environment:
+            SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+            SPRING_PROFILES_ACTIVE: default
+            DB_HOST: db
+            DB_PORT: 3306
+            DB_DATABASE: cludfly_main
+            DB_USERNAME: root
+            DB_PASSWORD: widowmaker
+        networks:
+            - kafka-net
+            - app-net
+
+  notification-service:
+        build:
+            context: ./notifications
+            dockerfile: Dockerfile
+        depends_on:
+            - kafka
+        ports:
+            - "8081:8080"
+        environment:
+            SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+        networks:
+            - kafka-net
+
+  kafdrop:
+        image: obsidiandynamics/kafdrop:3.30.0
+        ports:
+            - "9100:9000"
+        environment:
+            KAFKA_BROKER_CONNECT: kafka:92
+            KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+        depends_on:
+            - kafka
+            - zookeeper
+        networks:
+            - kafka-net
+
+  frontend-react:
+        container_name: frontend_app
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile
+        ports:
+            - "5000:3000"
+        environment:
+            - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co:8080
+        
+        restart: unless-stopped
+        networks:
+            - app-net
+
+
+  redis-insight:
+    build:
+      context: .
+      dockerfile: Dockerfile.redisinsight
+    image: redisinsight-custom
+    container_name: redis_insight
+    restart: always
+    ports:
+      - "8001:5540"
+    depends_on:
+      - redis
+    networks:
+      - app-net
+
+  redis:
+    image: redis:latest
+    container_name: redis_server
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - app-net
+    environment:
+      REDIS_PASSWORD: Elian2020#   # Nota: esta var no aplica a 'redis:latest' si no usas --requirepass
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: always
+    ports:
+      - "8075:6333"
+      - "8076:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__API_KEY: Elian2020#
+      QDRANT__SERVICE__READ_ONLY_API_KEY: Elian2020#
+    networks:
+      - app-net
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8nserver.com
+    restart: always
+    environment:
+      - N8N_HOST=autobot.cloudfly.com.co
+      - N8N_PROTOCOL=https
+      - N8N_PORT=5678
+      - WEBHOOK_URL=https://autobot.cloudfly.com.co/
+      - N8N_EDITOR_BASE_URL=https://autobot.cloudfly.com.co
+      - NODE_ENV=production
+      - N8N_SECURE_COOKIE=true
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - qdrant
+      - redis
+      - postgresql
+      - evolution-api
+      - xtts
+    networks:
+      - app-net
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.n8n.rule=Host(`autobot.cloudfly.com.co`)
+      - traefik.http.routers.n8n.entrypoints=websecure
+      - traefik.http.routers.n8n.tls.certresolver=le
+      - traefik.http.services.n8n.loadbalancer.server.port=5678
+
+  postgresql:
+    image: pgvector/pgvector:pg15
+    container_name: postgres_server
+    restart: always
+    environment:
+      POSTGRES_DB: chatbotdb
+      POSTGRES_USER: chatbot_user
+      POSTGRES_PASSWORD: chatbot_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: always
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    environment:
+      TZ: America/Bogota
+    networks:
+      - app-net
+
+  evolution-api:
+    image: evoapicloud/evolution-api:latest
+    container_name: evolution_api
+    restart: always
+    ports:
+      - "8090:8080"
+    env_file:
+      - .env
+    volumes:
+      - evolution_instances:/evolution/instances
+    networks:
+      - app-net
+
+  xtts:
+    image: local-xtts
+    build:
+      context: .
+      dockerfile: Dockerfile.TTS
+    environment:
+      - API_KEY=sellerbot2025
+      - DEFAULT_LANG=es
+      - TTS_MODEL=tts_models/multilingual/multi-dataset/xtts_v2
+      - SAMPLE_RATE=24000
+      - OUTPUT_DIR=/data/outputs
+    volumes:
+      - ./data:/data/outputs
+    ports:
+      - "8030:8000"
+    networks:
+      - app-net
+
+  # =========================
+  #      CHATWOOT (WEB)
+  # =========================
+  chatwoot:
+    image: chatwoot/chatwoot:latest
+    container_name: chatwoot
+    restart: always
+    ports:
+      - "3020:3000"
+    command: /bin/sh -lc "bundle exec rails db:chatwoot_prepare && mkdir -p tmp/pids && bundle exec puma -C config/puma.rb"
+    environment:
+      RAILS_ENV: production
+      SECRET_KEY_BASE: "44d4f95c1b13aa70fd34dd6453a121fd962d9c1b748b28f21ac36cd1f481714a"
+      FRONTEND_URL: "http://185.135.137.38:3020"
+      INSTALLATION_NAME: "Chatwoot"
+      ENABLE_ACCOUNT_SIGNUP: "true"
+      ACTIVE_STORAGE_SERVICE: "local"
+
+      # Base de datos (usa host del servicio: postgresql)
+      DATABASE_URL: "postgres://chatbot_user:chatbot_pass@postgresql:5432/chatwoot_production"
+
+      # Redis (usa host del servicio: redis)
+      REDIS_URL: "redis://redis:6379/1"
+
+      DEFAULT_LOCALE: "es"
+    volumes:
+      - chatwoot_storage:/app/storage
+    depends_on:
+      - postgresql
+      - redis
+    networks:
+      - app-net
+
+  # =========================
+  #    CHATWOOT (WORKER)
+  # =========================
+  chatwoot-worker:
+    image: chatwoot/chatwoot:latest
+    container_name: chatwoot_worker
+    restart: always
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    environment:
+      RAILS_ENV: production
+      SECRET_KEY_BASE: "44d4f95c1b13aa70fd34dd6453a121fd962d9c1b748b28f21ac36cd1f481714a"
+      FRONTEND_URL: "http://185.135.137.38:3020"
+      ACTIVE_STORAGE_SERVICE: "local"
+      DATABASE_URL: "postgres://chatbot_user:chatbot_pass@postgresql:5432/chatwoot_production"
+      REDIS_URL: "redis://redis:6379/1"
+      DEFAULT_LOCALE: "es"
+    volumes:
+      - chatwoot_storage:/app/storage
+    depends_on:
+      - postgresql
+      - redis
+      - chatwoot
+    networks:
+      - app-net
+    
+  
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    command:
+      - --log.level=DEBUG
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+
+      # ACME HTTP-01 (GoDaddy DNS, sin proxy)
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.le.acme.email=web@cloudfly.com.co
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sellerbot/traefik/acme.json:/letsencrypt/acme.json
+    networks:
+      - traefik
+      - app-net
+
+volumes:
+  n8n_data:
+  qdrant_data:
+  postgres_data:
+  portainer_data:
+  mongo_evolution_data:
+  evolution_instances:
+  chatwoot_storage:
+
+networks:
+  app-net:
+    driver: bridge
+  traefik:
+    external: false

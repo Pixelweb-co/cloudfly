@@ -19,7 +19,7 @@ type IntersectionContextProps = {
 export const IntersectionContext = createContext<IntersectionContextProps | null>(null)
 
 export const IntersectionProvider = ({ children }: { children: ReactNode }) => {
-  // States
+  // States 
   const [intersections, setIntersections] = useState(initialIntersections)
 
   const updateIntersections = (data: Record<string, boolean>) => {
