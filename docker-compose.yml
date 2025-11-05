@@ -6,7 +6,7 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_DATABASE: cloudfly_main
+      MYSQL_DATABASE: cloud_master
       MYSQL_PASSWORD: widowmaker
       MYSQL_ROOT_PASSWORD: widowmaker
     volumes:
@@ -269,6 +269,9 @@ services:
       FRONTEND_URL: "https://chatcenter.cloudfly.com.co"
       INSTALLATION_NAME: "chatcenter Cloudfly"
       ENABLE_ACCOUNT_SIGNUP: "true"
+      # Base de datos (usa host del servicio: postgresql)
+      DATABASE_URL: "postgres://chatbot_user:chatbot_pass@postgresql:5432/chatwoot_production"
+
     volumes:
       - chatwoot_storage:/app/storage
     depends_on:
