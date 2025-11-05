@@ -63,6 +63,7 @@ services:
       - traefik
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
 
       # router para HTTPS
       - "traefik.http.routers.api.rule=Host(`api.cloudfly.com.co`)"
@@ -97,6 +98,7 @@ services:
             - zookeeper
         networks:
             - kafka-net
+            - app-net
 
   frontend-react:
     container_name: frontend_app
@@ -111,6 +113,7 @@ services:
       - traefik
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.frontend.rule=Host(`dashboard.cloudfly.com.co`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls.certresolver=le"
@@ -182,6 +185,7 @@ services:
       - traefik
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.n8n.rule=Host(`autobot.cloudfly.com.co`)"
       - "traefik.http.routers.n8n.entrypoints=websecure"
       - "traefik.http.routers.n8n.tls.certresolver=le"
@@ -257,6 +261,7 @@ services:
     command: /bin/sh -lc "bundle exec rails db:chatwoot_prepare && mkdir -p tmp/pids && bundle exec puma -C config/puma.rb"
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.chatwoot.rule=Host(`chatcenter.cloudfly.com.co`)"
       - "traefik.http.routers.chatwoot.entrypoints=websecure"
       - "traefik.http.routers.chatwoot.tls.certresolver=le"
@@ -265,7 +270,7 @@ services:
       RAILS_ENV: production
       SECRET_KEY_BASE: "44d4f95c1b13aa70fd34dd6453a121fd962d9c1b748b28f21ac36cd1f481714a"
       FRONTEND_URL: "https://chatcenter.cloudfly.com.co"
-      INSTALLATION_NAME: "Chatwoot"
+      INSTALLATION_NAME: "chatcenter Cloudfly"
       ENABLE_ACCOUNT_SIGNUP: "true"
       # ...
     volumes:
