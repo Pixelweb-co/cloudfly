@@ -58,6 +58,12 @@ services:
     restart: unless-stopped
     environment:
       # tus variables de entorno actuales (SPRING_PROFILES_ACTIVE, DB, etc)
+     - SPRING_PROFILES_ACTIVE=production
+     - DB_HOST=db
+     - DB_PORT=3306
+     - DB_DATABASE=cloudfly_main
+     - DB_USERNAME=root
+     - DB_PASSWORD=widowmaker
     networks:
       - app-net
       - traefik
