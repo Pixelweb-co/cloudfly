@@ -6,13 +6,12 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_DATABASE: cloudfly_main        # corregido el typo
+      MYSQL_DATABASE: cloudfly_main
       MYSQL_PASSWORD: widowmaker
       MYSQL_ROOT_PASSWORD: widowmaker
     volumes:
       - persistent_master:/var/lib/mysql
     networks:
-      - default
       - kafka-net
       - app-net
 
@@ -95,7 +94,7 @@ services:
     ports:
       - "9100:9000"
     environment:
-      KAFKA_BROKER_CONNECT: kafka:9092   # corregido 92 -> 9092
+      KAFKA_BROKER_CONNECT: kafka:9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
     depends_on:
       - kafka
@@ -110,7 +109,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     environment:
-      - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co   # sin :8080, Traefik termina SSL
+      # Traefik termina SSL, no hace falta puerto
+      - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co
     restart: unless-stopped
     networks:
       - app-net
@@ -144,7 +144,7 @@ services:
     networks:
       - app-net
     environment:
-      REDIS_PASSWORD: Elian2020#   # recuerda configurar requirepass en redis.conf si lo quieres efectivo
+      REDIS_PASSWORD: Elian2020#   # solo efectivo si configuras requirepass
 
   qdrant:
     image: qdrant/qdrant:latest
@@ -347,8 +347,6 @@ volumes:
 
 networks:
   app-net:
-    driver: bridge
-  traefik:
     driver: bridge
   kafka-net:
     driver: bridge
