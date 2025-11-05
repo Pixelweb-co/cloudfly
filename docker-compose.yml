@@ -110,23 +110,23 @@ services:
             - kafka-net
 
   frontend-react:
-        container_name: frontend_app
-        build:
-            context: ./frontend
-            dockerfile: Dockerfile
-        environment:
-            - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co:8080
-        
-        restart: unless-stopped
-        networks:
-            - app-net
-            - traefik
-        labels:
-            - traefik.enable=true
-            - traefik.http.routers.frontend.rule=Host(`dashboard.cloudfly.com.co`)
-            - traefik.http.routers.frontend.entrypoints=websecure
-            - traefik.http.routers.frontend.tls.certresolver=le
-            - traefik.http.services.frontend.loadbalancer.server.port=3000
+    container_name: frontend_app
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co:8080
+    restart: unless-stopped
+    networks:
+      - app-net
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=app-net"
+      - "traefik.http.routers.frontend.rule=Host(`dashboard.cloudfly.com.co`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=le"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
 
 
   redis-insight:
@@ -181,7 +181,6 @@ services:
       - N8N_EDITOR_BASE_URL=https://autobot.cloudfly.com.co
       - NODE_ENV=production
       - N8N_SECURE_COOKIE=true
-
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:
@@ -194,11 +193,12 @@ services:
       - app-net
       - traefik
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.n8n.rule=Host(`autobot.cloudfly.com.co`)
-      - traefik.http.routers.n8n.entrypoints=websecure
-      - traefik.http.routers.n8n.tls.certresolver=le
-      - traefik.http.services.n8n.loadbalancer.server.port=5678
+      - "traefik.enable=true"
+      - "traefik.docker.network=app-net"
+      - "traefik.http.routers.n8n.rule=Host(`autobot.cloudfly.com.co`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls.certresolver=le"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
 
   postgresql:
     image: pgvector/pgvector:pg15
@@ -267,29 +267,21 @@ services:
     image: chatwoot/chatwoot:latest
     container_name: chatwoot
     restart: always
-    
     command: /bin/sh -lc "bundle exec rails db:chatwoot_prepare && mkdir -p tmp/pids && bundle exec puma -C config/puma.rb"
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.chatwoot.rule=Host(`chatcenter.cloudfly.com.co`)
-      - traefik.http.routers.chatwoot.entrypoints=websecure
-      - traefik.http.routers.chatwoot.tls.certresolver=le
-      - traefik.http.services.chatwoot.loadbalancer.server.port=3000
+      - "traefik.enable=true"
+      - "traefik.docker.network=app-net"
+      - "traefik.http.routers.chatwoot.rule=Host(`chatcenter.cloudfly.com.co`)"
+      - "traefik.http.routers.chatwoot.entrypoints=websecure"
+      - "traefik.http.routers.chatwoot.tls.certresolver=le"
+      - "traefik.http.services.chatwoot.loadbalancer.server.port=3000"
     environment:
       RAILS_ENV: production
       SECRET_KEY_BASE: "44d4f95c1b13aa70fd34dd6453a121fd962d9c1b748b28f21ac36cd1f481714a"
       FRONTEND_URL: "https://chatcenter.cloudfly.com.co"
       INSTALLATION_NAME: "Chatwoot"
       ENABLE_ACCOUNT_SIGNUP: "true"
-      ACTIVE_STORAGE_SERVICE: "local"
-
-      # Base de datos (usa host del servicio: postgresql)
-      DATABASE_URL: "postgres://chatbot_user:chatbot_pass@postgresql:5432/chatwoot_production"
-
-      # Redis (usa host del servicio: redis)
-      REDIS_URL: "redis://redis:6379/1"
-
-      DEFAULT_LOCALE: "es"
+      # ...
     volumes:
       - chatwoot_storage:/app/storage
     depends_on:
@@ -333,24 +325,31 @@ services:
       - "80:80"
       - "443:443"
     command:
-      - --log.level=DEBUG
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
+      - "--log.level=DEBUG"
 
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
+      # EntryPoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
 
-      # ACME HTTP-01 (GoDaddy DNS, sin proxy)
-      - --certificatesresolvers.le.acme.httpchallenge=true
-      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
-      - --certificatesresolvers.le.acme.email=web@cloudfly.com.co
-      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      # Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=app-net"
+
+      # ACME / Let's Encrypt (resolver 'le')
+      - "--certificatesresolvers.le.acme.email=web@cloudfly.com.co"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.le.acme.httpchallenge=true"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /sellerbot/traefik/acme.json:/letsencrypt/acme.json
     networks:
       - traefik
       - app-net
+
 
 volumes:
   n8n_data:
