@@ -56,7 +56,9 @@ services:
       - kafka-net
 
   backend-api:
-    image: sellerbot_backend-api
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: backend-api
     restart: unless-stopped
     environment:
