@@ -53,35 +53,24 @@ services:
             - kafka-net
 
   backend-api:
-        build:
-            context: ./backend
-            dockerfile: Dockerfile
-        depends_on:
-            - kafka
-            - db
-        restart: always
-        ports:
-            - "8080:8080"
-        links:
-            - db:db
-        volumes:
-            - ./backend/documents:/app/documents
-            - ./backend/firma_soporte:/app/firma_soporte
-            - ./backend/firmas/:/app/firmas
-            - ./backend/images:/app/images
-            - ./backend/uploads:/app/uploads
-    
-        environment:
-            SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-            SPRING_PROFILES_ACTIVE: default
-            DB_HOST: db
-            DB_PORT: 3306
-            DB_DATABASE: cludfly_main
-            DB_USERNAME: root
-            DB_PASSWORD: widowmaker
-        networks:
-            - kafka-net
-            - app-net
+    image: sellerbot_backend-api   # o la que uses
+    container_name: backend-api
+    restart: unless-stopped
+    environment:
+      # tus variables de entorno actuales (SPRING_PROFILES_ACTIVE, DB, etc)
+    networks:
+      - app-net
+      - traefik
+    labels:
+      - "traefik.enable=true"
+
+      # router para HTTPS
+      - "traefik.http.routers.api.rule=Host(`api.cloudfly.com.co`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=le"
+
+      # servicio interno (puerto del backend dentro del contenedor)
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
 
   notification-service:
         build:
@@ -122,7 +111,6 @@ services:
       - traefik
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=app-net"
       - "traefik.http.routers.frontend.rule=Host(`dashboard.cloudfly.com.co`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls.certresolver=le"
@@ -194,7 +182,6 @@ services:
       - traefik
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=app-net"
       - "traefik.http.routers.n8n.rule=Host(`autobot.cloudfly.com.co`)"
       - "traefik.http.routers.n8n.entrypoints=websecure"
       - "traefik.http.routers.n8n.tls.certresolver=le"
@@ -270,7 +257,6 @@ services:
     command: /bin/sh -lc "bundle exec rails db:chatwoot_prepare && mkdir -p tmp/pids && bundle exec puma -C config/puma.rb"
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=app-net"
       - "traefik.http.routers.chatwoot.rule=Host(`chatcenter.cloudfly.com.co`)"
       - "traefik.http.routers.chatwoot.entrypoints=websecure"
       - "traefik.http.routers.chatwoot.tls.certresolver=le"
@@ -336,7 +322,6 @@ services:
       # Docker provider
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=app-net"
 
       # ACME / Let's Encrypt (resolver 'le')
       - "--certificatesresolvers.le.acme.email=web@cloudfly.com.co"
