@@ -12,6 +12,7 @@ services:
     volumes:
       - persistent_master:/var/lib/mysql
     networks:
+      - default
       - kafka-net
       - app-net
 
@@ -109,8 +110,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     environment:
-      # Traefik termina SSL, no hace falta puerto
-      - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co
+      - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co   # Traefik termina SSL
     restart: unless-stopped
     networks:
       - app-net
@@ -144,7 +144,7 @@ services:
     networks:
       - app-net
     environment:
-      REDIS_PASSWORD: Elian2020#   # solo efectivo si configuras requirepass
+      REDIS_PASSWORD: Elian2020#   # recuerda requirepass si quieres que sea efectivo
 
   qdrant:
     image: qdrant/qdrant:latest
@@ -250,9 +250,6 @@ services:
     networks:
       - app-net
 
-  # =========================
-  #      CHATWOOT (WEB)
-  # =========================
   chatwoot:
     image: chatwoot/chatwoot:latest
     container_name: chatwoot
@@ -278,9 +275,6 @@ services:
     networks:
       - app-net
 
-  # =========================
-  #    CHATWOOT (WORKER)
-  # =========================
   chatwoot-worker:
     image: chatwoot/chatwoot:latest
     container_name: chatwoot_worker
@@ -328,6 +322,7 @@ services:
       # ACME / Let's Encrypt (resolver 'le')
       - "--certificatesresolvers.le.acme.email=web@cloudfly.com.co"
       - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.le.acme.httpchallenge=true"
       - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -347,6 +342,8 @@ volumes:
 
 networks:
   app-net:
+    driver: bridge
+  traefik:
     driver: bridge
   kafka-net:
     driver: bridge
