@@ -263,15 +263,8 @@ services:
       - "traefik.http.routers.chatwoot.entrypoints=websecure"
       - "traefik.http.routers.chatwoot.tls.certresolver=le"
       - "traefik.http.services.chatwoot.loadbalancer.server.port=3000"
-    environment:
-      RAILS_ENV: production
-      SECRET_KEY_BASE: "44d4f95c1b13aa70fd34dd6453a121fd962d9c1b748b28f21ac36cd1f481714a"
-      FRONTEND_URL: "https://chatcenter.cloudfly.com.co"
-      INSTALLATION_NAME: "chatcenter Cloudfly"
-      ENABLE_ACCOUNT_SIGNUP: "true"
-      # Base de datos (usa host del servicio: postgresql)
-      DATABASE_URL: "postgres://chatbot_user:chatbot_pass@postgresql:5432/chatwoot_production"
-
+    env_file:
+      - .env.chatwoot
     volumes:
       - chatwoot_storage:/app/storage
     depends_on:
