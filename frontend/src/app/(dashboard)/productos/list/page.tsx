@@ -12,7 +12,7 @@ import { userMethods } from '@/utils/userMethods'
 import { LinearProgress } from '@mui/material'
 
 import axiosInstance from '@/utils/axiosInterceptor'
-
+ 
 
 const ProductListApp = () => {
   const [productData, setProductData] = useState<any[]>([])

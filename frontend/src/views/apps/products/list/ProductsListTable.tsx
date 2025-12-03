@@ -19,7 +19,6 @@ import MenuItem from '@mui/material/MenuItem'
 import dotenv from 'dotenv'
 
 // Third-party Imports
-
 import { toast } from 'react-toastify'
 
 // Third-party Importss
@@ -89,8 +88,6 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   return itemRank.passed
 }
 
-
-
 const DebouncedInput = ({
   value: initialValue,
   onChange,
@@ -127,7 +124,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
   // States
   // const [addProductOpen, setAddProductOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState(tableData.sort((a:any, b:any) => b.id - a.id))
+  const [data, setData] = useState(tableData.sort((a: any, b: any) => b.id - a.id))
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
   const [loadForm, setLoadForm] = useState(false)
@@ -142,46 +139,40 @@ const ProductsListTable = ({ reload, tableData }: any) => {
   const handleInputChange = async (id: number, value: any) => {
     console.log('value:', value)
 
-    try{
-
-      const res = await axiosInstance.put(`${API_BASE_URL}/products/verification/${id}`, JSON.stringify({ verification: value }), {
-        headers: {
-          'Content-Type': 'application/json'
+    try {
+      const res = await axiosInstance.put(
+        `${API_BASE_URL}/products/verification/${id}`,
+        JSON.stringify({ verification: value }),
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
-      });
+      )
 
-       console.log("res.data", res.data)
-       setErrorUpdateItem("Actualizado correctamente!")
+      console.log('res.data', res.data)
+      setErrorUpdateItem('Actualizado correctamente!')
 
-       reload(true)
-
-    } catch (error:any) {
+      reload(true)
+    } catch (error: any) {
       console.log('Actualizar el producto:', error)
       setErrorUpdateItem(error.response.data)
-
     }
-
-
   }
 
   const deleteItem = async (id: any) => {
+    try {
+      const res = await axiosInstance.delete(`${API_BASE_URL}/products/${id}`)
 
-    try{
+      //console.log("res.data", res.data)
+      setErrorDeleteItem('Eliminado correctamente!')
 
-    const res = await axiosInstance.delete(`${API_BASE_URL}/products/${id}`)
-
-     //console.log("res.data", res.data)
-     setErrorDeleteItem("Eliminado correctamente!")
-
-     reload(true)
-
-  } catch (error:any) {
-    console.log('Eliminar el producto:', error)
-    setErrorDeleteItem(" Este equipo no se puede eliminar, tiene mantenimientos/solicitudes programados")
-
-  }
-
+      reload(true)
+    } catch (error: any) {
+      console.log('Eliminar el producto:', error)
+      setErrorDeleteItem(' Este equipo no se puede eliminar, tiene mantenimientos/solicitudes programados')
     }
+  }
 
   const columns = useMemo<ColumnDef<ProductTypeWithAction, any>[]>(
     () => [
@@ -208,242 +199,125 @@ const ProductsListTable = ({ reload, tableData }: any) => {
         )
       },
 
-      columnHelper.accessor('productName', {
-        header: 'Nombre',
+      // SKU -> usa campo sku
+      columnHelper.accessor('sku' as any, {
+        header: 'SKU',
         cell: ({ row }) => (
           <Typography color='text.primary' className='font-medium'>
-            {row.original.productName}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('brand', {
-        header: 'Marca',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.brand}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('model', {
-        header: 'Modelo',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.model}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('productCode', {
-        header: 'Serie',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.productCode}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('licensePlate', {
-        header: 'Placa',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.licensePlate}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('location', {
-        header: 'Ubicación',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.location}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('invimaRegister', {
-        header: 'Invima',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.invimaRegister}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('origin', {
-        header: 'Riesgo',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.origin}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('typeDevice', {
-        header: 'Tipo de producto',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.typeDevice}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('productClass', {
-        header: 'Clase',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.productClass}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('classification', {
-        header: 'Clasificación',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.classification}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('status', {
-        header: 'Estado',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.status}
+            {(row.original as any).sku}
           </Typography>
         )
       }),
 
-      columnHelper.accessor('voltage', {
-        header: 'Voltaje',
+      // Nombre -> usa productName
+      columnHelper.accessor('productName' as any, {
+        header: 'Nombre',
         cell: ({ row }) => (
           <Typography className='font-medium' color='text.primary'>
-            {row.original.voltage}
+            {(row.original as any).productName}
           </Typography>
         )
       }),
-      columnHelper.accessor('power', {
-        header: 'Potencia',
+
+      // Categoría (por ahora mostramos brand, si lo usas como marca/categoría comercial)
+      columnHelper.accessor('brand' as any, {
+        header: 'Categoría',
         cell: ({ row }) => (
           <Typography className='font-medium' color='text.primary'>
-            {row.original.power}
+            {(row.original as any).brand}
           </Typography>
         )
       }),
-      columnHelper.accessor('frequency', {
-        header: 'Frecuencia',
+
+      // Valor Venta -> price
+      columnHelper.accessor('price' as any, {
+        header: 'Valor Venta',
+        cell: ({ row }) => {
+          const value = (row.original as any).price
+
+          return (
+            <Typography className='font-medium' color='text.primary'>
+              {value !== null && value !== undefined
+                ? Number(value).toLocaleString('es-CO', {
+                    style: 'currency',
+                    currency: 'COP',
+                    maximumFractionDigits: 0
+                  })
+                : '-'}
+            </Typography>
+          )
+        }
+      }),
+
+      // Stock -> inventoryQty
+      columnHelper.accessor('inventoryQty' as any, {
+        header: 'Stock',
         cell: ({ row }) => (
           <Typography className='font-medium' color='text.primary'>
-            {row.original.frequency}
+            {(row.original as any).inventoryQty ?? 0}
           </Typography>
         )
       }),
-      columnHelper.accessor('amperage', {
-        header: 'Amperaje',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.amperage}
-          </Typography>
-        )
+
+      // Tipo de producto -> productType (0..5)
+      columnHelper.accessor('productType' as any, {
+        header: 'Tipo de producto',
+        cell: ({ row }) => {
+          const type = (row.original as any).productType || '0'
+          const map: Record<string, string> = {
+            '0': 'Producto simple',
+            '1': 'Producto agrupado',
+            '2': 'Producto con variantes',
+            '3': 'Servicio',
+            '4': 'Prod. Suscripción / Alquiler',
+            '5': 'Serv. Suscripción / Alquiler'
+          }
+
+          return (
+            <Typography className='font-medium' color='text.primary'>
+              {map[type] || type}
+            </Typography>
+          )
+        }
       }),
-      columnHelper.accessor('purchaseDate', {
-        header: 'Fecha de compra',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.purchaseDate}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('bookValue', {
-        header: 'Valor libro',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.bookValue}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('supplier', {
-        header: 'Proveedor',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.supplier}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('warranty', {
-        header: 'Garantía',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.warranty}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('warrantyStartDate', {
-        header: 'Inicio garantía',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.warrantyStartDate}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('warrantyEndDate', {
-        header: 'Fin garantía',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.warrantyEndDate}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('manual', {
-        header: 'Manual',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.manual}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('periodicity', {
-        header: 'Periodicidad',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.periodicity}
-          </Typography>
-        )
-      }),
-      columnHelper.accessor('placement', {
-        header: 'Ubicación específica',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.placement}
-          </Typography>
-        )
-      }),
+
       columnHelper.accessor('action', {
         header: 'Action',
         cell: ({ row }) => (
           <div className='flex items-center'>
-
-
-          {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('BIOMEDICAL') || userMethods.isRole('ADMIN')) &&
-            <Tooltip title='Lista de checkeo'>
-            <IconButton
-              onClick={() => {
-                setRowSelection(row.original)
-                setLoadFormCheck(true)
-              }}
-            >
-              <i className='tabler-list text-textSecondary' />
-            </IconButton>
-            </Tooltip>
-            }
+            {(userMethods.isRole('SUPERADMIN') ||
+              userMethods.isRole('BIOMEDICAL') ||
+              userMethods.isRole('ADMIN')) && (
+              <Tooltip title='Lista de checkeo'>
+                <IconButton
+                  onClick={() => {
+                    setRowSelection(row.original)
+                    setLoadFormCheck(true)
+                  }}
+                >
+                  <i className='tabler-list text-textSecondary' />
+                </IconButton>
+              </Tooltip>
+            )}
 
             <Tooltip title='Hoja de vida'>
-            <IconButton
-              onClick={() => {
-                localStorage.removeItem('productview')
-                console.log('asignando p', row.original)
+              <IconButton
+                onClick={() => {
+                  localStorage.removeItem('productview')
+                  console.log('asignando p', row.original)
 
-                localStorage.setItem('productview', JSON.stringify(row.original))
-                setTimeout(() => {
-                  router.push('/productos/view')
-                }, 500)
-              }}
-            >
-              <i className='tabler-eye text-textSecondary' />
-            </IconButton>
+                  localStorage.setItem('productview', JSON.stringify(row.original))
+                  setTimeout(() => {
+                    router.push('/productos/view')
+                  }, 500)
+                }}
+              >
+                <i className='tabler-eye text-textSecondary' />
+              </IconButton>
             </Tooltip>
-            {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('BIOMEDICAL') || userMethods.isRole('ADMIN')) ? (
+            {userMethods.isRole('SUPERADMIN') ||
+            userMethods.isRole('BIOMEDICAL') ||
+            userMethods.isRole('ADMIN') ? (
               <Tooltip title='Editar'>
                 <IconButton
                   onClick={() => {
@@ -456,40 +330,39 @@ const ProductsListTable = ({ reload, tableData }: any) => {
                 </IconButton>
               </Tooltip>
             ) : null}
-            {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('BIOMEDICAL') || userMethods.isRole('ADMIN')) ? (
+            {userMethods.isRole('SUPERADMIN') ||
+            userMethods.isRole('BIOMEDICAL') ||
+            userMethods.isRole('ADMIN') ? (
               <Tooltip title='Eliminar'>
                 <IconButton onClick={() => deleteItem(row.original.id)}>
                   <i className='tabler-trash text-textSecondary' />
                 </IconButton>
               </Tooltip>
             ) : null}
-            {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('BIOMEDICAL') || userMethods.isRole('ADMIN')) ? (
+            {userMethods.isRole('SUPERADMIN') ||
+            userMethods.isRole('BIOMEDICAL') ||
+            userMethods.isRole('ADMIN') ? (
               <>
-
-              <Tooltip title="Programación de mantenimiento">
-
+                <Tooltip title='Programación de mantenimiento'>
                   <IconButton
                     onClick={() => {
                       setRowSelection(row.original)
                       setProgramacionModal(true)
-
                     }}
                   >
-
                     <i className='tabler-calendar text-textSecondary' />
                   </IconButton>
-                  </Tooltip>
+                </Tooltip>
 
-
-                 {row && row.original && (row.original.schedules?.length ?? 0) > 0 && <Tooltip title="Equipo programado">
-                  <Badge variant='dot' color='success' className='ml-4'>
-                    <i className='tabler-dot' />
+                {row && row.original && (row.original.schedules?.length ?? 0) > 0 && (
+                  <Tooltip title='Equipo programado'>
+                    <Badge variant='dot' color='success' className='ml-4'>
+                      <i className='tabler-dot' />
                     </Badge>
-
-                  </Tooltip>}
-</>
-
-            ):null}
+                  </Tooltip>
+                )}
+              </>
+            ) : null}
           </div>
         ),
         enableSorting: false
@@ -502,6 +375,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
   useEffect(() => {
     console.log('data in table reload', tableData)
     setData(tableData)
+    setFilteredData(tableData)
   }, [tableData])
 
   const table = useReactTable({
@@ -519,38 +393,18 @@ const ProductsListTable = ({ reload, tableData }: any) => {
         pageSize: 10
       },
       columnVisibility: {
-        productName: true,    // Nombre
-        brand: true,         // Marca
-        model: true,         // Modelo
-        productCode: true,   // Serie
-        licensePlate: false, // Placa
-        location: false,     // Ubicación
-        invimaRegister: false, // Invima
-        origin: false,       // Riesgo
-        select: true,        // Checkbox column
-        action: true,        // Action column
-        productType: false,      // Tipo de producto
-        productClass: false,     // Clase
-        classification: false,    // Clasificación
-        status: false,           // Estado
-
-        voltage: false,          // Voltaje
-        power: false,           // Potencia
-        frequency: false,        // Frecuencia
-        amperage: false,         // Amperaje
-        purchaseDate: false,     // Fecha de compra
-        bookValue: false,        // Valor libro
-        supplier: false,         // Proveedor
-        warranty: false,         // Garantía
-        warrantyStartDate: false, // Inicio garantía
-        warrantyEndDate: false,   // Fin garantía
-        manual: false,           // Manual
-        periodicity: false,      // Periodicidad
-        placement: false         // Ubicación específica
+        sku: true, // SKU
+        productName: true, // Nombre
+        brand: true, // Categoría/Marca
+        price: true, // Valor Venta
+        inventoryQty: true, // Stock
+        select: true, // Checkbox column
+        action: true, // Action column
+        productType: true // Tipo de producto
+        // el resto de campos viejos los puedes limpiar luego si no los usas
       }
     },
     enableRowSelection: true, //enable row selection for all rows
-    // enableRowSelection: row => row.original.age > 18, // or enable row selection conditionally per row
     globalFilterFn: fuzzyFilter,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
@@ -570,7 +424,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
   return (
     <>
       <Card>
-        <CardHeader title='Equipos' className='pbe-4' />
+        <CardHeader title='Inventario' className='pbe-4' />
         <TableFilters setData={setFilteredData} tableData={data} />
         <div className='flex justify-between flex-col items-start md:flex-row md:items-center p-6 border-bs gap-4'>
           <CustomTextField
@@ -593,65 +447,50 @@ const ProductsListTable = ({ reload, tableData }: any) => {
               placeholder='Buscar'
               className='max-sm:is-full'
             />
-            {/* <Button
-              color='secondary'
-              variant='tonal'
-              startIcon={<i className='tabler-upload' />}
-              className='max-sm:is-full'
-            >
-              Exportar
-            </Button>
 
-            <Button
-              color='secondary'
-              variant='tonal'
-              startIcon={<i className='tabler-download' />}
-              className='max-sm:is-full'
-            >
-              Importar
-            </Button> */}
-
-            {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('BIOMEDICAL') || userMethods.isRole('ADMIN')) && (
-            <Button
-              onClick={() => {
-                setLoadForm(true)
-                setRowSelection({
-                  id: undefined,
-                  productType: '',
-                  productCode: '',
-                  productName: '',
-                  brand: '',
-                  model: '',
-                  licensePlate: '',
-                  productClass: '',
-                  classification: '',
-                  clientId: null,
-                  status: '1',
-                  dateAdded: null,
-                  inventoryRegister: '',
-                  origin: '',
-                  voltage: '',
-                  power: '',
-                  frequency: '',
-                  amperage: '',
-                  purchaseDate: '',
-                  bookValue: 0,
-                  supplier: '',
-                  warranty: '',
-                  warrantyStartDate: '',
-                  warrantyEndDate: '',
-                  manual: '',
-                  periodicity: '',
-                  location: '',
-                  placement: ''
-                })
-              }}
-              variant='contained'
-              startIcon={<i className='tabler-plus' />}
-              className='max-sm:is-full'
-            >
-              Agregar producto
-            </Button>
+            {(userMethods.isRole('SUPERADMIN') ||
+              userMethods.isRole('BIOMEDICAL') ||
+              userMethods.isRole('ADMIN')) && (
+              <Button
+                onClick={() => {
+                  localStorage.setItem(
+                    'productview',
+                    JSON.stringify({
+                      id: null,
+                      tenantId: null,
+                      productName: '',
+                      description: '',
+                      productType: '0',
+                      price: '',
+                      salePrice: '',
+                      sku: '',
+                      barcode: '',
+                      manageStock: false,
+                      inventoryStatus: 'IN_STOCK',
+                      allowBackorders: 'NO',
+                      inventoryQty: '',
+                      soldIndividually: false,
+                      weight: '',
+                      dimensions: '',
+                      upsellProducts: '',
+                      crossSellProducts: '',
+                      status: 'ACTIVE',
+                      brand: '',
+                      model: '',
+                      categoryIds: [],
+                      imageIds: []
+                    })
+                  )
+                  setTimeout(() => {
+                    router.push('/ventas/productos/form')
+                  }, 500)
+                }}
+                variant='contained'
+                startIcon={<i className='tabler-plus' />}
+                className='max-sm:is-full'
+              >
+                Agregar producto
+              </Button>
             )}
           </div>
         </div>
@@ -729,65 +568,75 @@ const ProductsListTable = ({ reload, tableData }: any) => {
         setData={setData}
       /> */}
 
-      {loadForm && <ProductoForm
-        open={loadForm}
-        onClose={() => {
-          setLoadForm(false)
-          reload(true)
+      {loadForm && (
+        <ProductoForm
+          open={loadForm}
+          onClose={() => {
+            setLoadForm(false)
+            reload(true)
 
-          setRowSelection({
-            id: undefined,
-            productType: '',
-            productCode: '',
-            productName: '',
-            brand: '',
-            model: '',
-            licensePlate: '',
-            productClass: '',
-            classification: '',
-            clientId: null,
-            status: '1',
-            dateAdded: null,
-            inventoryRegister: '',
-            origin: '',
-            voltage: '',
-            power: '',
-            frequency: '',
-            amperage: '',
-            purchaseDate: '',
-            bookValue: 0,
-            supplier: '',
-            warranty: '',
-            warrantyStartDate: '',
-            warrantyEndDate: '',
-            manual: '',
-            periodicity: '',
-            location: '',
-            placement: ''
-          })
-        }}
-        setOpen={() => setLoadForm(true)}
-        rowSelect={rowSelection}
-      />
+            setRowSelection({
+              id: undefined,
+              productType: '',
+              productCode: '',
+              productName: '',
+              brand: '',
+              model: '',
+              licensePlate: '',
+              productClass: '',
+              classification: '',
+              clientId: null,
+              status: '1',
+              dateAdded: null,
+              inventoryRegister: '',
+              origin: '',
+              voltage: '',
+              power: '',
+              frequency: '',
+              amperage: '',
+              purchaseDate: '',
+              bookValue: 0,
+              supplier: '',
+              warranty: '',
+              warrantyStartDate: '',
+              warrantyEndDate: '',
+              manual: '',
+              periodicity: '',
+              location: '',
+              placement: ''
+            })
+          }}
+          setOpen={() => setLoadForm(true)}
+          rowSelect={rowSelection}
+        />
+      )}
 
-    }
+      {programacionModal && (
+        <ProgramacionMantenimiento
+          open={programacionModal}
+          onClose={() => setProgramacionModal(false)}
+          onSuccess={() => reload(true)}
+          rowSelect={rowSelection}
+        />
+      )}
 
- {programacionModal && <ProgramacionMantenimiento
-        open={programacionModal}
-        onClose={() => setProgramacionModal(false)}
-        onSuccess={() => reload(true)}
-        rowSelect={rowSelection}
-      />}
+      {errorDeleteItem && (
+        <ErrorDialog
+          entitYName='Eliminar equipo'
+          open={errorDeleteItem}
+          error={errorDeleteItem}
+          setOpen={setErrorDeleteItem}
+        />
+      )}
 
-{errorDeleteItem && <ErrorDialog entitYName='Eliminar equipo' open={errorDeleteItem} error={errorDeleteItem} setOpen={setErrorDeleteItem} />}
-
-    {loadFormCheck &&  <CheckListForm
-        open={loadFormCheck}
-        onClose={() => setLoadFormCheck(false)}
-        setOpen={() => setLoadFormCheck(true)}
-        rowSelect={rowSelection}
-      />
-    }
+      {loadFormCheck && (
+        <CheckListForm
+          open={loadFormCheck}
+          onClose={() => setLoadFormCheck(false)}
+          setOpen={() => setLoadFormCheck(true)}
+          rowSelect={rowSelection}
+        />
+      )}
     </>
   )
 }

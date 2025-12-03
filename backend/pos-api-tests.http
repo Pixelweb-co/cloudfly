@@ -1,0 +1,159 @@
+### =====================================================
+### API Tests para el Sistema POS
+### =====================================================
+### Este archivo contiene ejemplos de requests HTTP para probar el backend POS
+### Usar con extensiones como REST Client (VSCode) o importar a Postman
+
+@baseUrl = http://localhost:8080
+@tenantId = 1
+@contentType = application/json
+
+### =====================================================
+### PRODUCTOS - Búsqueda para POS
+### =====================================================
+
+### 1. Buscar producto por código de barras (Scanner)
+GET {{baseUrl}}/productos/barcode/123456789?tenantId={{tenantId}}
+
+### 2. Buscar productos por nombre (Autocompletado)
+GET {{baseUrl}}/productos/search?query=laptop&tenantId={{tenantId}}
+
+### 3. Listar todos los productos del tenant
+GET {{baseUrl}}/productos/tenant/{{tenantId}}
+
+### =====================================================
+### ÓRDENES - Crear y Gestionar Ventas
+### =====================================================
+
+### 4. Crear nueva orden (Venta en POS)
+POST {{baseUrl}}/orders
+Content-Type: {{contentType}}
+
+{
+  "tenantId": 1,
+  "customerId": null,
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2,
+      "discount": 0.00
+    },
+    {
+      "productId": 2,
+      "quantity": 1,
+      "discount": 5.00
+    }
+  ],
+  "paymentMethod": "CASH",
+  "tax": 0.00,
+  "discount": 10.00,
+  "createdBy": 1
+}
+
+### 5. Crear orden con tarjeta de crédito
+POST {{baseUrl}}/orders
+Content-Type: {{contentType}}
+
+{
+  "tenantId": 1,
+  "items": [
+    {
+      "productId": 3,
+      "quantity": 5,
+      "discount": 0
+    }
+  ],
+  "paymentMethod": "CREDIT_CARD",
+  "tax": 15.00,
+  "discount": 0,
+  "createdBy": 1
+}
+
+### 6. Obtener orden por ID
+@orderId = 1
+GET {{baseUrl}}/orders/{{orderId}}
+
+### 7. Listar todas las órdenes de un tenant
+GET {{baseUrl}}/orders/tenant/{{tenantId}}
+
+### 8. Buscar orden por número de factura
+@invoiceNumber = INV-1-20231129-00001
+GET {{baseUrl}}/orders/invoice/{{invoiceNumber}}
+
+### 9. Filtrar órdenes por rango de fechas
+GET {{baseUrl}}/orders/tenant/{{tenantId}}/by-date?startDate=2023-11-01&endDate=2023-11-30
+
+### 10. Cancelar orden (restaura inventario)
+PATCH {{baseUrl}}/orders/{{orderId}}/cancel
+
+### =====================================================
+### CATEGORÍAS - Para filtrado en POS
+### =====================================================
+
+### 11. Listar categorías del tenant
+GET {{baseUrl}}/categorias/customer/{{tenantId}}
+
+### 12. Obtener categoría específica
+@categoryId = 1
+GET {{baseUrl}}/categorias/{{categoryId}}
+
+### =====================================================
+### CLIENTES - Para ventas con cliente
+### =====================================================
+
+### 13. Listar todos los clientes
+GET {{baseUrl}}/customers
+
+### 14. Obtener cliente específico
+@customerId = 1
+GET {{baseUrl}}/customers/{{customerId}}
+
+### =====================================================
+### EJEMPLOS DE EDGE CASES
+### =====================================================
+
+### 15. Intentar crear orden sin items (debe fallar)
+POST {{baseUrl}}/orders
+Content-Type: {{contentType}}
+
+{
+  "tenantId": 1,
+  "items": [],
+  "paymentMethod": "CASH"
+}
+
+### 16. Buscar producto que no existe (debe retornar 404)
+GET {{baseUrl}}/productos/barcode/NOEXISTE?tenantId={{tenantId}}
+
+### 17. Cancelar orden ya cancelada (debe fallar)
+PATCH {{baseUrl}}/orders/{{orderId}}/cancel
+
+### =====================================================
+### FLUJO COMPLETO DE VENTA
+### =====================================================
+
+### Paso 1: Buscar producto por barcode
+# GET /productos/barcode/123456789?tenantId=1
+
+### Paso 2: Agregar al carrito (en frontend)
+# cart = [{ productId: 1, quantity: 2 }]
+
+### Paso 3: Buscar otro producto por nombre
+# GET /productos/search?query=mouse&tenantId=1
+
+### Paso 4: Agregar al carrito
+# cart.push({ productId: 2, quantity: 1 })
+
+### Paso 5: Procesar pago
+# POST /orders con el cart
+
+### Paso 6: Imprimir recibo con order.invoiceNumber
+
+### =====================================================
+### NOTAS
+### =====================================================
+# - Cambiar @tenantId según tu configuración
+# - Los IDs de productos deben existir en tu base de datos
+# - El inventario se reduce automáticamente al crear orden
+# - Al cancelar orden, el inventario se restaura
+# - Los números de factura son únicos y se generan automáticamente

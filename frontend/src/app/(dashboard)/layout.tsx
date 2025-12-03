@@ -19,8 +19,7 @@ import HorizontalFooter from '@components/layout/horizontal/Footer'
 import ScrollToTop from '@core/components/scroll-to-top'
 
 // Util Imports
-import { getMode, getSystemMode } from '@core/utils/serverHelpers'
-import { useEffect } from 'react'
+import { getMode, getSystemMode, getSettingsFromCookie } from '@core/utils/serverHelpers'
 
 
 const Layout = async ({ children }: ChildrenType) => {
@@ -28,12 +27,13 @@ const Layout = async ({ children }: ChildrenType) => {
   const direction = 'ltr'
   const mode = getMode()
   const systemMode = getSystemMode()
+  const settingsCookie = getSettingsFromCookie()
 
   console.log('Layout mode:', mode)
   console.log('Layout systemMode:', systemMode)
 
   return (
-    <Providers direction={direction}>
+    <Providers direction={direction} mode={mode} systemMode={systemMode} settingsCookie={settingsCookie}>
       <LayoutWrapper
         systemMode={systemMode}
         verticalLayout={

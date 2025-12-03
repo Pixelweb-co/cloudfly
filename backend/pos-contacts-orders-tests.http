@@ -1,0 +1,82 @@
+### POS Integration Tests - Contacts and Orders
+
+### Variables
+@baseUrl = http://localhost:8080
+@tenantId = 1
+
+### 1. Login to get token
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### Save the token from response and use it in subsequent requests
+### Replace YOUR_TOKEN_HERE with actual token from login response
+
+### 2. Get all products for tenant
+GET {{baseUrl}}/productos/tenant/{{tenantId}}
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 3. Create a new Contact (Customer)
+POST {{baseUrl}}/contacts
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+  "name": "Juan Pérez",
+  "email": "juan.perez@example.com",
+  "phone": "555-1234",
+  "address": "Av. Principal 123",
+  "taxId": "12345678-9",
+  "type": "CUSTOMER",
+  "tenantId": 1
+}
+
+### 4. Get all contacts for tenant
+GET {{baseUrl}}/contacts/tenant/{{tenantId}}
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 5. Search contacts by name
+GET {{baseUrl}}/contacts/search?tenantId={{tenantId}}&name=Juan
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 6. Create an Order (Sale)
+# Replace productId and customerId with actual IDs from previous responses
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+  "tenantId": 1,
+  "customerId": 1,
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2,
+      "discount": 0
+    }
+  ],
+  "paymentMethod": "CASH",
+  "tax": 0,
+  "discount": 0
+}
+
+### 7. Get all orders for tenant
+GET {{baseUrl}}/orders/tenant/{{tenantId}}
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 8. Get order by ID
+GET {{baseUrl}}/orders/1
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 9. Get order by invoice number
+# Replace INVOICE_NUMBER with actual invoice from create order response
+GET {{baseUrl}}/orders/invoice/INV-20250130-0001
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### 10. Cancel an order
+POST {{baseUrl}}/orders/1/cancel
+Authorization: Bearer YOUR_TOKEN_HERE

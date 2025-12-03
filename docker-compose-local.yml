@@ -55,37 +55,7 @@ services:
     networks:
       - kafka-net
 
-  backend-cloud:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    depends_on:
-      - kafka
-      - db_master
-    restart: always
-    ports:
-      - "8080:8080"
-    links:
-      - db_master:db_master
-    volumes:
-      - ./backend/documents:/app/documents
-      - ./backend/firma_soporte:/app/firma_soporte
-      - ./backend/firmas/:/app/firmas
-      - ./backend/images:/app/images
-      - ./backend/uploads:/app/uploads
-
-    environment:
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SPRING_PROFILES_ACTIVE: default
-      DB_HOST: db_master
-      DB_PORT: 3306
-      DB_DATABASE: cloud_master
-      DB_USERNAME: root
-      DB_PASSWORD: cloud2020#
-    networks:
-      - kafka-net
-      - mired
-
+  
   notification-service:
     build:
       context: ./notifications
@@ -112,29 +82,45 @@ services:
     networks:
       - kafka-net
 
-  cloudfly-frontend:
-    container_name: cloudfly-frontend
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+  
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8nserver.com
+    restart: always
     ports:
-      - 3000:3000
+      - "5678:5678"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost.co:8080
-    restart: unless-stopped
+      - N8N_HOST=localhost
+      - N8N_PROTOCOL=http
+      - N8N_PORT=5678
+      - WEBHOOK_URL=http://localhost:5678/
+      - N8N_EDITOR_BASE_URL=http://localhost:5678
+      - NODE_ENV=production
+      - N8N_SECURE_COOKIE=true
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - db_master
     networks:
       - mired
-  # backup-service:
-  #     build: ./backup-service/
-  #     ports: 
-  #       - "8084:80"
-  #     volumes:
-  #       - ./backup-service/public:/var/www/html
-  #     links:
-  #       - db
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - mired
+    
 
 volumes:
   persistent_db:
+  n8n_data:
+  ollama_data:
 
 networks:
   kafka-net:

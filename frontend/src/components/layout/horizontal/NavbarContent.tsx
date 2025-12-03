@@ -2,6 +2,7 @@
 
 // Third-party Imports
 import classnames from 'classnames'
+import Image from "next/image";
 
 // Component Imports
 import NavToggle from './NavToggle'

@@ -7,7 +7,7 @@ import RegisterV2 from '@/views/pages/auth/RegisterV2'
 import { getServerMode } from '@core/utils/serverHelpers'
 
 export const metadata: Metadata = {
-  title: 'Register',
+  title: 'Registro',
   description: 'Crea tu cuenta'
 }
 
