@@ -225,14 +225,19 @@ services:
     image: evoapicloud/evolution-api:latest
     container_name: evolution_api
     restart: always
-    ports:
-      - "8090:8080"
     env_file:
       - .env
     volumes:
       - evolution_instances:/evolution/instances
     networks:
       - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.eapi.rule=Host(`eapi.cloudfly.com.co`)"
+      - "traefik.http.routers.eapi.entrypoints=websecure"
+      - "traefik.http.routers.eapi.tls.certresolver=le"
+      - "traefik.http.services.eapi.loadbalancer.server.port=8080"
+
 
   xtts:
     image: local-xtts
