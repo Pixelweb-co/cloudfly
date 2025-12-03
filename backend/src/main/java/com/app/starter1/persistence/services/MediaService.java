@@ -1,4 +1,4 @@
 package com.app.starter1.persistence.services;
 
-public class ProductService {
+public class MediaService {
 }
