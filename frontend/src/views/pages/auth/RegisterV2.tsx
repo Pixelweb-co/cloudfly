@@ -203,30 +203,164 @@ const RegisterV2 = ({ mode }: { mode: any }) => {
   return (
     <div className='flex bs-full justify-center'>
       <div
-        className={classnames(
-          'flex bs-full items-center justify-center flex-1 min-bs-[100dvh] relative p-6 max-md:hidden',
-          {
-            'border-ie': settings.skin === 'bordered'
-          }
-        )}
-      >
-        <RegisterIllustration src={characterIllustration} alt='character-illustration' />
-        {!hidden && (
-          <MaskImg
-            alt='mask'
-            src={authBackground}
-            className={classnames({ 'scale-x-[-1]': theme.direction === 'rtl' })}
-          />
-        )}
+  className={classnames(
+    'flex bs-full flex-1 min-bs-[100dvh] relative max-md:hidden',
+    {
+      'border-ie': settings.skin === 'bordered'
+    }
+  )}
+>
+  <div className='m-auto w-full max-w-4xl ps-10 pe-6 flex flex-col gap-6'>
+    {/* Título y descripción */}
+    <div className='text-left'>
+      <Typography variant='h4' component='h2' className='mb-2'>
+        Planes y precios
+      </Typography>
+      <Typography variant='body1' className='text-textSecondary'>
+        Todos los planes incluyen automatización con IA, chatbots y panel de control. 
+        Empieza gratis y escala solo cuando tu negocio lo necesite.
+      </Typography>
+    </div>
+
+    {/* Toggle mensual/anual (solo visual por ahora) */}
+    <div className='flex items-center gap-4 text-sm'>
+      <span className='font-medium'>Mensual</span>
+
+      <div className='relative inline-flex h-6 w-11 items-center rounded-full bg-primary/10'>
+        <span className='inline-block h-5 w-5 rounded-full bg-primary translate-x-1'></span>
       </div>
+
+      <span className='text-textSecondary'>Anual</span>
+
+      <span className='rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary'>
+        Ahorra hasta 10%
+      </span>
+    </div>
+
+    {/* Cards de planes */}
+    <div className='grid gap-4 lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1'>
+      {/* BASIC */}
+      <div className='rounded-2xl border border-divider bg-backgroundPaper/80 p-5 shadow-sm flex flex-col'>
+        <div className='mb-4'>
+          <div className='text-3xl mb-3'>🐷</div>
+          <Typography variant='h6' className='mb-1'>
+            Basic
+          </Typography>
+          <Typography variant='body2' className='text-textSecondary'>
+            Un inicio simple para todos.
+          </Typography>
+        </div>
+
+        <div className='mb-4'>
+          <Typography variant='h4' component='p' className='leading-none'>
+            $0
+            <span className='text-sm font-normal text-textSecondary'> /mes</span>
+          </Typography>
+        </div>
+
+        <ul className='space-y-1 text-sm text-textSecondary mb-4'>
+          <li>Hasta 100 conversaciones al mes</li>
+          <li>Formularios y flujos básicos</li>
+          <li>Campos ilimitados</li>
+          <li>Hasta 2 subcuentas / sucursales</li>
+        </ul>
+
+        <Button variant='outlined' fullWidth size='small'>
+          Tu plan actual
+        </Button>
+      </div>
+
+      {/* STANDARD (Popular) */}
+      <div className='rounded-2xl border-2 border-primary bg-backgroundPaper p-5 shadow-md flex flex-col relative'>
+        <span className='absolute right-4 top-4 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary'>
+          Popular
+        </span>
+
+        <div className='mb-4'>
+          <div className='text-3xl mb-3'>💼</div>
+          <Typography variant='h6' className='mb-1'>
+            Standard
+          </Typography>
+          <Typography variant='body2' className='text-textSecondary'>
+            Para pequeñas y medianas empresas.
+          </Typography>
+        </div>
+
+        <div className='mb-4'>
+          <Typography variant='h4' component='p' className='leading-none'>
+            $40
+            <span className='text-sm font-normal text-textSecondary'> /mes</span>
+          </Typography>
+          <Typography variant='caption' className='text-textSecondary'>
+            USD 480 /año
+          </Typography>
+        </div>
+
+        <ul className='space-y-1 text-sm text-textSecondary mb-4'>
+          <li>Respuestas ilimitadas</li>
+          <li>Campañas y embudos de venta</li>
+          <li>Integración con Instagram y WhatsApp</li>
+          <li>Integraciones con Google Sheets / Docs</li>
+        </ul>
+
+        <Button variant='contained' fullWidth size='small'>
+          Upgrade
+        </Button>
+      </div>
+
+      {/* ENTERPRISE */}
+      <div className='rounded-2xl border border-divider bg-backgroundPaper/80 p-5 shadow-sm flex flex-col'>
+        <div className='mb-4'>
+          <div className='text-3xl mb-3'>🚀</div>
+          <Typography variant='h6' className='mb-1'>
+            Enterprise
+          </Typography>
+          <Typography variant='body2' className='text-textSecondary'>
+            Ideal para grandes equipos y agencias.
+          </Typography>
+        </div>
+
+        <div className='mb-4'>
+          <Typography variant='h4' component='p' className='leading-none'>
+            $80
+            <span className='text-sm font-normal text-textSecondary'> /mes</span>
+          </Typography>
+          <Typography variant='caption' className='text-textSecondary'>
+            USD 960 /año
+          </Typography>
+        </div>
+
+        <ul className='space-y-1 text-sm text-textSecondary mb-4'>
+          <li>Soporte para múltiples marcas / clientes</li>
+          <li>Dominio y branding personalizados</li>
+          <li>Mayor almacenamiento y registros</li>
+          <li>Integraciones avanzadas (ERP / CRM)</li>
+        </ul>
+
+        <Button variant='outlined' fullWidth size='small'>
+          Upgrade
+        </Button>
+      </div>
+    </div>
+  </div>
+
+  {!hidden && (
+    <MaskImg
+      alt='mask'
+      src={authBackground}
+      className={classnames({ 'scale-x-[-1]': theme.direction === 'rtl' })}
+    />
+  )}
+</div>
+
       <div className='flex justify-center items-center bs-full bg-backgroundPaper !min-is-full p-6 md:!min-is-[unset] md:p-12 md:is-[480px]'>
         <Link href='/' className='absolute block-start-5 sm:block-start-[33px] inline-start-6 sm:inline-start-[38px]'>
           <Logo />
         </Link>
         <div className='flex flex-col gap-6 is-full sm:is-auto md:is-full sm:max-is-[400px] md:max-is-[unset] mbs-11 sm:mbs-14 md:mbs-0'>
           <div className='flex flex-col gap-1'>
-            <Typography variant='h4'>¡La aventura comienza aquí 🚀</Typography>
-            <Typography>¡Haz que la gestión de tu aplicación sea fácil y divertida!</Typography>
+            <Typography variant='h4'>Comienza tu prueba gratuita 🚀</Typography>
+            <Typography>¡Comience con una cuenta demo en cloudfly!</Typography>
           </div>
 
           {success && (

@@ -1,141 +1,301 @@
 package com.app.starter1.persistence.services;
 
-import com.app.starter1.persistence.entity.Contrato;
-import com.app.starter1.persistence.entity.Customer;
-import com.app.starter1.persistence.entity.Image;
+import com.app.starter1.dto.ProductRequestDTO;
+import com.app.starter1.dto.ProductResponseDTO;
+import com.app.starter1.persistence.entity.Category;
+import com.app.starter1.persistence.entity.Media;
 import com.app.starter1.persistence.entity.Product;
-import com.app.starter1.persistence.exeptions.ProductNotFoundException;
-import com.app.starter1.persistence.repository.ContratoRepository;
-import com.app.starter1.persistence.repository.CustomerRepository;
-import com.app.starter1.persistence.repository.ImageRepository;
+import com.app.starter1.persistence.repository.CategoryRepository;
+import com.app.starter1.persistence.repository.MediaRepository;
 import com.app.starter1.persistence.repository.ProductRepository;
-import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.lang.Contract;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Optional;
+import java.math.BigDecimal;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class ProductService {
 
-    @Autowired
-    private ProductRepository productRepository;
+    private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
+    private final MediaRepository mediaRepository;
 
-    @Autowired
-    private CustomerRepository customerRepository;
-
-    @Autowired
-    private ContratoRepository contratoRepository;
-
-    // Inyectar el repositorio de imágenes
-    @Autowired
-    private ImageRepository imageRepository;
-
-    /**
-     * Obtiene los productos asociados a un cliente dado.
-     *
-     * @param customerId ID del cliente
-     * @return Lista de productos asociados al cliente
-     */
-    public List<Product> getProductsByCustomer(Long customerId) {
-        return productRepository.findByCustomer(customerId);
+    public ProductService(ProductRepository productRepository,
+            CategoryRepository categoryRepository,
+            MediaRepository mediaRepository) {
+        this.productRepository = productRepository;
+        this.categoryRepository = categoryRepository;
+        this.mediaRepository = mediaRepository;
     }
 
-    /**
-     * Guarda un producto y actualiza su relación con el contrato asociado al cliente.
-     *
-     * @param producto Producto a guardar
-     * @param clienteId ID del cliente asociado al producto
-     * @return Producto guardado
+    /*
+     * ------------------------------ Crear / Actualizar
+     * ------------------------------
      */
+
     @Transactional
-    public Product guardarProductoConContrato(Product producto, Long customerId) {
-        // Obtener el contrato asociado al cliente
-        Optional<Contrato> contratoOpt = contratoRepository.findByClienteId(customerId);
-        if (!contratoOpt.isPresent()) {
-            throw new RuntimeException("Contrato no encontrado para el cliente");
+    public ProductResponseDTO saveOrUpdate(ProductRequestDTO dto) {
+
+        if (dto.getProductName() == null || dto.getProductName().trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre del producto es obligatorio");
+        }
+        if (dto.getPrice() == null) {
+            throw new IllegalArgumentException("El precio del producto es obligatorio");
         }
 
-        Contrato contrato = contratoOpt.get();
+        Product product;
 
+        if (dto.getId() != null) {
+            // actualizar
+            product = productRepository.findById(dto.getId())
+                    .orElseThrow(() -> new NoSuchElementException("Producto no encontrado con id " + dto.getId()));
+        } else {
+            // crear
+            product = new Product();
+        }
 
-        // Guardar el producto
-        Product productoGuardado = productRepository.save(producto);
+        product.setTenantId(dto.getTenantId());
 
-        // Agregar el producto a la lista de productos del contrato
-        contrato.getProductos().add(productoGuardado);
-        contratoRepository.save(contrato); // Guardar el contrato con el producto asociado
+        product.setProductName(dto.getProductName());
+        product.setDescription(dto.getDescription());
+        product.setProductType(dto.getProductType());
 
-        return productoGuardado;
+        product.setPrice(dto.getPrice() != null ? dto.getPrice() : BigDecimal.ZERO);
+        product.setSalePrice(dto.getSalePrice());
+
+        product.setSku(dto.getSku());
+        product.setBarcode(dto.getBarcode());
+
+        product.setManageStock(dto.getManageStock());
+        product.setInventoryStatus(dto.getInventoryStatus());
+        product.setAllowBackorders(dto.getAllowBackorders());
+        product.setInventoryQty(dto.getInventoryQty());
+
+        product.setSoldIndividually(dto.getSoldIndividually());
+
+        product.setWeight(dto.getWeight());
+        product.setDimensions(dto.getDimensions());
+
+        product.setUpsellProducts(dto.getUpsellProducts());
+        product.setCrossSellProducts(dto.getCrossSellProducts());
+
+        product.setStatus(dto.getStatus());
+        product.setBrand(dto.getBrand());
+        product.setModel(dto.getModel());
+
+        // ----------------- Categorías -----------------
+        if (dto.getCategoryIds() != null && !dto.getCategoryIds().isEmpty()) {
+            List<Category> categories = categoryRepository.findAllById(dto.getCategoryIds());
+            product.setCategories(new HashSet<>(categories));
+        } else {
+            product.getCategories().clear();
+        }
+
+        // ----------------- Imágenes (Media) -----------------
+        if (dto.getImageIds() != null && !dto.getImageIds().isEmpty()) {
+            List<Media> medias = mediaRepository.findAllById(dto.getImageIds());
+            product.setImages(new HashSet<>(medias));
+        } else {
+            product.getImages().clear();
+        }
+
+        Product saved = productRepository.save(product);
+
+        return toResponseDTO(saved);
     }
 
-
-    /**
-     * Actualiza los datos de un producto existente.
-     *
-     * @param productId ID del producto a actualizar
-     * @param updatedProduct Datos actualizados del producto
-     * @return Producto actualizado
+    /*
+     * ------------------------------ Obtener por id ------------------------------
      */
-    public Product actualizarProducto(Long productId, Product updatedProduct) {
-        Product existingProduct = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Producto con ID " + productId + " no encontrado"));
 
-        if (updatedProduct.getProductType() != null) existingProduct.setProductType(updatedProduct.getProductType());
-        if (updatedProduct.getProductCode() != null) existingProduct.setProductCode(updatedProduct.getProductCode());
-        if (updatedProduct.getProductName() != null) existingProduct.setProductName(updatedProduct.getProductName());
-        if (updatedProduct.getBrand() != null) existingProduct.setBrand(updatedProduct.getBrand());
-        if (updatedProduct.getModel() != null) existingProduct.setModel(updatedProduct.getModel());
-        if (updatedProduct.getLicensePlate() != null) existingProduct.setLicensePlate(updatedProduct.getLicensePlate());
-        if (updatedProduct.getProductClass() != null) existingProduct.setProductClass(updatedProduct.getProductClass());
-        if (updatedProduct.getClassification() != null) existingProduct.setClassification(updatedProduct.getClassification());
-        if (updatedProduct.getStatus() != null) existingProduct.setStatus(updatedProduct.getStatus());
-        if (updatedProduct.getDateAdded() != null) existingProduct.setDateAdded(updatedProduct.getDateAdded());
-        if (updatedProduct.getInvimaRegister() != null) existingProduct.setInvimaRegister(updatedProduct.getInvimaRegister());
-        if (updatedProduct.getOrigin() != null) existingProduct.setOrigin(updatedProduct.getOrigin());
-        if (updatedProduct.getVoltage() != null) existingProduct.setVoltage(updatedProduct.getVoltage());
-        if (updatedProduct.getPower() != null) existingProduct.setPower(updatedProduct.getPower());
-        if (updatedProduct.getFrequency() != null) existingProduct.setFrequency(updatedProduct.getFrequency());
-        if (updatedProduct.getAmperage() != null) existingProduct.setAmperage(updatedProduct.getAmperage());
-        if (updatedProduct.getPurchaseDate() != null) existingProduct.setPurchaseDate(updatedProduct.getPurchaseDate());
-        if (updatedProduct.getBookValue() != null) existingProduct.setBookValue(updatedProduct.getBookValue());
-        if (updatedProduct.getSupplier() != null) existingProduct.setSupplier(updatedProduct.getSupplier());
-        if (updatedProduct.getWarranty() != null) existingProduct.setWarranty(updatedProduct.getWarranty());
-        if (updatedProduct.getWarrantyStartDate() != null) existingProduct.setWarrantyStartDate(updatedProduct.getWarrantyStartDate());
-        if (updatedProduct.getWarrantyEndDate() != null) existingProduct.setWarrantyEndDate(updatedProduct.getWarrantyEndDate());
-        if (updatedProduct.getManual() != null) existingProduct.setManual(updatedProduct.getManual());
-        if (updatedProduct.getPeriodicity() != null) existingProduct.setPeriodicity(updatedProduct.getPeriodicity());
-        if (updatedProduct.getLocation() != null) existingProduct.setLocation(updatedProduct.getLocation());
-        if (updatedProduct.getPlacement() != null) existingProduct.setPlacement(updatedProduct.getPlacement());
-        if (updatedProduct.getVerification() != null) existingProduct.setVerification(updatedProduct.getVerification());
-        if (updatedProduct.getImage() != null) existingProduct.setImage(updatedProduct.getImage());
+    @Transactional(readOnly = true)
+    public ProductResponseDTO getById(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Producto no encontrado con id " + id));
 
-        return productRepository.save(existingProduct);
+        return toResponseDTO(product);
     }
 
+    /*
+     * ------------------------------ Listar por tenant
+     * ------------------------------
+     */
 
-    private void eliminarImagen(Image imagen) {
-        try {
-            // Eliminar la imagen del sistema de archivos
-            Path filePath = Paths.get("uploads/images/" + imagen.getName());
-            Files.deleteIfExists(filePath);
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> listByTenant(Long tenantId) {
+        List<Product> products = productRepository.findByTenantId(tenantId);
+        return products.stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
+    }
 
-            // Eliminar la imagen de la base de datos
-            imageRepository.delete(imagen);
-        } catch (Exception e) {
-            throw new RuntimeException("Error al eliminar la imagen: " + e.getMessage(), e);
+    /* ------------------------------ Borrar ------------------------------ */
+
+    @Transactional
+    public void delete(Long id) {
+        if (!productRepository.existsById(id)) {
+            throw new NoSuchElementException("Producto no encontrado con id " + id);
         }
+        productRepository.deleteById(id);
     }
 
+    /* ------------------------------ Mapper ------------------------------ */
 
+    private ProductResponseDTO toResponseDTO(Product p) {
+        List<Long> categoryIds = p.getCategories().stream()
+                .map(Category::getId)
+                .collect(Collectors.toList());
+
+        List<Long> imageIds = p.getImages().stream()
+                .map(Media::getId)
+                .collect(Collectors.toList());
+
+        return ProductResponseDTO.builder()
+                .id(p.getId())
+                .tenantId(p.getTenantId())
+                .productName(p.getProductName())
+                .description(p.getDescription())
+                .productType(p.getProductType())
+                .price(p.getPrice())
+                .salePrice(p.getSalePrice())
+                .sku(p.getSku())
+                .barcode(p.getBarcode())
+                .manageStock(p.getManageStock())
+                .inventoryStatus(p.getInventoryStatus())
+                .allowBackorders(p.getAllowBackorders())
+                .inventoryQty(p.getInventoryQty())
+                .soldIndividually(p.getSoldIndividually())
+                .weight(p.getWeight())
+                .dimensions(p.getDimensions())
+                .upsellProducts(p.getUpsellProducts())
+                .crossSellProducts(p.getCrossSellProducts())
+                .status(p.getStatus())
+                .brand(p.getBrand())
+                .model(p.getModel())
+                .categoryIds(categoryIds)
+                .imageIds(imageIds)
+                .createdAt(p.getCreatedAt())
+                .updatedAt(p.getUpdatedAt())
+                .build();
+    }
+
+    /*
+     * ------------------------------ POS: Búsqueda por Barcode
+     * ------------------------------
+     */
+
+    @Transactional(readOnly = true)
+    public ProductResponseDTO getByBarcode(String barcode, Long tenantId) {
+        if (barcode == null || barcode.trim().isEmpty()) {
+            throw new IllegalArgumentException("El código de barras no puede estar vacío");
+        }
+
+        Product product = productRepository.findByBarcodeAndTenantId(barcode, tenantId)
+                .orElseThrow(() -> new NoSuchElementException("Producto no encontrado con barcode: " + barcode));
+
+        return toResponseDTO(product);
+    }
+
+    /*
+     * ------------------------------ POS: Búsqueda por Nombre
+     * ------------------------------
+     */
+
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> searchByName(String query, Long tenantId) {
+        if (query == null || query.trim().isEmpty()) {
+            throw new IllegalArgumentException("El término de búsqueda no puede estar vacío");
+        }
+
+        List<Product> products = productRepository.findByProductNameContainingIgnoreCaseAndTenantId(query, tenantId);
+
+        return products.stream()
+                .map(this::toResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    /*
+     * ------------------------------ POS: Validar Stock
+     * ------------------------------
+     */
+
+    @Transactional(readOnly = true)
+    public boolean validateStock(Long productId, Integer quantity) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NoSuchElementException("Producto no encontrado con id " + productId));
+
+        // Si no maneja stock, siempre está disponible
+        if (product.getManageStock() == null || !product.getManageStock()) {
+            return true;
+        }
+
+        // Verificar que haya stock suficiente
+        Integer currentStock = product.getInventoryQty() != null ? product.getInventoryQty() : 0;
+        return currentStock >= quantity;
+    }
+
+    /*
+     * ------------------------------ POS: Reducir Stock
+     * ------------------------------
+     */
+
+    @Transactional
+    public void reduceStock(Long productId, Integer quantity) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NoSuchElementException("Producto no encontrado con id " + productId));
+
+        // Si no maneja stock, no hacer nada
+        if (product.getManageStock() == null || !product.getManageStock()) {
+            return;
+        }
+
+        Integer currentStock = product.getInventoryQty() != null ? product.getInventoryQty() : 0;
+
+        if (currentStock < quantity) {
+            throw new IllegalStateException("Stock insuficiente para el producto: " + product.getProductName()
+                    + ". Disponible: " + currentStock + ", Solicitado: " + quantity);
+        }
+
+        // Reducir stock
+        product.setInventoryQty(currentStock - quantity);
+
+        // Actualizar estado si es necesario
+        if (product.getInventoryQty() == 0) {
+            product.setInventoryStatus("OUT_OF_STOCK");
+        } else if (product.getInventoryQty() > 0 && "OUT_OF_STOCK".equals(product.getInventoryStatus())) {
+            product.setInventoryStatus("IN_STOCK");
+        }
+
+        productRepository.save(product);
+    }
+
+    /*
+     * ------------------------------ POS: Restaurar Stock (para cancelaciones)
+     * ------------------------------
+     */
+
+    @Transactional
+    public void restoreStock(Long productId, Integer quantity) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NoSuchElementException("Producto no encontrado con id " + productId));
+
+        // Si no maneja stock, no hacer nada
+        if (product.getManageStock() == null || !product.getManageStock()) {
+            return;
+        }
+
+        Integer currentStock = product.getInventoryQty() != null ? product.getInventoryQty() : 0;
+
+        // Restaurar stock
+        product.setInventoryQty(currentStock + quantity);
+
+        // Actualizar estado
+        if (product.getInventoryQty() > 0 && "OUT_OF_STOCK".equals(product.getInventoryStatus())) {
+            product.setInventoryStatus("IN_STOCK");
+        }
+
+        productRepository.save(product);
+    }
 }
