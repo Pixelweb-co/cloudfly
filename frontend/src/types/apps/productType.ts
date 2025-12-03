@@ -1,31 +1,40 @@
+// src/types/apps/productType.ts
+
 export type ProductType = {
-  id?: number
-  typeDevice?: string
-  productCode?: string
-  productName?: string
-  brand?: string
-  model?: string
-  licensePlate?: string
-  productClass?: string
-  classification?: string
-  client?: number | null // Se usa 'null' para representar la posibilidad de que no haya cliente asociado
-  status?: string
-  dateAdded?: string | null // Usamos 'string' para representar la fecha en formato ISO 8601
-  invimaRegister?: string
-  origin?: string
-  voltage?: string
-  power?: string
-  frequency?: string
-  amperage?: string
-  purchaseDate?: string
-  bookValue?: number
-  supplier?: string
-  warranty?: string
-  warrantyStartDate?: string
-  warrantyEndDate?: string
-  manual?: string
-  periodicity?: string
-  location?: string
-  placement?: string
-  schedules?: []
+  image: string | undefined
+  id: number
+  tenantId: number
+
+  productName: string
+  description: string
+  productType: string // '0' | '1' | '2' | '3' | '4' | '5'
+
+  price: number
+  salePrice: number | null
+
+  sku: string
+  barcode: string
+
+  manageStock: boolean
+  inventoryStatus: 'IN_STOCK' | 'OUT_OF_STOCK' | 'ON_BACKORDER'
+  allowBackorders: 'NO' | 'ALLOW' | 'ALLOW_NOTIFY'
+  inventoryQty: number | null
+  soldIndividually: boolean
+
+  weight: number | null
+  dimensions: string
+
+  upsellProducts: string
+  crossSellProducts: string
+
+  status: 'ACTIVE' | 'INACTIVE'
+  brand: string
+  model: string
+
+  // lo que realmente te manda el backend
+  categoryIds: number[]
+  imageIds: number[]
+
+  createdAt: string
+  updatedAt: string
 }

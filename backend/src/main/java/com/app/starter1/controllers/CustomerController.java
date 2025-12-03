@@ -2,12 +2,10 @@ package com.app.starter1.controllers;
 
 
 import com.app.starter1.dto.*;
-import com.app.starter1.persistence.entity.Contrato;
 import com.app.starter1.persistence.entity.Customer;
 import com.app.starter1.persistence.entity.UserEntity;
 import com.app.starter1.persistence.repository.CustomerRepository;
 import com.app.starter1.persistence.repository.UserRepository;
-import com.app.starter1.persistence.services.ContractService;
 import com.app.starter1.persistence.services.CustomerService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +15,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/customers")
@@ -26,8 +23,7 @@ public class CustomerController {
     @Autowired
     private CustomerService customerService;
 
-    @Autowired
-    ContractService contractService;
+
 
     @Autowired
     CustomerRepository customerRepository;
@@ -40,12 +36,10 @@ public class CustomerController {
         // Crear el cliente
         Customer cliente = customerService.createCustomer(request);
 
-        // Crear el contrato asociando el cliente creado
-        Contrato contrato = contractService.createContrato(cliente, request);
 
         return ResponseEntity.ok(Map.of(
-                "cliente", cliente,
-                "contrato", contrato
+                "cliente", cliente
+
         ));
     }
 
@@ -84,10 +78,6 @@ public class CustomerController {
         user.setCustomer(customer);
         UserEntity userSaved = userRepository.save(user);
 
-        // Crear el contrato asociando el cliente creado
-        Contrato contrato = contractService.createContrato(customer, contratoRequest);
-
-
 
         return ResponseEntity.ok(userSaved);
     }
@@ -125,14 +115,10 @@ public class CustomerController {
         updatedCustomer.setType((String) payload.get("type"));
         updatedCustomer.setStatus(Boolean.valueOf((String) payload.get("status")));
 
-        Contrato updatedContrato = new Contrato();
-        updatedContrato.setFechaInicio(LocalDate.parse((String) payload.get("fechaInicio")));
-        updatedContrato.setFechaFinal(LocalDate.parse((String) payload.get("fechaFinal")));
-        updatedContrato.setDescripcionContrato((String) payload.get("descripcionContrato"));
-        updatedContrato.setEstado("1");
+
 
         // Actualizar cliente y contrato
-        Customer savedCustomer = customerService.updateCustomerAndContract(customerId, updatedCustomer, updatedContrato);
+        Customer savedCustomer = customerService.updateCustomerAndContract(customerId, updatedCustomer);
 
         return ResponseEntity.ok(savedCustomer);
     }
@@ -145,16 +131,4 @@ public class CustomerController {
     }
 
 
-    // GET CONTRACT BY CUSTOMER ID
-    @GetMapping("/{customerId}/contracts")
-    public ResponseEntity<Contrato> getContratoByCustomerId(@PathVariable Long customerId) {
-        return ResponseEntity.ok(customerService.getContratoByCustomerId(customerId));
     }
-
-    // DELETE CONTRACT
-    @DeleteMapping("/contracts/{id}")
-    public ResponseEntity<Void> deleteContrato(@PathVariable Long id) {
-        customerService.deleteContrato(id);
-        return ResponseEntity.noContent().build();
-    }
-}

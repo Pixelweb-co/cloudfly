@@ -1,36 +1,36 @@
 [
   {
-    "label": "Equipos",
-    "icon": "box",
-    "route": "/productos/list",
+    "label": "Marqueting",
+    "icon": "megaphone",
+    "route": "/marketing",
     "roles": [
       "SUPERADMIN",
       "ADMIN",
-      "BIOMEDICAL",
       "USER"
+    ],
+    "children": [
+      {
+        "label": "Campañas",
+        "route": "/marketing/campanas",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN",
+          "USER"
+        ]
+      },
+      {
+        "label": "Terceros",
+        "route": "/marketing/contacts/list",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN",
+          "USER"
+        ]
+      }
     ]
   },
   {
-    "label": "Solicitudes",
-    "icon": "clock",
-    "route": "/solicitudes/list",
-    "roles": [
-      "SUPERADMIN",
-      "ADMIN",
-      "BIOMEDICAL"
-    ]
-  },
-  {
-    "label": "Por hacer",
-    "icon": "report",
-    "route": "/solicitudes/worklist",
-    "roles": [
-      "SUPERADMIN",
-      "BIOMEDICAL"
-    ]
-  },
-  {
-    "label": "Cronograma",
+    "label": "Calendario",
     "icon": "calendar",
     "route": "/calendar",
     "roles": [
@@ -54,6 +54,63 @@
         "roles": [
           "SUPERADMIN",
           "ADMIN"
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Ventas",
+    "route": "/ventas/list",
+    "roles": [
+      "SUPERADMIN",
+      "ADMIN",
+      "USER"
+    ],
+    "icon": "shopping-cart",
+    "children": [
+      {
+        "label": "Categorías",
+        "route": "/ventas/categorias/list",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN",
+          "USER"
+        ]
+      },
+      {
+        "label": "Productos",
+        "route": "/ventas/productos/list",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN",
+          "USER"
+        ]
+      },
+      {
+        "label": "Cotizaciones",
+        "route": "/ventas/cotizaciones/list",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN",
+          "USER"
+        ]
+      },
+      {
+        "label": "Pedidos",
+        "route": "/ventas/pedidos",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN",
+          "USER"
+        ]
+      },
+      {
+        "label": "Facturas",
+        "route": "/ventas/facturas/list",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN",
+          "USER"
         ]
       }
     ]

@@ -1,133 +1,302 @@
 package com.app.starter1.persistence.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "products")
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Table(name = "productos")
 public class Product {
 
     @Id
-    @Column(name = "id_producto")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "tipo_producto")
-    private Long productType;
+    // multi-tenant
+    @Column(nullable = false)
+    private Long tenantId;
 
-    @Column(name = "codigo_producto")
-    private String productCode;
-
-    @Column(name = "nombre_producto")
+    @Column(nullable = false, length = 200)
     private String productName;
 
-    @Column(name = "marca_producto")
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(length = 20)
+    private String productType; // 0,1,2,3,4,5 según UI
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal price;
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal salePrice;
+
+    @Column(length = 100)
+    private String sku;
+
+    @Column(length = 100)
+    private String barcode;
+
+    private Boolean manageStock;         // manageStock
+
+    @Column(length = 20)
+    private String inventoryStatus;      // IN_STOCK, OUT_OF_STOCK, ON_BACKORDER
+
+    @Column(length = 20)
+    private String allowBackorders;      // NO, ALLOW, ALLOW_NOTIFY
+
+    private Integer inventoryQty;
+
+    private Boolean soldIndividually;
+
+    @Column(precision = 10, scale = 3)
+    private BigDecimal weight;
+
+    @Column(length = 100)
+    private String dimensions;
+
+    @Column(length = 500)
+    private String upsellProducts;
+
+    @Column(length = 500)
+    private String crossSellProducts;
+
+    @Column(length = 20)
+    private String status; // ACTIVE, INACTIVE
+
+    @Column(length = 100)
     private String brand;
 
-    @Column(name = "modelo_producto")
+    @Column(length = 100)
     private String model;
 
-    @Column(name = "placa_producto")
-    private String licensePlate;
+    // ⬇️ ManyToMany con Category (NO con CategoriaProducto)
+    @ManyToMany
+    @JoinTable(
+            name = "producto_categorias",
+            joinColumns = @JoinColumn(name = "producto_id"),
+            inverseJoinColumns = @JoinColumn(name = "categoria_id")
+    )
+    private Set<Category> categories = new HashSet<>();
 
-    @Column(name = "clase_producto")
-    private String productClass;
+    @ManyToMany
+    @JoinTable(
+            name = "producto_media",
+            joinColumns = @JoinColumn(name = "producto_id"),
+            inverseJoinColumns = @JoinColumn(name = "media_id")
+    )
+    private Set<Media> images = new HashSet<>();
 
-    @Column(name = "clasificacion_producto")
-    private String classification;
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
 
-    @Column(name = "status_producto")
-    private String status;
-
-    @Column(name = "date_added", nullable = true, updatable = false)
-    private LocalDate dateAdded;
+    private LocalDateTime updatedAt;
 
     @PrePersist
-    public void prePersist() {
-        if (this.dateAdded == null) {
-            this.dateAdded = LocalDate.now();
-        }
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = this.createdAt;
     }
 
-    @Column(name = "reginv_producto")
-    private String invimaRegister;
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 
-    @Column(name = "procedencia_producto")
-    private String origin;
+    // ===== Getters y Setters =====
 
-    @Column(name = "voltaje_producto")
-    private String voltage;
+    public Long getId() {
+        return id;
+    }
 
-    @Column(name = "potencia_producto")
-    private String power;
+    public Long getTenantId() {
+        return tenantId;
+    }
 
-    @Column(name = "frecuencia_producto")
-    private String frequency;
+    public void setTenantId(Long tenantId) {
+        this.tenantId = tenantId;
+    }
 
-    @Column(name = "amperios_producto")
-    private String amperage;
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    @Column(name = "fecha_compra_producto")
-    private LocalDate purchaseDate;
+    public String getProductName() {
+        return productName;
+    }
 
-    @Column(name = "valor_contable_producto")
-    private Integer bookValue;
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
 
-    @Column(name = "proveedor_producto")
-    private String supplier;
+    public String getDescription() {
+        return description;
+    }
 
-    @Column(name = "cliente_producto")
-    private Long customer;
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-    @Column(name = "garantia_producto")
-    private String warranty;
+    public String getProductType() {
+        return productType;
+    }
 
-    @Column(name = "inicio_garantia_producto")
-    private LocalDate warrantyStartDate;
+    public void setProductType(String productType) {
+        this.productType = productType;
+    }
 
-    @Column(name = "fin_garantia_producto")
-    private LocalDate warrantyEndDate;
+    public BigDecimal getPrice() {
+        return price;
+    }
 
-    @Column(name = "manual_producto")
-    private String manual;
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
 
-    @Column(name = "periocidad")
-    private String periodicity;
+    public BigDecimal getSalePrice() {
+        return salePrice;
+    }
 
-    @Column(name = "sede_producto")
-    private String location;
+    public void setSalePrice(BigDecimal salePrice) {
+        this.salePrice = salePrice;
+    }
 
-    @Column(name = "ubicacion_producto")
-    private String placement;
+    public String getSku() {
+        return sku;
+    }
 
-    @Column(name = "verification")
-    private Boolean verification;
+    public void setSku(String sku) {
+        this.sku = sku;
+    }
 
-    @OneToOne(targetEntity = Image.class,cascade = CascadeType.ALL,fetch = FetchType.EAGER)
-    private Image image;
+    public String getBarcode() {
+        return barcode;
+    }
 
-//    @Column(name = "id_contrato")
-//
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "contrato")
-    @JsonIgnore
-    private Contrato contrato;
+    public void setBarcode(String barcode) {
+        this.barcode = barcode;
+    }
 
-    @OneToMany(mappedBy = "device", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    private List<Schedule> schedules;
+    public Boolean getManageStock() {
+        return manageStock;
+    }
 
+    public void setManageStock(Boolean manageStock) {
+        this.manageStock = manageStock;
+    }
+
+    public String getInventoryStatus() {
+        return inventoryStatus;
+    }
+
+    public void setInventoryStatus(String inventoryStatus) {
+        this.inventoryStatus = inventoryStatus;
+    }
+
+    public String getAllowBackorders() {
+        return allowBackorders;
+    }
+
+    public void setAllowBackorders(String allowBackorders) {
+        this.allowBackorders = allowBackorders;
+    }
+
+    public Integer getInventoryQty() {
+        return inventoryQty;
+    }
+
+    public void setInventoryQty(Integer inventoryQty) {
+        this.inventoryQty = inventoryQty;
+    }
+
+    public Boolean getSoldIndividually() {
+        return soldIndividually;
+    }
+
+    public void setSoldIndividually(Boolean soldIndividually) {
+        this.soldIndividually = soldIndividually;
+    }
+
+    public BigDecimal getWeight() {
+        return weight;
+    }
+
+    public void setWeight(BigDecimal weight) {
+        this.weight = weight;
+    }
+
+    public String getDimensions() {
+        return dimensions;
+    }
+
+    public void setDimensions(String dimensions) {
+        this.dimensions = dimensions;
+    }
+
+    public String getUpsellProducts() {
+        return upsellProducts;
+    }
+
+    public void setUpsellProducts(String upsellProducts) {
+        this.upsellProducts = upsellProducts;
+    }
+
+    public String getCrossSellProducts() {
+        return crossSellProducts;
+    }
+
+    public void setCrossSellProducts(String crossSellProducts) {
+        this.crossSellProducts = crossSellProducts;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public Set<Category> getCategories() {
+        return categories;
+    }
+
+    public void setCategories(Set<Category> categories) {
+        this.categories = categories;
+    }
+
+    public Set<Media> getImages() {
+        return images;
+    }
+
+    public void setImages(Set<Media> images) {
+        this.images = images;
+    }
+
+    public String getBrand() {
+        return brand;
+    }
+
+    public void setBrand(String brand) {
+        this.brand = brand;
+    }
+
+    public String getModel() {
+        return model;
+    }
+
+    public void setModel(String model) {
+        this.model = model;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
 }
