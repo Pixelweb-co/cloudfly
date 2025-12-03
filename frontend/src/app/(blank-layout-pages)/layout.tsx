@@ -6,17 +6,19 @@ import Providers from '@components/Providers'
 import BlankLayout from '@layouts/BlankLayout'
 
 // Util Imports
-import { getSystemMode } from '@core/utils/serverHelpers'
+import { getSystemMode, getMode, getSettingsFromCookie } from '@core/utils/serverHelpers'
 
 type Props = ChildrenType
 
-const Layout = ({ children }: Props) => {
+const Layout = async ({ children }: Props) => {
   // Vars
   const direction = 'ltr'
   const systemMode = getSystemMode()
+  const mode = getMode()
+  const settingsCookie = getSettingsFromCookie()
 
   return (
-    <Providers direction={direction}>
+    <Providers direction={direction} mode={mode} systemMode={systemMode} settingsCookie={settingsCookie}>
       <BlankLayout systemMode={systemMode}>{children}</BlankLayout>
     </Providers>
   )

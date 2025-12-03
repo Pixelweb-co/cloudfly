@@ -54,9 +54,9 @@ export type Config = {
 }
 
 const themeConfig: Config = {
-  templateName: 'GM2',
-  homePageUrl: '/dashboards/crm',
-  settingsCookieName: 'vuexy-mui-next-demo-1',
+  templateName: 'CloudFly Marketing AI Pro',
+  homePageUrl: '/dashboard',
+  settingsCookieName: 'cloudfly-settings',
   mode: 'light', // 'system', 'light', 'dark'
   skin: 'default', // 'default', 'bordered'
   semiDark: false, // true, false

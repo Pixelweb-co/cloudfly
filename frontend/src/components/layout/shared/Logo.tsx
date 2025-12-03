@@ -3,7 +3,7 @@
 // React Imports
 import { useEffect, useRef } from 'react'
 import type { CSSProperties } from 'react'
-
+import Image from "next/image";
 // Third-party Imports
 import styled from '@emotion/styled'
 
@@ -71,17 +71,13 @@ const Logo = ({ color }: { color?: CSSProperties['color'] }) => {
 
   return (
     <div className='flex items-center'>
-      <VuexyLogo className='text-2xl text-primary' />
-      <LogoText
-        color={color}
-        ref={logoTextRef}
-        isHovered={isHovered}
-        isCollapsed={layout === 'collapsed'}
-        transitionDuration={transitionDuration}
-        isBreakpointReached={isBreakpointReached}
-      >
-        {themeConfig.templateName}
-      </LogoText>
+     <Image
+        src="/images/logo-cloudfly.png" // ruta desde /public
+        alt="Bot Cloudfly"
+        width={437}            // ancho en px
+        height={50}           // alto en px
+        className="rounded-full"
+      />
     </div>
   )
 }

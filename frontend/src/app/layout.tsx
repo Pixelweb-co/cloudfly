@@ -11,8 +11,8 @@ import '@/app/globals.css'
 import '@assets/iconify-icons/generated-icons.css'
 
 export const metadata = {
-  title: 'GM2',
-  description: 'Sistema gestión de mantenimiento'
+  title: 'Cloudfly',
+  description: 'Ventas sin parar, clientes felices',
 }
 
 const RootLayout = ({ children }: ChildrenType) => {

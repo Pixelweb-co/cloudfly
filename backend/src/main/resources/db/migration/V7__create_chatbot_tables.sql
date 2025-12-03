@@ -1,0 +1,12 @@
+CREATE TABLE chatbot_configs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id BIGINT NOT NULL UNIQUE,
+    instance_name VARCHAR(255) NOT NULL,
+    chatbot_type VARCHAR(50) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,
+    n8n_webhook_url TEXT,
+    context TEXT,
+    api_key TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
