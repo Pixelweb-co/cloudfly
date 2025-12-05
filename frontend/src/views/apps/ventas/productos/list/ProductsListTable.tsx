@@ -127,7 +127,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
   // States
   // const [addProductOpen, setAddProductOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState(tableData.sort((a:any, b:any) => b.id - a.id))
+  const [data, setData] = useState(tableData.sort((a: any, b: any) => b.id - a.id))
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
   const [loadForm, setLoadForm] = useState(false)
@@ -142,7 +142,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
   const handleInputChange = async (id: number, value: any) => {
     console.log('value:', value)
 
-    try{
+    try {
 
       const res = await axiosInstance.put(`${API_BASE_URL}/products/verification/${id}`, JSON.stringify({ verification: value }), {
         headers: {
@@ -150,12 +150,12 @@ const ProductsListTable = ({ reload, tableData }: any) => {
         }
       });
 
-       console.log("res.data", res.data)
-       setErrorUpdateItem("Actualizado correctamente!")
+      console.log("res.data", res.data)
+      setErrorUpdateItem("Actualizado correctamente!")
 
-       reload(true)
+      reload(true)
 
-    } catch (error:any) {
+    } catch (error: any) {
       console.log('Actualizar el producto:', error)
       setErrorUpdateItem(error.response.data)
 
@@ -166,22 +166,22 @@ const ProductsListTable = ({ reload, tableData }: any) => {
 
   const deleteItem = async (id: any) => {
 
-    try{
+    try {
 
-    const res = await axiosInstance.delete(`${API_BASE_URL}/products/${id}`)
+      const res = await axiosInstance.delete(`${API_BASE_URL}/products/${id}`)
 
-     //console.log("res.data", res.data)
-     setErrorDeleteItem("Eliminado correctamente!")
+      //console.log("res.data", res.data)
+      setErrorDeleteItem("Eliminado correctamente!")
 
-     reload(true)
+      reload(true)
 
-  } catch (error:any) {
-    console.log('Eliminar el producto:', error)
-    setErrorDeleteItem(" Este equipo no se puede eliminar, tiene mantenimientos/solicitudes programados")
-
-  }
+    } catch (error: any) {
+      console.log('Eliminar el producto:', error)
+      setErrorDeleteItem(" Este equipo no se puede eliminar, tiene mantenimientos/solicitudes programados")
 
     }
+
+  }
 
   const columns = useMemo<ColumnDef<ProductTypeWithAction, any>[]>(
     () => [
@@ -232,56 +232,56 @@ const ProductsListTable = ({ reload, tableData }: any) => {
           </Typography>
         )
       }),
-      columnHelper.accessor('productCode', {
+      columnHelper.accessor('productCode' as any, {
         header: 'Serie',
         cell: ({ row }) => (
           <Typography className='font-medium' color='text.primary'>
-            {row.original.productCode}
+            {(row.original as any).productCode}
           </Typography>
         )
       }),
-      columnHelper.accessor('licensePlate', {
+      columnHelper.accessor('licensePlate' as any, {
         header: 'Placa',
         cell: ({ row }) => (
           <Typography className='font-medium' color='text.primary'>
-            {row.original.licensePlate}
+            {(row.original as any).licensePlate}
           </Typography>
         )
       }),
-      
+
       columnHelper.accessor('action', {
         header: 'Action',
         cell: ({ row }) => (
           <div className='flex items-center'>
 
 
-          {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('BIOMEDICAL') || userMethods.isRole('ADMIN')) &&
-            <Tooltip title='Lista de checkeo'>
-            <IconButton
-              onClick={() => {
-                setRowSelection(row.original)
-                setLoadFormCheck(true)
-              }}
-            >
-              <i className='tabler-list text-textSecondary' />
-            </IconButton>
-            </Tooltip>
+            {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('BIOMEDICAL') || userMethods.isRole('ADMIN')) &&
+              <Tooltip title='Lista de checkeo'>
+                <IconButton
+                  onClick={() => {
+                    setRowSelection(row.original)
+                    setLoadFormCheck(true)
+                  }}
+                >
+                  <i className='tabler-list text-textSecondary' />
+                </IconButton>
+              </Tooltip>
             }
 
             <Tooltip title='Hoja de vida'>
-            <IconButton
-              onClick={() => {
-                localStorage.removeItem('productview')
-                console.log('asignando p', row.original)
+              <IconButton
+                onClick={() => {
+                  localStorage.removeItem('productview')
+                  console.log('asignando p', row.original)
 
-                localStorage.setItem('productview', JSON.stringify(row.original))
-                setTimeout(() => {
-                  router.push('/productos/view')
-                }, 500)
-              }}
-            >
-              <i className='tabler-eye text-textSecondary' />
-            </IconButton>
+                  localStorage.setItem('productview', JSON.stringify(row.original))
+                  setTimeout(() => {
+                    router.push('/productos/view')
+                  }, 500)
+                }}
+              >
+                <i className='tabler-eye text-textSecondary' />
+              </IconButton>
             </Tooltip>
             {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('BIOMEDICAL') || userMethods.isRole('ADMIN')) ? (
               <Tooltip title='Editar'>
@@ -306,7 +306,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
             {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('BIOMEDICAL') || userMethods.isRole('ADMIN')) ? (
               <>
 
-              <Tooltip title="Programación de mantenimiento">
+                <Tooltip title="Programación de mantenimiento">
 
                   <IconButton
                     onClick={() => {
@@ -318,18 +318,18 @@ const ProductsListTable = ({ reload, tableData }: any) => {
 
                     <i className='tabler-calendar text-textSecondary' />
                   </IconButton>
-                  </Tooltip>
+                </Tooltip>
 
 
-                 {row && row.original && (row.original.schedules?.length ?? 0) > 0 && <Tooltip title="Equipo programado">
+                {row && row.original && (row.original.schedules?.length ?? 0) > 0 && <Tooltip title="Equipo programado">
                   <Badge variant='dot' color='success' className='ml-4'>
                     <i className='tabler-dot' />
-                    </Badge>
+                  </Badge>
 
-                  </Tooltip>}
-</>
+                </Tooltip>}
+              </>
 
-            ):null}
+            ) : null}
           </div>
         ),
         enableSorting: false
@@ -452,46 +452,46 @@ const ProductsListTable = ({ reload, tableData }: any) => {
             </Button> */}
 
             {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('BIOMEDICAL') || userMethods.isRole('ADMIN')) && (
-            <Button
-              onClick={() => {
-                setLoadForm(true)
-                setRowSelection({
-                  id: undefined,
-                  productType: '',
-                  productCode: '',
-                  productName: '',
-                  brand: '',
-                  model: '',
-                  licensePlate: '',
-                  productClass: '',
-                  classification: '',
-                  clientId: null,
-                  status: '1',
-                  dateAdded: null,
-                  inventoryRegister: '',
-                  origin: '',
-                  voltage: '',
-                  power: '',
-                  frequency: '',
-                  amperage: '',
-                  purchaseDate: '',
-                  bookValue: 0,
-                  supplier: '',
-                  warranty: '',
-                  warrantyStartDate: '',
-                  warrantyEndDate: '',
-                  manual: '',
-                  periodicity: '',
-                  location: '',
-                  placement: ''
-                })
-              }}
-              variant='contained'
-              startIcon={<i className='tabler-plus' />}
-              className='max-sm:is-full'
-            >
-              Agregar producto
-            </Button>
+              <Button
+                onClick={() => {
+                  setLoadForm(true)
+                  setRowSelection({
+                    id: undefined,
+                    productType: '',
+                    productCode: '',
+                    productName: '',
+                    brand: '',
+                    model: '',
+                    licensePlate: '',
+                    productClass: '',
+                    classification: '',
+                    clientId: null,
+                    status: '1',
+                    dateAdded: null,
+                    inventoryRegister: '',
+                    origin: '',
+                    voltage: '',
+                    power: '',
+                    frequency: '',
+                    amperage: '',
+                    purchaseDate: '',
+                    bookValue: 0,
+                    supplier: '',
+                    warranty: '',
+                    warrantyStartDate: '',
+                    warrantyEndDate: '',
+                    manual: '',
+                    periodicity: '',
+                    location: '',
+                    placement: ''
+                  })
+                }}
+                variant='contained'
+                startIcon={<i className='tabler-plus' />}
+                className='max-sm:is-full'
+              >
+                Agregar producto
+              </Button>
             )}
           </div>
         </div>
@@ -610,24 +610,24 @@ const ProductsListTable = ({ reload, tableData }: any) => {
         rowSelect={rowSelection}
       />
 
-    }
+      }
 
- {programacionModal && <ProgramacionMantenimiento
+      {programacionModal && <ProgramacionMantenimiento
         open={programacionModal}
         onClose={() => setProgramacionModal(false)}
         onSuccess={() => reload(true)}
         rowSelect={rowSelection}
       />}
 
-{errorDeleteItem && <ErrorDialog entitYName='Eliminar equipo' open={errorDeleteItem} error={errorDeleteItem} setOpen={setErrorDeleteItem} />}
+      {errorDeleteItem && <ErrorDialog entitYName='Eliminar equipo' open={errorDeleteItem} error={errorDeleteItem} setOpen={setErrorDeleteItem} />}
 
-    {loadFormCheck &&  <CheckListForm
+      {loadFormCheck && <CheckListForm
         open={loadFormCheck}
         onClose={() => setLoadFormCheck(false)}
         setOpen={() => setLoadFormCheck(true)}
         rowSelect={rowSelection}
       />
-    }
+      }
     </>
   )
 }

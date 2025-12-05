@@ -14,10 +14,10 @@ export enum ContactType {
 export interface Contact {
     id: number
     name: string
-    email?: string
-    phone?: string
-    address?: string
-    taxId?: string
+    email?: string | null
+    phone?: string | null
+    address?: string | null
+    taxId?: string | null
     type: ContactType
     tenantId: number
 }

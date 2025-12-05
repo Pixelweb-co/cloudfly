@@ -296,19 +296,20 @@ const PosComponent: React.FC = () => {
       </div>
 
       <PaymentModal
-        open={isPaymentModalOpen}
+        isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
         total={calculateTotal()}
-        onPayment={processPayment}
+        onConfirm={processPayment}
       />
 
       <CustomerSelectionModal
-        open={isCustomerModalOpen}
+        isOpen={isCustomerModalOpen}
         onClose={() => setIsCustomerModalOpen(false)}
-        onSelectCustomer={(customer) => {
+        onSelect={(customer: Contact) => {
           setSelectedCustomer(customer)
           setIsCustomerModalOpen(false)
         }}
+        tenantId={getTenantId() || 0}
       />
     </div>
   )
