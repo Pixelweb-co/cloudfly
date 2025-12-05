@@ -2,11 +2,12 @@ import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 
 interface FunctionKeysProps {
-  onSearch: (term: string) => void;
-  searchTerm: string;
+  onSearch?: (term: string) => void;
+  searchTerm?: string;
+  onClearCart?: () => void;
 }
 
-export const FunctionKeys: React.FC<FunctionKeysProps> = ({ onSearch, searchTerm }) => {
+export const FunctionKeys: React.FC<FunctionKeysProps> = ({ onSearch, searchTerm = '', onClearCart }) => {
   const keys = [
     { label: 'ESPERA', color: 'bg-purple-300' },
     { label: 'RECUPERAR', color: 'bg-cyan-200' },
@@ -43,7 +44,7 @@ export const FunctionKeys: React.FC<FunctionKeysProps> = ({ onSearch, searchTerm
             <input
               type="text"
               value={searchTerm}
-              onChange={(e) => onSearch(e.target.value)}
+              onChange={(e) => onSearch?.(e.target.value)}
               className="flex-1 border border-gray-300 px-2 py-1 text-sm outline-none focus:border-blue-500 shadow-inner"
               placeholder="Escanear código o escribir nombre..."
               autoFocus

@@ -5,15 +5,17 @@ interface RightPanelProps {
   subtotal?: number;
   discount?: number;
   total: number;
-  onPaymentSelect: () => void;
-  onClear: () => void;
-  onSave: () => void;
+  onCheckout?: () => void;
+  onPaymentSelect?: () => void;
+  onClear?: () => void;
+  onSave?: () => void;
 }
 
 export const RightPanel: React.FC<RightPanelProps> = ({
   subtotal = 0,
   discount = 0,
   total,
+  onCheckout,
   onPaymentSelect,
   onClear,
   onSave
@@ -63,10 +65,10 @@ export const RightPanel: React.FC<RightPanelProps> = ({
 
       {/* Payment Methods */}
       <div className="grid grid-cols-2 gap-2 h-32">
-        <Btn label="Efectivo" color="bg-green-500 text-white hover:bg-green-600" icon={Banknote} onClick={onPaymentSelect} />
-        <Btn label="Tarjeta" color="bg-blue-500 text-white hover:bg-blue-600" icon={CreditCard} onClick={onPaymentSelect} />
-        <Btn label="Transferencia" color="bg-purple-500 text-white hover:bg-purple-600" icon={Smartphone} onClick={onPaymentSelect} />
-        <Btn label="Otro" color="bg-gray-400 text-white hover:bg-gray-500" onClick={onPaymentSelect} />
+        <Btn label="Efectivo" color="bg-green-500 text-white hover:bg-green-600" icon={Banknote} onClick={onCheckout || onPaymentSelect} />
+        <Btn label="Tarjeta" color="bg-blue-500 text-white hover:bg-blue-600" icon={CreditCard} onClick={onCheckout || onPaymentSelect} />
+        <Btn label="Transferencia" color="bg-purple-500 text-white hover:bg-purple-600" icon={Smartphone} onClick={onCheckout || onPaymentSelect} />
+        <Btn label="Otro" color="bg-gray-400 text-white hover:bg-gray-500" onClick={onCheckout || onPaymentSelect} />
       </div>
 
       {/* Print/Save */}
