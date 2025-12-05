@@ -12,6 +12,7 @@ const now = new Date().toISOString()
 
 export const MOCK_PRODUCTS: ProductType[] = [
   {
+    image: undefined,
     id: 1,
     tenantId: 1,
     productName: 'Classic Cheeseburger',
@@ -39,6 +40,7 @@ export const MOCK_PRODUCTS: ProductType[] = [
     updatedAt: now
   },
   {
+    image: undefined,
     id: 2,
     tenantId: 1,
     productName: 'Double Bacon BBQ',
@@ -66,6 +68,7 @@ export const MOCK_PRODUCTS: ProductType[] = [
     updatedAt: now
   },
   {
+    image: undefined,
     id: 3,
     tenantId: 1,
     productName: 'Margherita Pizza',
@@ -93,6 +96,7 @@ export const MOCK_PRODUCTS: ProductType[] = [
     updatedAt: now
   },
   {
+    image: undefined,
     id: 4,
     tenantId: 1,
     productName: 'Pepperoni Feast',
@@ -120,6 +124,7 @@ export const MOCK_PRODUCTS: ProductType[] = [
     updatedAt: now
   },
   {
+    image: undefined,
     id: 5,
     tenantId: 1,
     productName: 'Cola Zero',
@@ -147,6 +152,7 @@ export const MOCK_PRODUCTS: ProductType[] = [
     updatedAt: now
   },
   {
+    image: undefined,
     id: 6,
     tenantId: 1,
     productName: 'Lemonade Fresh',
@@ -174,6 +180,7 @@ export const MOCK_PRODUCTS: ProductType[] = [
     updatedAt: now
   },
   {
+    image: undefined,
     id: 7,
     tenantId: 1,
     productName: 'Chocolate Lava Cake',
@@ -201,6 +208,7 @@ export const MOCK_PRODUCTS: ProductType[] = [
     updatedAt: now
   },
   {
+    image: undefined,
     id: 8,
     tenantId: 1,
     productName: 'Vanilla Bean Shake',
