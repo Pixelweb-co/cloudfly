@@ -26,7 +26,7 @@ import { Plus, Trash, Save, ArrowLeft, Search } from 'lucide-react'
 import axiosInstance from '@/utils/axiosInterceptor'
 import { userMethods } from '@/utils/userMethods'
 import { ProductService, ContactService } from '@/views/apps/pos/services/api'
-import { ContactType } from '@/types/apps/contactType'
+import { Contact } from '@/views/apps/pos/types'
 import { ProductType } from '@/types/apps/productType'
 
 const InvoiceForm = () => {
@@ -35,7 +35,7 @@ const InvoiceForm = () => {
     const id = params?.id
 
     const [loading, setLoading] = useState(false)
-    const [customers, setCustomers] = useState<ContactType[]>([])
+    const [customers, setCustomers] = useState<Contact[]>([])
     const [products, setProducts] = useState<ProductType[]>([])
     const [searchTerm, setSearchTerm] = useState('')
 
