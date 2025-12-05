@@ -24,7 +24,7 @@ const Providers = (props: Props) => {
   return (
     <NextAuthProvider>
       <VerticalNavProvider>
-        <SettingsProvider settingsCookie={settingsCookie} mode={mode}>
+        <SettingsProvider settingsCookie={settingsCookie ?? null} mode={mode}>
           <ThemeProvider direction={direction} systemMode={systemMode}>
             {children}
           </ThemeProvider>
