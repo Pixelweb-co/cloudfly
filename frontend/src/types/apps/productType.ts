@@ -37,4 +37,7 @@ export type ProductType = {
 
   createdAt: string
   updatedAt: string
+
+  // Programaciones de mantenimiento (opcional)
+  schedules?: any[]
 }

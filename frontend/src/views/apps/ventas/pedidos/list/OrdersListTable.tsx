@@ -30,7 +30,7 @@ import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
 
 import TablePaginationComponent from '@components/TablePaginationComponent'
-import type { OrderType } from '@/views/apps/pos/types'
+import type { OrderResponse } from '@/views/apps/pos/types'
 import ColumnSelector from '@/components/ColumnSelector'
 import CustomTextField from '@core/components/mui/TextField'
 import tableStyles from '@core/styles/table.module.css'
@@ -49,7 +49,7 @@ declare module '@tanstack/table-core' {
     }
 }
 
-type OrderTypeWithAction = OrderType & {
+type OrderResponseWithAction = OrderResponse & {
     action?: string
 }
 
@@ -86,7 +86,7 @@ const DebouncedInput = ({
     return <CustomTextField {...props} value={value} onChange={e => setValue(e.target.value)} />
 }
 
-const columnHelper = createColumnHelper<OrderTypeWithAction>()
+const columnHelper = createColumnHelper<OrderResponseWithAction>()
 
 const OrdersListTable = ({ reload, tableData }: any) => {
     const [rowSelection, setRowSelection] = useState({})
@@ -125,7 +125,7 @@ const OrdersListTable = ({ reload, tableData }: any) => {
         return labels[status] || status
     }
 
-    const columns = useMemo<ColumnDef<OrderTypeWithAction, any>[]>(
+    const columns = useMemo<ColumnDef<OrderResponseWithAction, any>[]>(
         () => [
             {
                 id: 'select',
@@ -217,7 +217,7 @@ const OrdersListTable = ({ reload, tableData }: any) => {
     }, [tableData])
 
     const table = useReactTable({
-        data: filteredData as OrderType[],
+        data: filteredData as OrderResponse[],
         columns,
         filterFns: {
             fuzzy: fuzzyFilter

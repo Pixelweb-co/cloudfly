@@ -2,9 +2,9 @@
 
 import Grid from '@mui/material/Grid'
 import OrdersListTable from './OrdersListTable'
-import type { OrderType } from '@/views/apps/pos/types'
+import type { OrderResponse } from '@/views/apps/pos/types'
 
-const OrdersList = ({ reload, ordersData }: { reload: any; ordersData: OrderType[] }) => {
+const OrdersList = ({ reload, ordersData }: { reload: any; ordersData: OrderResponse[] }) => {
     return (
         <Grid container spacing={6}>
             <Grid item xs={12}>

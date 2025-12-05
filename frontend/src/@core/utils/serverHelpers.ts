@@ -11,19 +11,25 @@ import type { SystemMode } from '@core/types'
 // Config Imports
 import themeConfig from '@configs/themeConfig'
 
-export const getSettingsFromCookie = (): Settings => {
+export const getSettingsFromCookie = (): Settings | null => {
   const cookieStore = cookies()
 
   const cookieName = themeConfig.settingsCookieName
 
-  return JSON.parse(cookieStore.get(cookieName)?.value || '{}')
+  const cookieValue = cookieStore.get(cookieName)?.value
+
+  if (!cookieValue) return null
+
+  const parsed = JSON.parse(cookieValue)
+
+  return Object.keys(parsed).length === 0 ? null : parsed
 }
 
 export const getMode = () => {
   const settingsCookie = getSettingsFromCookie()
 
   // Get mode from cookie or fallback to theme config
-  const _mode = settingsCookie.mode || themeConfig.mode
+  const _mode = settingsCookie?.mode || themeConfig.mode
 
   return _mode
 }
@@ -47,5 +53,5 @@ export const getServerMode = () => {
 export const getSkin = () => {
   const settingsCookie = getSettingsFromCookie()
 
-  return settingsCookie.skin || 'default'
+  return settingsCookie?.skin || 'default'
 }
