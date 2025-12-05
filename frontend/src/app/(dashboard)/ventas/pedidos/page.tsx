@@ -5,12 +5,12 @@ import { LinearProgress } from '@mui/material'
 import axiosInstance from '@/utils/axiosInterceptor'
 import { userMethods } from '@/utils/userMethods'
 import OrdersList from '@views/apps/ventas/pedidos/list'
-import type { Order } from '@/types/apps/Types'
+import type { OrderResponse } from '@/views/apps/pos/types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 
 const OrdersListApp = () => {
-  const [ordersData, setOrdersData] = useState<Order[]>([])
+  const [ordersData, setOrdersData] = useState<OrderResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [reload, setReload] = useState(false)
