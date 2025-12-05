@@ -71,12 +71,12 @@ export const SettingsProvider = (props: Props) => {
   // Cookies
   const [settingsCookie, updateSettingsCookie] = useObjectCookie<Settings>(
     themeConfig.settingsCookieName,
-    JSON.stringify(props.settingsCookie) !== '{}' ? props.settingsCookie : updatedInitialSettings
+    props.settingsCookie && JSON.stringify(props.settingsCookie) !== '{}' ? props.settingsCookie : updatedInitialSettings
   )
 
   // State
   const [_settingsState, _updateSettingsState] = useState<Settings>(
-    JSON.stringify(settingsCookie) !== '{}' ? settingsCookie : updatedInitialSettings
+    settingsCookie && JSON.stringify(settingsCookie) !== '{}' ? settingsCookie : updatedInitialSettings
   )
 
   const updateSettings = (settings: Partial<Settings>, options?: UpdateSettingsOptions) => {
