@@ -13,18 +13,18 @@ import { NextAuthProvider } from '@/contexts/nextAuthProvider'
 type Props = ChildrenType & {
   direction: Direction
   mode?: Mode
-  settingsCookie?: Settings | null
+  settingsCookie: Settings | null
   systemMode?: SystemMode
 }
 
 const Providers = (props: Props) => {
   // Props
-  const { children, direction, mode, settingsCookie, systemMode } = props
+  const { children, direction, mode, settingsCookie = null, systemMode } = props
 
   return (
     <NextAuthProvider>
       <VerticalNavProvider>
-        <SettingsProvider settingsCookie={settingsCookie ?? null} mode={mode}>
+        <SettingsProvider settingsCookie={settingsCookie} mode={mode}>
           <ThemeProvider direction={direction} systemMode={systemMode ?? 'light'}>
             {children}
           </ThemeProvider>

@@ -37,7 +37,11 @@ const schema = yup.object().shape({
   position: yup.string().required('El cargo es obligatorio')
 })
 
-const FormCustomer = () => {
+interface FormCustomerProps {
+  onSuccess?: (customerData: any) => void
+}
+
+const FormCustomer = ({ onSuccess }: FormCustomerProps = {}) => {
   const {
     control,
     handleSubmit,
@@ -97,7 +101,12 @@ const FormCustomer = () => {
       reset()
       localStorage.setItem('UserLogin', JSON.stringify(response.data))
 
-      router.push('/home')
+      // Llamar a onSuccess si existe
+      if (onSuccess && response.data && response.data.customer) {
+        onSuccess(response.data.customer)
+      } else {
+        router.push('/home')
+      }
     } catch (error) {
       console.error('Error al enviar los datos:', error)
     }
