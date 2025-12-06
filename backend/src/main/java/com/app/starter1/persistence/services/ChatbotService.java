@@ -5,11 +5,13 @@ import com.app.starter1.persistence.entity.ChatbotConfig;
 import com.app.starter1.persistence.entity.ChatbotType;
 import com.app.starter1.persistence.repository.ChatbotConfigRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChatbotService {
@@ -58,23 +60,31 @@ public class ChatbotService {
 
     @Transactional
     public ChatbotConfigDTO activateChatbot(Long tenantId) {
+        log.info("🔧 [CHATBOT-SERVICE] Starting activation for tenantId: {}", tenantId);
+
         ChatbotConfig config = chatbotConfigRepository.findByTenantId(tenantId)
                 .orElse(new ChatbotConfig());
 
         if (config.getId() == null) {
+            log.info("✨ [CHATBOT-SERVICE] Creating new config for tenantId: {}", tenantId);
             config.setTenantId(tenantId);
             config.setApiKey(UUID.randomUUID().toString());
-            config.setInstanceName("cloudfly_" + tenantId); // Generate instance name
-            config.setChatbotType(ChatbotType.SALES); // Default type
+            config.setInstanceName("cloudfly_" + tenantId);
+            config.setChatbotType(ChatbotType.SALES);
             config.setIsActive(false);
-            config.setN8nWebhookUrl("https://autobot.cloudfly.com.co/webhook/" + tenantId); // Default webhook
+            config.setN8nWebhookUrl("https://autobot.cloudfly.com.co/webhook/" + tenantId);
+            log.info("📝 [CHATBOT-SERVICE] Config created - Instance: {}, Webhook: {}",
+                    config.getInstanceName(), config.getN8nWebhookUrl());
+        } else {
+            log.info("📂 [CHATBOT-SERVICE] Using existing config - Instance: {}", config.getInstanceName());
         }
 
         // Create instance in Evolution API
         try {
-            // We pass the webhook URL to Evolution API so it can send events there
+            log.info("🌐 [CHATBOT-SERVICE] Calling Evolution API to create instance: {}", config.getInstanceName());
             java.util.Map<String, Object> response = evolutionApiService.createInstance(config.getInstanceName(),
                     config.getN8nWebhookUrl());
+            log.info("✅ [CHATBOT-SERVICE] Evolution API response received");
 
             // If response contains QR, use it
             String qrCode = null;
@@ -82,25 +92,34 @@ public class ChatbotService {
                 Object qrObj = response.get("qrcode");
                 if (qrObj instanceof java.util.Map) {
                     qrCode = (String) ((java.util.Map) qrObj).get("base64");
+                    log.info("🔲 [CHATBOT-SERVICE] QR code found in create response");
                 }
             }
 
-            // If no QR in create response (sometimes it is), fetch it explicitly
+            // If no QR in create response, fetch it explicitly
             if (qrCode == null) {
+                log.info("🔍 [CHATBOT-SERVICE] No QR in response, fetching explicitly");
                 java.util.Map<String, Object> qrResponse = evolutionApiService.fetchQrCode(config.getInstanceName());
                 if (qrResponse != null && qrResponse.containsKey("base64")) {
                     qrCode = (String) qrResponse.get("base64");
+                    log.info("✅ [CHATBOT-SERVICE] QR code fetched successfully");
                 }
             }
 
             ChatbotConfig saved = chatbotConfigRepository.save(config);
+            log.info("💾 [CHATBOT-SERVICE] Config saved to database");
+
             ChatbotConfigDTO dto = mapToDTO(saved);
             dto.setQrCode(qrCode);
+            log.info("✅ [CHATBOT-SERVICE] Activation completed for tenantId: {}", tenantId);
             return dto;
 
         } catch (Exception e) {
+            log.error("⚠️ [CHATBOT-SERVICE] Error during activation: {}", e.getMessage());
+
             // If instance already exists, try to fetch QR
             if (e.getMessage().contains("already exists")) {
+                log.info("ℹ️ [CHATBOT-SERVICE] Instance already exists, fetching QR");
                 try {
                     java.util.Map<String, Object> qrResponse = evolutionApiService
                             .fetchQrCode(config.getInstanceName());
@@ -108,12 +127,15 @@ public class ChatbotService {
                     ChatbotConfigDTO dto = mapToDTO(saved);
                     if (qrResponse != null && qrResponse.containsKey("base64")) {
                         dto.setQrCode((String) qrResponse.get("base64"));
+                        log.info("✅ [CHATBOT-SERVICE] QR fetched for existing instance");
                     }
                     return dto;
                 } catch (Exception ex) {
+                    log.error("❌ [CHATBOT-SERVICE] Failed to fetch QR for existing instance: {}", ex.getMessage(), ex);
                     throw new RuntimeException("Failed to activate chatbot: " + ex.getMessage());
                 }
             }
+            log.error("❌ [CHATBOT-SERVICE] Activation failed: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to activate chatbot: " + e.getMessage());
         }
     }
