@@ -322,7 +322,7 @@ services:
       # Docker provider
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=cloudfly_app-net"
+      - "--providers.docker.network=sellerbot_app-net"
 
       # ACME / Let's Encrypt (resolver 'le')
       - "--certificatesresolvers.le.acme.email=web@cloudfly.com.co"
