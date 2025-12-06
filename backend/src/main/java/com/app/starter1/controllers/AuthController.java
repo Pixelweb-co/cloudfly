@@ -1,7 +1,5 @@
 package com.app.starter1.controllers;
 
-
-import com.app.starter1.dto.AuthCreateUserRequest;
 import com.app.starter1.dto.AuthCreateUserRequest;
 import com.app.starter1.dto.AuthResponse;
 import com.app.starter1.dto.LoginRequest;
@@ -43,7 +41,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest userRequest){
+    public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest userRequest) {
 
         return new ResponseEntity<>(userDetailService.loginUser(userRequest), HttpStatus.OK);
     }
@@ -82,7 +80,6 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> validateAccount(@RequestBody Map<String, String> request) {
         String vaidationToken = request.get("validationToken");
         String isAvailable = verificationTokenService.validateVerificationToken(vaidationToken);
-
 
         Map<String, String> response = new HashMap<>();
         response.put("Activado", isAvailable);
