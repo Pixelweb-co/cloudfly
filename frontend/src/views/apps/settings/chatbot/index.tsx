@@ -21,7 +21,7 @@ import {
     Box
 } from '@mui/material'
 import { ChatbotConfig, ChatbotType } from '@/types/apps/chatbotTypes'
-import axios from 'axios'
+import axiosInstance from '@/utils/axiosInterceptor'
 
 const ChatbotSettings = () => {
     const [loading, setLoading] = useState(false)
@@ -46,7 +46,7 @@ const ChatbotSettings = () => {
     const fetchConfig = async () => {
         try {
             setLoading(true)
-            const response = await axios.get('/api/chatbot/config')
+            const response = await axiosInstance.get('/api/chatbot/config')
             if (response.data) {
                 setConfig(response.data)
                 if (response.data.qrCode) {
@@ -64,7 +64,7 @@ const ChatbotSettings = () => {
         try {
             setActivating(true)
             setMessage(null)
-            const response = await axios.post('/api/chatbot/activate')
+            const response = await axiosInstance.post('/api/chatbot/activate')
             setConfig(response.data)
             if (response.data.qrCode) {
                 setQrCode(response.data.qrCode)
@@ -83,7 +83,7 @@ const ChatbotSettings = () => {
     const handleCheckQr = async () => {
         try {
             setLoading(true)
-            const response = await axios.get('/api/chatbot/qr')
+            const response = await axiosInstance.get('/api/chatbot/qr')
             if (response.data) {
                 setConfig(response.data)
                 if (response.data.qrCode) {
@@ -106,7 +106,7 @@ const ChatbotSettings = () => {
         try {
             setSaving(true)
             setMessage(null)
-            const response = await axios.post('/api/chatbot/config', config)
+            const response = await axiosInstance.post('/api/chatbot/config', config)
             setConfig(response.data)
             setMessage({ type: 'success', text: 'Configuración guardada correctamente' })
         } catch (error) {
