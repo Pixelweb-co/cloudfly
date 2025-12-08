@@ -39,6 +39,9 @@ public class ChatbotConfig {
     @Column(columnDefinition = "TEXT")
     private String context; // System prompt / Business context
 
+    @Column(length = 255)
+    private String agentName; // Name the chatbot agent presents itself with
+
     @Column(columnDefinition = "TEXT")
     private String apiKey; // API Key for this tenant's bot
 

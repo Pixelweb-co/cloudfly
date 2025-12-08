@@ -53,6 +53,7 @@ public class ChatbotService {
         config.setIsActive(dto.getIsActive());
         config.setN8nWebhookUrl(dto.getN8nWebhookUrl());
         config.setContext(dto.getContext());
+        config.setAgentName(dto.getAgentName());
 
         ChatbotConfig saved = chatbotConfigRepository.save(config);
         return mapToDTO(saved);
@@ -156,6 +157,57 @@ public class ChatbotService {
         }
     }
 
+    @Transactional
+    public ChatbotConfigDTO logoutChatbot(Long tenantId) {
+        ChatbotConfig config = chatbotConfigRepository.findByTenantId(tenantId)
+                .orElseThrow(() -> new RuntimeException("Chatbot config not found"));
+
+        try {
+            evolutionApiService.logoutInstance(config.getInstanceName());
+            config.setIsActive(false);
+            chatbotConfigRepository.save(config);
+            return mapToDTO(config);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to logout chatbot: " + e.getMessage());
+        }
+    }
+
+    @Transactional
+    public ChatbotConfigDTO restartChatbot(Long tenantId) {
+        ChatbotConfig config = chatbotConfigRepository.findByTenantId(tenantId)
+                .orElseThrow(() -> new RuntimeException("Chatbot config not found"));
+
+        try {
+            java.util.Map<String, Object> response = evolutionApiService.restartInstance(config.getInstanceName());
+            // Intentar obtener QR después de reiniciar
+            try {
+                java.util.Map<String, Object> qrResponse = evolutionApiService.fetchQrCode(config.getInstanceName());
+                ChatbotConfigDTO dto = mapToDTO(config);
+                if (qrResponse != null && qrResponse.containsKey("base64")) {
+                    dto.setQrCode((String) qrResponse.get("base64"));
+                }
+                return dto;
+            } catch (Exception qrEx) {
+                return mapToDTO(config);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to restart chatbot: " + e.getMessage());
+        }
+    }
+
+    @Transactional
+    public void deleteChatbot(Long tenantId) {
+        ChatbotConfig config = chatbotConfigRepository.findByTenantId(tenantId)
+                .orElseThrow(() -> new RuntimeException("Chatbot config not found"));
+
+        try {
+            evolutionApiService.deleteInstance(config.getInstanceName());
+            chatbotConfigRepository.delete(config);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete chatbot: " + e.getMessage());
+        }
+    }
+
     private ChatbotConfigDTO mapToDTO(ChatbotConfig entity) {
         ChatbotConfigDTO dto = new ChatbotConfigDTO();
         dto.setId(entity.getId());
@@ -165,6 +217,7 @@ public class ChatbotService {
         dto.setIsActive(entity.getIsActive());
         dto.setN8nWebhookUrl(entity.getN8nWebhookUrl());
         dto.setContext(entity.getContext());
+        dto.setAgentName(entity.getAgentName());
         dto.setApiKey(entity.getApiKey());
         return dto;
     }

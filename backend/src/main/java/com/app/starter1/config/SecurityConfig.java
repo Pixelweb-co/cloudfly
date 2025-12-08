@@ -74,6 +74,9 @@ public class SecurityConfig {
                                                         .hasAnyRole("SUPERADMIN", "ADMIN", "BIOMEDICAL", "USER");
                                         http.requestMatchers(HttpMethod.PUT, "/api/chatbot/**").hasAnyRole("SUPERADMIN",
                                                         "ADMIN", "BIOMEDICAL", "USER");
+                                        http.requestMatchers(HttpMethod.DELETE, "/api/chatbot/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN", "BIOMEDICAL", "USER");
 
                                         // Configurar los endpoints privados
                                         // auth
@@ -262,6 +265,40 @@ public class SecurityConfig {
                                         http.requestMatchers(HttpMethod.DELETE, "/categorias/**").hasAnyRole(
                                                         "SUPERADMIN", "BIOMEDICAL",
                                                         "ADMIN");
+                                        http.requestMatchers(HttpMethod.PATCH, "/categorias/**").hasAnyRole(
+                                                        "SUPERADMIN", "BIOMEDICAL",
+                                                        "ADMIN");
+
+                                        // chatbot types
+                                        http.requestMatchers(HttpMethod.GET, "/chatbot-types/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN");
+                                        http.requestMatchers(HttpMethod.PUT, "/chatbot-types/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN");
+                                        http.requestMatchers(HttpMethod.POST, "/chatbot-types/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN");
+                                        http.requestMatchers(HttpMethod.DELETE, "/chatbot-types/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN");
+                                        http.requestMatchers(HttpMethod.PATCH, "/chatbot-types/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN");
+
+                                        // chat / conversaciones
+                                        http.requestMatchers(HttpMethod.GET, "/api/chat/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN",
+                                                        "USER");
+                                        http.requestMatchers(HttpMethod.POST, "/api/chat/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN",
+                                                        "USER");
+                                        http.requestMatchers(HttpMethod.PATCH, "/api/chat/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN",
+                                                        "USER");
 
                                         // plantilla verficacion
 

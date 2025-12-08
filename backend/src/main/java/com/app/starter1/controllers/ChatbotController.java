@@ -57,4 +57,31 @@ public class ChatbotController {
         log.info("✅ [CHATBOT] QR code retrieved for tenantId: {}", tenantId);
         return ResponseEntity.ok(result);
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ChatbotConfigDTO> logoutChatbot() {
+        Long tenantId = userMethods.getTenantId();
+        log.info("🔌 [CHATBOT] Logging out chatbot for tenantId: {}", tenantId);
+        ChatbotConfigDTO result = chatbotService.logoutChatbot(tenantId);
+        log.info("✅ [CHATBOT] Chatbot logged out for tenantId: {}", tenantId);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/restart")
+    public ResponseEntity<ChatbotConfigDTO> restartChatbot() {
+        Long tenantId = userMethods.getTenantId();
+        log.info("🔄 [CHATBOT] Restarting chatbot for tenantId: {}", tenantId);
+        ChatbotConfigDTO result = chatbotService.restartChatbot(tenantId);
+        log.info("✅ [CHATBOT] Chatbot restarted for tenantId: {}", tenantId);
+        return ResponseEntity.ok(result);
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Void> deleteChatbot() {
+        Long tenantId = userMethods.getTenantId();
+        log.info("🗑️ [CHATBOT] Deleting chatbot for tenantId: {}", tenantId);
+        chatbotService.deleteChatbot(tenantId);
+        log.info("✅ [CHATBOT] Chatbot deleted for tenantId: {}", tenantId);
+        return ResponseEntity.noContent().build();
+    }
 }

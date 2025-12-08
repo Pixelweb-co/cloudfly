@@ -12,6 +12,7 @@ public class ChatbotConfigDTO {
     private Boolean isActive;
     private String n8nWebhookUrl;
     private String context;
+    private String agentName;
     private String apiKey;
     private String qrCode; // Base64 QR Code for activation
 }
