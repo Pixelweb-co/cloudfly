@@ -35,6 +35,14 @@ public class Contact {
     @Column(nullable = false)
     private ContactType type;
 
+    // Stage for Kanban board: LEAD, POTENTIAL, CLIENT
+    @Column(length = 50)
+    private String stage = "LEAD";
+
+    // Avatar/profile picture URL
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @Column(name = "tenant_id", nullable = false)
     private Integer tenantId;
 

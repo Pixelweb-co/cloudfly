@@ -19,7 +19,14 @@
 /backup-service/public/secret_client.json
 /backup-service/public/token.json
 
+# Environment files with secrets
 /frontend/.env.local
+/.env
+/.env.local
+/.env.production
+/.env.*.local
+/chat-socket-service/.env
+/chat-socket-service/.env.local
 
 
 /backend/*.iml

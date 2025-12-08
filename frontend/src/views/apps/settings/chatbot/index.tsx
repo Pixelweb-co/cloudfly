@@ -20,7 +20,7 @@ import {
     Divider,
     Box
 } from '@mui/material'
-import { ChatbotConfig, ChatbotType } from '@/types/apps/chatbotTypes'
+import { ChatbotConfig, ChatbotType, ChatbotTypeConfig } from '@/types/apps/chatbotTypes'
 import axiosInstance from '@/utils/axiosInterceptor'
 
 const ChatbotSettings = () => {
@@ -29,6 +29,7 @@ const ChatbotSettings = () => {
     const [activating, setActivating] = useState(false)
     const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
     const [qrCode, setQrCode] = useState<string | null>(null)
+    const [chatbotTypes, setChatbotTypes] = useState<ChatbotTypeConfig[]>([])
 
     const [config, setConfig] = useState<ChatbotConfig>({
         instanceName: '',
@@ -36,28 +37,72 @@ const ChatbotSettings = () => {
         isActive: false,
         n8nWebhookUrl: '',
         context: '',
+        agentName: '',
         apiKey: ''
     })
 
     useEffect(() => {
         fetchConfig()
+        fetchChatbotTypes()
     }, [])
 
     const fetchConfig = async () => {
         try {
             setLoading(true)
             const response = await axiosInstance.get('/api/chatbot/config')
-            if (response.data) {
+            if (response.data && response.data.id) {
                 setConfig(response.data)
                 if (response.data.qrCode) {
                     setQrCode(response.data.qrCode)
                 }
+            } else {
+                // No configuration exists yet - use defaults
+                setConfig({
+                    instanceName: '',
+                    chatbotType: 'SALES',
+                    isActive: false,
+                    n8nWebhookUrl: '',
+                    context: '',
+                    agentName: '',
+                    apiKey: ''
+                })
             }
         } catch (error) {
             console.error('Error fetching chatbot config:', error)
+            // On error, also set defaults so UI renders
+            setConfig({
+                instanceName: '',
+                chatbotType: 'SALES',
+                isActive: false,
+                n8nWebhookUrl: '',
+                context: '',
+                agentName: '',
+                apiKey: ''
+            })
         } finally {
             setLoading(false)
         }
+    }
+
+    const fetchChatbotTypes = async () => {
+        try {
+            const response = await axiosInstance.get('/chatbot-types/active')
+            setChatbotTypes(response.data)
+        } catch (error) {
+            console.error('Error fetching chatbot types:', error)
+        }
+    }
+
+    const handleChatbotTypeChange = (newType: ChatbotType) => {
+        // Find the corresponding chatbot type config
+        const typeConfig = chatbotTypes.find(t => t.typeName === newType)
+
+        // Update both the type and the webhook URL
+        setConfig(prev => ({
+            ...prev,
+            chatbotType: newType,
+            n8nWebhookUrl: typeConfig?.webhookUrl || prev.n8nWebhookUrl
+        }))
     }
 
     const handleActivate = async () => {
@@ -114,6 +159,73 @@ const ChatbotSettings = () => {
             setMessage({ type: 'error', text: 'Error al guardar la configuración' })
         } finally {
             setSaving(false)
+        }
+    }
+
+    const handleLogout = async () => {
+        if (!confirm('¿Estás seguro de que quieres desconectar el chatbot?')) return
+
+        try {
+            setLoading(true)
+            setMessage(null)
+            const response = await axiosInstance.post('/api/chatbot/logout')
+            setConfig(response.data)
+            setQrCode(null)
+            setMessage({ type: 'success', text: 'Chatbot desconectado exitosamente' })
+        } catch (error) {
+            console.error('Error disconnecting chatbot:', error)
+            setMessage({ type: 'error', text: 'Error al desconectar el chatbot' })
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleRestart = async () => {
+        try {
+            setLoading(true)
+            setMessage(null)
+            const response = await axiosInstance.post('/api/chatbot/restart')
+            setConfig(response.data)
+            if (response.data.qrCode) {
+                setQrCode(response.data.qrCode)
+                setMessage({ type: 'info', text: 'Chatbot reiniciado. Escanea el nuevo código QR' })
+            } else {
+                setMessage({ type: 'success', text: 'Chatbot reiniciado exitosamente' })
+            }
+        } catch (error) {
+            console.error('Error restarting chatbot:', error)
+            setMessage({ type: 'error', text: 'Error al reiniciar el chatbot' })
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleDelete = async () => {
+        if (!confirm('¿Estás seguro de que quieres ELIMINAR la instancia del chatbot? Esta acción no se puede deshacer.')) return
+
+        try {
+            setLoading(true)
+            setMessage(null)
+            await axiosInstance.delete('/api/chatbot')
+            setConfig({
+                id: undefined,
+                tenantId: undefined,
+                instanceName: '',
+                chatbotType: 'SALES',
+                isActive: false,
+                n8nWebhookUrl: '',
+                context: '',
+                agentName: '',
+                qrCode: undefined
+            })
+            setQrCode(null)
+            setMessage({ type: 'success', text: 'Instancia eliminada exitosamente' })
+            fetchConfig() // Refresh
+        } catch (error) {
+            console.error('Error deleting chatbot:', error)
+            setMessage({ type: 'error', text: 'Error al eliminar la instancia' })
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -220,23 +332,25 @@ const ChatbotSettings = () => {
                                                     <Select
                                                         value={config.chatbotType}
                                                         label='Tipo de Chatbot'
-                                                        onChange={e => setConfig({ ...config, chatbotType: e.target.value as ChatbotType })}
+                                                        onChange={e => handleChatbotTypeChange(e.target.value as ChatbotType)}
                                                     >
-                                                        <MenuItem value='SALES'>Ventas (Ecommerce)</MenuItem>
-                                                        <MenuItem value='SUPPORT'>Soporte al Cliente</MenuItem>
-                                                        <MenuItem value='SCHEDULING'>Agendamiento</MenuItem>
+                                                        {chatbotTypes.map(type => (
+                                                            <MenuItem key={type.id} value={type.typeName}>
+                                                                {type.description || type.typeName}
+                                                            </MenuItem>
+                                                        ))}
                                                     </Select>
                                                 </FormControl>
                                             </Grid>
 
-                                            <Grid item xs={12}>
+                                            <Grid item xs={12} sm={6}>
                                                 <TextField
                                                     fullWidth
-                                                    label='URL del Webhook n8n'
-                                                    value={config.n8nWebhookUrl}
-                                                    onChange={e => setConfig({ ...config, n8nWebhookUrl: e.target.value })}
-                                                    placeholder='https://autobot.cloudfly.com.co/webhook/...'
-                                                    helperText='URL predeterminada para el flujo de trabajo'
+                                                    label='Nombre del Agente'
+                                                    value={config.agentName || ''}
+                                                    onChange={e => setConfig({ ...config, agentName: e.target.value })}
+                                                    placeholder='Ej: María, Asistente Virtual, Bot de Ventas'
+                                                    helperText='Nombre con el que se presentará el agente a los usuarios'
                                                 />
                                             </Grid>
 
@@ -257,6 +371,40 @@ const ChatbotSettings = () => {
                                                 <Button type='submit' variant='contained' size='large' disabled={saving}>
                                                     {saving ? 'Guardando...' : 'Guardar Configuración'}
                                                 </Button>
+                                            </Grid>
+
+                                            {/* Gestión de Instancia */}
+                                            <Grid item xs={12}>
+                                                <Divider sx={{ my: 2 }} />
+                                                <Typography variant='h6' sx={{ mb: 3 }}>
+                                                    Gestión de Instancia
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                                                    <Button
+                                                        variant='outlined'
+                                                        color='warning'
+                                                        onClick={handleLogout}
+                                                        disabled={loading || !config.isActive}
+                                                    >
+                                                        🔌 Desconectar WhatsApp
+                                                    </Button>
+                                                    <Button
+                                                        variant='outlined'
+                                                        color='info'
+                                                        onClick={handleRestart}
+                                                        disabled={loading}
+                                                    >
+                                                        🔄 Reconectar / Generar Nuevo QR
+                                                    </Button>
+                                                    <Button
+                                                        variant='outlined'
+                                                        color='error'
+                                                        onClick={handleDelete}
+                                                        disabled={loading}
+                                                    >
+                                                        🗑️ Eliminar Instancia
+                                                    </Button>
+                                                </Box>
                                             </Grid>
                                         </Grid>
                                     </form>

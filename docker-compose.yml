@@ -259,6 +259,32 @@ services:
     networks:
       - app-net
 
+  chat-socket-service:
+    build:
+      context: ./chat-socket-service
+      dockerfile: Dockerfile
+    container_name: chat_socket
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3001
+      - FRONTEND_URL=${FRONTEND_URL:-https://dashboard.cloudfly.com.co}
+      - JAVA_API_URL=${JAVA_API_URL:-https://api.cloudfly.com.co}
+      - JWT_SECRET=${JWT_SECRET}
+      - N8N_SECRET_KEY=${N8N_SECRET_KEY}
+    networks:
+      - app-net
+    depends_on:
+      - db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chatsocket.rule=Host(`chat.cloudfly.com.co`)"
+      - "traefik.http.routers.chatsocket.entrypoints=websecure"
+      - "traefik.http.routers.chatsocket.tls.certresolver=le"
+      - "traefik.http.services.chatsocket.loadbalancer.server.port=3001"
+
   chatwoot:
     image: chatwoot/chatwoot:latest
     container_name: chatwoot
