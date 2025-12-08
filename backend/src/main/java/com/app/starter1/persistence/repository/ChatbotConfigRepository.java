@@ -10,5 +10,7 @@ import java.util.Optional;
 public interface ChatbotConfigRepository extends JpaRepository<ChatbotConfig, Long> {
     Optional<ChatbotConfig> findByTenantId(Long tenantId);
 
+    Optional<ChatbotConfig> findByTenantIdAndIsActive(Long tenantId, Boolean isActive);
+
     Optional<ChatbotConfig> findByInstanceName(String instanceName);
 }

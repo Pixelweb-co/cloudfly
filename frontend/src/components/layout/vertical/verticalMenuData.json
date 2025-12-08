@@ -1,8 +1,44 @@
 [
   {
+    "label": "Comunicaciones",
+    "icon": "chat",
+    "route": "#",
+    "roles": [
+      "SUPERADMIN",
+      "ADMIN",
+      "USER"
+    ],
+    "children": [
+      {
+        "label": "Chatbot IA WhatsApp",
+        "route": "/settings/chatbot",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN"
+        ]
+      },
+      {
+        "label": "Tipos de Chatbot",
+        "route": "/settings/chatbot-types/list",
+        "roles": [
+          "SUPERADMIN"
+        ]
+      },
+      {
+        "label": "Conversaciones",
+        "route": "/comunicaciones/conversaciones",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN",
+          "USER"
+        ]
+      }
+    ]
+  },
+  {
     "label": "Marqueting",
     "icon": "megaphone",
-    "route": "/marketing",
+    "route": "#",
     "roles": [
       "SUPERADMIN",
       "ADMIN",
@@ -119,35 +155,24 @@
     "label": "Administracion",
     "icon": "settings",
     "roles": [
-      "SUPERADMIN"
+      "SUPERADMIN",
+      "ADMIN"
     ],
     "children": [
       {
         "label": "Clientes",
         "route": "/administracion/clientes/list",
         "roles": [
-          "SUPERADMIN"
+          "SUPERADMIN",
+          "ADMIN"
         ]
       },
       {
-        "label": "Tipos de servicio",
-        "route": "/administracion/tiposervicio/list",
+        "label": "Tipos de Chatbot",
+        "route": "/settings/chatbot-types/list",
         "roles": [
-          "SUPERADMIN"
-        ]
-      },
-      {
-        "label": "Tipos de dispositivos",
-        "route": "/administracion/tipodispositivo/list",
-        "roles": [
-          "SUPERADMIN"
-        ]
-      },
-      {
-        "label": "Plantillas de verificación",
-        "route": "/administracion/plantillasverificacion/list",
-        "roles": [
-          "SUPERADMIN"
+          "SUPERADMIN",
+          "ADMIN"
         ]
       }
     ]
