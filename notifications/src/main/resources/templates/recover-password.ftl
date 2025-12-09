@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recuperación de Contraseña</title>
+    <title>CloudFly Recuperación de Contraseña</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -40,7 +40,7 @@
 <body>
     <div class="email-container">
         <div class="email-header">
-            <h2>GM2 Recuperación de Contraseña</h2>
+            <h2>CloudFly Recuperación de Contraseña</h2>
         </div>
         <div class="email-body">
             <p>Hola ${username} recibimos una solicitud para recuperar tu contraseña. Si no solicitaste este cambio, por favor ignora este mensaje.</p>
@@ -48,7 +48,7 @@
             <p><a href="${recoverLink}">Restablecer contraseña</a></p>
         </div>
         <div class="email-footer">
-            <p>&copy; 2025 GM2. Todos los derechos reservados.</p>
+            <p>&copy; 2025 CloudFly. Todos los derechos reservados.</p>
         </div>
     </div>
 </body>
