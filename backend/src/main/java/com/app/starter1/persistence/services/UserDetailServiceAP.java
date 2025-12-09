@@ -119,7 +119,7 @@ public class UserDetailServiceAP implements UserDetailsService {
                                         + userEntity.getVerificationToken();
 
                         String to = userEntity.getEmail();
-                        String subject = "Registro exitoso! " + "Bienvenido a CLOUDFLY, " + request.getUsername();
+                        String subject = "Ahora eres parte de CloudFly, " + request.getUsername();
                         String body = activationLink;
                         String type = "register";
 
