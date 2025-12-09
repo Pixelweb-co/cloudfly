@@ -32,7 +32,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         const token = localStorage.getItem('AuthToken')
         if (!token) return
 
-        // URL dinámica según entorno
+        // URL dinámica según entorno - ACTUALIZADO PARA PRODUCCIÓN
         const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL ||
             (typeof window !== 'undefined' && window.location.hostname === 'localhost'
                 ? 'http://localhost:3001'
