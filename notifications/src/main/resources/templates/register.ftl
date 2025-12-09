@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro Completo GM2</title>
+    <title>Bienvenido a CloudFly</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -21,7 +21,7 @@
         }
         .email-header {
             text-align: center;
-            background-color: #007BFF;
+            background-color: #50a4ffff;
             color: white;
             padding: 10px 0;
             border-radius: 5px 5px 0 0;
@@ -40,17 +40,17 @@
 <body>
     <div class="email-container">
         <div class="email-header">
-            <h2>Bienvenido a GM2</h2>
+            <h2>Bienvenido a CloudFly</h2>
         </div>
         <div class="email-body">
             <p>Hola <strong>${name}</strong>,</p>
-            <p>Gracias por registrarte en GM2. Ahora puedes disfrutar de todos nuestros servicios.</p>
+            <p>Gracias por registrarte en CloudFly. Ahora puedes disfrutar de todos nuestros servicios.</p>
             <p>Debes validar tu cuenta en el siguiente enlace</p>
             <p><a href="${activateLink}">Activa tu cuenta aqui!</a></p>
             <p>Si tienes alguna duda, no dudes en contactarnos.</p>
         </div>
         <div class="email-footer">
-            <p>&copy; 2025 GM2. Todos los derechos reservados.</p>
+            <p>&copy; 2025 CloudFly. Todos los derechos reservados.</p>
         </div>
     </div>
 </body>
