@@ -32,11 +32,10 @@ public class EmailService {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true); // true indica que el contenido es HTML
 
-            helper.setFrom("gm2@yunismedical.com");
+            helper.setFrom("gestorweb@cloudfly.com.co");
             helper.setTo(notification.getTo());
             helper.setSubject(notification.getSubject());
             helper.setText(body, true); // El segundo parámetro true indica que el cuerpo es HTML
-
 
             mailSender.send(mimeMessage);
             System.out.println("Email sent successfully to: " + notification.getTo());
@@ -52,12 +51,11 @@ public class EmailService {
         Map<String, Object> model = new HashMap<>();
         model.put("name", notification.getUsername());
 
-        if(notification.getType().equals("register")){
+        if (notification.getType().equals("register")) {
             model.put("activateLink", notification.getBody()); // O cualquier otro valor dinámico
         }
 
-
-        if(notification.getType().equals("recover-password")){
+        if (notification.getType().equals("recover-password")) {
             model.put("username", notification.getUsername());
             model.put("recoverLink", notification.getBody()); // O cualquier otro valor dinámico
         }
