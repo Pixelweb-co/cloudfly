@@ -70,6 +70,7 @@ services:
       - DB_PASSWORD=widowmaker
     networks:
       - app-net
+      - kafka-net
     labels:
       - "traefik.enable=true"
       # router HTTPS para el API
@@ -83,8 +84,6 @@ services:
     build:
       context: ./notifications
       dockerfile: Dockerfile
-    depends_on:
-      - kafka
     ports:
       - "8081:8080"
     environment:
