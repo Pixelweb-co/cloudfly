@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<StackPane xmlns="http://javafx.com/javafx"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="com.cloudfly.pos.controllers.LoginController"
+           prefHeight="700.0" prefWidth="1024.0"
+           styleClass="root">
+    
+    <VBox alignment="CENTER" spacing="30" styleClass="login-container">
+        <padding>
+            <Insets top="50" right="50" bottom="50" left="50"/>
+        </padding>
+        
+        <!-- Logo y Título -->
+        <VBox alignment="CENTER" spacing="10">
+            <Label text="CloudFly POS" styleClass="title">
+                <font>
+                    <Font name="System Bold" size="40.0"/>
+                </font>
+            </Label>
+            <Label text="Punto de Venta" styleClass="subtitle">
+                <font>
+                    <Font size="18.0"/>
+                </font>
+            </Label>
+        </VBox>
+        
+        <!-- Formulario de Login -->
+        <VBox spacing="20" maxWidth="400" styleClass="form-container">
+            
+            <!-- Campo Usuario -->
+            <VBox spacing="5">
+                <Label text="Usuario" styleClass="field-label"/>
+                <TextField fx:id="usernameField" 
+                          promptText="Ingrese su usuario"
+                          styleClass="text-field"
+                          prefHeight="45"/>
+            </VBox>
+            
+            <!-- Campo Contraseña -->
+            <VBox spacing="5">
+                <Label text="Contraseña" styleClass="field-label"/>
+                <PasswordField fx:id="passwordField" 
+                              promptText="Ingrese su contraseña"
+                              styleClass="text-field"
+                              prefHeight="45"
+                              onAction="#handleLogin"/>
+            </VBox>
+            
+            <!-- Mensaje de Error -->
+            <Label fx:id="errorLabel" 
+                   styleClass="error-label" 
+                   wrapText="true"
+                   visible="false"/>
+            
+            <!-- Loading Indicator -->
+            <ProgressIndicator fx:id="loadingIndicator" 
+                              visible="false"
+                              prefWidth="50"
+                              prefHeight="50"/>
+            
+            <!-- Botón de Login -->
+            <Button fx:id="loginButton" 
+                   text="INICIAR SESIÓN" 
+                   onAction="#handleLogin"
+                   styleClass="primary-button"
+                   maxWidth="Infinity"
+                   prefHeight="50"/>
+        </VBox>
+        
+        <!-- Footer -->
+        <Label text="© 2025 CloudFly - Versión 1.0.0" styleClass="footer-text">
+            <font>
+                <Font size="12.0"/>
+            </font>
+        </Label>
+    </VBox>
+</StackPane>
