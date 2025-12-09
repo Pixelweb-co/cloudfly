@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.cloudfly.pos.controllers.POSController"
+            styleClass="pos-root">
+    
+    <!-- Header -->
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="20" styleClass="header">
+            <padding>
+                <Insets top="15" right="20" bottom="15" left="20"/>
+            </padding>
+            
+            <VBox>
+                <Label text="CloudFly POS" styleClass="header-title"/>
+                <Label fx:id="userLabel" text="Usuario" styleClass="header-subtitle"/>
+            </VBox>
+            
+            <Region HBox.hgrow="ALWAYS"/>
+            
+            <Label fx:id="dateTimeLabel" styleClass="header-subtitle"/>
+            
+            <Button text="CERRAR SESIÓN" 
+                   onAction="#handleLogout"
+                   styleClass="logout-button"/>
+        </HBox>
+    </top>
+    
+    <!-- Main Content -->
+    <center>
+        <HBox spacing="0">
+            <!-- Products Section -->
+            <VBox spacing="15" HBox.hgrow="ALWAYS" style="-fx-padding: 20;">
+                
+                <!-- Search Bar -->
+                <HBox spacing="10">
+                    <TextField fx:id="searchField" 
+                              promptText="Buscar producto por nombre o código de barras..."
+                              styleClass="search-field"
+                              prefHeight="45"
+                              HBox.hgrow="ALWAYS"/>
+                    <Button text="BUSCAR" 
+                           onAction="#handleSearch"
+                           styleClass="primary-button"
+                           prefWidth="120"
+                           prefHeight="45"/>
+                </HBox>
+                
+                <!-- Products Grid -->
+                <ScrollPane fitToWidth="true" fitToHeight="true">
+                    <FlowPane fx:id="productsPane" 
+                             hgap="15" 
+                             vgap="15"
+                             padding="10"/>
+                </ScrollPane>
+            </VBox>
+            
+            <!-- Cart Section (Sidebar) -->
+            <VBox spacing="15" prefWidth="400" styleClass="sidebar">
+                <padding>
+                    <Insets top="20" right="20" bottom="20" left="20"/>
+                </padding>
+                
+                <Label text="CARRITO DE COMPRAS" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+                
+                <!-- Cart Items List -->
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                    <VBox fx:id="cartPane" spacing="10"/>
+                </ScrollPane>
+                
+                <Separator/>
+                
+                <!-- Totals -->
+                <VBox spacing="10">
+                    <HBox>
+                        <Label text="Subtotal:" style="-fx-font-size: 16px;"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="subtotalLabel" text="$0.00" style="-fx-font-size: 16px;"/>
+                    </HBox>
+                    <HBox>
+                        <Label text="Descuento:" style="-fx-font-size: 16px;"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="discountLabel" text="$0.00" style="-fx-font-size: 16px;"/>
+                    </HBox>
+                    <Separator/>
+                    <HBox>
+                        <Label text="TOTAL:" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="totalLabel" text="$0.00" styleClass="total-label"/>
+                    </HBox>
+                </VBox>
+                
+                <!-- Action Buttons -->
+                <VBox spacing="10">
+                    <Button text="PROCESAR VENTA" 
+                           onAction="#handleCheckout"
+                           styleClass="action-button"
+                           maxWidth="Infinity"
+                           prefHeight="50"/>
+                    <Button text="LIMPIAR CARRITO" 
+                           onAction="#handleClearCart"
+                           styleClass="danger-button"
+                           maxWidth="Infinity"
+                           prefHeight="50"/>
+                </VBox>
+            </VBox>
+        </HBox>
+    </center>
+</BorderPane>
