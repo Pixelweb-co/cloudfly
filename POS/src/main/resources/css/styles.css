@@ -1,0 +1,176 @@
+/* Estilos Globales */
+.root {
+    -fx-font-family: "Segoe UI", "Arial", sans-serif;
+    -fx-background-color: linear-gradient(to bottom right, #667eea 0%, #764ba2 100%);
+}
+
+/* Login Screen */
+.login-container {
+    -fx-background-color: white;
+    -fx-background-radius: 20px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 20, 0, 0, 10);
+    -fx-max-width: 500px;
+    -fx-padding: 50px;
+}
+
+.title {
+    -fx-text-fill: #50a4ff;
+    -fx-font-weight: bold;
+}
+
+.subtitle {
+    -fx-text-fill: #666;
+}
+
+.form-container {
+    -fx-padding: 20px 0;
+}
+
+.field-label {
+    -fx-text-fill: #333;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+.text-field {
+    -fx-font-size: 16px;
+    -jfx-focus-color: #50a4ff;
+    -jfx-unfocus-color: #ccc;
+}
+
+.primary-button {
+    -fx-background-color: #50a4ff;
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 25px;
+    -fx-cursor: hand;
+}
+
+.primary-button:hover {
+    -fx-background-color: #3d8cd9;
+}
+
+.primary-button:pressed {
+    -fx-background-color: #2a75b8;
+}
+
+.error-label {
+    -fx-text-fill: #dc3545;
+    -fx-font-size: 14px;
+    -fx-padding: 10px;
+    -fx-background-color: #f8d7da;
+    -fx-background-radius: 5px;
+    -fx-border-color: #f5c6cb;
+    -fx-border-radius: 5px;
+}
+
+.footer-text {
+    -fx-text-fill: #999;
+}
+
+/* POS Screen */
+.pos-root {
+    -fx-background-color: #f5f5f5;
+}
+
+.header {
+    -fx-background-color: #50a4ff;
+    -fx-padding: 15px 20px;
+}
+
+.header-title {
+    -fx-text-fill: white;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
+
+.header-subtitle {
+    -fx-text-fill: #e0e0e0;
+    -fx-font-size: 14px;
+}
+
+.logout-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-border-color: white;
+    -fx-border-width: 2px;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-padding: 8px 20px;
+    -fx-cursor: hand;
+}
+
+.logout-button:hover {
+    -fx-background-color: rgba(255,255,255,0.1);
+}
+
+.sidebar {
+    -fx-background-color: white;
+    -fx-padding: 20px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 2, 0);
+}
+
+.product-card {
+    -fx-background-color: white;
+    -fx-background-radius: 10px;
+    -fx-padding: 15px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);
+    -fx-cursor: hand;
+}
+
+.product-card:hover {
+    -fx-effect: dropshadow(gaussian, rgba(80,164,255,0.3), 10, 0, 0, 3);
+}
+
+.product-name {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333;
+}
+
+.product-price {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #50a4ff;
+}
+
+.cart-item {
+    -fx-background-color: #f9f9f9;
+    -fx-padding: 10px;
+    -fx-background-radius: 5px;
+}
+
+.total-label {
+    -fx-font-size: 32px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #50a4ff;
+}
+
+.action-button {
+    -fx-background-color: #28a745;
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-min-height: 50px;
+    -fx-background-radius: 10px;
+    -fx-cursor: hand;
+}
+
+.action-button:hover {
+    -fx-background-color: #218838;
+}
+
+.danger-button {
+    -fx-background-color: #dc3545;
+}
+
+.danger-button:hover {
+    -fx-background-color: #c82333;
+}
+
+.search-field {
+    -fx-font-size: 18px;
+    -fx-padding: 15px;
+    -fx-background-radius: 10px;
+}
