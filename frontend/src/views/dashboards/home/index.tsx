@@ -5,6 +5,9 @@ import { useState, useEffect } from 'react'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Typography from '@mui/material/Typography'
 
 // Component Imports
 import WelcomeBanner from './WelcomeBanner'
@@ -18,14 +21,9 @@ import ActiveConversations from './ActiveConversations'
 import SkeletonStats from '@/components/skeleton/SkeletonStats'
 import SkeletonChart from '@/components/skeleton/SkeletonChart'
 import SkeletonActivity from '@/components/skeleton/SkeletonActivity'
-// import DashboardNotifications from './DashboardNotifications'
-
-// Hook Imports
-// import { useDashboardUpdates } from '@/hooks/useDashboardUpdates'
 
 const HomeDashboard = () => {
     const [loading, setLoading] = useState(true)
-    // const { isConnected, stats, newActivity } = useDashboardUpdates()
 
     useEffect(() => {
         // Simular carga inicial
@@ -33,22 +31,9 @@ const HomeDashboard = () => {
         return () => clearTimeout(timer)
     }, [])
 
-    // Refreshar cuando hay updates por WebSocket
-    // useEffect(() => {
-    //     if (stats) {
-    //         console.log('📊 Stats actualizadas vía WebSocket:', stats)
-    //     }
-    // }, [stats])
-
-    // useEffect(() => {
-    //     if (newActivity) {
-    //         console.log('🔔 Nueva actividad:', newActivity)
-    //     }
-    // }, [newActivity])
-
     return (
         <Grid container spacing={6}>
-            {/* Welcome Banner - Always visible */}
+            {/* Welcome Banner */}
             <Grid item xs={12}>
                 <WelcomeBanner />
             </Grid>

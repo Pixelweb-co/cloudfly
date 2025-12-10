@@ -28,9 +28,13 @@ interface QuickAction {
 const WelcomeBanner = () => {
     const theme = useTheme()
     const [currentTime, setCurrentTime] = useState(new Date())
+    const [userName, setUserName] = useState('Usuario')
 
-    // Usuario actual (obtener del contexto/redux)
-    const userName = localStorage.getItem('userName') || 'Usuario'
+    // Obtener nombre de usuario del localStorage (solo en cliente)
+    useEffect(() => {
+        const name = localStorage.getItem('userName') || 'Usuario'
+        setUserName(name)
+    }, [])
 
     useEffect(() => {
         const timer = setInterval(() => {
