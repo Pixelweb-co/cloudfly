@@ -56,8 +56,8 @@ public class DashboardService {
                                 salesChange > 0 ? "up" : salesChange < 0 ? "down" : "neutral");
 
                 // Clientes activos (últimos 7 días)
-                LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
-                Long activeCustomers = customerRepository.countByCreatedAtAfter(weekAgo);
+                LocalDate weekAgo = LocalDate.now().minusDays(7);
+                Long activeCustomers = customerRepository.countByDateRegisterAfter(weekAgo);
 
                 DashboardStatsDTO.CustomersStats customersStats = new DashboardStatsDTO.CustomersStats(
                                 activeCustomers.intValue(),
