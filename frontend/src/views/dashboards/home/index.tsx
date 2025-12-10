@@ -33,18 +33,18 @@ const HomeDashboard = () => {
         return () => clearTimeout(timer)
     }, [])
 
-    // Refrescar cuando hay updates por WebSocket
-    useEffect(() => {
-        if (stats) {
-            console.log('📊 Stats actualizadas vía WebSocket:', stats)
-        }
-    }, [stats])
+    // Refreshar cuando hay updates por WebSocket
+    // useEffect(() => {
+    //     if (stats) {
+    //         console.log('📊 Stats actualizadas vía WebSocket:', stats)
+    //     }
+    // }, [stats])
 
-    useEffect(() => {
-        if (newActivity) {
-            console.log('🔔 Nueva actividad:', newActivity)
-        }
-    }, [newActivity])
+    // useEffect(() => {
+    //     if (newActivity) {
+    //         console.log('🔔 Nueva actividad:', newActivity)
+    //     }
+    // }, [newActivity])
 
     return (
         <Grid container spacing={6}>
