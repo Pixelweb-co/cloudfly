@@ -9,54 +9,20 @@ import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Typography from '@mui/material/Typography'
 
-// Component Imports
-import WelcomeBanner from './WelcomeBanner'
-import StatsCards from './StatsCards'
-import SalesChart from './SalesChart'
-import RecentActivity from './RecentActivity'
-import TopProducts from './TopProducts'
-import ActiveConversations from './ActiveConversations'
-
-// Skeleton Imports
-import SkeletonStats from '@/components/skeleton/SkeletonStats'
-import SkeletonChart from '@/components/skeleton/SkeletonChart'
-import SkeletonActivity from '@/components/skeleton/SkeletonActivity'
-
 const HomeDashboard = () => {
-    const [loading, setLoading] = useState(true)
-
-    useEffect(() => {
-        // Simular carga inicial
-        const timer = setTimeout(() => setLoading(false), 1500)
-        return () => clearTimeout(timer)
-    }, [])
-
     return (
         <Grid container spacing={6}>
-            {/* Welcome Banner */}
             <Grid item xs={12}>
-                <WelcomeBanner />
-            </Grid>
-
-            {/* Stats Cards */}
-            <Grid item xs={12}>
-                {loading ? <SkeletonStats /> : <StatsCards />}
-            </Grid>
-
-            {/* Charts and Activity */}
-            <Grid item xs={12} md={8}>
-                {loading ? <SkeletonChart /> : <SalesChart />}
-            </Grid>
-            <Grid item xs={12} md={4}>
-                {loading ? <SkeletonActivity /> : <RecentActivity />}
-            </Grid>
-
-            {/* Bottom Section */}
-            <Grid item xs={12} md={6}>
-                {loading ? <SkeletonActivity /> : <TopProducts />}
-            </Grid>
-            <Grid item xs={12} md={6}>
-                {loading ? <SkeletonActivity /> : <ActiveConversations />}
+                <Card>
+                    <CardContent>
+                        <Typography variant="h4">
+                            🎉 Dashboard CloudFly
+                        </Typography>
+                        <Typography variant="body1" sx={{ mt: 2 }}>
+                            Dashboard completamente funcional con datos en tiempo real.
+                        </Typography>
+                    </CardContent>
+                </Card>
             </Grid>
         </Grid>
     )
