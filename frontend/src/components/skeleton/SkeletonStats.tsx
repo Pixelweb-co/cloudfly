@@ -1,3 +1,5 @@
+'use client'
+
 // MUI Imports
 import Skeleton from '@mui/material/Skeleton'
 import Grid from '@mui/material/Grid'

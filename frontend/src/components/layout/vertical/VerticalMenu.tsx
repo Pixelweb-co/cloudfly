@@ -24,10 +24,8 @@ import menuItemStyles from '@core/styles/vertical/menuItemStyles'
 import menuSectionStyles from '@core/styles/vertical/menuSectionStyles'
 
 // Menu data import
-import verticalMenuData from './verticalMenuData'
+import verticalMenuData from './verticalMenuData.json'
 import { userMethods } from '@/utils/userMethods'
-import { LinearProgress } from '@mui/material'
-import { useEffect, useState } from 'react'
 
 type RenderExpandIconProps = {
   open?: boolean
@@ -49,11 +47,6 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
   const theme = useTheme()
   const verticalNavOptions = useVerticalNav()
   const { isBreakpointReached, transitionDuration } = verticalNavOptions
-
-  // Evitar mismatch SSR/CSR
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-  if (!mounted) return null
 
   const ScrollWrapper = isBreakpointReached ? 'div' : PerfectScrollbar
 
