@@ -18,14 +18,14 @@ import ActiveConversations from './ActiveConversations'
 import SkeletonStats from '@/components/skeleton/SkeletonStats'
 import SkeletonChart from '@/components/skeleton/SkeletonChart'
 import SkeletonActivity from '@/components/skeleton/SkeletonActivity'
-import DashboardNotifications from './DashboardNotifications'
+// import DashboardNotifications from './DashboardNotifications'
 
 // Hook Imports
-import { useDashboardUpdates } from '@/hooks/useDashboardUpdates'
+// import { useDashboardUpdates } from '@/hooks/useDashboardUpdates'
 
 const HomeDashboard = () => {
     const [loading, setLoading] = useState(true)
-    const { isConnected, stats, newActivity } = useDashboardUpdates()
+    // const { isConnected, stats, newActivity } = useDashboardUpdates()
 
     useEffect(() => {
         // Simular carga inicial
