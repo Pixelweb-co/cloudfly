@@ -15,6 +15,9 @@ interface SocketContextType {
     markAsRead: (messageIds: number[], conversationId: string) => void
     startTyping: (conversationId: string) => void
     stopTyping: (conversationId: string) => void
+    // Dashboard events
+    subscribeDashboard: () => void
+    unsubscribeDashboard: () => void
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined)
@@ -114,10 +117,23 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         socket.emit('stop-typing', { conversationId })
     }
 
+    const subscribeDashboard = () => {
+        if (!socket) return
+        console.log('📊 Suscribiendo a updates del dashboard')
+        socket.emit('subscribe-dashboard')
+    }
+
+    const unsubscribeDashboard = () => {
+        if (!socket) return
+        console.log('📊 Desuscribiendo de updates del dashboard')
+        socket.emit('unsubscribe-dashboard')
+    }
+
     return (
         <SocketContext.Provider value={{
             socket, isConnected, messages, sendMessage, joinConversation,
-            leaveConversation, subscribePlatform, markAsRead, startTyping, stopTyping
+            leaveConversation, subscribePlatform, markAsRead, startTyping, stopTyping,
+            subscribeDashboard, unsubscribeDashboard
         }}>
             {children}
         </SocketContext.Provider>
