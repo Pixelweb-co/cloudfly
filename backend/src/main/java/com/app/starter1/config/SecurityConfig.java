@@ -67,6 +67,11 @@ public class SecurityConfig {
                                         http.requestMatchers(HttpMethod.GET, "/sendnotification/**").permitAll();
                                         http.requestMatchers(HttpMethod.GET, "/api/public/chatbot/**").permitAll();
 
+                                        // Swagger UI y OpenAPI
+                                        http.requestMatchers("/v3/api-docs/**").permitAll();
+                                        http.requestMatchers("/swagger-ui/**").permitAll();
+                                        http.requestMatchers("/swagger-ui.html").permitAll();
+
                                         // Chatbot configuración (todos los roles autenticados)
                                         http.requestMatchers(HttpMethod.GET, "/api/chatbot/**").hasAnyRole("SUPERADMIN",
                                                         "ADMIN", "BIOMEDICAL", "USER");
