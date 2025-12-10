@@ -38,4 +38,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // Obtener el último número de secuencia para generar invoice number
     @Query("SELECT MAX(o.id) FROM Order o WHERE o.tenantId = :tenantId")
     Long findMaxIdByTenantId(@Param("tenantId") Long tenantId);
+
+    // Dashboard methods
+    List<Order> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    List<Order> findTop5ByOrderByCreatedAtDesc();
 }

@@ -17,4 +17,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // POS: Búsqueda por nombre (autocompletado)
     List<Product> findByProductNameContainingIgnoreCaseAndTenantId(String productName, Long tenantId);
+
+    // Dashboard: Productos con stock bajo
+    List<Product> findByInventoryQtyLessThan(Integer qty);
+
+    // Dashboard: Top productos por stock (placeholder para ventas)
+    List<Product> findTop5ByOrderByInventoryQtyDesc();
 }
