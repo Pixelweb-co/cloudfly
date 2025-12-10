@@ -1,9 +1,8 @@
-import EcommerceDashboard from '../apps/ecommerce/dashboard/page'
+// Component Imports
+import HomeDashboard from '@/views/dashboards/home'
 
-const DashboardECommerce = () => {
-  return <><EcommerceDashboard />
-  {/* Personalizador desactivado */}
-  </>
+const DashboardHome = () => {
+  return <HomeDashboard />
 }
 
-export default DashboardECommerce
+export default DashboardHome
