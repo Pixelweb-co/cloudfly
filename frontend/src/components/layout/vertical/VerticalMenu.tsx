@@ -24,7 +24,7 @@ import menuItemStyles from '@core/styles/vertical/menuItemStyles'
 import menuSectionStyles from '@core/styles/vertical/menuSectionStyles'
 
 // Menu data import
-import verticalMenuData from './verticalMenuData'
+import verticalMenuData from './verticalMenuData.json'
 import { userMethods } from '@/utils/userMethods'
 import { LinearProgress } from '@mui/material'
 import { useEffect, useState } from 'react'
