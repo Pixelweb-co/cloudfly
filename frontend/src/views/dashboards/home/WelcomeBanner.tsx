@@ -82,7 +82,7 @@ const WelcomeBanner = () => {
         {
             icon: <AssessmentIcon />,
             label: 'Ver Reportes',
-            link: '/reportes',
+            link: '/report es',
             color: theme.palette.warning.main
         }
     ]
@@ -153,7 +153,7 @@ const WelcomeBanner = () => {
                                             transition: 'all 0.3s ease'
                                         }}
                                     >
-                                        <Box sx={{ fontSize: 32 }}>{action.icon}</Box>
+                                        <span style={{ fontSize: 32, display: 'flex' }}>{action.icon}</span>
                                         <Typography variant='caption' fontWeight={600}>
                                             {action.label}
                                         </Typography>

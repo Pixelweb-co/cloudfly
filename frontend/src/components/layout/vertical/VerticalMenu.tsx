@@ -25,7 +25,6 @@ import menuSectionStyles from '@core/styles/vertical/menuSectionStyles'
 
 // Menu data import
 import verticalMenuData from './verticalMenuData.json'
-import { userMethods } from '@/utils/userMethods'
 
 type RenderExpandIconProps = {
   open?: boolean
@@ -50,14 +49,10 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
 
   const ScrollWrapper = isBreakpointReached ? 'div' : PerfectScrollbar
 
-  // Render menu items dynamically
+  // Render menu items dynamically (SIN FILTRO DE ROLES - para debug)
   const renderMenuItems = (menuData: any[]) => {
     return menuData.map((item, index) => {
-      if (
-        item.children &&
-        item.children.length > 0 &&
-        item.roles.filter((role: any) => userMethods.isRole(role)).length > 0
-      ) {
+      if (item.children && item.children.length > 0) {
         // Render SubMenu if there are children
         return (
           <SubMenu
@@ -72,11 +67,9 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
       } else {
         // Render MenuItem for leaf nodes
         return (
-          item.roles.filter((role: any) => userMethods.isRole(role)).length > 0 && (
-            <MenuItem key={index} href={item.route} icon={<i className={`tabler-${item.icon}`} />}>
-              {item.label}
-            </MenuItem>
-          )
+          <MenuItem key={index} href={item.route} icon={<i className={`tabler-${item.icon}`} />}>
+            {item.label}
+          </MenuItem>
         )
       }
     })
