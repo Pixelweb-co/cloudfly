@@ -1,160 +1,123 @@
-# CloudFly POS - Aplicación de Escritorio
+# CloudFly POS Desktop
 
-Aplicación de Punto de Venta (POS) de escritorio desarrollada en JavaFX que se conecta al backend de CloudFly.
+Aplicación de escritorio para Punto de Venta (POS) desarrollada en JavaFX 21.
 
-## 🚀 Características
+## 🎯 Estado del Proyecto
 
-- ✅ Autenticación con JWT
-- ✅ Interfaz moderna con Material Design
-- ✅ Conexión en tiempo real con el backend
-- ✅ Gestión de productos
-- ✅ Carrito de compras
-- ✅ Procesamiento de órdenes
-- ✅ Soporte para modo offline (próximamente)
+**Versión:** 1.0.0-SNAPSHOT  
+**Última actualización:** 2025-12-11
 
-## 📋 Requisitos
+### ✅ Completado
+- Login con autenticación JWT
+- Pantalla principal básica funcional
+- Sistema de carrito de compras
+- Cálculo de totales
+- Integración con backend CloudFly
 
+### 🚧 En Desarrollo
+Ver `ESPECIFICACION_POS_DESKTOP.md` para detalles completos.
+
+## 🚀 Inicio Rápido
+
+### Requisitos
 - Java 17 o superior
-- Maven 3.6+
-- Conexión a internet (para conectar con el backend)
+- Maven 3.8+
+- Backend CloudFly corriendo
 
-## 🛠️ Instalación y Ejecución
-
-### Opción 1: Ejecutar con Maven
-
+### Ejecutar
 ```bash
-cd POS
-mvn clean javafx:run
-```
+# Compilar y ejecutar
+mvn clean compile javafx:run
 
-### Opción 2: Compilar JAR ejecutable
+# Ejecutar en modo local (localhost)
+mvn javafx:run -Denv=local
 
-```bash
+# Generar JAR ejecutable
 mvn clean package
 java -jar target/pos-desktop-1.0.0.jar
 ```
 
-### Opción 3: Desarrollo con IDE
+### Configuración
 
-1. Importar el proyecto como proyecto Maven en IntelliJ IDEA o Eclipse
-2. Esperar a que se descarguen las dependencias
-3. Ejecutar la clase `com.cloudfly.pos.Main`
+La aplicación se conecta por defecto a:
+- **Producción:** `https://api.cloudfly.com.co/`
+- **Local:** `http://localhost:8080/`
 
-## ⚙️ Configuración
-
-### URL del Backend
-
-Por defecto, la aplicación se conecta a:
-- **Producción**: `https://api.cloudfly.com.co/`
-- **Desarrollo**: `http://localhost:8080/`
-
-Para cambiar entre ambientes, editar `AppConfig.java` o ejecutar con:
-
-```bash
-# Para desarrollo local
-mvn javafx:run -Denv=local
-
-# Para producción
-mvn javafx:run -Denv=production
-```
+Para cambiar el ambiente, usar la variable `-Denv=local`.
 
 ## 📁 Estructura del Proyecto
 
 ```
 POS/
-├── src/main/
-│   ├── java/com/cloudfly/pos/
-│   │   ├── Main.java                    # Punto de entrada
-│   │   ├── config/
-│   │   │   └── AppConfig.java          # Configuración global
-│   │   ├── controllers/
-│   │   │   ├── LoginController.java    # Control de login
-│   │   │   └── POSController.java      # Control del POS
-│   │   ├── models/
-│   │   │   ├── User.java               # Modelo de usuario
-│   │   │   ├── Product.java            # Modelo de producto
-│   │   │   └── dto/                    # DTOs para API
-│   │   ├── services/
-│   │   │   ├── AuthService.java        # Servicio de autenticación
-│   │   │   └── api/
-│   │   │       ├── ApiService.java     # Interface API
-│   │   │       └── ApiClient.java      # Cliente Retrofit
-│   │   └── utils/
-│   │       └── SessionManager.java     # Gestor de sesión
-│   └── resources/
-│       ├── fxml/
-│       │   ├── login.fxml              # Vista de login
-│       │   └── pos.fxml                # Vista del POS
-│       └── css/
-│           └── styles.css              # Estilos
-└── pom.xml                             # Configuración Maven
+├── src/main/java/com/cloudfly/pos/
+│   ├── Main.java                    # Punto de entrada
+│   ├── controllers/
+│   │   ├── LoginController.java     # ✅ Completado
+│   │   └── POSController.java       # ✅ Completado
+│   ├── models/
+│   │   ├── Product.java             # ✅ Completado
+│   │   ├── OrderItem.java           # ✅ Completado
+│   │   └── User.java                # ✅ Completado
+│   ├── services/
+│   │   ├── AuthService.java         # ✅ Completado
+│   │   └── api/ApiService.java      # ✅ Completado
+│   └── utils/
+│       └── SessionManager.java      # ✅ Completado
+├── src/main/resources/
+│   ├── fxml/
+│   │   ├── login.fxml               # ✅ Completado
+│   │   └── pos.fxml                 # ✅ Completado
+│   └── css/
+│       └── styles.css               # ✅ Completado
+└── pom.xml
 ```
 
-## 🔐 Uso
+## 🔑 Credenciales de Prueba
 
-### 1. Login
-
-Al iniciar la aplicación, ingresa tus credenciales de CloudFly:
-- **Usuario**: Tu nombre de usuario
-- **Contraseña**: Tu contraseña
-
-### 2. Pantalla Principal (POS)
-
-Después del login exitoso, accederás a la pantalla principal donde podrás:
-- Búsqueda de productos
-- Agregar productos al carrito
-- Procesar ventas
-- Ver historial
-
-## 🔧 Desarrollo
-
-### Agregar Nuevas Funcionalidades
-
-1. **Nuevos Endpoints API**: Agregar en `ApiService.java`
-2. **Nuevas Vistas**: Crear FXML en `resources/fxml/`
-3. **Estilos**: Modificar `resources/css/styles.css`
-
-### Debug
-
-Los logs de la aplicación y las peticiones HTTP se mostrarán en la consola durante el desarrollo.
-
-## 📦 Distribución
-
-Para crear un ejecutable nativo:
-
-```bash
-# Crear imagen nativa con jpackage (Java 17+)
-jpackage --input target --name CloudFlyPOS \
-  --main-jar pos-desktop-1.0.0.jar \
-  --main-class com.cloudfly.pos.Main \
-  --type exe
+```
+Usuario: edwing2022
+Contraseña: [configurada en el backend]
 ```
 
-## 🐛 Solución de Problemas
+## 📖 Documentación
 
-### Error de conexión al backend
+- **Especificación Completa:** `ESPECIFICACION_POS_DESKTOP.md`
+- **API Reference:** Ver backend CloudFly
+- **Diseño UI:** Basado en `frontend/src/views/apps/pos/`
 
-- Verificar que el backend esté corriendo
-- Verificar la URL en `AppConfig.java`
-- Revisar firewall y proxy
+## 🛠️ Tecnologías
 
-### No se cargan las vistas FXML
+- **JavaFX 21** - Framework UI
+- **Retrofit 2.11** - Cliente HTTP
+- **OkHttp 4.12** - HTTP client
+- **Lombok** - Reducción de boilerplate
+- **Gson** - Serialización JSON
+- **JWT** - Autenticación
 
-- Verificar la ruta en `FXMLLoader`
-- Asegurarse de que los archivos FXML estén en `resources/fxml/`
+## 📝 Próximos Pasos
 
-## 📝 Próximas Funcionalidades
+1. Implementar header completo con información de factura
+2. Agregar búsqueda por código de barras
+3. Crear modal de métodos de pago
+4. Implementar selector de clientes
+5. Agregar teclado de funciones
 
-- [ ] Modo offline con sincronización
-- [ ] Impresión de tickets
-- [ ] Soporte para escáner de código de barras
-- [ ] Reportes y estadísticas
-- [ ] Multi-terminal
+Ver checklist completo en `ESPECIFICACION_POS_DESKTOP.md`.
 
-## 👥 Autor
+## 🐛 Problemas Conocidos
 
-CloudFly Development Team
+- ~~JavaFX runtime components missing~~ ✅ Resuelto
+- ~~FXML loading errors~~ ✅ Resuelto
+- ~~JWT sin roles~~ ✅ Resuelto
 
-## 📄 Licencia
+## 📞 Soporte
 
-Propiedad de CloudFly © 2025
+Para dudas o problemas, consultar:
+- Especificación técnica: `ESPECIFICACION_POS_DESKTOP.md`
+- Backend API: `backend/README.md`
+- Frontend Web: `frontend/src/views/apps/pos/`
+
+---
+
+**Desarrollado por:** CloudFly Team  
+**Licencia:** Propietaria

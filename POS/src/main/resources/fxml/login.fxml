@@ -9,11 +9,12 @@
            xmlns:fx="http://javafx.com/fxml"
            fx:controller="com.cloudfly.pos.controllers.LoginController"
            prefHeight="700.0" prefWidth="1024.0"
-           styleClass="root">
+           styleClass="root"
+           alignment="CENTER">
     
-    <VBox alignment="CENTER" spacing="30" styleClass="login-container">
+    <VBox alignment="CENTER" spacing="30" styleClass="login-container" maxWidth="450" maxHeight="600">
         <padding>
-            <Insets top="50" right="50" bottom="50" left="50"/>
+            <Insets top="40" right="40" bottom="40" left="40"/>
         </padding>
         
         <!-- Logo y Título -->
@@ -31,10 +32,10 @@
         </VBox>
         
         <!-- Formulario de Login -->
-        <VBox spacing="20" maxWidth="400" styleClass="form-container">
+        <VBox spacing="20" maxWidth="400" styleClass="form-container" alignment="CENTER">
             
             <!-- Campo Usuario -->
-            <VBox spacing="5">
+            <VBox spacing="5" maxWidth="400" minWidth="350">
                 <Label text="Usuario" styleClass="field-label"/>
                 <TextField fx:id="usernameField" 
                           promptText="Ingrese su usuario"
@@ -43,7 +44,7 @@
             </VBox>
             
             <!-- Campo Contraseña -->
-            <VBox spacing="5">
+            <VBox spacing="5" maxWidth="400" minWidth="350">
                 <Label text="Contraseña" styleClass="field-label"/>
                 <PasswordField fx:id="passwordField" 
                               promptText="Ingrese su contraseña"
@@ -56,7 +57,8 @@
             <Label fx:id="errorLabel" 
                    styleClass="error-label" 
                    wrapText="true"
-                   visible="false"/>
+                   visible="false"
+                   maxWidth="400"/>
             
             <!-- Loading Indicator -->
             <ProgressIndicator fx:id="loadingIndicator" 
@@ -69,7 +71,8 @@
                    text="INICIAR SESIÓN" 
                    onAction="#handleLogin"
                    styleClass="primary-button"
-                   maxWidth="Infinity"
+                   maxWidth="400"
+                   minWidth="350"
                    prefHeight="50"/>
         </VBox>
         
