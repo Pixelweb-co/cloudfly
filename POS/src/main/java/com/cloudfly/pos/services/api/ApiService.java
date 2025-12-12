@@ -10,32 +10,32 @@ import java.util.List;
 
 public interface ApiService {
 
-    // Autenticación
-    @POST("auth/log-in")
-    Call<AuthResponse> login(@Body LoginRequest request);
+        // Autenticación
+        @POST("auth/login")
+        Call<AuthResponse> login(@Body LoginRequest request);
 
-    // Productos
-    @GET("products")
-    Call<List<Product>> getProducts(@Header("Authorization") String token);
+        // Productos
+        @GET("products")
+        Call<List<Product>> getProducts(@Header("Authorization") String token);
 
-    @GET("products/{id}")
-    Call<Product> getProductById(
-            @Header("Authorization") String token,
-            @Path("id") Long id);
+        @GET("products/{id}")
+        Call<Product> getProductById(
+                        @Header("Authorization") String token,
+                        @Path("id") Long id);
 
-    @GET("products/search")
-    Call<List<Product>> searchProducts(
-            @Header("Authorization") String token,
-            @Query("query") String query);
+        @GET("products/search")
+        Call<List<Product>> searchProducts(
+                        @Header("Authorization") String token,
+                        @Query("query") String query);
 
-    @GET("products/barcode/{barcode}")
-    Call<Product> getProductByBarcode(
-            @Header("Authorization") String token,
-            @Path("barcode") String barcode);
+        @GET("products/barcode/{barcode}")
+        Call<Product> getProductByBarcode(
+                        @Header("Authorization") String token,
+                        @Path("barcode") String barcode);
 
-    // Órdenes (para futura implementación)
-    @POST("orders")
-    Call<Object> createOrder(
-            @Header("Authorization") String token,
-            @Body Object orderRequest);
+        // Órdenes (para futura implementación)
+        @POST("orders")
+        Call<Object> createOrder(
+                        @Header("Authorization") String token,
+                        @Body Object orderRequest);
 }

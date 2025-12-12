@@ -152,6 +152,73 @@
     ]
   },
   {
+    "label": "Contabilidad",
+    "icon": "calculator",
+    "route": "#",
+    "roles": [
+      "SUPERADMIN",
+      "ADMIN"
+    ],
+    "children": [
+      {
+        "label": "Plan de Cuentas",
+        "route": "/contabilidad/plan-cuentas",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN"
+        ]
+      },
+      {
+        "label": "Comprobantes",
+        "route": "/contabilidad/comprobantes",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN"
+        ]
+      },
+      {
+        "label": "Terceros",
+        "route": "/contabilidad/terceros",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN"
+        ]
+      },
+      {
+        "label": "Centros de Costo",
+        "route": "/contabilidad/centros-costo",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN"
+        ]
+      },
+      {
+        "label": "Balance de Prueba",
+        "route": "/contabilidad/balance-prueba",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN"
+        ]
+      },
+      {
+        "label": "Libro Diario",
+        "route": "/contabilidad/libro-diario",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN"
+        ]
+      },
+      {
+        "label": "Libro Mayor",
+        "route": "/contabilidad/libro-mayor",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN"
+        ]
+      }
+    ]
+  },
+  {
     "label": "Administracion",
     "icon": "settings",
     "roles": [
