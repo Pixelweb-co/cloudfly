@@ -42,12 +42,12 @@ TOTAL:                                 [░░░░░░░░░░] 0/29 tar
 
 # FASE 1: BACKEND - LIBROS CONTABLES (2 semanas)
 
-## [ ] TAREA 1.1: Servicio Libro Diario
+## [🔄] TAREA 1.1: Servicio Libro Diario
 
-**Estado:** ⏳ Pendiente  
+**Estado:** 🔄 En Progreso  
 **Prioridad:** 🔴 Alta  
 **Estimado:** 3 días  
-**Inicio:** --/--/----  
+**Inicio:** 11/12/2025  
 **Fin:** --/--/----
 
 **Archivo:** `backend/src/main/java/com/app/starter1/services/LibroDiarioService.java`
