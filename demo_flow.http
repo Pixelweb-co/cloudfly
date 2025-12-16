@@ -1,0 +1,77 @@
+### Pruebas de Flujo Contable Completo (Camila)
+
+@host = http://localhost:8080
+@token = {{login.response.body.jwt}}
+
+### 1. Login
+# @name login
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "edwing2022",
+  "password": "Edwin2025*"
+}
+
+### 2. Crear Cotización
+POST {{host}}/quotes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "tenantId": 1,
+    "customerId": 99,
+    "expirationDate": "2025-12-25T00:00:00",
+    "status": "SENT",
+    "notes": "Cotización Demo Cliente Camila",
+    "items": [
+        { "productId": 1, "quantity": 2, "unitPrice": 100000, "discount": 0 },
+        { "productId": 2, "quantity": 1, "unitPrice": 25000, "discount": 0 }
+    ]
+}
+
+### 3. Crear Pedido (Opcional - Puede fallar si faltan validaciones estrictas)
+POST {{host}}/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "tenantId": 1,
+    "customerId": 99,
+    "paymentMethod": "CASH",
+    "items": [
+        { "productId": 1, "quantity": 2, "discount": 0 },
+        { "productId": 2, "quantity": 1, "discount": 0 }
+    ],
+    "createdBy": 1
+}
+
+### 4. Crear Factura
+POST {{host}}/invoices
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "tenantId": 1,
+    "customerId": 99,
+    "orderId": 1,
+    "invoiceNumber": "FV-CAM-TEST",
+    "issueDate": "2025-12-11T12:00:00",
+    "status": "PAID",
+    "notes": "Factura Venta Demo",
+    "items": [
+        { "productId": 1, "quantity": 2, "unitPrice": 100000, "tax": 38000, "total": 238000 },
+        { "productId": 2, "quantity": 1, "unitPrice": 25000, "tax": 0, "total": 25000 }
+    ],
+    "subtotal": 225000,
+    "tax": 38000,
+    "total": 263000
+}
+
+### 5. Reporte Libro Diario
+GET {{host}}/api/accounting/reports/libro-diario?fromDate=2025-12-11&toDate=2025-12-11&tenantId=1
+Authorization: Bearer {{token}}
+
+### 6. Reporte Estado de Resultados
+GET {{host}}/api/accounting/reports/estado-resultados?fromDate=2025-01-01&toDate=2025-12-31&tenantId=1
+Authorization: Bearer {{token}}

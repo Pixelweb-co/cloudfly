@@ -9,13 +9,45 @@ const verticalMenuData = (): VerticalMenuDataType[] => [
   },
   {
     label: 'Ventas',
-    href: '/ventas',
-    icon: 'tabler-info-circle',
-    children:[
+    icon: 'tabler-shopping-cart',
+    children: [
       {
-      label: 'Pedidos',
-      href: '/ventas',
-      icon: 'tabler-info-circle',
+        label: 'Cotizaciones',
+        href: '/ventas/cotizaciones/list'
+      },
+      {
+        label: 'Pedidos',
+        href: '/ventas/pedidos'
+      },
+      {
+        label: 'Facturas',
+        href: '/ventas/facturas/list'
+      },
+      {
+        label: 'Productos',
+        href: '/ventas/productos/list'
+      }
+    ]
+  },
+  {
+    label: 'Contabilidad',
+    icon: 'tabler-calculator',
+    children: [
+      {
+        label: 'Plan de Cuentas',
+        href: '/contabilidad/plan-cuentas'
+      },
+      {
+        label: 'Libro Diario',
+        href: '/contabilidad/libro-diario'
+      },
+      {
+        label: 'Estado Resultados',
+        href: '/contabilidad/estado-resultados'
+      },
+      {
+        label: 'Balance General',
+        href: '/contabilidad/balance-general'
       }
     ]
   },

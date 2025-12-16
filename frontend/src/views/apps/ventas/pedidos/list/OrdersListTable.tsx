@@ -193,6 +193,11 @@ const OrdersListTable = ({ reload, tableData }: any) => {
                 header: 'Acciones',
                 cell: ({ row }) => (
                     <div className='flex items-center'>
+                        <Tooltip title='Generar Factura'>
+                            <IconButton onClick={() => router.push(`/ventas/facturas/form?orderId=${row.original.id}`)}>
+                                <i className='tabler-file-invoice text-textSecondary' />
+                            </IconButton>
+                        </Tooltip>
                         <Tooltip title='Ver/Editar'>
                             <IconButton onClick={() => router.push(`/ventas/pedidos/form/${row.original.id}`)}>
                                 <i className='tabler-eye text-textSecondary' />

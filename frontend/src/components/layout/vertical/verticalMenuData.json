@@ -215,6 +215,22 @@
           "SUPERADMIN",
           "ADMIN"
         ]
+      },
+      {
+        "label": "Estado de Resultados",
+        "route": "/contabilidad/estado-resultados",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN"
+        ]
+      },
+      {
+        "label": "Balance General",
+        "route": "/contabilidad/balance-general",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN"
+        ]
       }
     ]
   },

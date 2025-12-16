@@ -3,11 +3,10 @@ import { ProductType } from '@/types/apps/productType'
 import { OrderRequest, OrderResponse, Contact } from '../types'
 import { userMethods } from '@/utils/userMethods'
 
-// Obtener tenantId del usuario autenticado
 const getTenantId = (): number => {
   const user = userMethods.getUserLogin();
-  const id_customer = user.customer.id
-  return id_customer
+  if (!user) return 0;
+  return user.tenantId || (user.customer ? user.customer.id : 1);
 }
 
 /**

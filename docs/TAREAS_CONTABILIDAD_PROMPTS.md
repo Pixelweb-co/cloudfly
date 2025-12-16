@@ -7,26 +7,29 @@ Implementar módulo de contabilidad completo cumpliendo requisitos de Siigo para
 
 ## 📊 ESTADO ACTUAL DEL PROYECTO
 
-**Última actualización:** 2025-12-11 20:48  
-**Tareas completadas:** 0/29  
-**Progreso general:** ░░░░░░░░░░ 0%
+**Última actualización:** 2025-12-11 20:51  
+**Tareas completadas:** 2/29  
+**Progreso general:** █░░░░░░░░░ 6.9%
 
-### **Tarea actual:**
-🔄 **TAREA 1.1: Servicio Libro Diario** (En Progreso desde 11/12/2025)
+###  **Última tarea completada:**
+✅ **TAREA 1.2: Servicio Libro Mayor** (Completada)
+
+### **Próxima tarea a realizar:**
+➡️ **TAREA 1.3: Controller Libros Contables**
 
 ---
 
 ## 📈 PROGRESO POR FASE
 
 ```
-FASE 1: Backend - Libros Contables     [░░░░] 0/4 tareas
-FASE 2: Backend - Estados Financieros  [░░░░] 0/4 tareas  
-FASE 3: Frontend - Comprobantes        [░░░░] 0/4 tareas
-FASE 4: Frontend - Reportes            [░░░░] 0/4 tareas
-FASE 5: Integraciones                  [░░░░] 0/4 tareas
-FASE 6: Menú y Rutas                   [░░░░] 0/2 tareas
+FASE 1: Backend - Libros Contables     [██░░] 2/4 tareas (50%)
+FASE 2: Backend - Estados Financieros  [░░░░] 0/4 tareas (0%)
+FASE 3: Frontend - Comprobantes        [░░░░] 0/4 tareas (0%)
+FASE 4: Frontend - Reportes            [░░░░] 0/4 tareas (0%)
+FASE 5: Integraciones                  [░░░░] 0/4 tareas (0%)
+FASE 6: Menú y Rutas                   [░░░░] 0/2 tareas (0%)
 ───────────────────────────────────────────────────────────
-TOTAL:                                 [░░░░░░░░░░] 0/29 tareas
+TOTAL:                                 [█░░░░░░░░░] 2/29 tareas (6.9%)
 ```
 
 ---
@@ -42,13 +45,13 @@ TOTAL:                                 [░░░░░░░░░░] 0/29 tar
 
 # FASE 1: BACKEND - LIBROS CONTABLES (2 semanas)
 
-## [🔄] TAREA 1.1: Servicio Libro Diario
+## [x] TAREA 1.1: Servicio Libro Diario
 
-**Estado:** 🔄 En Progreso  
+**Estado:** ✅ Completada  
 **Prioridad:** 🔴 Alta  
 **Estimado:** 3 días  
 **Inicio:** 11/12/2025  
-**Fin:** --/--/----
+**Fin:** 11/12/2025
 
 **Archivo:** `backend/src/main/java/com/app/starter1/services/LibroDiarioService.java`
 
@@ -82,22 +85,28 @@ Retornar LibroDiarioDTO con:
 ```
 
 **Criterios de aceptación:**
-- [ ] Service creado con método getLibroDiario()
-- [ ] DTO LibroDiarioDTO definido
-- [ ] Ordenamiento cronológico funciona
-- [ ] Cálculo de totales correcto
-- [ ] Filtros implementados
+- [x] Service creado con método getLibroDiario()
+- [x] DTO LibroDiarioDTO definido
+- [x] Ordenamiento cronológico funciona
+- [x] Cálculo de totales correcto
+- [x] Filtros implementados
+
+**Archivos creados:**
+- ✅ `LibroDiarioService.java` - Servicio principal
+- ✅ `LibroDiarioDTO.java` - DTO del reporte
+- ✅ `LibroDiarioRow.java` - DTO de cada fila
+- ✅ `AccountingVoucherRepository.java` - Repository con queries
 
 ---
 
-## [ ] TAREA 1.2: Servicio Libro Mayor
+## [x] TAREA 1.2: Servicio Libro Mayor
 
-**Estado:** ⏳ Pendiente  
+**Estado:** ✅ Completada  
 **Prioridad:** 🔴 Alta  
 **Estimado:** 3 días  
-**Inicio:** --/--/----  
-**Fin:** --/--/----  
-**Depende de:** TAREA 1.1
+**Inicio:** 11/12/2025  
+**Fin:** 11/12/2025  
+**Depende de:** TAREA 1.1 ✅
 
 **Archivo:** `backend/src/main/java/com/app/starter1/services/LibroMayorService.java`
 
@@ -126,10 +135,17 @@ Requisitos:
 ```
 
 **Criterios de aceptación:**
-- [ ] Service creado con método getLibroMayor()
-- [ ] Saldo inicial correcto según naturaleza
-- [ ] Saldo acumulado calculado correctamente
-- [ ] DTO LibroMayorDTO definido
+- [x] Service creado con método getLibroMayor()
+- [x] Saldo inicial correcto según naturaleza
+- [x] Saldo acumulado calculado correctamente
+- [x] DTO LibroMayorDTO definido
+
+**Archivos creados:**
+- ✅ `LibroMayorService.java` - Servicio principal
+- ✅ `LibroMayorDTO.java` - DTO del reporte
+- ✅ `LibroMayorRow.java` - DTO de cada fila
+- ✅ `AccountingEntryRepository.java` - Repository con queries
+- ✅ `ChartOfAccountRepository.java` - Repository de cuentas
 
 ---
 
