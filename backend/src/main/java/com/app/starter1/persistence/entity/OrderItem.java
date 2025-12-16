@@ -50,13 +50,18 @@ public class OrderItem {
     @Column(length = 100)
     private String barcode;
 
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal total;
+
     // Helper method para calcular subtotal
     public void calculateSubtotal() {
         if (this.discount == null) {
             this.discount = BigDecimal.ZERO;
         }
-        this.subtotal = this.unitPrice
-                .multiply(BigDecimal.valueOf(this.quantity))
-                .subtract(this.discount);
+        // Subtotal se refiere a precio * cantidad
+        this.subtotal = this.unitPrice.multiply(BigDecimal.valueOf(this.quantity));
+
+        // Total es Subtotal - Descuento
+        this.total = this.subtotal.subtract(this.discount);
     }
 }

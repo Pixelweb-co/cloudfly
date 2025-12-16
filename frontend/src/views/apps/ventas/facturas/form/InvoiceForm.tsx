@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import {
     Card,
     CardContent,
@@ -33,6 +33,8 @@ const InvoiceForm = () => {
     const router = useRouter()
     const params = useParams()
     const id = params?.id
+    const searchParams = useSearchParams()
+    const orderIdParam = searchParams.get('orderId')
 
     const [loading, setLoading] = useState(false)
     const [customers, setCustomers] = useState<Contact[]>([])
@@ -42,6 +44,7 @@ const InvoiceForm = () => {
     // Form State
     const [formData, setFormData] = useState({
         customerId: '',
+        orderId: '',
         dueDate: '',
         status: 'DRAFT',
         notes: ''
@@ -53,8 +56,43 @@ const InvoiceForm = () => {
         loadInitialData()
         if (id) {
             loadInvoice(id as string)
+        } else if (orderIdParam) {
+            loadOrderData(orderIdParam)
         }
-    }, [id])
+    }, [id, orderIdParam])
+
+    const loadOrderData = async (oId: string) => {
+        try {
+            setLoading(true)
+            const res = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/orders/${oId}`)
+            const order = res.data
+
+            setFormData({
+                customerId: order.customerId || '',
+                orderId: order.id,
+                dueDate: '',
+                status: 'DRAFT',
+                notes: `Factura generada desde Pedido #${order.invoiceNumber}`
+            })
+
+            setItems(order.items.map((item: any) => ({
+                productId: item.productId,
+                productName: item.productName || item.product?.productName,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                discount: item.discount,
+                subtotal: item.subtotal,
+                total: item.total
+            })))
+            toast.success('Datos cargados desde el pedido')
+        } catch (error) {
+            console.error('Error loading order:', error)
+            toast.error('Error al cargar datos del pedido')
+        } finally {
+            setLoading(false)
+        }
+    }
+    // ... (rest of the file)
 
     const loadInitialData = async () => {
         try {
@@ -168,8 +206,9 @@ const InvoiceForm = () => {
             const user = userMethods.getUserLogin()
 
             const payload = {
-                tenantId: user.customer.id,
+                tenantId: user.tenantId || (user.customer ? user.customer.id : 1),
                 customerId: Number(formData.customerId),
+                orderId: formData.orderId ? Number(formData.orderId) : null,
                 dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : null,
                 status: formData.status,
                 notes: formData.notes,
@@ -355,7 +394,7 @@ const InvoiceForm = () => {
                                                     onChange={(e) => handleUpdateItem(index, 'discount', Number(e.target.value))}
                                                 />
                                             </TableCell>
-                                            <TableCell>${item.total.toFixed(2)}</TableCell>
+                                            <TableCell>${(item.total || 0).toFixed(2)}</TableCell>
                                             <TableCell>
                                                 <IconButton size="small" color="error" onClick={() => handleRemoveItem(index)}>
                                                     <Trash size={18} />

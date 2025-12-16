@@ -81,12 +81,14 @@ public class InvoiceService {
         return mapToDTO(savedInvoice);
     }
 
+    @Transactional
     public List<InvoiceResponseDTO> getInvoicesByTenant(Long tenantId) {
         return invoiceRepository.findByTenantId(tenantId).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public InvoiceResponseDTO getInvoiceById(Long id) {
         return invoiceRepository.findById(id)
                 .map(this::mapToDTO)

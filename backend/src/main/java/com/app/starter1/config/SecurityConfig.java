@@ -202,6 +202,47 @@ public class SecurityConfig {
                                                         "ADMIN",
                                                         "BIOMEDICAL", "USER");
 
+                                        // chart of accounts (contabilidad)
+                                        http.requestMatchers(HttpMethod.GET, "/chart-of-accounts/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN", "BIOMEDICAL", "USER");
+                                        http.requestMatchers(HttpMethod.POST, "/chart-of-accounts/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN");
+                                        http.requestMatchers(HttpMethod.PUT, "/chart-of-accounts/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN");
+                                        http.requestMatchers(HttpMethod.DELETE, "/chart-of-accounts/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN");
+
+                                        // accounting reports (contabilidad)
+                                        http.requestMatchers(HttpMethod.GET, "/api/accounting/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN", "BIOMEDICAL", "USER");
+                                        // cost centers (centros de costo)
+                                        http.requestMatchers(HttpMethod.GET, "/cost-centers/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN", "BIOMEDICAL", "USER");
+                                        http.requestMatchers(HttpMethod.POST, "/cost-centers/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN");
+                                        http.requestMatchers(HttpMethod.PUT, "/cost-centers/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN");
+                                        http.requestMatchers(HttpMethod.DELETE, "/cost-centers/**").hasAnyRole(
+                                                        "SUPERADMIN",
+                                                        "ADMIN");
+                                        // accounting vouchers (comprobantes)
+                                        http.requestMatchers(HttpMethod.GET, "/accounting/vouchers/**").hasAnyRole(
+                                                        "SUPERADMIN", "ADMIN", "CONTADOR");
+                                        http.requestMatchers(HttpMethod.POST, "/accounting/vouchers/**").hasAnyRole(
+                                                        "SUPERADMIN", "ADMIN");
+                                        http.requestMatchers(HttpMethod.PUT, "/accounting/vouchers/**").hasAnyRole(
+                                                        "SUPERADMIN", "ADMIN");
+                                        http.requestMatchers(HttpMethod.DELETE, "/accounting/vouchers/**").hasAnyRole(
+                                                        "SUPERADMIN", "ADMIN");
+
                                         // tipo servicio
                                         http.requestMatchers(HttpMethod.GET, "/type-service/**").hasAnyRole(
                                                         "SUPERADMIN", "ADMIN",
@@ -338,6 +379,12 @@ public class SecurityConfig {
                                         http.requestMatchers(HttpMethod.GET, "/firma-solicitud/**").permitAll();
                                         http.requestMatchers(HttpMethod.POST, "/firma-solicitud/**").permitAll();
                                         http.requestMatchers(HttpMethod.DELETE, "/firma-solicitud/**").permitAll();
+
+                                        // 👉 contabilidad
+                                        http.requestMatchers(HttpMethod.GET, "/api/accounting/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "CONTADOR");
+                                        http.requestMatchers(HttpMethod.POST, "/api/accounting/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "CONTADOR");
 
                                         // 👉 nuevo: imágenes /uploads/**
                                         http.requestMatchers(HttpMethod.GET, "/uploads/**").permitAll();

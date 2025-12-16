@@ -23,8 +23,8 @@ const QuotesListApp = () => {
             let quotes_url = `${API_BASE_URL}/quotes`
 
             if (user.roles[0].roleEnum === 'ADMIN' || user.roles[0].roleEnum === 'USER' || user.roles[0].roleEnum === 'SUPERADMIN') {
-                const id_customer = user.customer.id
-                quotes_url = `${API_BASE_URL}/quotes/tenant/${id_customer}`
+                const tenantId = user.tenantId || (user.customer ? user.customer.id : 1)
+                quotes_url = `${API_BASE_URL}/quotes/tenant/${tenantId}`
             }
 
             const res = await axiosInstance.get(quotes_url)
