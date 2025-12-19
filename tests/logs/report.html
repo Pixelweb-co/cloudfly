@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title id="head-title">report.html</title>
+      <style type="text/css">body {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  /* do not increase min-width as some may use split screens */
+  min-width: 800px;
+  color: #999;
+}
+
+h1 {
+  font-size: 24px;
+  color: black;
+}
+
+h2 {
+  font-size: 16px;
+  color: black;
+}
+
+p {
+  color: black;
+}
+
+a {
+  color: #999;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+/******************************
+ * SUMMARY INFORMATION
+ ******************************/
+#environment td {
+  padding: 5px;
+  border: 1px solid #e6e6e6;
+  vertical-align: top;
+}
+#environment tr:nth-child(odd) {
+  background-color: #f6f6f6;
+}
+#environment ul {
+  margin: 0;
+  padding: 0 20px;
+}
+
+/******************************
+ * TEST RESULT COLORS
+ ******************************/
+span.passed,
+.passed .col-result {
+  color: green;
+}
+
+span.skipped,
+span.xfailed,
+span.rerun,
+.skipped .col-result,
+.xfailed .col-result,
+.rerun .col-result {
+  color: orange;
+}
+
+span.error,
+span.failed,
+span.xpassed,
+.error .col-result,
+.failed .col-result,
+.xpassed .col-result {
+  color: red;
+}
+
+.col-links__extra {
+  margin-right: 3px;
+}
+
+/******************************
+ * RESULTS TABLE
+ *
+ * 1. Table Layout
+ * 2. Extra
+ * 3. Sorting items
+ *
+ ******************************/
+/*------------------
+ * 1. Table Layout
+ *------------------*/
+#results-table {
+  border: 1px solid #e6e6e6;
+  color: #999;
+  font-size: 12px;
+  width: 100%;
+}
+#results-table th,
+#results-table td {
+  padding: 5px;
+  border: 1px solid #e6e6e6;
+  text-align: left;
+}
+#results-table th {
+  font-weight: bold;
+}
+
+/*------------------
+ * 2. Extra
+ *------------------*/
+.logwrapper {
+  max-height: 230px;
+  overflow-y: scroll;
+  background-color: #e6e6e6;
+}
+.logwrapper.expanded {
+  max-height: none;
+}
+.logwrapper.expanded .logexpander:after {
+  content: "collapse [-]";
+}
+.logwrapper .logexpander {
+  z-index: 1;
+  position: sticky;
+  top: 10px;
+  width: max-content;
+  border: 1px solid;
+  border-radius: 3px;
+  padding: 5px 7px;
+  margin: 10px 0 10px calc(100% - 80px);
+  cursor: pointer;
+  background-color: #e6e6e6;
+}
+.logwrapper .logexpander:after {
+  content: "expand [+]";
+}
+.logwrapper .logexpander:hover {
+  color: #000;
+  border-color: #000;
+}
+.logwrapper .log {
+  min-height: 40px;
+  position: relative;
+  top: -50px;
+  height: calc(100% + 50px);
+  border: 1px solid #e6e6e6;
+  color: black;
+  display: block;
+  font-family: "Courier New", Courier, monospace;
+  padding: 5px;
+  padding-right: 80px;
+  white-space: pre-wrap;
+}
+
+div.media {
+  border: 1px solid #e6e6e6;
+  float: right;
+  height: 240px;
+  margin: 0 5px;
+  overflow: hidden;
+  width: 320px;
+}
+
+.media-container {
+  display: grid;
+  grid-template-columns: 25px auto 25px;
+  align-items: center;
+  flex: 1 1;
+  overflow: hidden;
+  height: 200px;
+}
+
+.media-container--fullscreen {
+  grid-template-columns: 0px auto 0px;
+}
+
+.media-container__nav--right,
+.media-container__nav--left {
+  text-align: center;
+  cursor: pointer;
+}
+
+.media-container__viewport {
+  cursor: pointer;
+  text-align: center;
+  height: inherit;
+}
+.media-container__viewport img,
+.media-container__viewport video {
+  object-fit: cover;
+  width: 100%;
+  max-height: 100%;
+}
+
+.media__name,
+.media__counter {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  flex: 0 0 25px;
+  align-items: center;
+}
+
+.collapsible td:not(.col-links) {
+  cursor: pointer;
+}
+.collapsible td:not(.col-links):hover::after {
+  color: #bbb;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.col-result {
+  width: 130px;
+}
+.col-result:hover::after {
+  content: " (hide details)";
+}
+
+.col-result.collapsed:hover::after {
+  content: " (show details)";
+}
+
+#environment-header h2:hover::after {
+  content: " (hide details)";
+  color: #bbb;
+  font-style: italic;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+#environment-header.collapsed h2:hover::after {
+  content: " (show details)";
+  color: #bbb;
+  font-style: italic;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/*------------------
+ * 3. Sorting items
+ *------------------*/
+.sortable {
+  cursor: pointer;
+}
+.sortable.desc:after {
+  content: " ";
+  position: relative;
+  left: 5px;
+  bottom: -12.5px;
+  border: 10px solid #4caf50;
+  border-bottom: 0;
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+.sortable.asc:after {
+  content: " ";
+  position: relative;
+  left: 5px;
+  bottom: 12.5px;
+  border: 10px solid #4caf50;
+  border-top: 0;
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+
+.hidden, .summary__reload__button.hidden {
+  display: none;
+}
+
+.summary__data {
+  flex: 0 0 550px;
+}
+.summary__reload {
+  flex: 1 1;
+  display: flex;
+  justify-content: center;
+}
+.summary__reload__button {
+  flex: 0 0 300px;
+  display: flex;
+  color: white;
+  font-weight: bold;
+  background-color: #4caf50;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.summary__reload__button:hover {
+  background-color: #46a049;
+}
+.summary__spacer {
+  flex: 0 0 550px;
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+}
+
+.filters,
+.collapse {
+  display: flex;
+  align-items: center;
+}
+.filters button,
+.collapse button {
+  color: #999;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.filters button:hover,
+.collapse button:hover {
+  color: #ccc;
+}
+
+.filter__label {
+  margin-right: 10px;
+}
+
+      </style>
+    
+  </head>
+  <body>
+    <h1 id="title">report.html</h1>
+    <p>Report generated on 16-Dec-2025 at 18:50:20 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a>
+        v4.1.1</p>
+    <div id="environment-header">
+      <h2>Environment</h2>
+    </div>
+    <table id="environment"></table>
+    <!-- TEMPLATES -->
+      <template id="template_environment_row">
+      <tr>
+        <td></td>
+        <td></td>
+      </tr>
+    </template>
+    <template id="template_results-table__body--empty">
+      <tbody class="results-table-row">
+        <tr id="not-found-message">
+          <td colspan="4">No results found. Check the filters.</th>
+        </tr>
+    </template>
+    <template id="template_results-table__tbody">
+      <tbody class="results-table-row">
+        <tr class="collapsible">
+        </tr>
+        <tr class="extras-row">
+          <td class="extra" colspan="4">
+            <div class="extraHTML"></div>
+            <div class="media">
+              <div class="media-container">
+                  <div class="media-container__nav--left"><</div>
+                  <div class="media-container__viewport">
+                    <img src="" />
+                    <video controls>
+                      <source src="" type="video/mp4">
+                    </video>
+                  </div>
+                  <div class="media-container__nav--right">></div>
+                </div>
+                <div class="media__name"></div>
+                <div class="media__counter"></div>
+            </div>
+            <div class="logwrapper">
+              <div class="logexpander"></div>
+              <div class="log"></div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </template>
+    <!-- END TEMPLATES -->
+    <div class="summary">
+      <div class="summary__data">
+        <h2>Summary</h2>
+        <div class="additional-summary prefix">
+        </div>
+        <p class="run-count">10 tests took 00:04:52.</p>
+        <p class="filter">(Un)check the boxes to filter the results.</p>
+        <div class="summary__reload">
+          <div class="summary__reload__button hidden" onclick="location.reload()">
+            <div>There are still tests running. <br />Reload this page to get the latest results!</div>
+          </div>
+        </div>
+        <div class="summary__spacer"></div>
+        <div class="controls">
+          <div class="filters">
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="failed" />
+            <span class="failed">10 Failed,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="passed" disabled/>
+            <span class="passed">0 Passed,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="skipped" />
+            <span class="skipped">2 Skipped,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="xfailed" disabled/>
+            <span class="xfailed">0 Expected failures,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="xpassed" disabled/>
+            <span class="xpassed">0 Unexpected passes,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="error" />
+            <span class="error">3 Errors,</span>
+            <input checked="true" class="filter" name="filter_checkbox" type="checkbox" data-test-result="rerun" disabled/>
+            <span class="rerun">0 Reruns</span>
+          </div>
+          <div class="collapse">
+            <button id="show_all_details">Show all details</button>&nbsp;/&nbsp;<button id="hide_all_details">Hide all details</button>
+          </div>
+        </div>
+      </div>
+      <div class="additional-summary summary">
+      </div>
+      <div class="additional-summary postfix">
+      </div>
+    </div>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable" data-column-type="result">Result</th>
+          <th class="sortable" data-column-type="testId">Test</th>
+          <th class="sortable" data-column-type="duration">Duration</th>
+          <th>Links</th>
+        </tr>
+      </thead>
+    </table>
+  </body>
+  <footer>
+    <div id="data-container" data-jsonblob="{&#34;environment&#34;: {&#34;Python&#34;: &#34;3.13.6&#34;, &#34;Platform&#34;: &#34;Windows-11-10.0.26100-SP0&#34;, &#34;Packages&#34;: {&#34;pytest&#34;: &#34;7.4.3&#34;, &#34;pluggy&#34;: &#34;1.6.0&#34;}, &#34;Plugins&#34;: {&#34;html&#34;: &#34;4.1.1&#34;, &#34;metadata&#34;: &#34;3.1.1&#34;}}, &#34;tests&#34;: {&#34;test_02_employees.py::TestEmployees::test_navigate_to_employees&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;test_02_employees.py::TestEmployees::test_navigate_to_employees&#34;, &#34;duration&#34;: &#34;00:00:21&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;test_02_employees.py::TestEmployees::test_navigate_to_employees&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:21&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;test_02_employees.py:20: in test_navigate_to_employees\n    navigate_via_menu(&amp;#x27;Recursos Humanos&amp;#x27;, &amp;#x27;Empleados&amp;#x27;, &amp;#x27;/hr/employees&amp;#x27;)\nconftest.py:153: in _navigate\n    WebDriverWait(driver, 10).until(\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\support\\wait.py:101: in until\n    raise TimeoutException(message, screen, stacktrace)\nE   selenium.common.exceptions.TimeoutException: Message: \nE   Stacktrace:\nE   Symbols not available. Dumping unresolved backtrace:\nE   \t0x1081223\nE   \t0x1081264\nE   \t0xe6e6dd\nE   \t0xeb93a5\nE   \t0xeb977b\nE   \t0xf00382\nE   \t0xedb534\nE   \t0xefdb13\nE   \t0xedb2e6\nE   \t0xead321\nE   \t0xeae1d4\nE   \t0x12d5264\nE   \t0x12d081b\nE   \t0x12ed0fa\nE   \t0x109b128\nE   \t0x10a312d\nE   \t0x1089528\nE   \t0x10896e9\nE   \t0x1073a78\nE   \t0x76385d49\nE   \t0x76f0d5db\nE   \t0x76f0d561\n\n---------------------------- Captured stderr setup -----------------------------\n2025-12-16 18:45:00,555 - conftest - INFO - Initializing WebDriver\n2025-12-16 18:45:00,556 - WDM - INFO - ====== WebDriver manager ======\n2025-12-16 18:45:02,157 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:45:02,219 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:45:02,278 - WDM - INFO - Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\n2025-12-16 18:45:02,279 - conftest - INFO - Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\n2025-12-16 18:45:03,821 - conftest - INFO - WebDriver initialized successfully\n2025-12-16 18:45:03,821 - conftest - INFO - Navigating to login page: http://localhost:3000\n2025-12-16 18:45:06,265 - conftest - INFO - Already logged in\n\n------------------------------ Captured log setup ------------------------------\nINFO     conftest:conftest.py:45 Initializing WebDriver\nINFO     WDM:logger.py:11 ====== WebDriver manager ======\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\nINFO     conftest:conftest.py:70 Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\nINFO     conftest:conftest.py:76 WebDriver initialized successfully\nINFO     conftest:conftest.py:92 Navigating to login page: http://localhost:3000\nINFO     conftest:conftest.py:97 Already logged in\n\n----------------------------- Captured stderr call -----------------------------\n2025-12-16 18:45:06,268 - test_02_employees - INFO - TC-101: Navigating to Employees page\n2025-12-16 18:45:06,268 - conftest - INFO - Navigating via menu: Recursos Humanos &amp;gt; Empleados\n2025-12-16 18:45:16,837 - conftest - ERROR - Menu navigation failed: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n\n------------------------------ Captured log call -------------------------------\nINFO     test_02_employees:test_02_employees.py:15 TC-101: Navigating to Employees page\nINFO     conftest:conftest.py:145 Navigating via menu: Recursos Humanos &amp;gt; Empleados\nERROR    conftest:conftest.py:186 Menu navigation failed: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n--------------------------- Captured stderr teardown ---------------------------\n2025-12-16 18:45:17,414 - conftest - ERROR - Test failed. Screenshot saved to: C:\\apps\\cloudfly\\tests\\logs\\failure_20251216_184517.png\n2025-12-16 18:45:17,415 - conftest - INFO - Closing WebDriver\n\n---------------------------- Captured log teardown -----------------------------\nERROR    conftest:conftest.py:84 Test failed. Screenshot saved to: C:\\apps\\cloudfly\\tests\\logs\\failure_20251216_184517.png\nINFO     conftest:conftest.py:86 Closing WebDriver&#34;}], &#34;test_02_employees.py::TestEmployees::test_employee_list_displays&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;test_02_employees.py::TestEmployees::test_employee_list_displays&#34;, &#34;duration&#34;: &#34;00:00:21&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;test_02_employees.py::TestEmployees::test_employee_list_displays&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:21&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;test_02_employees.py:35: in test_employee_list_displays\n    navigate_via_menu(&amp;#x27;Recursos Humanos&amp;#x27;, &amp;#x27;Empleados&amp;#x27;, &amp;#x27;/hr/employees&amp;#x27;)\nconftest.py:153: in _navigate\n    WebDriverWait(driver, 10).until(\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\support\\wait.py:101: in until\n    raise TimeoutException(message, screen, stacktrace)\nE   selenium.common.exceptions.TimeoutException: Message: \nE   Stacktrace:\nE   Symbols not available. Dumping unresolved backtrace:\nE   \t0x1081223\nE   \t0x1081264\nE   \t0xe6e6dd\nE   \t0xeb93a5\nE   \t0xeb977b\nE   \t0xf00382\nE   \t0xedb534\nE   \t0xefdb13\nE   \t0xedb2e6\nE   \t0xead321\nE   \t0xeae1d4\nE   \t0x12d5264\nE   \t0x12d081b\nE   \t0x12ed0fa\nE   \t0x109b128\nE   \t0x10a312d\nE   \t0x1089528\nE   \t0x10896e9\nE   \t0x1073a78\nE   \t0x76385d49\nE   \t0x76f0d5db\nE   \t0x76f0d561\n\n---------------------------- Captured stderr setup -----------------------------\n2025-12-16 18:45:22,221 - conftest - INFO - Initializing WebDriver\n2025-12-16 18:45:22,222 - WDM - INFO - ====== WebDriver manager ======\n2025-12-16 18:45:23,950 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:45:24,014 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:45:24,072 - WDM - INFO - Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\n2025-12-16 18:45:24,072 - conftest - INFO - Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\n2025-12-16 18:45:25,479 - conftest - INFO - WebDriver initialized successfully\n2025-12-16 18:45:25,479 - conftest - INFO - Navigating to login page: http://localhost:3000\n2025-12-16 18:45:27,758 - conftest - INFO - Already logged in\n\n------------------------------ Captured log setup ------------------------------\nINFO     conftest:conftest.py:45 Initializing WebDriver\nINFO     WDM:logger.py:11 ====== WebDriver manager ======\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\nINFO     conftest:conftest.py:70 Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\nINFO     conftest:conftest.py:76 WebDriver initialized successfully\nINFO     conftest:conftest.py:92 Navigating to login page: http://localhost:3000\nINFO     conftest:conftest.py:97 Already logged in\n\n----------------------------- Captured stderr call -----------------------------\n2025-12-16 18:45:27,760 - test_02_employees - INFO - TC-102: Verifying employee list\n2025-12-16 18:45:27,761 - conftest - INFO - Navigating via menu: Recursos Humanos &amp;gt; Empleados\n2025-12-16 18:45:38,315 - conftest - ERROR - Menu navigation failed: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n\n------------------------------ Captured log call -------------------------------\nINFO     test_02_employees:test_02_employees.py:33 TC-102: Verifying employee list\nINFO     conftest:conftest.py:145 Navigating via menu: Recursos Humanos &amp;gt; Empleados\nERROR    conftest:conftest.py:186 Menu navigation failed: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n--------------------------- Captured stderr teardown ---------------------------\n2025-12-16 18:45:38,594 - conftest - ERROR - Test failed. Screenshot saved to: C:\\apps\\cloudfly\\tests\\logs\\failure_20251216_184538.png\n2025-12-16 18:45:38,594 - conftest - INFO - Closing WebDriver\n\n---------------------------- Captured log teardown -----------------------------\nERROR    conftest:conftest.py:84 Test failed. Screenshot saved to: C:\\apps\\cloudfly\\tests\\logs\\failure_20251216_184538.png\nINFO     conftest:conftest.py:86 Closing WebDriver&#34;}], &#34;test_02_employees.py::TestEmployees::test_open_create_employee_dialog&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;test_02_employees.py::TestEmployees::test_open_create_employee_dialog&#34;, &#34;duration&#34;: &#34;00:00:21&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;test_02_employees.py::TestEmployees::test_open_create_employee_dialog&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:21&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;test_02_employees.py:60: in test_open_create_employee_dialog\n    navigate_via_menu(&amp;#x27;Recursos Humanos&amp;#x27;, &amp;#x27;Empleados&amp;#x27;, &amp;#x27;/hr/employees&amp;#x27;)\nconftest.py:153: in _navigate\n    WebDriverWait(driver, 10).until(\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\support\\wait.py:101: in until\n    raise TimeoutException(message, screen, stacktrace)\nE   selenium.common.exceptions.TimeoutException: Message: \nE   Stacktrace:\nE   Symbols not available. Dumping unresolved backtrace:\nE   \t0x1081223\nE   \t0x1081264\nE   \t0xe6e6dd\nE   \t0xeb93a5\nE   \t0xeb977b\nE   \t0xf00382\nE   \t0xedb534\nE   \t0xefdb13\nE   \t0xedb2e6\nE   \t0xead321\nE   \t0xeae1d4\nE   \t0x12d5264\nE   \t0x12d081b\nE   \t0x12ed0fa\nE   \t0x109b128\nE   \t0x10a312d\nE   \t0x1089528\nE   \t0x10896e9\nE   \t0x1073a78\nE   \t0x76385d49\nE   \t0x76f0d5db\nE   \t0x76f0d561\n\n---------------------------- Captured stderr setup -----------------------------\n2025-12-16 18:45:42,846 - conftest - INFO - Initializing WebDriver\n2025-12-16 18:45:42,847 - WDM - INFO - ====== WebDriver manager ======\n2025-12-16 18:45:44,405 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:45:44,455 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:45:44,502 - WDM - INFO - Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\n2025-12-16 18:45:44,502 - conftest - INFO - Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\n2025-12-16 18:45:45,869 - conftest - INFO - WebDriver initialized successfully\n2025-12-16 18:45:45,870 - conftest - INFO - Navigating to login page: http://localhost:3000\n2025-12-16 18:45:49,145 - conftest - INFO - Already logged in\n\n------------------------------ Captured log setup ------------------------------\nINFO     conftest:conftest.py:45 Initializing WebDriver\nINFO     WDM:logger.py:11 ====== WebDriver manager ======\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\nINFO     conftest:conftest.py:70 Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\nINFO     conftest:conftest.py:76 WebDriver initialized successfully\nINFO     conftest:conftest.py:92 Navigating to login page: http://localhost:3000\nINFO     conftest:conftest.py:97 Already logged in\n\n----------------------------- Captured stderr call -----------------------------\n2025-12-16 18:45:49,148 - test_02_employees - INFO - TC-103: Opening create employee dialog\n2025-12-16 18:45:49,148 - conftest - INFO - Navigating via menu: Recursos Humanos &amp;gt; Empleados\n2025-12-16 18:45:59,722 - conftest - ERROR - Menu navigation failed: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n\n------------------------------ Captured log call -------------------------------\nINFO     test_02_employees:test_02_employees.py:58 TC-103: Opening create employee dialog\nINFO     conftest:conftest.py:145 Navigating via menu: Recursos Humanos &amp;gt; Empleados\nERROR    conftest:conftest.py:186 Menu navigation failed: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n--------------------------- Captured stderr teardown ---------------------------\n2025-12-16 18:45:59,942 - conftest - ERROR - Test failed. Screenshot saved to: C:\\apps\\cloudfly\\tests\\logs\\failure_20251216_184559.png\n2025-12-16 18:45:59,942 - conftest - INFO - Closing WebDriver\n\n---------------------------- Captured log teardown -----------------------------\nERROR    conftest:conftest.py:84 Test failed. Screenshot saved to: C:\\apps\\cloudfly\\tests\\logs\\failure_20251216_184559.png\nINFO     conftest:conftest.py:86 Closing WebDriver&#34;}], &#34;test_02_employees.py::TestEmployees::test_create_employee_complete_flow&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;test_02_employees.py::TestEmployees::test_create_employee_complete_flow&#34;, &#34;duration&#34;: &#34;00:00:20&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;test_02_employees.py::TestEmployees::test_create_employee_complete_flow&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:20&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;test_02_employees.py:80: in test_create_employee_complete_flow\n    navigate_via_menu(&amp;#x27;Recursos Humanos&amp;#x27;, &amp;#x27;Empleados&amp;#x27;, &amp;#x27;/hr/employees&amp;#x27;)\nconftest.py:153: in _navigate\n    WebDriverWait(driver, 10).until(\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\support\\wait.py:101: in until\n    raise TimeoutException(message, screen, stacktrace)\nE   selenium.common.exceptions.TimeoutException: Message: \nE   Stacktrace:\nE   Symbols not available. Dumping unresolved backtrace:\nE   \t0x1081223\nE   \t0x1081264\nE   \t0xe6e6dd\nE   \t0xeb93a5\nE   \t0xeb977b\nE   \t0xf00382\nE   \t0xedb534\nE   \t0xefdb13\nE   \t0xedb2e6\nE   \t0xead321\nE   \t0xeae1d4\nE   \t0x12d5264\nE   \t0x12d081b\nE   \t0x12ed0fa\nE   \t0x109b128\nE   \t0x10a312d\nE   \t0x1089528\nE   \t0x10896e9\nE   \t0x1073a78\nE   \t0x76385d49\nE   \t0x76f0d5db\nE   \t0x76f0d561\n\n---------------------------- Captured stderr setup -----------------------------\n2025-12-16 18:46:03,839 - conftest - INFO - Initializing WebDriver\n2025-12-16 18:46:03,839 - WDM - INFO - ====== WebDriver manager ======\n2025-12-16 18:46:05,299 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:46:05,359 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:46:05,407 - WDM - INFO - Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\n2025-12-16 18:46:05,407 - conftest - INFO - Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\n2025-12-16 18:46:06,765 - conftest - INFO - WebDriver initialized successfully\n2025-12-16 18:46:06,766 - conftest - INFO - Navigating to login page: http://localhost:3000\n2025-12-16 18:46:09,114 - conftest - INFO - Already logged in\n\n------------------------------ Captured log setup ------------------------------\nINFO     conftest:conftest.py:45 Initializing WebDriver\nINFO     WDM:logger.py:11 ====== WebDriver manager ======\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\nINFO     conftest:conftest.py:70 Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\nINFO     conftest:conftest.py:76 WebDriver initialized successfully\nINFO     conftest:conftest.py:92 Navigating to login page: http://localhost:3000\nINFO     conftest:conftest.py:97 Already logged in\n\n----------------------------- Captured stderr call -----------------------------\n2025-12-16 18:46:09,115 - test_02_employees - INFO - TC-104: Creating new employee\n2025-12-16 18:46:09,116 - conftest - INFO - Navigating via menu: Recursos Humanos &amp;gt; Empleados\n2025-12-16 18:46:19,694 - conftest - ERROR - Menu navigation failed: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n\n------------------------------ Captured log call -------------------------------\nINFO     test_02_employees:test_02_employees.py:78 TC-104: Creating new employee\nINFO     conftest:conftest.py:145 Navigating via menu: Recursos Humanos &amp;gt; Empleados\nERROR    conftest:conftest.py:186 Menu navigation failed: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n--------------------------- Captured stderr teardown ---------------------------\n2025-12-16 18:46:20,036 - conftest - ERROR - Test failed. Screenshot saved to: C:\\apps\\cloudfly\\tests\\logs\\failure_20251216_184619.png\n2025-12-16 18:46:20,037 - conftest - INFO - Closing WebDriver\n\n---------------------------- Captured log teardown -----------------------------\nERROR    conftest:conftest.py:84 Test failed. Screenshot saved to: C:\\apps\\cloudfly\\tests\\logs\\failure_20251216_184619.png\nINFO     conftest:conftest.py:86 Closing WebDriver&#34;}], &#34;test_02_employees.py::TestEmployees::test_toggle_employee_status&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;test_02_employees.py::TestEmployees::test_toggle_employee_status&#34;, &#34;duration&#34;: &#34;00:00:31&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;test_02_employees.py::TestEmployees::test_toggle_employee_status&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:31&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;C:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:787: in urlopen\n    response = self._make_request(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:534: in _make_request\n    response = conn.getresponse()\nC:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:565: in getresponse\n    httplib_response = super().getresponse()\nC:\\Python313\\Lib\\http\\client.py:1430: in getresponse\n    response.begin()\nC:\\Python313\\Lib\\http\\client.py:331: in begin\n    version, status, reason = self._read_status()\nC:\\Python313\\Lib\\http\\client.py:292: in _read_status\n    line = str(self.fp.readline(_MAXLINE + 1), &amp;quot;iso-8859-1&amp;quot;)\nC:\\Python313\\Lib\\socket.py:719: in readinto\n    return self._sock.recv_into(b)\nE   ConnectionResetError: [WinError 10054] Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto\n\nDuring handling of the above exception, another exception occurred:\ntest_02_employees.py:140: in test_toggle_employee_status\n    navigate_via_menu(&amp;#x27;Recursos Humanos&amp;#x27;, &amp;#x27;Empleados&amp;#x27;, &amp;#x27;/hr/employees&amp;#x27;)\nconftest.py:153: in _navigate\n    WebDriverWait(driver, 10).until(\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\support\\wait.py:92: in until\n    value = method(self._driver)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\support\\expected_conditions.py:80: in _predicate\n    return driver.find_element(*locator)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:741: in find_element\n    return self.execute(Command.FIND_ELEMENT, {&amp;quot;using&amp;quot;: by, &amp;quot;value&amp;quot;: value})[&amp;quot;value&amp;quot;]\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:345: in execute\n    response = self.command_executor.execute(driver_command, params)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\remote_connection.py:300: in execute\n    return self._request(command_info[0], url, body=data)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\remote_connection.py:321: in _request\n    response = self._conn.request(method, url, body=body, headers=headers)\nC:\\Python313\\Lib\\site-packages\\urllib3\\_request_methods.py:143: in request\n    return self.request_encode_body(\nC:\\Python313\\Lib\\site-packages\\urllib3\\_request_methods.py:278: in request_encode_body\n    return self.urlopen(method, url, **extra_kw)\nC:\\Python313\\Lib\\site-packages\\urllib3\\poolmanager.py:459: in urlopen\n    response = conn.urlopen(method, u.request_uri, **kw)\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:841: in urlopen\n    retries = retries.increment(\nC:\\Python313\\Lib\\site-packages\\urllib3\\util\\retry.py:474: in increment\n    raise reraise(type(error), error, _stacktrace)\nC:\\Python313\\Lib\\site-packages\\urllib3\\util\\util.py:38: in reraise\n    raise value.with_traceback(tb)\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:787: in urlopen\n    response = self._make_request(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:534: in _make_request\n    response = conn.getresponse()\nC:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:565: in getresponse\n    httplib_response = super().getresponse()\nC:\\Python313\\Lib\\http\\client.py:1430: in getresponse\n    response.begin()\nC:\\Python313\\Lib\\http\\client.py:331: in begin\n    version, status, reason = self._read_status()\nC:\\Python313\\Lib\\http\\client.py:292: in _read_status\n    line = str(self.fp.readline(_MAXLINE + 1), &amp;quot;iso-8859-1&amp;quot;)\nC:\\Python313\\Lib\\socket.py:719: in readinto\n    return self._sock.recv_into(b)\nE   urllib3.exceptions.ProtocolError: (&amp;#x27;Connection aborted.&amp;#x27;, ConnectionResetError(10054, &amp;#x27;Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto&amp;#x27;, None, 10054, None))\n\n---------------------------- Captured stderr setup -----------------------------\n2025-12-16 18:46:24,004 - conftest - INFO - Initializing WebDriver\n2025-12-16 18:46:24,004 - WDM - INFO - ====== WebDriver manager ======\n2025-12-16 18:46:25,583 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:46:25,633 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:46:25,686 - WDM - INFO - Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\n2025-12-16 18:46:25,687 - conftest - INFO - Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\n2025-12-16 18:46:27,340 - conftest - INFO - WebDriver initialized successfully\n2025-12-16 18:46:27,341 - conftest - INFO - Navigating to login page: http://localhost:3000\n2025-12-16 18:46:30,284 - conftest - INFO - Already logged in\n\n------------------------------ Captured log setup ------------------------------\nINFO     conftest:conftest.py:45 Initializing WebDriver\nINFO     WDM:logger.py:11 ====== WebDriver manager ======\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\nINFO     conftest:conftest.py:70 Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\nINFO     conftest:conftest.py:76 WebDriver initialized successfully\nINFO     conftest:conftest.py:92 Navigating to login page: http://localhost:3000\nINFO     conftest:conftest.py:97 Already logged in\n\n----------------------------- Captured stderr call -----------------------------\n2025-12-16 18:46:30,286 - test_02_employees - INFO - TC-105: Testing toggle employee status\n2025-12-16 18:46:30,287 - conftest - INFO - Navigating via menu: Recursos Humanos &amp;gt; Empleados\n2025-12-16 18:46:38,368 - conftest - ERROR - Menu navigation failed: (&amp;#x27;Connection aborted.&amp;#x27;, ConnectionResetError(10054, &amp;#x27;Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto&amp;#x27;, None, 10054, None))\n\n------------------------------ Captured log call -------------------------------\nINFO     test_02_employees:test_02_employees.py:137 TC-105: Testing toggle employee status\nINFO     conftest:conftest.py:145 Navigating via menu: Recursos Humanos &amp;gt; Empleados\nERROR    conftest:conftest.py:186 Menu navigation failed: (&amp;#x27;Connection aborted.&amp;#x27;, ConnectionResetError(10054, &amp;#x27;Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto&amp;#x27;, None, 10054, None))\n\n--------------------------- Captured stderr teardown ---------------------------\n2025-12-16 18:46:59,176 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DCD6E70&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/b87981e32d932f6e481f165014afe75a/screenshot\n2025-12-16 18:47:03,245 - urllib3.connectionpool - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2F570&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/b87981e32d932f6e481f165014afe75a/screenshot\n2025-12-16 18:47:07,308 - urllib3.connectionpool - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2F130&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/b87981e32d932f6e481f165014afe75a/screenshot\n\n---------------------------- Captured log teardown -----------------------------\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DCD6E70&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/b87981e32d932f6e481f165014afe75a/screenshot\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2F570&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/b87981e32d932f6e481f165014afe75a/screenshot\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2F130&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/b87981e32d932f6e481f165014afe75a/screenshot&#34;}, {&#34;extras&#34;: [], &#34;result&#34;: &#34;Error&#34;, &#34;testId&#34;: &#34;test_02_employees.py::TestEmployees::test_toggle_employee_status::teardown&#34;, &#34;duration&#34;: &#34;00:00:16&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Error&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;test_02_employees.py::TestEmployees::test_toggle_employee_status::teardown&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:16&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;C:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:198: in _new_conn\n    sock = connection.create_connection(\nC:\\Python313\\Lib\\site-packages\\urllib3\\util\\connection.py:85: in create_connection\n    raise err\nC:\\Python313\\Lib\\site-packages\\urllib3\\util\\connection.py:73: in create_connection\n    sock.connect(sa)\nE   ConnectionRefusedError: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n\n\nThe above exception was the direct cause of the following exception:\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:787: in urlopen\n    response = self._make_request(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:493: in _make_request\n    conn.request(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:494: in request\n    self.endheaders()\nC:\\Python313\\Lib\\http\\client.py:1333: in endheaders\n    self._send_output(message_body, encode_chunked=encode_chunked)\nC:\\Python313\\Lib\\http\\client.py:1093: in _send_output\n    self.send(msg)\nC:\\Python313\\Lib\\http\\client.py:1037: in send\n    self.connect()\nC:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:325: in connect\n    self.sock = self._new_conn()\nC:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:213: in _new_conn\n    raise NewConnectionError(\nE   urllib3.exceptions.NewConnectionError: &amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2EAD0&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n\n\nThe above exception was the direct cause of the following exception:\nconftest.py:83: in driver\n    driver.save_screenshot(screenshot_path)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:828: in save_screenshot\n    return self.get_screenshot_as_file(filename)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:804: in get_screenshot_as_file\n    png = self.get_screenshot_as_png()\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:838: in get_screenshot_as_png\n    return b64decode(self.get_screenshot_as_base64().encode(&amp;quot;ascii&amp;quot;))\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:849: in get_screenshot_as_base64\n    return self.execute(Command.SCREENSHOT)[&amp;quot;value&amp;quot;]\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:345: in execute\n    response = self.command_executor.execute(driver_command, params)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\remote_connection.py:300: in execute\n    return self._request(command_info[0], url, body=data)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\remote_connection.py:321: in _request\n    response = self._conn.request(method, url, body=body, headers=headers)\nC:\\Python313\\Lib\\site-packages\\urllib3\\_request_methods.py:135: in request\n    return self.request_encode_url(\nC:\\Python313\\Lib\\site-packages\\urllib3\\_request_methods.py:182: in request_encode_url\n    return self.urlopen(method, url, **extra_kw)\nC:\\Python313\\Lib\\site-packages\\urllib3\\poolmanager.py:459: in urlopen\n    response = conn.urlopen(method, u.request_uri, **kw)\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:871: in urlopen\n    return self.urlopen(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:871: in urlopen\n    return self.urlopen(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:871: in urlopen\n    return self.urlopen(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:841: in urlopen\n    retries = retries.increment(\nC:\\Python313\\Lib\\site-packages\\urllib3\\util\\retry.py:519: in increment\n    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]\nE   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host=&amp;#x27;localhost&amp;#x27;, port=50701): Max retries exceeded with url: /session/b87981e32d932f6e481f165014afe75a/screenshot (Caused by NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2EAD0&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;))\n\n---------------------------- Captured stderr setup -----------------------------\n2025-12-16 18:46:24,004 - conftest - INFO - Initializing WebDriver\n2025-12-16 18:46:24,004 - WDM - INFO - ====== WebDriver manager ======\n2025-12-16 18:46:25,583 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:46:25,633 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:46:25,686 - WDM - INFO - Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\n2025-12-16 18:46:25,687 - conftest - INFO - Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\n2025-12-16 18:46:27,340 - conftest - INFO - WebDriver initialized successfully\n2025-12-16 18:46:27,341 - conftest - INFO - Navigating to login page: http://localhost:3000\n2025-12-16 18:46:30,284 - conftest - INFO - Already logged in\n\n------------------------------ Captured log setup ------------------------------\nINFO     conftest:conftest.py:45 Initializing WebDriver\nINFO     WDM:logger.py:11 ====== WebDriver manager ======\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\nINFO     conftest:conftest.py:70 Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\nINFO     conftest:conftest.py:76 WebDriver initialized successfully\nINFO     conftest:conftest.py:92 Navigating to login page: http://localhost:3000\nINFO     conftest:conftest.py:97 Already logged in\n\n----------------------------- Captured stderr call -----------------------------\n2025-12-16 18:46:30,286 - test_02_employees - INFO - TC-105: Testing toggle employee status\n2025-12-16 18:46:30,287 - conftest - INFO - Navigating via menu: Recursos Humanos &amp;gt; Empleados\n2025-12-16 18:46:38,368 - conftest - ERROR - Menu navigation failed: (&amp;#x27;Connection aborted.&amp;#x27;, ConnectionResetError(10054, &amp;#x27;Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto&amp;#x27;, None, 10054, None))\n\n------------------------------ Captured log call -------------------------------\nINFO     test_02_employees:test_02_employees.py:137 TC-105: Testing toggle employee status\nINFO     conftest:conftest.py:145 Navigating via menu: Recursos Humanos &amp;gt; Empleados\nERROR    conftest:conftest.py:186 Menu navigation failed: (&amp;#x27;Connection aborted.&amp;#x27;, ConnectionResetError(10054, &amp;#x27;Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto&amp;#x27;, None, 10054, None))\n\n\n--------------------------- Captured stderr teardown ---------------------------\n2025-12-16 18:46:59,176 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DCD6E70&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/b87981e32d932f6e481f165014afe75a/screenshot\n2025-12-16 18:47:03,245 - urllib3.connectionpool - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2F570&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/b87981e32d932f6e481f165014afe75a/screenshot\n2025-12-16 18:47:07,308 - urllib3.connectionpool - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2F130&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/b87981e32d932f6e481f165014afe75a/screenshot\n\n---------------------------- Captured log teardown -----------------------------\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DCD6E70&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/b87981e32d932f6e481f165014afe75a/screenshot\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2F570&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/b87981e32d932f6e481f165014afe75a/screenshot\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2F130&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/b87981e32d932f6e481f165014afe75a/screenshot\n&#34;}], &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_navigate_to_periods&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_navigate_to_periods&#34;, &#34;duration&#34;: &#34;00:00:32&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;test_03_payroll_processing.py::TestPayrollProcessing::test_navigate_to_periods&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:32&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;test_03_payroll_processing.py:30: in test_navigate_to_periods\n    navigate_via_menu(&amp;#x27;Recursos Humanos&amp;#x27;, &amp;#x27;Periodos&amp;#x27;, &amp;#x27;/hr/periods&amp;#x27;)\nconftest.py:173: in _navigate\n    child_link = WebDriverWait(driver, 5).until(\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\support\\wait.py:101: in until\n    raise TimeoutException(message, screen, stacktrace)\nE   selenium.common.exceptions.TimeoutException: Message: \nE   Stacktrace:\nE   Symbols not available. Dumping unresolved backtrace:\nE   \t0x1081223\nE   \t0x1081264\nE   \t0xe6e6dd\nE   \t0xeb93a5\nE   \t0xeb977b\nE   \t0xf00382\nE   \t0xedb534\nE   \t0xefdb13\nE   \t0xedb2e6\nE   \t0xead321\nE   \t0xeae1d4\nE   \t0x12d5264\nE   \t0x12d081b\nE   \t0x12ed0fa\nE   \t0x109b128\nE   \t0x10a312d\nE   \t0x1089528\nE   \t0x10896e9\nE   \t0x1073a78\nE   \t0x76385d49\nE   \t0x76f0d5db\nE   \t0x76f0d561\n\n---------------------------- Captured stderr setup -----------------------------\n2025-12-16 18:47:11,751 - test_03_payroll_processing - INFO - Setting up demo data\n2025-12-16 18:47:11,757 - test_03_payroll_processing - INFO - Demo data response: {&amp;quot;error&amp;quot;: &amp;quot;Acceso no autorizado&amp;quot;, &amp;quot;message&amp;quot;: &amp;quot;Full authentication is required to access this resource&amp;quot;}\n2025-12-16 18:47:11,758 - conftest - INFO - Initializing WebDriver\n2025-12-16 18:47:11,758 - WDM - INFO - ====== WebDriver manager ======\n2025-12-16 18:47:13,314 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:47:13,369 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:47:13,421 - WDM - INFO - Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\n2025-12-16 18:47:13,421 - conftest - INFO - Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\n2025-12-16 18:47:14,924 - conftest - INFO - WebDriver initialized successfully\n2025-12-16 18:47:14,925 - conftest - INFO - Navigating to login page: http://localhost:3000\n2025-12-16 18:47:16,759 - conftest - INFO - Already logged in\n\n------------------------------ Captured log setup ------------------------------\nINFO     test_03_payroll_processing:test_03_payroll_processing.py:16 Setting up demo data\nINFO     test_03_payroll_processing:test_03_payroll_processing.py:22 Demo data response: {&amp;quot;error&amp;quot;: &amp;quot;Acceso no autorizado&amp;quot;, &amp;quot;message&amp;quot;: &amp;quot;Full authentication is required to access this resource&amp;quot;}\nINFO     conftest:conftest.py:45 Initializing WebDriver\nINFO     WDM:logger.py:11 ====== WebDriver manager ======\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\nINFO     conftest:conftest.py:70 Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\nINFO     conftest:conftest.py:76 WebDriver initialized successfully\nINFO     conftest:conftest.py:92 Navigating to login page: http://localhost:3000\nINFO     conftest:conftest.py:97 Already logged in\n\n----------------------------- Captured stderr call -----------------------------\n2025-12-16 18:47:16,761 - test_03_payroll_processing - INFO - TC-201: Navigating to Periods page\n2025-12-16 18:47:16,761 - conftest - INFO - Navigating via menu: Recursos Humanos &amp;gt; Periodos\n2025-12-16 18:47:40,998 - conftest - ERROR - Menu navigation failed: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n\n------------------------------ Captured log call -------------------------------\nINFO     test_03_payroll_processing:test_03_payroll_processing.py:28 TC-201: Navigating to Periods page\nINFO     conftest:conftest.py:145 Navigating via menu: Recursos Humanos &amp;gt; Periodos\nERROR    conftest:conftest.py:186 Menu navigation failed: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n--------------------------- Captured stderr teardown ---------------------------\n2025-12-16 18:47:41,369 - conftest - ERROR - Test failed. Screenshot saved to: C:\\apps\\cloudfly\\tests\\logs\\failure_20251216_184741.png\n2025-12-16 18:47:41,370 - conftest - INFO - Closing WebDriver\n\n---------------------------- Captured log teardown -----------------------------\nERROR    conftest:conftest.py:84 Test failed. Screenshot saved to: C:\\apps\\cloudfly\\tests\\logs\\failure_20251216_184741.png\nINFO     conftest:conftest.py:86 Closing WebDriver&#34;}], &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_create_payroll_period&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_create_payroll_period&#34;, &#34;duration&#34;: &#34;00:00:33&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;test_03_payroll_processing.py::TestPayrollProcessing::test_create_payroll_period&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:33&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;C:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:787: in urlopen\n    response = self._make_request(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:534: in _make_request\n    response = conn.getresponse()\nC:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:565: in getresponse\n    httplib_response = super().getresponse()\nC:\\Python313\\Lib\\http\\client.py:1430: in getresponse\n    response.begin()\nC:\\Python313\\Lib\\http\\client.py:331: in begin\n    version, status, reason = self._read_status()\nC:\\Python313\\Lib\\http\\client.py:292: in _read_status\n    line = str(self.fp.readline(_MAXLINE + 1), &amp;quot;iso-8859-1&amp;quot;)\nC:\\Python313\\Lib\\socket.py:719: in readinto\n    return self._sock.recv_into(b)\nE   ConnectionResetError: [WinError 10054] Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto\n\nDuring handling of the above exception, another exception occurred:\ntest_03_payroll_processing.py:40: in test_create_payroll_period\n    navigate_via_menu(&amp;#x27;Recursos Humanos&amp;#x27;, &amp;#x27;Periodos&amp;#x27;, &amp;#x27;/hr/periods&amp;#x27;)\nconftest.py:153: in _navigate\n    WebDriverWait(driver, 10).until(\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\support\\wait.py:92: in until\n    value = method(self._driver)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\support\\expected_conditions.py:80: in _predicate\n    return driver.find_element(*locator)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:741: in find_element\n    return self.execute(Command.FIND_ELEMENT, {&amp;quot;using&amp;quot;: by, &amp;quot;value&amp;quot;: value})[&amp;quot;value&amp;quot;]\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:345: in execute\n    response = self.command_executor.execute(driver_command, params)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\remote_connection.py:300: in execute\n    return self._request(command_info[0], url, body=data)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\remote_connection.py:321: in _request\n    response = self._conn.request(method, url, body=body, headers=headers)\nC:\\Python313\\Lib\\site-packages\\urllib3\\_request_methods.py:143: in request\n    return self.request_encode_body(\nC:\\Python313\\Lib\\site-packages\\urllib3\\_request_methods.py:278: in request_encode_body\n    return self.urlopen(method, url, **extra_kw)\nC:\\Python313\\Lib\\site-packages\\urllib3\\poolmanager.py:459: in urlopen\n    response = conn.urlopen(method, u.request_uri, **kw)\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:841: in urlopen\n    retries = retries.increment(\nC:\\Python313\\Lib\\site-packages\\urllib3\\util\\retry.py:474: in increment\n    raise reraise(type(error), error, _stacktrace)\nC:\\Python313\\Lib\\site-packages\\urllib3\\util\\util.py:38: in reraise\n    raise value.with_traceback(tb)\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:787: in urlopen\n    response = self._make_request(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:534: in _make_request\n    response = conn.getresponse()\nC:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:565: in getresponse\n    httplib_response = super().getresponse()\nC:\\Python313\\Lib\\http\\client.py:1430: in getresponse\n    response.begin()\nC:\\Python313\\Lib\\http\\client.py:331: in begin\n    version, status, reason = self._read_status()\nC:\\Python313\\Lib\\http\\client.py:292: in _read_status\n    line = str(self.fp.readline(_MAXLINE + 1), &amp;quot;iso-8859-1&amp;quot;)\nC:\\Python313\\Lib\\socket.py:719: in readinto\n    return self._sock.recv_into(b)\nE   urllib3.exceptions.ProtocolError: (&amp;#x27;Connection aborted.&amp;#x27;, ConnectionResetError(10054, &amp;#x27;Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto&amp;#x27;, None, 10054, None))\n\n---------------------------- Captured stderr setup -----------------------------\n2025-12-16 18:47:43,762 - conftest - INFO - Initializing WebDriver\n2025-12-16 18:47:43,763 - WDM - INFO - ====== WebDriver manager ======\n2025-12-16 18:47:45,523 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:47:45,578 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:47:45,633 - WDM - INFO - Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\n2025-12-16 18:47:45,634 - conftest - INFO - Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\n2025-12-16 18:47:47,290 - conftest - INFO - WebDriver initialized successfully\n2025-12-16 18:47:47,291 - conftest - INFO - Navigating to login page: http://localhost:3000\n2025-12-16 18:47:50,706 - conftest - INFO - Already logged in\n\n------------------------------ Captured log setup ------------------------------\nINFO     conftest:conftest.py:45 Initializing WebDriver\nINFO     WDM:logger.py:11 ====== WebDriver manager ======\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\nINFO     conftest:conftest.py:70 Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\nINFO     conftest:conftest.py:76 WebDriver initialized successfully\nINFO     conftest:conftest.py:92 Navigating to login page: http://localhost:3000\nINFO     conftest:conftest.py:97 Already logged in\n\n----------------------------- Captured stderr call -----------------------------\n2025-12-16 18:47:50,709 - test_03_payroll_processing - INFO - TC-202: Creating payroll period\n2025-12-16 18:47:50,709 - conftest - INFO - Navigating via menu: Recursos Humanos &amp;gt; Periodos\n2025-12-16 18:48:00,401 - conftest - ERROR - Menu navigation failed: (&amp;#x27;Connection aborted.&amp;#x27;, ConnectionResetError(10054, &amp;#x27;Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto&amp;#x27;, None, 10054, None))\n\n------------------------------ Captured log call -------------------------------\nINFO     test_03_payroll_processing:test_03_payroll_processing.py:37 TC-202: Creating payroll period\nINFO     conftest:conftest.py:145 Navigating via menu: Recursos Humanos &amp;gt; Periodos\nERROR    conftest:conftest.py:186 Menu navigation failed: (&amp;#x27;Connection aborted.&amp;#x27;, ConnectionResetError(10054, &amp;#x27;Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto&amp;#x27;, None, 10054, None))\n\n--------------------------- Captured stderr teardown ---------------------------\n2025-12-16 18:48:08,958 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DD67CE0&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/441c80b71f49e22d4553bf8a9a679abc/screenshot\n2025-12-16 18:48:13,018 - urllib3.connectionpool - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2E470&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/441c80b71f49e22d4553bf8a9a679abc/screenshot\n2025-12-16 18:48:17,045 - urllib3.connectionpool - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2F790&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/441c80b71f49e22d4553bf8a9a679abc/screenshot\n\n---------------------------- Captured log teardown -----------------------------\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DD67CE0&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/441c80b71f49e22d4553bf8a9a679abc/screenshot\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2E470&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/441c80b71f49e22d4553bf8a9a679abc/screenshot\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2F790&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/441c80b71f49e22d4553bf8a9a679abc/screenshot&#34;}, {&#34;extras&#34;: [], &#34;result&#34;: &#34;Error&#34;, &#34;testId&#34;: &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_create_payroll_period::teardown&#34;, &#34;duration&#34;: &#34;00:00:16&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Error&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;test_03_payroll_processing.py::TestPayrollProcessing::test_create_payroll_period::teardown&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:16&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;C:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:198: in _new_conn\n    sock = connection.create_connection(\nC:\\Python313\\Lib\\site-packages\\urllib3\\util\\connection.py:85: in create_connection\n    raise err\nC:\\Python313\\Lib\\site-packages\\urllib3\\util\\connection.py:73: in create_connection\n    sock.connect(sa)\nE   ConnectionRefusedError: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n\n\nThe above exception was the direct cause of the following exception:\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:787: in urlopen\n    response = self._make_request(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:493: in _make_request\n    conn.request(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:494: in request\n    self.endheaders()\nC:\\Python313\\Lib\\http\\client.py:1333: in endheaders\n    self._send_output(message_body, encode_chunked=encode_chunked)\nC:\\Python313\\Lib\\http\\client.py:1093: in _send_output\n    self.send(msg)\nC:\\Python313\\Lib\\http\\client.py:1037: in send\n    self.connect()\nC:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:325: in connect\n    self.sock = self._new_conn()\nC:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:213: in _new_conn\n    raise NewConnectionError(\nE   urllib3.exceptions.NewConnectionError: &amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2EF10&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n\n\nThe above exception was the direct cause of the following exception:\nconftest.py:83: in driver\n    driver.save_screenshot(screenshot_path)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:828: in save_screenshot\n    return self.get_screenshot_as_file(filename)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:804: in get_screenshot_as_file\n    png = self.get_screenshot_as_png()\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:838: in get_screenshot_as_png\n    return b64decode(self.get_screenshot_as_base64().encode(&amp;quot;ascii&amp;quot;))\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:849: in get_screenshot_as_base64\n    return self.execute(Command.SCREENSHOT)[&amp;quot;value&amp;quot;]\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:345: in execute\n    response = self.command_executor.execute(driver_command, params)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\remote_connection.py:300: in execute\n    return self._request(command_info[0], url, body=data)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\remote_connection.py:321: in _request\n    response = self._conn.request(method, url, body=body, headers=headers)\nC:\\Python313\\Lib\\site-packages\\urllib3\\_request_methods.py:135: in request\n    return self.request_encode_url(\nC:\\Python313\\Lib\\site-packages\\urllib3\\_request_methods.py:182: in request_encode_url\n    return self.urlopen(method, url, **extra_kw)\nC:\\Python313\\Lib\\site-packages\\urllib3\\poolmanager.py:459: in urlopen\n    response = conn.urlopen(method, u.request_uri, **kw)\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:871: in urlopen\n    return self.urlopen(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:871: in urlopen\n    return self.urlopen(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:871: in urlopen\n    return self.urlopen(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:841: in urlopen\n    retries = retries.increment(\nC:\\Python313\\Lib\\site-packages\\urllib3\\util\\retry.py:519: in increment\n    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]\nE   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host=&amp;#x27;localhost&amp;#x27;, port=60338): Max retries exceeded with url: /session/441c80b71f49e22d4553bf8a9a679abc/screenshot (Caused by NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2EF10&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;))\n\n---------------------------- Captured stderr setup -----------------------------\n2025-12-16 18:47:43,762 - conftest - INFO - Initializing WebDriver\n2025-12-16 18:47:43,763 - WDM - INFO - ====== WebDriver manager ======\n2025-12-16 18:47:45,523 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:47:45,578 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:47:45,633 - WDM - INFO - Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\n2025-12-16 18:47:45,634 - conftest - INFO - Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\n2025-12-16 18:47:47,290 - conftest - INFO - WebDriver initialized successfully\n2025-12-16 18:47:47,291 - conftest - INFO - Navigating to login page: http://localhost:3000\n2025-12-16 18:47:50,706 - conftest - INFO - Already logged in\n\n------------------------------ Captured log setup ------------------------------\nINFO     conftest:conftest.py:45 Initializing WebDriver\nINFO     WDM:logger.py:11 ====== WebDriver manager ======\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\nINFO     conftest:conftest.py:70 Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\nINFO     conftest:conftest.py:76 WebDriver initialized successfully\nINFO     conftest:conftest.py:92 Navigating to login page: http://localhost:3000\nINFO     conftest:conftest.py:97 Already logged in\n\n----------------------------- Captured stderr call -----------------------------\n2025-12-16 18:47:50,709 - test_03_payroll_processing - INFO - TC-202: Creating payroll period\n2025-12-16 18:47:50,709 - conftest - INFO - Navigating via menu: Recursos Humanos &amp;gt; Periodos\n2025-12-16 18:48:00,401 - conftest - ERROR - Menu navigation failed: (&amp;#x27;Connection aborted.&amp;#x27;, ConnectionResetError(10054, &amp;#x27;Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto&amp;#x27;, None, 10054, None))\n\n------------------------------ Captured log call -------------------------------\nINFO     test_03_payroll_processing:test_03_payroll_processing.py:37 TC-202: Creating payroll period\nINFO     conftest:conftest.py:145 Navigating via menu: Recursos Humanos &amp;gt; Periodos\nERROR    conftest:conftest.py:186 Menu navigation failed: (&amp;#x27;Connection aborted.&amp;#x27;, ConnectionResetError(10054, &amp;#x27;Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto&amp;#x27;, None, 10054, None))\n\n\n--------------------------- Captured stderr teardown ---------------------------\n2025-12-16 18:48:08,958 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DD67CE0&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/441c80b71f49e22d4553bf8a9a679abc/screenshot\n2025-12-16 18:48:13,018 - urllib3.connectionpool - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2E470&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/441c80b71f49e22d4553bf8a9a679abc/screenshot\n2025-12-16 18:48:17,045 - urllib3.connectionpool - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2F790&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/441c80b71f49e22d4553bf8a9a679abc/screenshot\n\n---------------------------- Captured log teardown -----------------------------\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DD67CE0&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/441c80b71f49e22d4553bf8a9a679abc/screenshot\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2E470&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/441c80b71f49e22d4553bf8a9a679abc/screenshot\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE2F790&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/441c80b71f49e22d4553bf8a9a679abc/screenshot\n&#34;}], &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_navigate_to_process_page&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_navigate_to_process_page&#34;, &#34;duration&#34;: &#34;00:00:20&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;test_03_payroll_processing.py::TestPayrollProcessing::test_navigate_to_process_page&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:20&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;test_03_payroll_processing.py:74: in test_navigate_to_process_page\n    navigate_via_menu(&amp;#x27;Recursos Humanos&amp;#x27;, &amp;#x27;Procesar&amp;#x27;, &amp;#x27;/hr/process&amp;#x27;)\nconftest.py:153: in _navigate\n    WebDriverWait(driver, 10).until(\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\support\\wait.py:101: in until\n    raise TimeoutException(message, screen, stacktrace)\nE   selenium.common.exceptions.TimeoutException: Message: \nE   Stacktrace:\nE   Symbols not available. Dumping unresolved backtrace:\nE   \t0x1081223\nE   \t0x1081264\nE   \t0xe6e6dd\nE   \t0xeb93a5\nE   \t0xeb977b\nE   \t0xf00382\nE   \t0xedb534\nE   \t0xefdb13\nE   \t0xedb2e6\nE   \t0xead321\nE   \t0xeae1d4\nE   \t0x12d5264\nE   \t0x12d081b\nE   \t0x12ed0fa\nE   \t0x109b128\nE   \t0x10a312d\nE   \t0x1089528\nE   \t0x10896e9\nE   \t0x1073a78\nE   \t0x76385d49\nE   \t0x76f0d5db\nE   \t0x76f0d561\n\n---------------------------- Captured stderr setup -----------------------------\n2025-12-16 18:48:21,536 - conftest - INFO - Initializing WebDriver\n2025-12-16 18:48:21,538 - WDM - INFO - ====== WebDriver manager ======\n2025-12-16 18:48:23,180 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:48:23,241 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:48:23,297 - WDM - INFO - Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\n2025-12-16 18:48:23,298 - conftest - INFO - Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\n2025-12-16 18:48:24,853 - conftest - INFO - WebDriver initialized successfully\n2025-12-16 18:48:24,854 - conftest - INFO - Navigating to login page: http://localhost:3000\n2025-12-16 18:48:26,721 - conftest - INFO - Already logged in\n\n------------------------------ Captured log setup ------------------------------\nINFO     conftest:conftest.py:45 Initializing WebDriver\nINFO     WDM:logger.py:11 ====== WebDriver manager ======\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\nINFO     conftest:conftest.py:70 Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\nINFO     conftest:conftest.py:76 WebDriver initialized successfully\nINFO     conftest:conftest.py:92 Navigating to login page: http://localhost:3000\nINFO     conftest:conftest.py:97 Already logged in\n\n----------------------------- Captured stderr call -----------------------------\n2025-12-16 18:48:26,723 - test_03_payroll_processing - INFO - TC-203: Navigating to Process page\n2025-12-16 18:48:26,723 - conftest - INFO - Navigating via menu: Recursos Humanos &amp;gt; Procesar\n2025-12-16 18:48:37,255 - conftest - ERROR - Menu navigation failed: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n\n------------------------------ Captured log call -------------------------------\nINFO     test_03_payroll_processing:test_03_payroll_processing.py:71 TC-203: Navigating to Process page\nINFO     conftest:conftest.py:145 Navigating via menu: Recursos Humanos &amp;gt; Procesar\nERROR    conftest:conftest.py:186 Menu navigation failed: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n--------------------------- Captured stderr teardown ---------------------------\n2025-12-16 18:48:37,548 - conftest - ERROR - Test failed. Screenshot saved to: C:\\apps\\cloudfly\\tests\\logs\\failure_20251216_184837.png\n2025-12-16 18:48:37,551 - conftest - INFO - Closing WebDriver\n\n---------------------------- Captured log teardown -----------------------------\nERROR    conftest:conftest.py:84 Test failed. Screenshot saved to: C:\\apps\\cloudfly\\tests\\logs\\failure_20251216_184837.png\nINFO     conftest:conftest.py:86 Closing WebDriver&#34;}], &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_calculate_payroll&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_calculate_payroll&#34;, &#34;duration&#34;: &#34;00:00:29&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;test_03_payroll_processing.py::TestPayrollProcessing::test_calculate_payroll&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:29&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;C:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:787: in urlopen\n    response = self._make_request(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:534: in _make_request\n    response = conn.getresponse()\nC:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:565: in getresponse\n    httplib_response = super().getresponse()\nC:\\Python313\\Lib\\http\\client.py:1430: in getresponse\n    response.begin()\nC:\\Python313\\Lib\\http\\client.py:331: in begin\n    version, status, reason = self._read_status()\nC:\\Python313\\Lib\\http\\client.py:292: in _read_status\n    line = str(self.fp.readline(_MAXLINE + 1), &amp;quot;iso-8859-1&amp;quot;)\nC:\\Python313\\Lib\\socket.py:719: in readinto\n    return self._sock.recv_into(b)\nE   ConnectionResetError: [WinError 10054] Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto\n\nDuring handling of the above exception, another exception occurred:\ntest_03_payroll_processing.py:87: in test_calculate_payroll\n    navigate_via_menu(&amp;#x27;Recursos Humanos&amp;#x27;, &amp;#x27;Procesar&amp;#x27;, &amp;#x27;/hr/process&amp;#x27;)\nconftest.py:153: in _navigate\n    WebDriverWait(driver, 10).until(\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\support\\wait.py:92: in until\n    value = method(self._driver)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\support\\expected_conditions.py:80: in _predicate\n    return driver.find_element(*locator)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:741: in find_element\n    return self.execute(Command.FIND_ELEMENT, {&amp;quot;using&amp;quot;: by, &amp;quot;value&amp;quot;: value})[&amp;quot;value&amp;quot;]\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:345: in execute\n    response = self.command_executor.execute(driver_command, params)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\remote_connection.py:300: in execute\n    return self._request(command_info[0], url, body=data)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\remote_connection.py:321: in _request\n    response = self._conn.request(method, url, body=body, headers=headers)\nC:\\Python313\\Lib\\site-packages\\urllib3\\_request_methods.py:143: in request\n    return self.request_encode_body(\nC:\\Python313\\Lib\\site-packages\\urllib3\\_request_methods.py:278: in request_encode_body\n    return self.urlopen(method, url, **extra_kw)\nC:\\Python313\\Lib\\site-packages\\urllib3\\poolmanager.py:459: in urlopen\n    response = conn.urlopen(method, u.request_uri, **kw)\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:841: in urlopen\n    retries = retries.increment(\nC:\\Python313\\Lib\\site-packages\\urllib3\\util\\retry.py:474: in increment\n    raise reraise(type(error), error, _stacktrace)\nC:\\Python313\\Lib\\site-packages\\urllib3\\util\\util.py:38: in reraise\n    raise value.with_traceback(tb)\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:787: in urlopen\n    response = self._make_request(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:534: in _make_request\n    response = conn.getresponse()\nC:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:565: in getresponse\n    httplib_response = super().getresponse()\nC:\\Python313\\Lib\\http\\client.py:1430: in getresponse\n    response.begin()\nC:\\Python313\\Lib\\http\\client.py:331: in begin\n    version, status, reason = self._read_status()\nC:\\Python313\\Lib\\http\\client.py:292: in _read_status\n    line = str(self.fp.readline(_MAXLINE + 1), &amp;quot;iso-8859-1&amp;quot;)\nC:\\Python313\\Lib\\socket.py:719: in readinto\n    return self._sock.recv_into(b)\nE   urllib3.exceptions.ProtocolError: (&amp;#x27;Connection aborted.&amp;#x27;, ConnectionResetError(10054, &amp;#x27;Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto&amp;#x27;, None, 10054, None))\n\n---------------------------- Captured stderr setup -----------------------------\n2025-12-16 18:48:41,723 - conftest - INFO - Initializing WebDriver\n2025-12-16 18:48:41,724 - WDM - INFO - ====== WebDriver manager ======\n2025-12-16 18:48:43,424 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:48:43,478 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:48:43,542 - WDM - INFO - Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\n2025-12-16 18:48:43,542 - conftest - INFO - Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\n2025-12-16 18:48:45,105 - conftest - INFO - WebDriver initialized successfully\n2025-12-16 18:48:45,106 - conftest - INFO - Navigating to login page: http://localhost:3000\n2025-12-16 18:48:48,061 - conftest - INFO - Already logged in\n\n------------------------------ Captured log setup ------------------------------\nINFO     conftest:conftest.py:45 Initializing WebDriver\nINFO     WDM:logger.py:11 ====== WebDriver manager ======\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\nINFO     conftest:conftest.py:70 Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\nINFO     conftest:conftest.py:76 WebDriver initialized successfully\nINFO     conftest:conftest.py:92 Navigating to login page: http://localhost:3000\nINFO     conftest:conftest.py:97 Already logged in\n\n----------------------------- Captured stderr call -----------------------------\n2025-12-16 18:48:48,065 - test_03_payroll_processing - INFO - TC-204: Testing payroll calculation\n2025-12-16 18:48:48,066 - conftest - INFO - Navigating via menu: Recursos Humanos &amp;gt; Procesar\n2025-12-16 18:48:54,003 - conftest - ERROR - Menu navigation failed: (&amp;#x27;Connection aborted.&amp;#x27;, ConnectionResetError(10054, &amp;#x27;Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto&amp;#x27;, None, 10054, None))\n\n------------------------------ Captured log call -------------------------------\nINFO     test_03_payroll_processing:test_03_payroll_processing.py:84 TC-204: Testing payroll calculation\nINFO     conftest:conftest.py:145 Navigating via menu: Recursos Humanos &amp;gt; Procesar\nERROR    conftest:conftest.py:186 Menu navigation failed: (&amp;#x27;Connection aborted.&amp;#x27;, ConnectionResetError(10054, &amp;#x27;Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto&amp;#x27;, None, 10054, None))\n\n--------------------------- Captured stderr teardown ---------------------------\n2025-12-16 18:49:02,503 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DD67020&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot\n2025-12-16 18:49:06,570 - urllib3.connectionpool - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DD67F00&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot\n2025-12-16 18:49:10,637 - urllib3.connectionpool - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE3ABE0&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot\n\n---------------------------- Captured log teardown -----------------------------\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DD67020&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DD67F00&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE3ABE0&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot&#34;}, {&#34;extras&#34;: [], &#34;result&#34;: &#34;Error&#34;, &#34;testId&#34;: &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_calculate_payroll::teardown&#34;, &#34;duration&#34;: &#34;00:00:16&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Error&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;test_03_payroll_processing.py::TestPayrollProcessing::test_calculate_payroll::teardown&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:16&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;C:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:198: in _new_conn\n    sock = connection.create_connection(\nC:\\Python313\\Lib\\site-packages\\urllib3\\util\\connection.py:85: in create_connection\n    raise err\nC:\\Python313\\Lib\\site-packages\\urllib3\\util\\connection.py:73: in create_connection\n    sock.connect(sa)\nE   ConnectionRefusedError: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n\n\nThe above exception was the direct cause of the following exception:\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:787: in urlopen\n    response = self._make_request(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:493: in _make_request\n    conn.request(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:494: in request\n    self.endheaders()\nC:\\Python313\\Lib\\http\\client.py:1333: in endheaders\n    self._send_output(message_body, encode_chunked=encode_chunked)\nC:\\Python313\\Lib\\http\\client.py:1093: in _send_output\n    self.send(msg)\nC:\\Python313\\Lib\\http\\client.py:1037: in send\n    self.connect()\nC:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:325: in connect\n    self.sock = self._new_conn()\nC:\\Python313\\Lib\\site-packages\\urllib3\\connection.py:213: in _new_conn\n    raise NewConnectionError(\nE   urllib3.exceptions.NewConnectionError: &amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE3AAD0&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n\n\nThe above exception was the direct cause of the following exception:\nconftest.py:83: in driver\n    driver.save_screenshot(screenshot_path)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:828: in save_screenshot\n    return self.get_screenshot_as_file(filename)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:804: in get_screenshot_as_file\n    png = self.get_screenshot_as_png()\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:838: in get_screenshot_as_png\n    return b64decode(self.get_screenshot_as_base64().encode(&amp;quot;ascii&amp;quot;))\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:849: in get_screenshot_as_base64\n    return self.execute(Command.SCREENSHOT)[&amp;quot;value&amp;quot;]\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\webdriver.py:345: in execute\n    response = self.command_executor.execute(driver_command, params)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\remote_connection.py:300: in execute\n    return self._request(command_info[0], url, body=data)\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\remote\\remote_connection.py:321: in _request\n    response = self._conn.request(method, url, body=body, headers=headers)\nC:\\Python313\\Lib\\site-packages\\urllib3\\_request_methods.py:135: in request\n    return self.request_encode_url(\nC:\\Python313\\Lib\\site-packages\\urllib3\\_request_methods.py:182: in request_encode_url\n    return self.urlopen(method, url, **extra_kw)\nC:\\Python313\\Lib\\site-packages\\urllib3\\poolmanager.py:459: in urlopen\n    response = conn.urlopen(method, u.request_uri, **kw)\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:871: in urlopen\n    return self.urlopen(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:871: in urlopen\n    return self.urlopen(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:871: in urlopen\n    return self.urlopen(\nC:\\Python313\\Lib\\site-packages\\urllib3\\connectionpool.py:841: in urlopen\n    retries = retries.increment(\nC:\\Python313\\Lib\\site-packages\\urllib3\\util\\retry.py:519: in increment\n    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]\nE   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host=&amp;#x27;localhost&amp;#x27;, port=55862): Max retries exceeded with url: /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot (Caused by NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE3AAD0&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;))\n\n---------------------------- Captured stderr setup -----------------------------\n2025-12-16 18:48:41,723 - conftest - INFO - Initializing WebDriver\n2025-12-16 18:48:41,724 - WDM - INFO - ====== WebDriver manager ======\n2025-12-16 18:48:43,424 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:48:43,478 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:48:43,542 - WDM - INFO - Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\n2025-12-16 18:48:43,542 - conftest - INFO - Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\n2025-12-16 18:48:45,105 - conftest - INFO - WebDriver initialized successfully\n2025-12-16 18:48:45,106 - conftest - INFO - Navigating to login page: http://localhost:3000\n2025-12-16 18:48:48,061 - conftest - INFO - Already logged in\n\n------------------------------ Captured log setup ------------------------------\nINFO     conftest:conftest.py:45 Initializing WebDriver\nINFO     WDM:logger.py:11 ====== WebDriver manager ======\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\nINFO     conftest:conftest.py:70 Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\nINFO     conftest:conftest.py:76 WebDriver initialized successfully\nINFO     conftest:conftest.py:92 Navigating to login page: http://localhost:3000\nINFO     conftest:conftest.py:97 Already logged in\n\n----------------------------- Captured stderr call -----------------------------\n2025-12-16 18:48:48,065 - test_03_payroll_processing - INFO - TC-204: Testing payroll calculation\n2025-12-16 18:48:48,066 - conftest - INFO - Navigating via menu: Recursos Humanos &amp;gt; Procesar\n2025-12-16 18:48:54,003 - conftest - ERROR - Menu navigation failed: (&amp;#x27;Connection aborted.&amp;#x27;, ConnectionResetError(10054, &amp;#x27;Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto&amp;#x27;, None, 10054, None))\n\n------------------------------ Captured log call -------------------------------\nINFO     test_03_payroll_processing:test_03_payroll_processing.py:84 TC-204: Testing payroll calculation\nINFO     conftest:conftest.py:145 Navigating via menu: Recursos Humanos &amp;gt; Procesar\nERROR    conftest:conftest.py:186 Menu navigation failed: (&amp;#x27;Connection aborted.&amp;#x27;, ConnectionResetError(10054, &amp;#x27;Se ha forzado la interrupci\u00f3n de una conexi\u00f3n existente por el host remoto&amp;#x27;, None, 10054, None))\n\n\n--------------------------- Captured stderr teardown ---------------------------\n2025-12-16 18:49:02,503 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DD67020&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot\n2025-12-16 18:49:06,570 - urllib3.connectionpool - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DD67F00&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot\n2025-12-16 18:49:10,637 - urllib3.connectionpool - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE3ABE0&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot\n\n---------------------------- Captured log teardown -----------------------------\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DD67020&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DD67F00&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot\nWARNING  urllib3.connectionpool:connectionpool.py:868 Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by &amp;#x27;NewConnectionError(&amp;#x27;&amp;lt;urllib3.connection.HTTPConnection object at 0x000002115DE3ABE0&amp;gt;: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexi\u00f3n ya que el equipo de destino deneg\u00f3 expresamente dicha conexi\u00f3n&amp;#x27;)&amp;#x27;: /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot\n&#34;}], &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_approve_payroll&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Skipped&#34;, &#34;testId&#34;: &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_approve_payroll&#34;, &#34;duration&#34;: &#34;00:00:19&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Skipped&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;test_03_payroll_processing.py::TestPayrollProcessing::test_approve_payroll&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:19&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;(&amp;#x27;C:\\\\apps\\\\cloudfly\\\\tests\\\\test_03_payroll_processing.py&amp;#x27;, 137, &amp;#x27;Skipped: Cannot test approval&amp;#x27;)\n\n---------------------------- Captured stderr setup -----------------------------\n2025-12-16 18:49:15,251 - conftest - INFO - Initializing WebDriver\n2025-12-16 18:49:15,252 - WDM - INFO - ====== WebDriver manager ======\n2025-12-16 18:49:16,865 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:49:16,921 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:49:16,971 - WDM - INFO - Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\n2025-12-16 18:49:16,971 - conftest - INFO - Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\n2025-12-16 18:49:18,316 - conftest - INFO - WebDriver initialized successfully\n2025-12-16 18:49:18,316 - conftest - INFO - Navigating to login page: http://localhost:3000\n2025-12-16 18:49:20,902 - conftest - INFO - Already logged in\n\n------------------------------ Captured log setup ------------------------------\nINFO     conftest:conftest.py:45 Initializing WebDriver\nINFO     WDM:logger.py:11 ====== WebDriver manager ======\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\nINFO     conftest:conftest.py:70 Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\nINFO     conftest:conftest.py:76 WebDriver initialized successfully\nINFO     conftest:conftest.py:92 Navigating to login page: http://localhost:3000\nINFO     conftest:conftest.py:97 Already logged in\n\n----------------------------- Captured stderr call -----------------------------\n2025-12-16 18:49:20,905 - test_03_payroll_processing - INFO - TC-205: Testing payroll approval\n2025-12-16 18:49:31,570 - test_03_payroll_processing - WARNING - TC-205: Could not approve (might not be in correct state): Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n\n------------------------------ Captured log call -------------------------------\nINFO     test_03_payroll_processing:test_03_payroll_processing.py:123 TC-205: Testing payroll approval\nWARNING  test_03_payroll_processing:test_03_payroll_processing.py:136 TC-205: Could not approve (might not be in correct state): Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n--------------------------- Captured stderr teardown ---------------------------\n2025-12-16 18:49:31,574 - conftest - INFO - Closing WebDriver\n\n---------------------------- Captured log teardown -----------------------------\nINFO     conftest:conftest.py:86 Closing WebDriver&#34;}], &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_pay_payroll&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Skipped&#34;, &#34;testId&#34;: &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_pay_payroll&#34;, &#34;duration&#34;: &#34;00:00:19&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Skipped&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;test_03_payroll_processing.py::TestPayrollProcessing::test_pay_payroll&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:19&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;(&amp;#x27;C:\\\\apps\\\\cloudfly\\\\tests\\\\test_03_payroll_processing.py&amp;#x27;, 159, &amp;#x27;Skipped: Cannot test payment&amp;#x27;)\n\n---------------------------- Captured stderr setup -----------------------------\n2025-12-16 18:49:34,138 - conftest - INFO - Initializing WebDriver\n2025-12-16 18:49:34,139 - WDM - INFO - ====== WebDriver manager ======\n2025-12-16 18:49:35,846 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:49:35,899 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:49:35,949 - WDM - INFO - Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\n2025-12-16 18:49:35,949 - conftest - INFO - Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\n2025-12-16 18:49:37,512 - conftest - INFO - WebDriver initialized successfully\n2025-12-16 18:49:37,513 - conftest - INFO - Navigating to login page: http://localhost:3000\n2025-12-16 18:49:40,337 - conftest - INFO - Already logged in\n\n------------------------------ Captured log setup ------------------------------\nINFO     conftest:conftest.py:45 Initializing WebDriver\nINFO     WDM:logger.py:11 ====== WebDriver manager ======\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\nINFO     conftest:conftest.py:70 Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\nINFO     conftest:conftest.py:76 WebDriver initialized successfully\nINFO     conftest:conftest.py:92 Navigating to login page: http://localhost:3000\nINFO     conftest:conftest.py:97 Already logged in\n\n----------------------------- Captured stderr call -----------------------------\n2025-12-16 18:49:40,339 - test_03_payroll_processing - INFO - TC-206: Testing payment registration\n2025-12-16 18:49:50,937 - test_03_payroll_processing - WARNING - TC-206: Could not register payment: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n\n------------------------------ Captured log call -------------------------------\nINFO     test_03_payroll_processing:test_03_payroll_processing.py:141 TC-206: Testing payment registration\nWARNING  test_03_payroll_processing:test_03_payroll_processing.py:158 TC-206: Could not register payment: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n--------------------------- Captured stderr teardown ---------------------------\n2025-12-16 18:49:50,940 - conftest - INFO - Closing WebDriver\n\n---------------------------- Captured log teardown -----------------------------\nINFO     conftest:conftest.py:86 Closing WebDriver&#34;}], &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_view_receipts&#34;: [{&#34;extras&#34;: [], &#34;result&#34;: &#34;Failed&#34;, &#34;testId&#34;: &#34;test_03_payroll_processing.py::TestPayrollProcessing::test_view_receipts&#34;, &#34;duration&#34;: &#34;00:00:27&#34;, &#34;resultsTableRow&#34;: [&#34;&lt;td class=\&#34;col-result\&#34;&gt;Failed&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-testId\&#34;&gt;test_03_payroll_processing.py::TestPayrollProcessing::test_view_receipts&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-duration\&#34;&gt;00:00:27&lt;/td&gt;&#34;, &#34;&lt;td class=\&#34;col-links\&#34;&gt;&lt;/td&gt;&#34;], &#34;log&#34;: &#34;test_03_payroll_processing.py:166: in test_view_receipts\n    ???\nconftest.py:153: in _navigate\n    for el in parent_elements:\nC:\\Python313\\Lib\\site-packages\\selenium\\webdriver\\support\\wait.py:101: in until\n    raise TimeoutException(message, screen, stacktrace)\nE   selenium.common.exceptions.TimeoutException: Message: \nE   Stacktrace:\nE   Symbols not available. Dumping unresolved backtrace:\nE   \t0x1081223\nE   \t0x1081264\nE   \t0xe6e6dd\nE   \t0xeb93a5\nE   \t0xeb977b\nE   \t0xf00382\nE   \t0xedb534\nE   \t0xefdb13\nE   \t0xedb2e6\nE   \t0xead321\nE   \t0xeae1d4\nE   \t0x12d5264\nE   \t0x12d081b\nE   \t0x12ed0fa\nE   \t0x109b128\nE   \t0x10a312d\nE   \t0x1089528\nE   \t0x10896e9\nE   \t0x1073a78\nE   \t0x76385d49\nE   \t0x76f0d5db\nE   \t0x76f0d561\n\n---------------------------- Captured stderr setup -----------------------------\n2025-12-16 18:49:53,244 - conftest - INFO - Initializing WebDriver\n2025-12-16 18:49:53,244 - WDM - INFO - ====== WebDriver manager ======\n2025-12-16 18:49:55,194 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:50:03,372 - WDM - INFO - Get LATEST chromedriver version for google-chrome\n2025-12-16 18:50:03,419 - WDM - INFO - Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\n2025-12-16 18:50:03,420 - conftest - INFO - Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\n2025-12-16 18:50:04,941 - conftest - INFO - WebDriver initialized successfully\n2025-12-16 18:50:04,942 - conftest - INFO - Navigating to login page: http://localhost:3000\n2025-12-16 18:50:07,245 - conftest - INFO - Already logged in\n\n------------------------------ Captured log setup ------------------------------\nINFO     conftest:conftest.py:45 Initializing WebDriver\nINFO     WDM:logger.py:11 ====== WebDriver manager ======\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Get LATEST chromedriver version for google-chrome\nINFO     WDM:logger.py:11 Driver [C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache\nINFO     conftest:conftest.py:70 Using ChromeDriver at: C:\\Users\\Edwin\\.wdm\\drivers\\chromedriver\\win64\\143.0.7499.146\\chromedriver-win32\\chromedriver.exe\nINFO     conftest:conftest.py:76 WebDriver initialized successfully\nINFO     conftest:conftest.py:92 Navigating to login page: http://localhost:3000\nINFO     conftest:conftest.py:97 Already logged in\n\n----------------------------- Captured stderr call -----------------------------\n2025-12-16 18:50:07,247 - test_03_payroll_processing - INFO - TC-207: Viewing receipts\n2025-12-16 18:50:07,248 - conftest - INFO - Navigating via menu: Recursos Humanos &amp;gt; Recibos\n2025-12-16 18:50:17,917 - conftest - ERROR - Menu navigation failed: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n\n------------------------------ Captured log call -------------------------------\nINFO     test_03_payroll_processing:test_03_payroll_processing.py:163 TC-207: Viewing receipts\nINFO     conftest:conftest.py:145 Navigating via menu: Recursos Humanos &amp;gt; Recibos\nERROR    conftest:conftest.py:186 Menu navigation failed: Message: \nStacktrace:\nSymbols not available. Dumping unresolved backtrace:\n\t0x1081223\n\t0x1081264\n\t0xe6e6dd\n\t0xeb93a5\n\t0xeb977b\n\t0xf00382\n\t0xedb534\n\t0xefdb13\n\t0xedb2e6\n\t0xead321\n\t0xeae1d4\n\t0x12d5264\n\t0x12d081b\n\t0x12ed0fa\n\t0x109b128\n\t0x10a312d\n\t0x1089528\n\t0x10896e9\n\t0x1073a78\n\t0x76385d49\n\t0x76f0d5db\n\t0x76f0d561\n\n--------------------------- Captured stderr teardown ---------------------------\n2025-12-16 18:50:18,163 - conftest - ERROR - Test failed. Screenshot saved to: C:\\apps\\cloudfly\\tests\\logs\\failure_20251216_185017.png\n2025-12-16 18:50:18,164 - conftest - INFO - Closing WebDriver\n\n---------------------------- Captured log teardown -----------------------------\nERROR    conftest:conftest.py:84 Test failed. Screenshot saved to: C:\\apps\\cloudfly\\tests\\logs\\failure_20251216_185017.png\nINFO     conftest:conftest.py:86 Closing WebDriver&#34;}]}, &#34;renderCollapsed&#34;: [&#34;passed&#34;], &#34;initialSort&#34;: &#34;result&#34;, &#34;title&#34;: &#34;report.html&#34;}"></div>
+    <script>
+      (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+const { getCollapsedCategory, setCollapsedIds } = require('./storage.js')
+
+class DataManager {
+    setManager(data) {
+        const collapsedCategories = [...getCollapsedCategory(data.renderCollapsed)]
+        const collapsedIds = []
+        const tests = Object.values(data.tests).flat().map((test, index) => {
+            const collapsed = collapsedCategories.includes(test.result.toLowerCase())
+            const id = `test_${index}`
+            if (collapsed) {
+                collapsedIds.push(id)
+            }
+            return {
+                ...test,
+                id,
+                collapsed,
+            }
+        })
+        const dataBlob = { ...data, tests }
+        this.data = { ...dataBlob }
+        this.renderData = { ...dataBlob }
+        setCollapsedIds(collapsedIds)
+    }
+
+    get allData() {
+        return { ...this.data }
+    }
+
+    resetRender() {
+        this.renderData = { ...this.data }
+    }
+
+    setRender(data) {
+        this.renderData.tests = [...data]
+    }
+
+    toggleCollapsedItem(id) {
+        this.renderData.tests = this.renderData.tests.map((test) =>
+            test.id === id ? { ...test, collapsed: !test.collapsed } : test,
+        )
+    }
+
+    set allCollapsed(collapsed) {
+        this.renderData = { ...this.renderData, tests: [...this.renderData.tests.map((test) => (
+            { ...test, collapsed }
+        ))] }
+    }
+
+    get testSubset() {
+        return [...this.renderData.tests]
+    }
+
+    get environment() {
+        return this.renderData.environment
+    }
+
+    get initialSort() {
+        return this.data.initialSort
+    }
+}
+
+module.exports = {
+    manager: new DataManager(),
+}
+
+},{"./storage.js":8}],2:[function(require,module,exports){
+const mediaViewer = require('./mediaviewer.js')
+const templateEnvRow = document.getElementById('template_environment_row')
+const templateResult = document.getElementById('template_results-table__tbody')
+
+function htmlToElements(html) {
+    const temp = document.createElement('template')
+    temp.innerHTML = html
+    return temp.content.childNodes
+}
+
+const find = (selector, elem) => {
+    if (!elem) {
+        elem = document
+    }
+    return elem.querySelector(selector)
+}
+
+const findAll = (selector, elem) => {
+    if (!elem) {
+        elem = document
+    }
+    return [...elem.querySelectorAll(selector)]
+}
+
+const dom = {
+    getStaticRow: (key, value) => {
+        const envRow = templateEnvRow.content.cloneNode(true)
+        const isObj = typeof value === 'object' && value !== null
+        const values = isObj ? Object.keys(value).map((k) => `${k}: ${value[k]}`) : null
+
+        const valuesElement = htmlToElements(
+            values ? `<ul>${values.map((val) => `<li>${val}</li>`).join('')}<ul>` : `<div>${value}</div>`)[0]
+        const td = findAll('td', envRow)
+        td[0].textContent = key
+        td[1].appendChild(valuesElement)
+
+        return envRow
+    },
+    getResultTBody: ({ testId, id, log, extras, resultsTableRow, tableHtml, result, collapsed }) => {
+        const resultBody = templateResult.content.cloneNode(true)
+        resultBody.querySelector('tbody').classList.add(result.toLowerCase())
+        resultBody.querySelector('tbody').id = testId
+        resultBody.querySelector('.collapsible').dataset.id = id
+
+        resultsTableRow.forEach((html) => {
+            const t = document.createElement('template')
+            t.innerHTML = html
+            resultBody.querySelector('.collapsible').appendChild(t.content)
+        })
+
+        if (log) {
+            // Wrap lines starting with "E" with span.error to color those lines red
+            const wrappedLog = log.replace(/^E.*$/gm, (match) => `<span class="error">${match}</span>`)
+            resultBody.querySelector('.log').innerHTML = wrappedLog
+        } else {
+            resultBody.querySelector('.log').remove()
+        }
+
+        if (collapsed) {
+            resultBody.querySelector('.collapsible > td')?.classList.add('collapsed')
+            resultBody.querySelector('.extras-row').classList.add('hidden')
+        } else {
+            resultBody.querySelector('.collapsible > td')?.classList.remove('collapsed')
+        }
+
+        const media = []
+        extras?.forEach(({ name, format_type, content }) => {
+            if (['image', 'video'].includes(format_type)) {
+                media.push({ path: content, name, format_type })
+            }
+
+            if (format_type === 'html') {
+                resultBody.querySelector('.extraHTML').insertAdjacentHTML('beforeend', `<div>${content}</div>`)
+            }
+        })
+        mediaViewer.setup(resultBody, media)
+
+        // Add custom html from the pytest_html_results_table_html hook
+        tableHtml?.forEach((item) => {
+            resultBody.querySelector('td[class="extra"]').insertAdjacentHTML('beforeend', item)
+        })
+
+        return resultBody
+    },
+}
+
+module.exports = {
+    dom,
+    htmlToElements,
+    find,
+    findAll,
+}
+
+},{"./mediaviewer.js":6}],3:[function(require,module,exports){
+const { manager } = require('./datamanager.js')
+const { doSort } = require('./sort.js')
+const storageModule = require('./storage.js')
+
+const getFilteredSubSet = (filter) =>
+    manager.allData.tests.filter(({ result }) => filter.includes(result.toLowerCase()))
+
+const doInitFilter = () => {
+    const currentFilter = storageModule.getVisible()
+    const filteredSubset = getFilteredSubSet(currentFilter)
+    manager.setRender(filteredSubset)
+}
+
+const doFilter = (type, show) => {
+    if (show) {
+        storageModule.showCategory(type)
+    } else {
+        storageModule.hideCategory(type)
+    }
+
+    const currentFilter = storageModule.getVisible()
+    const filteredSubset = getFilteredSubSet(currentFilter)
+    manager.setRender(filteredSubset)
+
+    const sortColumn = storageModule.getSort()
+    doSort(sortColumn, true)
+}
+
+module.exports = {
+    doFilter,
+    doInitFilter,
+}
+
+},{"./datamanager.js":1,"./sort.js":7,"./storage.js":8}],4:[function(require,module,exports){
+const { redraw, bindEvents, renderStatic } = require('./main.js')
+const { doInitFilter } = require('./filter.js')
+const { doInitSort } = require('./sort.js')
+const { manager } = require('./datamanager.js')
+const data = JSON.parse(document.getElementById('data-container').dataset.jsonblob)
+
+function init() {
+    manager.setManager(data)
+    doInitFilter()
+    doInitSort()
+    renderStatic()
+    redraw()
+    bindEvents()
+}
+
+init()
+
+},{"./datamanager.js":1,"./filter.js":3,"./main.js":5,"./sort.js":7}],5:[function(require,module,exports){
+const { dom, find, findAll } = require('./dom.js')
+const { manager } = require('./datamanager.js')
+const { doSort } = require('./sort.js')
+const { doFilter } = require('./filter.js')
+const {
+    getVisible,
+    getCollapsedIds,
+    setCollapsedIds,
+    getSort,
+    getSortDirection,
+    possibleFilters,
+} = require('./storage.js')
+
+const removeChildren = (node) => {
+    while (node.firstChild) {
+        node.removeChild(node.firstChild)
+    }
+}
+
+const renderStatic = () => {
+    const renderEnvironmentTable = () => {
+        const environment = manager.environment
+        const rows = Object.keys(environment).map((key) => dom.getStaticRow(key, environment[key]))
+        const table = document.getElementById('environment')
+        removeChildren(table)
+        rows.forEach((row) => table.appendChild(row))
+    }
+    renderEnvironmentTable()
+}
+
+const addItemToggleListener = (elem) => {
+    elem.addEventListener('click', ({ target }) => {
+        const id = target.parentElement.dataset.id
+        manager.toggleCollapsedItem(id)
+
+        const collapsedIds = getCollapsedIds()
+        if (collapsedIds.includes(id)) {
+            const updated = collapsedIds.filter((item) => item !== id)
+            setCollapsedIds(updated)
+        } else {
+            collapsedIds.push(id)
+            setCollapsedIds(collapsedIds)
+        }
+        redraw()
+    })
+}
+
+const renderContent = (tests) => {
+    const sortAttr = getSort(manager.initialSort)
+    const sortAsc = JSON.parse(getSortDirection())
+    const rows = tests.map(dom.getResultTBody)
+    const table = document.getElementById('results-table')
+    const tableHeader = document.getElementById('results-table-head')
+
+    const newTable = document.createElement('table')
+    newTable.id = 'results-table'
+
+    // remove all sorting classes and set the relevant
+    findAll('.sortable', tableHeader).forEach((elem) => elem.classList.remove('asc', 'desc'))
+    tableHeader.querySelector(`.sortable[data-column-type="${sortAttr}"]`)?.classList.add(sortAsc ? 'desc' : 'asc')
+    newTable.appendChild(tableHeader)
+
+    if (!rows.length) {
+        const emptyTable = document.getElementById('template_results-table__body--empty').content.cloneNode(true)
+        newTable.appendChild(emptyTable)
+    } else {
+        rows.forEach((row) => {
+            if (!!row) {
+                findAll('.collapsible td:not(.col-links', row).forEach(addItemToggleListener)
+                find('.logexpander', row).addEventListener('click',
+                    (evt) => evt.target.parentNode.classList.toggle('expanded'),
+                )
+                newTable.appendChild(row)
+            }
+        })
+    }
+
+    table.replaceWith(newTable)
+}
+
+const renderDerived = () => {
+    const currentFilter = getVisible()
+    possibleFilters.forEach((result) => {
+        const input = document.querySelector(`input[data-test-result="${result}"]`)
+        input.checked = currentFilter.includes(result)
+    })
+}
+
+const bindEvents = () => {
+    const filterColumn = (evt) => {
+        const { target: element } = evt
+        const { testResult } = element.dataset
+
+        doFilter(testResult, element.checked)
+        const collapsedIds = getCollapsedIds()
+        const updated = manager.renderData.tests.map((test) => {
+            return {
+                ...test,
+                collapsed: collapsedIds.includes(test.id),
+            }
+        })
+        manager.setRender(updated)
+        redraw()
+    }
+
+    const header = document.getElementById('environment-header')
+    header.addEventListener('click', () => {
+        const table = document.getElementById('environment')
+        table.classList.toggle('hidden')
+        header.classList.toggle('collapsed')
+    })
+
+    findAll('input[name="filter_checkbox"]').forEach((elem) => {
+        elem.addEventListener('click', filterColumn)
+    })
+
+    findAll('.sortable').forEach((elem) => {
+        elem.addEventListener('click', (evt) => {
+            const { target: element } = evt
+            const { columnType } = element.dataset
+            doSort(columnType)
+            redraw()
+        })
+    })
+
+    document.getElementById('show_all_details').addEventListener('click', () => {
+        manager.allCollapsed = false
+        setCollapsedIds([])
+        redraw()
+    })
+    document.getElementById('hide_all_details').addEventListener('click', () => {
+        manager.allCollapsed = true
+        const allIds = manager.renderData.tests.map((test) => test.id)
+        setCollapsedIds(allIds)
+        redraw()
+    })
+}
+
+const redraw = () => {
+    const { testSubset } = manager
+
+    renderContent(testSubset)
+    renderDerived()
+}
+
+module.exports = {
+    redraw,
+    bindEvents,
+    renderStatic,
+}
+
+},{"./datamanager.js":1,"./dom.js":2,"./filter.js":3,"./sort.js":7,"./storage.js":8}],6:[function(require,module,exports){
+class MediaViewer {
+    constructor(assets) {
+        this.assets = assets
+        this.index = 0
+    }
+
+    nextActive() {
+        this.index = this.index === this.assets.length - 1 ? 0 : this.index + 1
+        return [this.activeFile, this.index]
+    }
+
+    prevActive() {
+        this.index = this.index === 0 ? this.assets.length - 1 : this.index -1
+        return [this.activeFile, this.index]
+    }
+
+    get currentIndex() {
+        return this.index
+    }
+
+    get activeFile() {
+        return this.assets[this.index]
+    }
+}
+
+
+const setup = (resultBody, assets) => {
+    if (!assets.length) {
+        resultBody.querySelector('.media').classList.add('hidden')
+        return
+    }
+
+    const mediaViewer = new MediaViewer(assets)
+    const container = resultBody.querySelector('.media-container')
+    const leftArrow = resultBody.querySelector('.media-container__nav--left')
+    const rightArrow = resultBody.querySelector('.media-container__nav--right')
+    const mediaName = resultBody.querySelector('.media__name')
+    const counter = resultBody.querySelector('.media__counter')
+    const imageEl = resultBody.querySelector('img')
+    const sourceEl = resultBody.querySelector('source')
+    const videoEl = resultBody.querySelector('video')
+
+    const setImg = (media, index) => {
+        if (media?.format_type === 'image') {
+            imageEl.src = media.path
+
+            imageEl.classList.remove('hidden')
+            videoEl.classList.add('hidden')
+        } else if (media?.format_type === 'video') {
+            sourceEl.src = media.path
+
+            videoEl.classList.remove('hidden')
+            imageEl.classList.add('hidden')
+        }
+
+        mediaName.innerText = media?.name
+        counter.innerText = `${index + 1} / ${assets.length}`
+    }
+    setImg(mediaViewer.activeFile, mediaViewer.currentIndex)
+
+    const moveLeft = () => {
+        const [media, index] = mediaViewer.prevActive()
+        setImg(media, index)
+    }
+    const doRight = () => {
+        const [media, index] = mediaViewer.nextActive()
+        setImg(media, index)
+    }
+    const openImg = () => {
+        window.open(mediaViewer.activeFile.path, '_blank')
+    }
+    if (assets.length === 1) {
+        container.classList.add('media-container--fullscreen')
+    } else {
+        leftArrow.addEventListener('click', moveLeft)
+        rightArrow.addEventListener('click', doRight)
+    }
+    imageEl.addEventListener('click', openImg)
+}
+
+module.exports = {
+    setup,
+}
+
+},{}],7:[function(require,module,exports){
+const { manager } = require('./datamanager.js')
+const storageModule = require('./storage.js')
+
+const genericSort = (list, key, ascending, customOrder) => {
+    let sorted
+    if (customOrder) {
+        sorted = list.sort((a, b) => {
+            const aValue = a.result.toLowerCase()
+            const bValue = b.result.toLowerCase()
+
+            const aIndex = customOrder.findIndex((item) => item.toLowerCase() === aValue)
+            const bIndex = customOrder.findIndex((item) => item.toLowerCase() === bValue)
+
+            // Compare the indices to determine the sort order
+            return aIndex - bIndex
+        })
+    } else {
+        sorted = list.sort((a, b) => a[key] === b[key] ? 0 : a[key] > b[key] ? 1 : -1)
+    }
+
+    if (ascending) {
+        sorted.reverse()
+    }
+    return sorted
+}
+
+const durationSort = (list, ascending) => {
+    const parseDuration = (duration) => {
+        if (duration.includes(':')) {
+            // If it's in the format "HH:mm:ss"
+            const [hours, minutes, seconds] = duration.split(':').map(Number)
+            return (hours * 3600 + minutes * 60 + seconds) * 1000
+        } else {
+            // If it's in the format "nnn ms"
+            return parseInt(duration)
+        }
+    }
+    const sorted = list.sort((a, b) => parseDuration(a['duration']) - parseDuration(b['duration']))
+    if (ascending) {
+        sorted.reverse()
+    }
+    return sorted
+}
+
+const doInitSort = () => {
+    const type = storageModule.getSort(manager.initialSort)
+    const ascending = storageModule.getSortDirection()
+    const list = manager.testSubset
+    const initialOrder = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed', 'Skipped', 'Passed']
+
+    storageModule.setSort(type)
+    storageModule.setSortDirection(ascending)
+
+    if (type?.toLowerCase() === 'original') {
+        manager.setRender(list)
+    } else {
+        let sortedList
+        switch (type) {
+        case 'duration':
+            sortedList = durationSort(list, ascending)
+            break
+        case 'result':
+            sortedList = genericSort(list, type, ascending, initialOrder)
+            break
+        default:
+            sortedList = genericSort(list, type, ascending)
+            break
+        }
+        manager.setRender(sortedList)
+    }
+}
+
+const doSort = (type, skipDirection) => {
+    const newSortType = storageModule.getSort(manager.initialSort) !== type
+    const currentAsc = storageModule.getSortDirection()
+    let ascending
+    if (skipDirection) {
+        ascending = currentAsc
+    } else {
+        ascending = newSortType ? false : !currentAsc
+    }
+    storageModule.setSort(type)
+    storageModule.setSortDirection(ascending)
+
+    const list = manager.testSubset
+    const sortedList = type === 'duration' ? durationSort(list, ascending) : genericSort(list, type, ascending)
+    manager.setRender(sortedList)
+}
+
+module.exports = {
+    doInitSort,
+    doSort,
+}
+
+},{"./datamanager.js":1,"./storage.js":8}],8:[function(require,module,exports){
+const possibleFilters = [
+    'passed',
+    'skipped',
+    'failed',
+    'error',
+    'xfailed',
+    'xpassed',
+    'rerun',
+]
+
+const getVisible = () => {
+    const url = new URL(window.location.href)
+    const settings = new URLSearchParams(url.search).get('visible')
+    const lower = (item) => {
+        const lowerItem = item.toLowerCase()
+        if (possibleFilters.includes(lowerItem)) {
+            return lowerItem
+        }
+        return null
+    }
+    return settings === null ?
+        possibleFilters :
+        [...new Set(settings?.split(',').map(lower).filter((item) => item))]
+}
+
+const hideCategory = (categoryToHide) => {
+    const url = new URL(window.location.href)
+    const visibleParams = new URLSearchParams(url.search).get('visible')
+    const currentVisible = visibleParams ? visibleParams.split(',') : [...possibleFilters]
+    const settings = [...new Set(currentVisible)].filter((f) => f !== categoryToHide).join(',')
+
+    url.searchParams.set('visible', settings)
+    window.history.pushState({}, null, unescape(url.href))
+}
+
+const showCategory = (categoryToShow) => {
+    if (typeof window === 'undefined') {
+        return
+    }
+    const url = new URL(window.location.href)
+    const currentVisible = new URLSearchParams(url.search).get('visible')?.split(',').filter(Boolean) ||
+        [...possibleFilters]
+    const settings = [...new Set([categoryToShow, ...currentVisible])]
+    const noFilter = possibleFilters.length === settings.length || !settings.length
+
+    noFilter ? url.searchParams.delete('visible') : url.searchParams.set('visible', settings.join(','))
+    window.history.pushState({}, null, unescape(url.href))
+}
+
+const getSort = (initialSort) => {
+    const url = new URL(window.location.href)
+    let sort = new URLSearchParams(url.search).get('sort')
+    if (!sort) {
+        sort = initialSort || 'result'
+    }
+    return sort
+}
+
+const setSort = (type) => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('sort', type)
+    window.history.pushState({}, null, unescape(url.href))
+}
+
+const getCollapsedCategory = (renderCollapsed) => {
+    let categories
+    if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href)
+        const collapsedItems = new URLSearchParams(url.search).get('collapsed')
+        switch (true) {
+        case !renderCollapsed && collapsedItems === null:
+            categories = ['passed']
+            break
+        case collapsedItems?.length === 0 || /^["']{2}$/.test(collapsedItems):
+            categories = []
+            break
+        case /^all$/.test(collapsedItems) || collapsedItems === null && /^all$/.test(renderCollapsed):
+            categories = [...possibleFilters]
+            break
+        default:
+            categories = collapsedItems?.split(',').map((item) => item.toLowerCase()) || renderCollapsed
+            break
+        }
+    } else {
+        categories = []
+    }
+    return categories
+}
+
+const getSortDirection = () => JSON.parse(sessionStorage.getItem('sortAsc')) || false
+const setSortDirection = (ascending) => sessionStorage.setItem('sortAsc', ascending)
+
+const getCollapsedIds = () => JSON.parse(sessionStorage.getItem('collapsedIds')) || []
+const setCollapsedIds = (list) => sessionStorage.setItem('collapsedIds', JSON.stringify(list))
+
+module.exports = {
+    getVisible,
+    hideCategory,
+    showCategory,
+    getCollapsedIds,
+    setCollapsedIds,
+    getSort,
+    setSort,
+    getSortDirection,
+    setSortDirection,
+    getCollapsedCategory,
+    possibleFilters,
+}
+
+},{}]},{},[4]);
+    </script>
+  </footer>
+</html>

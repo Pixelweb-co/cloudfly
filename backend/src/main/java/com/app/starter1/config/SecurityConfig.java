@@ -388,6 +388,19 @@ public class SecurityConfig {
 
                                         // 👉 nuevo: imágenes /uploads/**
                                         http.requestMatchers(HttpMethod.GET, "/uploads/**").permitAll();
+
+                                        // 👉 Recursos Humanos (HR & Payroll)
+                                        http.requestMatchers(HttpMethod.GET, "/api/hr/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR");
+                                        http.requestMatchers(HttpMethod.POST, "/api/hr/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR");
+                                        http.requestMatchers(HttpMethod.PUT, "/api/hr/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR");
+                                        http.requestMatchers(HttpMethod.PATCH, "/api/hr/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR");
+                                        http.requestMatchers(HttpMethod.DELETE, "/api/hr/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR");
+
                                         // Configurar el resto de los endpoints (no especificados)
                                         http.anyRequest().denyAll();
                                 }).addFilterBefore(new JwtTokenValidator(jwtUtils), BasicAuthenticationFilter.class)

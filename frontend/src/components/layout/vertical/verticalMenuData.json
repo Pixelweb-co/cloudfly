@@ -152,6 +152,81 @@
     ]
   },
   {
+    "label": "Recursos Humanos",
+    "icon": "users",
+    "route": "#",
+    "roles": [
+      "SUPERADMIN",
+      "ADMIN",
+      "HR"
+    ],
+    "children": [
+      {
+        "label": "Dashboard",
+        "route": "/hr/dashboard",
+        "icon": "chart-pie",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN",
+          "HR"
+        ]
+      },
+      {
+        "label": "Empleados",
+        "route": "/hr/employees",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN",
+          "HR"
+        ]
+      },
+      {
+        "label": "Conceptos de Nómina",
+        "route": "/hr/concepts",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN",
+          "HR"
+        ]
+      },
+      {
+        "label": "Periodos",
+        "route": "/hr/periods",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN",
+          "HR"
+        ]
+      },
+      {
+        "label": "Procesar Nómina",
+        "route": "/hr/process",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN",
+          "HR"
+        ]
+      },
+      {
+        "label": "Recibos",
+        "route": "/hr/receipts",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN",
+          "HR"
+        ]
+      },
+      {
+        "label": "Configuración",
+        "route": "/hr/config",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN"
+        ]
+      }
+    ]
+  },
+  {
     "label": "Contabilidad",
     "icon": "calculator",
     "route": "#",
