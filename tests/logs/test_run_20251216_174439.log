@@ -1,0 +1,22 @@
+2025-12-16 17:44:40,178 - conftest - INFO - Initializing WebDriver
+2025-12-16 17:44:40,178 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 17:44:42,069 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 17:44:42,230 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 17:44:42,295 - WDM - INFO - There is no [win64] chromedriver "143.0.7499.146" for browser google-chrome "143.0.7499" in cache
+2025-12-16 17:44:42,296 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 17:44:42,507 - WDM - INFO - WebDriver version 143.0.7499.146 selected
+2025-12-16 17:44:42,519 - WDM - INFO - Modern chrome version https://storage.googleapis.com/chrome-for-testing-public/143.0.7499.146/win32/chromedriver-win32.zip
+2025-12-16 17:44:42,519 - WDM - INFO - About to download new driver from https://storage.googleapis.com/chrome-for-testing-public/143.0.7499.146/win32/chromedriver-win32.zip
+2025-12-16 17:44:42,630 - WDM - INFO - Driver downloading response is 200
+2025-12-16 17:44:44,091 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 17:44:45,981 - WDM - INFO - Driver has been saved in cache [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146]
+2025-12-16 17:44:46,777 - conftest - INFO - Initializing WebDriver
+2025-12-16 17:44:46,778 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 17:44:49,216 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 17:44:49,280 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 17:44:49,336 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 17:44:49,421 - conftest - INFO - Initializing WebDriver
+2025-12-16 17:44:49,421 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 17:44:51,002 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 17:44:51,057 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 17:44:51,107 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache

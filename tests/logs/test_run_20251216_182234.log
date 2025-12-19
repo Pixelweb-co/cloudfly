@@ -1,0 +1,287 @@
+2025-12-16 18:22:34,505 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:22:34,506 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:22:36,063 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:22:36,131 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:22:36,188 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:22:36,189 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:22:37,465 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:22:37,466 - test_01_login - INFO - TC-001: Testing login page load
+2025-12-16 18:22:44,826 - test_01_login - INFO - TC-001: PASSED - Login page loaded successfully
+2025-12-16 18:22:44,828 - conftest - INFO - Closing WebDriver
+2025-12-16 18:22:51,386 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:22:51,386 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:22:53,102 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:22:53,161 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:22:53,211 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:22:53,212 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:22:54,653 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:22:54,656 - test_01_login - INFO - TC-002: Testing successful login
+2025-12-16 18:22:56,957 - test_01_login - INFO - Using credentials: edwing2022 / **********
+2025-12-16 18:23:03,971 - test_01_login - INFO - TC-002: PASSED - Login successful
+2025-12-16 18:23:03,972 - conftest - INFO - Closing WebDriver
+2025-12-16 18:23:10,414 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:23:10,414 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:23:12,128 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:23:12,186 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:23:12,249 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:23:12,250 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:23:13,696 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:23:13,698 - test_01_login - INFO - TC-003: Testing invalid login
+2025-12-16 18:23:23,157 - test_01_login - INFO - TC-003: Error message displayed: Th username invalid_user not exists!
+2025-12-16 18:23:23,157 - test_01_login - INFO - TC-003: PASSED - Invalid login rejected
+2025-12-16 18:23:23,160 - conftest - INFO - Closing WebDriver
+2025-12-16 18:23:29,565 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:23:29,565 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:23:31,623 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:23:31,690 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:23:31,780 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:23:31,782 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:23:33,261 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:23:33,262 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:23:35,568 - conftest - INFO - Already logged in
+2025-12-16 18:23:35,570 - test_02_employees - INFO - TC-101: Navigating to Employees page
+2025-12-16 18:24:06,127 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_182405.png
+2025-12-16 18:24:06,127 - conftest - INFO - Closing WebDriver
+2025-12-16 18:24:08,707 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:24:08,707 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:24:10,288 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:24:10,377 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:24:10,458 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:24:10,458 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:24:11,889 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:24:11,889 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:24:14,351 - conftest - INFO - Already logged in
+2025-12-16 18:24:14,352 - test_02_employees - INFO - TC-102: Verifying employee list
+2025-12-16 18:24:38,913 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_182438.png
+2025-12-16 18:24:38,913 - conftest - INFO - Closing WebDriver
+2025-12-16 18:24:41,208 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:24:41,208 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:24:42,993 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:24:43,042 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:24:43,100 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:24:43,100 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:24:44,524 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:24:44,525 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:24:47,176 - conftest - INFO - Already logged in
+2025-12-16 18:24:47,178 - test_02_employees - INFO - TC-103: Opening create employee dialog
+2025-12-16 18:24:59,406 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:24:59,407 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:25:01,586 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:25:01,643 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:25:01,701 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:25:01,702 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:25:03,168 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:25:03,168 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:25:06,080 - conftest - INFO - Already logged in
+2025-12-16 18:25:06,084 - test_02_employees - INFO - TC-104: Creating new employee
+2025-12-16 18:25:23,262 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_182522.png
+2025-12-16 18:25:23,262 - conftest - INFO - Closing WebDriver
+2025-12-16 18:25:25,604 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:25:25,605 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:25:27,424 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:25:27,480 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:25:27,541 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:25:27,542 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:25:29,148 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:25:29,148 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:25:31,551 - conftest - INFO - Already logged in
+2025-12-16 18:25:31,555 - test_02_employees - INFO - TC-105: Testing toggle employee status
+2025-12-16 18:25:46,206 - test_02_employees - WARNING - TC-105: Could not test toggle (might not have employees): Message: no such element: Unable to locate element: {"method":"css selector","selector":"[data-testid="ToggleOnIcon"], [data-testid="ToggleOffIcon"]"}
+  (Session info: chrome=143.0.7499.42); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0x1081223
+	0x1081264
+	0xe6e6dd
+	0xeb93a5
+	0xeb977b
+	0xf00382
+	0xedb534
+	0xefdb13
+	0xedb2e6
+	0xead321
+	0xeae1d4
+	0x12d5264
+	0x12d081b
+	0x12ed0fa
+	0x109b128
+	0x10a312d
+	0x1089528
+	0x10896e9
+	0x1073a78
+	0x76385d49
+	0x76f0d5db
+	0x76f0d561
+
+2025-12-16 18:25:46,211 - conftest - INFO - Closing WebDriver
+2025-12-16 18:25:48,678 - test_03_payroll_processing - INFO - Setting up demo data
+2025-12-16 18:25:48,696 - test_03_payroll_processing - INFO - Demo data response: {"error": "Acceso no autorizado", "message": "Full authentication is required to access this resource"}
+2025-12-16 18:25:48,699 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:25:48,700 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:25:50,285 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:25:50,341 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:25:50,404 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:25:50,405 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:25:51,788 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:25:51,789 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:25:54,050 - conftest - INFO - Already logged in
+2025-12-16 18:25:54,052 - test_03_payroll_processing - INFO - TC-201: Navigating to Periods page
+2025-12-16 18:26:08,309 - test_03_payroll_processing - INFO - TC-201: PASSED - Periods page loaded
+2025-12-16 18:26:08,312 - conftest - INFO - Closing WebDriver
+2025-12-16 18:26:15,417 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:26:15,419 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:26:17,126 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:26:21,237 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:26:21,297 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:26:21,297 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:26:23,152 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:26:23,153 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:26:25,972 - conftest - INFO - Already logged in
+2025-12-16 18:26:25,976 - test_03_payroll_processing - INFO - TC-202: Creating payroll period
+2025-12-16 18:26:40,773 - test_03_payroll_processing - WARNING - TC-202: Period creation might not have dialog yet: Message: no such element: Unable to locate element: {"method":"xpath","selector":"//button[contains(., 'Nuevo Periodo') or contains(., 'New Period')]"}
+  (Session info: chrome=143.0.7499.42); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0x1081223
+	0x1081264
+	0xe6e6dd
+	0xeb93a5
+	0xeb977b
+	0xf00382
+	0xedb534
+	0xefdb13
+	0xedb2e6
+	0xead321
+	0xeae1d4
+	0x12d5264
+	0x12d081b
+	0x12ed0fa
+	0x109b128
+	0x10a312d
+	0x1089528
+	0x10896e9
+	0x1073a78
+	0x76385d49
+	0x76f0d5db
+	0x76f0d561
+
+2025-12-16 18:26:40,776 - conftest - INFO - Closing WebDriver
+2025-12-16 18:26:43,319 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:26:43,320 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:26:44,962 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:26:45,020 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:26:45,077 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:26:45,078 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:26:46,402 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:26:46,403 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:26:49,498 - conftest - INFO - Already logged in
+2025-12-16 18:26:49,500 - test_03_payroll_processing - INFO - TC-203: Navigating to Process page
+2025-12-16 18:27:04,149 - test_03_payroll_processing - INFO - TC-203: PASSED - Process page loaded
+2025-12-16 18:27:04,151 - conftest - INFO - Closing WebDriver
+2025-12-16 18:27:10,608 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:27:10,608 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:27:12,363 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:27:12,423 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:27:12,471 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:27:12,471 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:27:13,952 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:27:13,953 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:27:16,877 - conftest - INFO - Already logged in
+2025-12-16 18:27:16,883 - test_03_payroll_processing - INFO - TC-204: Testing payroll calculation
+2025-12-16 18:27:32,317 - test_03_payroll_processing - WARNING - TC-204: No periods found to process
+2025-12-16 18:27:32,322 - conftest - INFO - Closing WebDriver
+2025-12-16 18:27:34,863 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:27:34,864 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:27:36,446 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:27:44,602 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:27:44,669 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:27:44,670 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:27:46,048 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:27:46,049 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:27:50,053 - conftest - INFO - Already logged in
+2025-12-16 18:27:50,056 - test_03_payroll_processing - INFO - TC-205: Testing payroll approval
+2025-12-16 18:28:00,672 - test_03_payroll_processing - WARNING - TC-205: Could not approve (might not be in correct state): Message: 
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0x1081223
+	0x1081264
+	0xe6e6dd
+	0xeb93a5
+	0xeb977b
+	0xf00382
+	0xedb534
+	0xefdb13
+	0xedb2e6
+	0xead321
+	0xeae1d4
+	0x12d5264
+	0x12d081b
+	0x12ed0fa
+	0x109b128
+	0x10a312d
+	0x1089528
+	0x10896e9
+	0x1073a78
+	0x76385d49
+	0x76f0d5db
+	0x76f0d561
+
+2025-12-16 18:28:00,677 - conftest - INFO - Closing WebDriver
+2025-12-16 18:28:04,720 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:28:04,721 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:28:06,360 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:28:06,413 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:28:06,470 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:28:06,471 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:28:07,886 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:28:07,886 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:28:10,332 - conftest - INFO - Already logged in
+2025-12-16 18:28:10,334 - test_03_payroll_processing - INFO - TC-206: Testing payment registration
+2025-12-16 18:28:20,907 - test_03_payroll_processing - WARNING - TC-206: Could not register payment: Message: 
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0x1081223
+	0x1081264
+	0xe6e6dd
+	0xeb93a5
+	0xeb977b
+	0xf00382
+	0xedb534
+	0xefdb13
+	0xedb2e6
+	0xead321
+	0xeae1d4
+	0x12d5264
+	0x12d081b
+	0x12ed0fa
+	0x109b128
+	0x10a312d
+	0x1089528
+	0x10896e9
+	0x1073a78
+	0x76385d49
+	0x76f0d5db
+	0x76f0d561
+
+2025-12-16 18:28:20,909 - conftest - INFO - Closing WebDriver
+2025-12-16 18:28:23,319 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:28:23,319 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:28:25,072 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:28:33,240 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:28:33,299 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:28:33,300 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:28:34,722 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:28:34,723 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:28:36,977 - conftest - INFO - Already logged in
+2025-12-16 18:28:36,980 - test_03_payroll_processing - INFO - TC-207: Viewing receipts
+2025-12-16 18:28:56,240 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_182856.png
+2025-12-16 18:28:56,240 - conftest - INFO - Closing WebDriver
+2025-12-16 18:28:58,670 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:28:58,671 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:29:00,456 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:29:00,503 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:29:00,560 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:29:00,561 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:29:01,971 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:29:01,973 - test_debug - INFO - Inspecting login page structure
+2025-12-16 18:29:09,697 - conftest - INFO - Closing WebDriver

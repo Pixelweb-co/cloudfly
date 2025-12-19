@@ -52,9 +52,62 @@ const verticalMenuData = (): VerticalMenuDataType[] => [
     ]
   },
   {
-    label: 'Nomina',
-    href: '/nomina',
-    icon: 'tabler-info-circle'
+    label: 'Recursos Humanos',
+    icon: 'tabler-users',
+    children: [
+      // Dashboard de Nómina
+      {
+        label: 'Dashboard',
+        href: '/hr/dashboard',
+        icon: 'tabler-chart-pie'
+      },
+      // Gestión de Personal
+      {
+        label: 'Empleados',
+        href: '/hr/employees',
+        icon: 'tabler-user-circle'
+      },
+      {
+        label: 'Conceptos de Nómina',
+        href: '/hr/concepts',
+        icon: 'tabler-list-details'
+      },
+      // Liquidación (como Alegra)
+      {
+        label: 'Liquidación',
+        icon: 'tabler-calculator',
+        children: [
+          {
+            label: 'Periodos de Nómina',
+            href: '/hr/periods'
+          },
+          {
+            label: 'Procesar Nómina',
+            href: '/hr/process'
+          },
+          {
+            label: 'Recibos de Nómina',
+            href: '/hr/receipts'
+          }
+        ]
+      },
+      // Emisión (futuro - Nómina Electrónica)
+      {
+        label: 'Emisión',
+        href: '/hr/emission',
+        icon: 'tabler-send',
+        suffix: {
+          label: 'Próx.',
+          color: 'warning'
+        }
+      },
+      // Configuración
+      {
+        label: 'Configuración',
+        href: '/hr/config',
+        icon: 'tabler-settings'
+      }
+    ]
   },
   {
     label: 'Reportes',

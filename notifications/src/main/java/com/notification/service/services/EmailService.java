@@ -5,12 +5,13 @@ import freemarker.template.Configuration;
 import freemarker.template.Template;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
 
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,6 +24,9 @@ public class EmailService {
     @Autowired
     private Configuration freemarkerConfig;
 
+    /**
+     * Envía un email con soporte para adjuntos PDF
+     */
     public void sendEmail(NotificationMessage notification) {
         try {
             // Determinar el tipo de correo y cargar la plantilla correspondiente
@@ -30,12 +34,23 @@ public class EmailService {
 
             // Crear un mensaje MimeMessage para enviar correo con HTML
             MimeMessage mimeMessage = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true); // true indica que el contenido es HTML
+            // true indica que el contenido es multipart (soporta adjuntos)
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
             helper.setFrom("gestorweb@cloudfly.com.co");
             helper.setTo(notification.getTo());
             helper.setSubject(notification.getSubject());
             helper.setText(body, true); // El segundo parámetro true indica que el cuerpo es HTML
+
+            // Agregar adjunto PDF si existe
+            if (notification.hasPdfAttachment()) {
+                byte[] pdfBytes = Base64.getDecoder().decode(notification.getPdfAttachment());
+                helper.addAttachment(
+                        notification.getPdfFileName(),
+                        new ByteArrayResource(pdfBytes),
+                        "application/pdf");
+                System.out.println("PDF adjunto agregado: " + notification.getPdfFileName());
+            }
 
             mailSender.send(mimeMessage);
             System.out.println("Email sent successfully to: " + notification.getTo());
@@ -51,13 +66,24 @@ public class EmailService {
         Map<String, Object> model = new HashMap<>();
         model.put("name", notification.getUsername());
 
+        // Si hay datos de plantilla adicionales, agregarlos al modelo
+        if (notification.getTemplateData() != null) {
+            model.putAll(notification.getTemplateData());
+        }
+
         if (notification.getType().equals("register")) {
-            model.put("activateLink", notification.getBody()); // O cualquier otro valor dinámico
+            model.put("activateLink", notification.getBody());
         }
 
         if (notification.getType().equals("recover-password")) {
             model.put("username", notification.getUsername());
-            model.put("recoverLink", notification.getBody()); // O cualquier otro valor dinámico
+            model.put("recoverLink", notification.getBody());
+        }
+
+        // Para colillas de pago
+        if (notification.getType().equals("payroll-receipt")) {
+            model.put("employeeName", notification.getUsername());
+            // Los demás datos vienen de templateData
         }
 
         // Cargar la plantilla dependiendo del tipo
