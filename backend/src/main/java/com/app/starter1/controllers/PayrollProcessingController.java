@@ -170,7 +170,6 @@ public class PayrollProcessingController {
                                 .imssAmount(receipt.getImssAmount())
                                 .status(receipt.getStatus().name())
                                 .isPaid(receipt.isPaid())
-                                .isStamped(receipt.isStamped())
                                 .build();
         }
 }

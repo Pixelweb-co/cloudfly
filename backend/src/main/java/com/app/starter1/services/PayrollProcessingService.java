@@ -66,7 +66,7 @@ public class PayrollProcessingService {
         }
 
         // Actualizar estado del periodo
-        period.setStatus(PayrollPeriod.PeriodStatus.CALCULATED);
+        period.setStatus(PayrollPeriod.PeriodStatus.LIQUIDATED);
         periodRepository.save(period);
 
         result.setReceipts(receipts);
@@ -127,7 +127,7 @@ public class PayrollProcessingService {
                 .findFirst()
                 .orElse(java.math.BigDecimal.ZERO));
 
-        receipt.setStatus(PayrollReceipt.ReceiptStatus.CALCULATED);
+        receipt.setStatus(PayrollReceipt.ReceiptStatus.PENDING);
 
         receipt = receiptRepository.save(receipt);
 
@@ -174,8 +174,8 @@ public class PayrollProcessingService {
         PayrollPeriod period = periodRepository.findByIdAndCustomer(periodId, customer)
                 .orElseThrow(() -> new RuntimeException("Period not found"));
 
-        if (period.getStatus() != PayrollPeriod.PeriodStatus.CALCULATED) {
-            throw new RuntimeException("Period must be in CALCULATED status to approve");
+        if (period.getStatus() != PayrollPeriod.PeriodStatus.LIQUIDATED) {
+            throw new RuntimeException("Period must be in LIQUIDATED status to approve");
         }
 
         List<PayrollReceipt> receipts = receiptRepository.findByPayrollPeriod(period);
@@ -184,7 +184,7 @@ public class PayrollProcessingService {
             receiptRepository.save(receipt);
         }
 
-        period.setStatus(PayrollPeriod.PeriodStatus.APPROVED);
+        period.setStatus(PayrollPeriod.PeriodStatus.PAID);
         periodRepository.save(period);
 
         log.info("Payroll approved for period: {}", period.getPeriodName());
