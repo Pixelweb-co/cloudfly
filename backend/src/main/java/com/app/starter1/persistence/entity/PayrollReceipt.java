@@ -116,10 +116,8 @@ public class PayrollReceipt {
 
     // === ENUMS ===
     public enum ReceiptStatus {
-        CALCULATED, // Calculado
-        APPROVED, // Aprobado
-        STAMPED, // Timbrado (CFDI generado)
-        PAID, // Pagado
+        PENDING, // Generado, pendiente de pago
+        PAID, // Pagado y notificado
         CANCELLED // Cancelado
     }
 
@@ -132,7 +130,7 @@ public class PayrollReceipt {
         return status == ReceiptStatus.PAID && paidAt != null;
     }
 
-    public boolean isStamped() {
-        return status == ReceiptStatus.STAMPED && uuid != null;
+    public boolean canBePaid() {
+        return status == ReceiptStatus.PENDING;
     }
 }

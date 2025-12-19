@@ -31,6 +31,25 @@ export interface Employee {
     bankAccount?: string
     clabe?: string
 
+    // Seguridad Social (Colombia)
+    nss?: string // Número de Seguro Social
+    eps?: string // EPS (Entidad Promotora de Salud)
+    arl?: string // ARL (Administradora de Riesgos Laborales)
+    afp?: string // AFP (Fondo de Pensiones)
+    cesantiasBox?: string // Caja de Cesantías
+
+    // Tipo de Salario y Prestaciones (Colombia)
+    salaryType?: 'ORDINARIO' | 'INTEGRAL'
+    hasTransportAllowance?: boolean
+    contractTypeEnum?: 'INDEFINIDO' | 'FIJO' | 'OBRA_LABOR' | 'TEMPORAL' | 'APRENDIZAJE' | 'PRESTACION_SERVICIOS'
+
+    // Campos adicionales para nómina Colombia
+    arlRiskLevel?: 'RIESGO_I' | 'RIESGO_II' | 'RIESGO_III' | 'RIESGO_IV' | 'RIESGO_V'
+    cajaCompensacion?: string
+    workSchedule?: 'TIEMPO_COMPLETO' | 'MEDIO_TIEMPO' | 'POR_HORAS'
+    monthlyWorkedDays?: number
+    hasFamilySubsidy?: boolean
+
     isActive: boolean
     notes?: string
 }
@@ -94,6 +113,12 @@ export interface PayrollPeriod {
     description?: string
     periodName: string
     workingDays: number
+    // Empleados asignados
+    employeeIds?: number[]
+    employeeCount?: number
+    // Totales de nómina
+    totalPayroll?: number
+    elapsedPayroll?: number
 }
 
 export interface PayrollReceipt {
