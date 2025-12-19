@@ -64,4 +64,10 @@ public class PayrollConfigurationDTO {
     private BigDecimal parafiscalCajaPercentage; // % Caja de compensación (4%)
     private BigDecimal parafiscalSenaPercentage; // % SENA (2%)
     private BigDecimal parafiscalIcbfPercentage; // % ICBF (3%)
+
+    // === PROVISIONES ===
+    private BigDecimal primaPercentage; // Prima de servicios (8.33%)
+    private BigDecimal cesantiasPercentage; // Cesantías (8.33%)
+    private BigDecimal interesesCesantiasPercentage; // Intereses cesantías (12% anual)
+    private BigDecimal vacacionesPercentage; // Vacaciones (4.17%)
 }

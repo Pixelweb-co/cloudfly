@@ -5,7 +5,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @Builder
@@ -23,4 +25,12 @@ public class PayrollPeriodDTO {
     private String description;
     private String periodName;
     private Integer workingDays;
+
+    // Empleados asignados
+    private List<Long> employeeIds;
+    private Integer employeeCount;
+
+    // Totales
+    private BigDecimal totalPayroll;
+    private BigDecimal elapsedPayroll; // Valor proporcional a días transcurridos
 }

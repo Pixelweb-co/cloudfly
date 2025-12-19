@@ -135,6 +135,23 @@ public class Employee {
     private Boolean hasTransportAllowance = true; // ¿Aplica auxilio de transporte?
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "arl_risk_level", length = 10)
+    private ArlRiskLevel arlRiskLevel = ArlRiskLevel.RIESGO_I; // Nivel de riesgo ARL
+
+    @Column(name = "caja_compensacion", length = 100)
+    private String cajaCompensacion; // Caja de Compensación Familiar (Comfama, Cafam, etc.)
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "work_schedule", length = 20)
+    private WorkSchedule workSchedule = WorkSchedule.TIEMPO_COMPLETO; // Jornada laboral
+
+    @Column(name = "monthly_worked_days")
+    private Integer monthlyWorkedDays = 30; // Días laborados al mes (default 30)
+
+    @Column(name = "has_family_subsidy", nullable = false)
+    private Boolean hasFamilySubsidy = false; // ¿Aplica subsidio familiar?
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "contract_type_enum", length = 30)
     private ContractTypeEnum contractTypeEnum; // Tipo de contrato enum
 
@@ -181,6 +198,30 @@ public class Employee {
         TEMPORAL, // Contrato temporal
         APRENDIZAJE, // Contrato de aprendizaje SENA
         PRESTACION_SERVICIOS // Prestación de servicios (independiente)
+    }
+
+    public enum ArlRiskLevel {
+        RIESGO_I(0.522), // Riesgo I: 0.522% - Actividades administrativas
+        RIESGO_II(1.044), // Riesgo II: 1.044% - Actividades comerciales
+        RIESGO_III(2.436), // Riesgo III: 2.436% - Manufacturas
+        RIESGO_IV(4.350), // Riesgo IV: 4.350% - Construcción
+        RIESGO_V(6.960); // Riesgo V: 6.960% - Minería, alta peligrosidad
+
+        private final double percentage;
+
+        ArlRiskLevel(double percentage) {
+            this.percentage = percentage;
+        }
+
+        public double getPercentage() {
+            return percentage;
+        }
+    }
+
+    public enum WorkSchedule {
+        TIEMPO_COMPLETO, // Jornada completa (8 horas)
+        MEDIO_TIEMPO, // Medio tiempo (4 horas)
+        POR_HORAS // Trabajo por horas
     }
 
     // Método helper para obtener nombre completo

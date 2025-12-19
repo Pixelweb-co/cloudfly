@@ -55,6 +55,13 @@ public class EmployeeDTO {
     private Boolean hasTransportAllowance; // ¿Aplica auxilio de transporte?
     private String contractTypeEnum; // Tipo de contrato enum
 
+    // Campos adicionales para nómina Colombia
+    private String arlRiskLevel; // Nivel de riesgo ARL (RIESGO_I - RIESGO_V)
+    private String cajaCompensacion; // Caja de Compensación Familiar
+    private String workSchedule; // Jornada laboral
+    private Integer monthlyWorkedDays; // Días laborados al mes
+    private Boolean hasFamilySubsidy; // ¿Aplica subsidio familiar?
+
     private Boolean isActive;
     private String notes;
 }

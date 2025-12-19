@@ -190,6 +190,15 @@
         ]
       },
       {
+        "label": "Novedades",
+        "route": "/hr/novelties",
+        "roles": [
+          "SUPERADMIN",
+          "ADMIN",
+          "HR"
+        ]
+      },
+      {
         "label": "Periodos",
         "route": "/hr/periods",
         "roles": [

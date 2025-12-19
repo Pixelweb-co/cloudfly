@@ -49,6 +49,12 @@ export interface PayrollConfiguration {
     parafiscalCajaPercentage: number
     parafiscalSenaPercentage: number
     parafiscalIcbfPercentage: number
+
+    // Provisiones
+    primaPercentage: number
+    cesantiasPercentage: number
+    interesesCesantiasPercentage: number
+    vacacionesPercentage: number
 }
 
 const BASE_URL = '/api/hr/payroll/config'

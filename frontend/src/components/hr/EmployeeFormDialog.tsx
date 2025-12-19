@@ -72,6 +72,18 @@ const CESANTIAS_OPTIONS = [
     'Otra'
 ]
 
+// Opciones de Cajas de Compensación Familiar
+const CAJA_COMPENSACION_OPTIONS = [
+    'Comfama',
+    'Cafam',
+    'Compensar',
+    'Comfandi',
+    'Combarranquilla',
+    'Colsubsidio',
+    'Comfenalco',
+    'Otra'
+]
+
 export default function EmployeeFormDialog({ open, onClose, onSuccess, employee }: EmployeeFormDialogProps) {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
@@ -110,7 +122,14 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
         eps: '',
         arl: '',
         afp: '',
-        cesantiasBox: ''
+        cesantiasBox: '',
+
+        // Campos adicionales nómina Colombia
+        arlRiskLevel: 'RIESGO_I',
+        cajaCompensacion: '',
+        workSchedule: 'TIEMPO_COMPLETO',
+        monthlyWorkedDays: '30',
+        hasFamilySubsidy: false
     })
 
     const [formData, setFormData] = useState(getInitialFormData())
@@ -142,7 +161,12 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
                 eps: employee.eps || '',
                 arl: employee.arl || '',
                 afp: employee.afp || '',
-                cesantiasBox: employee.cesantiasBox || ''
+                cesantiasBox: employee.cesantiasBox || '',
+                arlRiskLevel: employee.arlRiskLevel || 'RIESGO_I',
+                cajaCompensacion: employee.cajaCompensacion || '',
+                workSchedule: employee.workSchedule || 'TIEMPO_COMPLETO',
+                monthlyWorkedDays: employee.monthlyWorkedDays?.toString() || '30',
+                hasFamilySubsidy: employee.hasFamilySubsidy ?? false
             })
         } else if (!open) {
             // Reset form when dialog closes
@@ -167,6 +191,7 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
             const employeeData = {
                 ...formData,
                 baseSalary: parseFloat(formData.baseSalary),
+                monthlyWorkedDays: parseInt(formData.monthlyWorkedDays),
                 hireDate: formData.hireDate
             }
 
@@ -490,7 +515,75 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
                                 ))}
                             </TextField>
                         </Grid>
-
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                fullWidth
+                                select
+                                label="Caja de Compensación"
+                                name="cajaCompensacion"
+                                value={formData.cajaCompensacion}
+                                onChange={handleChange}
+                            >
+                                {CAJA_COMPENSACION_OPTIONS.map(option => (
+                                    <MenuItem key={option} value={option}>{option}</MenuItem>
+                                ))}
+                            </TextField>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                fullWidth
+                                select
+                                label="Nivel de Riesgo ARL"
+                                name="arlRiskLevel"
+                                value={formData.arlRiskLevel}
+                                onChange={handleChange}
+                                helperText="Determina el porcentaje de cotización ARL"
+                            >
+                                <MenuItem value="RIESGO_I">Riesgo I - 0.522% (Administrativo)</MenuItem>
+                                <MenuItem value="RIESGO_II">Riesgo II - 1.044% (Comercial)</MenuItem>
+                                <MenuItem value="RIESGO_III">Riesgo III - 2.436% (Manufactura)</MenuItem>
+                                <MenuItem value="RIESGO_IV">Riesgo IV - 4.350% (Construcción)</MenuItem>
+                                <MenuItem value="RIESGO_V">Riesgo V - 6.960% (Alta peligrosidad)</MenuItem>
+                            </TextField>
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                            <TextField
+                                fullWidth
+                                select
+                                label="Jornada Laboral"
+                                name="workSchedule"
+                                value={formData.workSchedule}
+                                onChange={handleChange}
+                            >
+                                <MenuItem value="TIEMPO_COMPLETO">Tiempo Completo</MenuItem>
+                                <MenuItem value="MEDIO_TIEMPO">Medio Tiempo</MenuItem>
+                                <MenuItem value="POR_HORAS">Por Horas</MenuItem>
+                            </TextField>
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                            <TextField
+                                fullWidth
+                                label="Días Laborados / Mes"
+                                name="monthlyWorkedDays"
+                                type="number"
+                                value={formData.monthlyWorkedDays}
+                                onChange={handleChange}
+                                inputProps={{ min: 1, max: 30 }}
+                                helperText="Default: 30 días"
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={formData.hasFamilySubsidy}
+                                        onChange={(e) => setFormData({ ...formData, hasFamilySubsidy: e.target.checked })}
+                                        name="hasFamilySubsidy"
+                                    />
+                                }
+                                label="Aplica Subsidio Familiar"
+                            />
+                        </Grid>
                         {/* ========== DATOS BANCARIOS ========== */}
                         <Grid item xs={12} sx={{ mt: 2 }}>
                             <Typography variant="subtitle1" fontWeight="bold" color="primary">

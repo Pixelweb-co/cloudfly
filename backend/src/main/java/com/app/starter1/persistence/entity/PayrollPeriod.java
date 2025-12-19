@@ -8,8 +8,11 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Entidad para periodos de nómina
@@ -62,6 +65,15 @@ public class PayrollPeriod {
     @Column(name = "description", length = 255)
     private String description;
 
+    // === EMPLEADOS ASIGNADOS ===
+    @ManyToMany
+    @JoinTable(name = "payroll_period_employees", joinColumns = @JoinColumn(name = "period_id"), inverseJoinColumns = @JoinColumn(name = "employee_id"))
+    private Set<Employee> assignedEmployees = new HashSet<>();
+
+    // === TOTALES ===
+    @Column(name = "total_payroll", precision = 15, scale = 2)
+    private BigDecimal totalPayroll = BigDecimal.ZERO;
+
     // === FECHAS DE CONTROL ===
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -88,11 +100,11 @@ public class PayrollPeriod {
     }
 
     public enum PeriodStatus {
-        OPEN, // Abierto (se pueden registrar incidencias)
-        CALCULATED, // Calculado (nómina calculada, pero no aprobada)
-        APPROVED, // Aprobado (listo para pagar)
-        PAID, // Pagado (dispersión realizada)
-        CLOSED // Cerrado (no se puede modificar)
+        OPEN, // Abierto (se pueden registrar novedades)
+        LIQUIDATED, // Liquidado (calculado y generados recibos, listo para pagar)
+        PARTIALLY_PAID, // Parcialmente pagado (algunos empleados pagados)
+        PAID, // Completamente pagado (todos los empleados pagados)
+        CLOSED // Cerrado contablemente (no se puede modificar)
     }
 
     // Métodos helper
@@ -101,14 +113,18 @@ public class PayrollPeriod {
     }
 
     public boolean canModify() {
-        return status == PeriodStatus.OPEN || status == PeriodStatus.CALCULATED;
+        return status == PeriodStatus.OPEN;
     }
 
     public boolean isProcessed() {
-        return status == PeriodStatus.CALCULATED ||
-                status == PeriodStatus.APPROVED ||
+        return status == PeriodStatus.LIQUIDATED ||
+                status == PeriodStatus.PARTIALLY_PAID ||
                 status == PeriodStatus.PAID ||
                 status == PeriodStatus.CLOSED;
+    }
+
+    public boolean canBePaid() {
+        return status == PeriodStatus.LIQUIDATED || status == PeriodStatus.PARTIALLY_PAID;
     }
 
     public int getWorkingDays() {
