@@ -64,6 +64,9 @@ public class EmployeeCreateDTO {
     @Size(max = 100)
     private String department;
 
+    // Centro de costo para contabilidad analítica
+    private Long costCenterId;
+
     @Size(max = 100)
     private String jobTitle;
 

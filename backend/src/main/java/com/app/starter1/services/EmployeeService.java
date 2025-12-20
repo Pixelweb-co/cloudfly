@@ -3,9 +3,11 @@ package com.app.starter1.services;
 import com.app.starter1.dto.hr.EmployeeCreateDTO;
 import com.app.starter1.dto.hr.EmployeeDTO;
 import com.app.starter1.dto.hr.EmployeePayrollHistoryDTO;
+import com.app.starter1.persistence.entity.CostCenter;
 import com.app.starter1.persistence.entity.Employee;
 import com.app.starter1.persistence.entity.Customer;
 import com.app.starter1.persistence.entity.PayrollReceipt;
+import com.app.starter1.persistence.repository.CostCenterRepository;
 import com.app.starter1.persistence.repository.EmployeeRepository;
 import com.app.starter1.persistence.repository.CustomerRepository;
 import com.app.starter1.persistence.repository.PayrollReceiptRepository;
@@ -28,6 +30,7 @@ public class EmployeeService {
         private final EmployeeRepository employeeRepository;
         private final CustomerRepository customerRepository;
         private final PayrollReceiptRepository payrollReceiptRepository;
+        private final CostCenterRepository costCenterRepository;
 
         @Transactional(readOnly = true)
         public Page<EmployeeDTO> getAllEmployees(Long customerId, Pageable pageable) {
@@ -86,6 +89,9 @@ public class EmployeeService {
                                 .hireDate(dto.getHireDate())
                                 .terminationDate(dto.getTerminationDate())
                                 .department(dto.getDepartment())
+                                .costCenter(dto.getCostCenterId() != null
+                                                ? costCenterRepository.findById(dto.getCostCenterId()).orElse(null)
+                                                : null)
                                 .jobTitle(dto.getJobTitle())
                                 .contractType(dto.getContractType())
                                 .baseSalary(dto.getBaseSalary())
@@ -150,6 +156,12 @@ public class EmployeeService {
                 employee.setHireDate(dto.getHireDate());
                 employee.setTerminationDate(dto.getTerminationDate());
                 employee.setDepartment(dto.getDepartment());
+                // Actualizar centro de costo
+                if (dto.getCostCenterId() != null) {
+                        employee.setCostCenter(costCenterRepository.findById(dto.getCostCenterId()).orElse(null));
+                } else {
+                        employee.setCostCenter(null);
+                }
                 employee.setJobTitle(dto.getJobTitle());
                 employee.setContractType(dto.getContractType());
                 employee.setBaseSalary(dto.getBaseSalary());
@@ -254,6 +266,12 @@ public class EmployeeService {
                                 .hireDate(employee.getHireDate())
                                 .terminationDate(employee.getTerminationDate())
                                 .department(employee.getDepartment())
+                                .costCenterId(employee.getCostCenter() != null ? employee.getCostCenter().getId()
+                                                : null)
+                                .costCenterCode(employee.getCostCenter() != null ? employee.getCostCenter().getCode()
+                                                : null)
+                                .costCenterName(employee.getCostCenter() != null ? employee.getCostCenter().getName()
+                                                : null)
                                 .jobTitle(employee.getJobTitle())
                                 .contractType(employee.getContractType())
                                 .baseSalary(employee.getBaseSalary())
