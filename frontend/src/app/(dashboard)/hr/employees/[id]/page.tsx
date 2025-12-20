@@ -15,7 +15,6 @@ import {
     Grid,
     Paper,
     Divider,
-    IconButton,
     CircularProgress,
     Table,
     TableBody,
@@ -25,7 +24,9 @@ import {
     TableRow,
     Stack,
     LinearProgress,
-    Tooltip
+    Tooltip,
+    IconButton,
+    Alert
 } from '@mui/material'
 import {
     ArrowBack,
@@ -37,62 +38,30 @@ import {
     AttachMoney,
     Email,
     Phone,
-    LocationOn,
+    Badge,
+    Download,
     CalendarMonth,
     AccountBalance,
-    Badge,
-    Download
+    PictureAsPdf
 } from '@mui/icons-material'
-
-// Types
-interface Employee {
-    id: number
-    firstName: string
-    lastName: string
-    fullName: string
-    email: string
-    phone: string
-    nationalId: string
-    rfc: string
-    curp: string
-    address: string
-    city: string
-    state: string
-    postalCode: string
-    birthDate: string
-    employeeNumber: string
-    hireDate: string
-    terminationDate: string | null
-    department: string
-    jobTitle: string
-    contractType: string
-    baseSalary: number
-    paymentFrequency: string
-    paymentMethod: string
-    bankName: string
-    bankAccount: string
-    clabe: string
-    // Colombia
-    eps: string
-    arl: string
-    afp: string
-    cesantiasBox: string
-    nss: string
-    salaryType: string
-    hasTransportAllowance: boolean
-    contractTypeEnum: string
-    isActive: boolean
-}
+import { employeeService } from '@/services/hr/employeeService'
+import { Employee } from '@/types/hr'
 
 interface PayrollHistory {
     id: number
-    period: string
+    receiptNumber: string
+    periodName: string
+    periodYear: number
+    periodNumber: number
+    periodType: string
+    calculationDate: string
     baseSalary: number
-    perceptions: number
-    deductions: number
+    totalPerceptions: number
+    totalDeductions: number
     netPay: number
     status: string
-    receiptNumber: string
+    paidAt: string | null
+    pdfPath: string | null
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
@@ -115,6 +84,7 @@ export default function EmployeeDetailPage() {
     const [employee, setEmployee] = useState<Employee | null>(null)
     const [payrollHistory, setPayrollHistory] = useState<PayrollHistory[]>([])
     const [tabValue, setTabValue] = useState(0)
+    const [loadingHistory, setLoadingHistory] = useState(false)
 
     useEffect(() => {
         if (employeeId) {
@@ -126,15 +96,8 @@ export default function EmployeeDetailPage() {
     const loadEmployee = async () => {
         try {
             setLoading(true)
-            const response = await fetch(`${API_BASE}/api/hr/employees/${employeeId}?customerId=1`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('AuthToken')}`
-                }
-            })
-            if (response.ok) {
-                const data = await response.json()
-                setEmployee(data)
-            }
+            const data = await employeeService.getById(parseInt(employeeId), 1)
+            setEmployee(data)
         } catch (error) {
             console.error('Error loading employee:', error)
         } finally {
@@ -143,12 +106,45 @@ export default function EmployeeDetailPage() {
     }
 
     const loadPayrollHistory = async () => {
-        // Mock data for now - would be an API call
-        setPayrollHistory([
-            { id: 1, period: 'Dic 2024 Q1', baseSalary: 2500000, perceptions: 2800000, deductions: 420000, netPay: 2380000, status: 'PAID', receiptNumber: 'RN-2024-12-001' },
-            { id: 2, period: 'Nov 2024 Q2', baseSalary: 2500000, perceptions: 2650000, deductions: 400000, netPay: 2250000, status: 'PAID', receiptNumber: 'RN-2024-11-002' },
-            { id: 3, period: 'Nov 2024 Q1', baseSalary: 2500000, perceptions: 2750000, deductions: 410000, netPay: 2340000, status: 'PAID', receiptNumber: 'RN-2024-11-001' },
-        ])
+        try {
+            setLoadingHistory(true)
+            const response = await fetch(`${API_BASE}/api/hr/employees/${employeeId}/payroll-history?customerId=1`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('AuthToken')}`
+                }
+            })
+            if (response.ok) {
+                const data = await response.json()
+                setPayrollHistory(data)
+            }
+        } catch (error) {
+            console.error('Error loading payroll history:', error)
+        } finally {
+            setLoadingHistory(false)
+        }
+    }
+
+    const handleDownloadPDF = async (receiptId: number) => {
+        try {
+            const response = await fetch(`${API_BASE}/api/hr/payroll/receipts/${receiptId}/pdf?customerId=1`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('AuthToken')}`
+                }
+            })
+            if (response.ok) {
+                const blob = await response.blob()
+                const url = window.URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `recibo_${receiptId}.pdf`
+                document.body.appendChild(a)
+                a.click()
+                window.URL.revokeObjectURL(url)
+                document.body.removeChild(a)
+            }
+        } catch (error) {
+            console.error('Error downloading PDF:', error)
+        }
     }
 
     const formatCurrency = (value: number) => {
@@ -159,7 +155,7 @@ export default function EmployeeDetailPage() {
         }).format(value)
     }
 
-    const formatDate = (date: string) => {
+    const formatDate = (date: string | null | undefined) => {
         if (!date) return '-'
         return new Date(date).toLocaleDateString('es-CO', {
             year: 'numeric',
@@ -248,7 +244,7 @@ export default function EmployeeDetailPage() {
                             <Typography variant="body1" color="text.secondary" gutterBottom>
                                 {employee.jobTitle} • {employee.department}
                             </Typography>
-                            <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                            <Stack direction="row" spacing={2} sx={{ mt: 1, flexWrap: 'wrap' }}>
                                 <Chip icon={<Email sx={{ fontSize: 16 }} />} label={employee.email || 'Sin email'} variant="outlined" size="small" />
                                 <Chip icon={<Phone sx={{ fontSize: 16 }} />} label={employee.phone || 'Sin teléfono'} variant="outlined" size="small" />
                                 <Chip icon={<Badge sx={{ fontSize: 16 }} />} label={`#${employee.employeeNumber}`} variant="outlined" size="small" />
@@ -285,6 +281,8 @@ export default function EmployeeDetailPage() {
                     value={tabValue}
                     onChange={(_, v) => setTabValue(v)}
                     sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
+                    variant="scrollable"
+                    scrollButtons="auto"
                 >
                     <Tab icon={<Person />} label="Datos Personales" iconPosition="start" />
                     <Tab icon={<Work />} label="Datos Laborales" iconPosition="start" />
@@ -314,16 +312,14 @@ export default function EmployeeDetailPage() {
                             </Grid>
                             <Grid item xs={12} md={6}>
                                 <Typography variant="subtitle1" fontWeight="bold" gutterBottom color="primary">
-                                    Dirección
+                                    Documentos de Identidad
                                 </Typography>
                                 <Paper elevation={0} sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
-                                    <InfoRow icon={<LocationOn />} label="Dirección" value={employee.address} />
+                                    <InfoRow icon={<Badge />} label="RFC (México)" value={employee.rfc} />
                                     <Divider />
-                                    <InfoRow icon={<LocationOn />} label="Ciudad" value={employee.city} />
+                                    <InfoRow icon={<Badge />} label="CURP (México)" value={employee.curp} />
                                     <Divider />
-                                    <InfoRow icon={<LocationOn />} label="Estado/Departamento" value={employee.state} />
-                                    <Divider />
-                                    <InfoRow icon={<LocationOn />} label="Código Postal" value={employee.postalCode} />
+                                    <InfoRow icon={<Badge />} label="NSS" value={employee.nss} />
                                 </Paper>
                             </Grid>
                         </Grid>
@@ -371,7 +367,18 @@ export default function EmployeeDetailPage() {
                                     <Divider />
                                     <InfoRow icon={<AccountBalance />} label="Cuenta Bancaria" value={employee.bankAccount} />
                                     <Divider />
-                                    <InfoRow icon={<AccountBalance />} label="CLABE" value={employee.clabe} />
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1.5 }}>
+                                        <AttachMoney color="primary" />
+                                        <Box sx={{ flex: 1 }}>
+                                            <Typography variant="caption" color="text.secondary">Auxilio de Transporte</Typography>
+                                            <Typography variant="body2" fontWeight={500}>
+                                                {employee.hasTransportAllowance ?
+                                                    <Chip label="Aplica" color="success" size="small" /> :
+                                                    <Chip label="No aplica" color="default" size="small" />
+                                                }
+                                            </Typography>
+                                        </Box>
+                                    </Box>
                                 </Paper>
                             </Grid>
                         </Grid>
@@ -392,31 +399,33 @@ export default function EmployeeDetailPage() {
                                     <InfoRow icon={<HealthAndSafety />} label="AFP (Fondo de Pensiones)" value={employee.afp} />
                                     <Divider />
                                     <InfoRow icon={<AccountBalance />} label="Caja de Cesantías" value={employee.cesantiasBox} />
+                                    <Divider />
+                                    <InfoRow icon={<AccountBalance />} label="Caja de Compensación" value={employee.cajaCompensacion} />
                                 </Paper>
                             </Grid>
                             <Grid item xs={12} md={6}>
                                 <Typography variant="subtitle1" fontWeight="bold" gutterBottom color="primary">
-                                    Beneficios
+                                    Información Adicional
                                 </Typography>
                                 <Paper elevation={0} sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
+                                    <InfoRow icon={<Work />} label="Nivel de Riesgo ARL" value={employee.arlRiskLevel} />
+                                    <Divider />
+                                    <InfoRow icon={<Work />} label="Jornada Laboral" value={employee.workSchedule} />
+                                    <Divider />
+                                    <InfoRow icon={<CalendarMonth />} label="Días Laborados/Mes" value={employee.monthlyWorkedDays?.toString()} />
+                                    <Divider />
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1.5 }}>
                                         <AttachMoney color="primary" />
                                         <Box sx={{ flex: 1 }}>
-                                            <Typography variant="caption" color="text.secondary">Auxilio de Transporte</Typography>
+                                            <Typography variant="caption" color="text.secondary">Subsidio Familiar</Typography>
                                             <Typography variant="body2" fontWeight={500}>
-                                                {employee.hasTransportAllowance ?
+                                                {employee.hasFamilySubsidy ?
                                                     <Chip label="Aplica" color="success" size="small" /> :
                                                     <Chip label="No aplica" color="default" size="small" />
                                                 }
                                             </Typography>
                                         </Box>
                                     </Box>
-                                    <Divider />
-                                    <InfoRow icon={<Badge />} label="NSS (México)" value={employee.nss} />
-                                    <Divider />
-                                    <InfoRow icon={<Badge />} label="RFC" value={employee.rfc} />
-                                    <Divider />
-                                    <InfoRow icon={<Badge />} label="CURP" value={employee.curp} />
                                 </Paper>
                             </Grid>
                         </Grid>
@@ -428,12 +437,16 @@ export default function EmployeeDetailPage() {
                             Últimos Recibos de Nómina
                         </Typography>
 
-                        {payrollHistory.length === 0 ? (
-                            <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-                                No hay historial de nómina disponible
-                            </Typography>
+                        {loadingHistory ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                                <CircularProgress />
+                            </Box>
+                        ) : payrollHistory.length === 0 ? (
+                            <Alert severity="info" sx={{ mt: 2 }}>
+                                No hay historial de nómina disponible para este empleado
+                            </Alert>
                         ) : (
-                            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, mt: 2 }}>
                                 <Table>
                                     <TableHead>
                                         <TableRow sx={{ bgcolor: 'action.hover' }}>
@@ -450,7 +463,7 @@ export default function EmployeeDetailPage() {
                                     <TableBody>
                                         {payrollHistory.map((record) => (
                                             <TableRow key={record.id} hover>
-                                                <TableCell>{record.period}</TableCell>
+                                                <TableCell>{record.periodName}</TableCell>
                                                 <TableCell>
                                                     <Typography variant="caption" color="text.secondary">
                                                         {record.receiptNumber}
@@ -458,25 +471,29 @@ export default function EmployeeDetailPage() {
                                                 </TableCell>
                                                 <TableCell align="right">{formatCurrency(record.baseSalary)}</TableCell>
                                                 <TableCell align="right" sx={{ color: 'success.main' }}>
-                                                    {formatCurrency(record.perceptions)}
+                                                    {formatCurrency(record.totalPerceptions)}
                                                 </TableCell>
                                                 <TableCell align="right" sx={{ color: 'error.main' }}>
-                                                    {formatCurrency(record.deductions)}
+                                                    {formatCurrency(record.totalDeductions)}
                                                 </TableCell>
                                                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>
                                                     {formatCurrency(record.netPay)}
                                                 </TableCell>
                                                 <TableCell>
                                                     <Chip
-                                                        label={record.status === 'PAID' ? 'Pagado' : 'Pendiente'}
+                                                        label={record.status === 'PAID' ? 'Pagado' : record.status === 'PENDING' ? 'Pendiente' : record.status}
                                                         color={record.status === 'PAID' ? 'success' : 'warning'}
                                                         size="small"
                                                     />
                                                 </TableCell>
                                                 <TableCell align="center">
                                                     <Tooltip title="Descargar PDF">
-                                                        <IconButton size="small" color="primary">
-                                                            <Download fontSize="small" />
+                                                        <IconButton
+                                                            size="small"
+                                                            color="primary"
+                                                            onClick={() => handleDownloadPDF(record.id)}
+                                                        >
+                                                            <PictureAsPdf fontSize="small" />
                                                         </IconButton>
                                                     </Tooltip>
                                                 </TableCell>
@@ -486,15 +503,6 @@ export default function EmployeeDetailPage() {
                                 </Table>
                             </TableContainer>
                         )}
-
-                        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
-                            <Button
-                                variant="outlined"
-                                onClick={() => router.push('/hr/receipts')}
-                            >
-                                Ver Todos los Recibos
-                            </Button>
-                        </Box>
                     </TabPanel>
                 </CardContent>
             </Card>

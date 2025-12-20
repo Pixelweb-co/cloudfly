@@ -66,13 +66,16 @@ public class PayrollPeriod {
     private String description;
 
     // === EMPLEADOS ASIGNADOS ===
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "payroll_period_employees", joinColumns = @JoinColumn(name = "period_id"), inverseJoinColumns = @JoinColumn(name = "employee_id"))
     private Set<Employee> assignedEmployees = new HashSet<>();
 
     // === TOTALES ===
     @Column(name = "total_payroll", precision = 15, scale = 2)
     private BigDecimal totalPayroll = BigDecimal.ZERO;
+
+    @Column(name = "elapsed_payroll", precision = 15, scale = 2)
+    private BigDecimal elapsedPayroll = BigDecimal.ZERO;
 
     // === FECHAS DE CONTROL ===
     @CreationTimestamp

@@ -2,6 +2,7 @@ package com.app.starter1.controllers;
 
 import com.app.starter1.dto.hr.EmployeeCreateDTO;
 import com.app.starter1.dto.hr.EmployeeDTO;
+import com.app.starter1.dto.hr.EmployeePayrollHistoryDTO;
 import com.app.starter1.services.EmployeeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/hr/employees")
@@ -80,5 +83,13 @@ public class EmployeeController {
             @RequestParam Long customerId) {
         employeeService.toggleEmployeeStatus(id, customerId);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{id}/payroll-history")
+    public ResponseEntity<List<EmployeePayrollHistoryDTO>> getEmployeePayrollHistory(
+            @PathVariable Long id,
+            @RequestParam Long customerId) {
+        List<EmployeePayrollHistoryDTO> history = employeeService.getEmployeePayrollHistory(id, customerId);
+        return ResponseEntity.ok(history);
     }
 }

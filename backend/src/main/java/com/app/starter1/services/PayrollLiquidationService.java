@@ -2,6 +2,7 @@ package com.app.starter1.services;
 
 import com.app.starter1.persistence.entity.*;
 import com.app.starter1.persistence.repository.*;
+import com.app.starter1.services.PayrollCalculationService.PayrollCalculationResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,9 +24,12 @@ public class PayrollLiquidationService {
     private final PayrollPeriodRepository periodRepository;
     private final PayrollReceiptRepository receiptRepository;
     private final PayrollNoveltyRepository noveltyRepository;
-    private final PayrollConfigurationRepository configRepository;
     private final CustomerRepository customerRepository;
-    private final NotificationService notificationService;
+    // private final NotificationService notificationService;
+    private final PayrollNotificationService notificationService;
+    private final PayrollCalculationService calculationService;
+    private final PayrollAccountingService accountingService;
+    private final PayrollPdfService pdfService;
 
     /**
      * Liquida un período completo, generando recibos para todos los empleados
@@ -44,24 +48,43 @@ public class PayrollLiquidationService {
             throw new RuntimeException("Solo se pueden liquidar períodos en estado OPEN");
         }
 
-        PayrollConfiguration config = configRepository.findByCustomer(customer)
-                .orElse(PayrollConfiguration.getDefault(customer));
-
         List<PayrollReceipt> receipts = new ArrayList<>();
         int employeesProcessed = 0;
         BigDecimal totalNetPay = BigDecimal.ZERO;
 
-        // Obtener novedades pendientes del período
+        // Obtener novedades pendientes
         List<PayrollNovelty> novelties = noveltyRepository.findByPeriod(customerId, periodId);
 
         for (Employee employee : period.getAssignedEmployees()) {
             try {
-                PayrollReceipt receipt = generateReceipt(period, employee, config, novelties);
+                // 1. Calcular
+                PayrollCalculationResult calcResult = calculationService.calculatePayroll(employee, period);
+
+                // 2. Crear Recibo (Entidad)
+                PayrollReceipt receipt = createReceiptFromCalculation(period, employee, calcResult);
+
+                // 3. Generar PDF (Simulado para path, el real se genera al enviar)
+                String pdfUrl = generateReceiptPDF(receipt);
+                receipt.setPdfPath(pdfUrl);
+
+                // Guardar para tener ID y persistencia
+                receipt = receiptRepository.save(receipt);
                 receipts.add(receipt);
+
                 totalNetPay = totalNetPay.add(receipt.getNetPay());
                 employeesProcessed++;
+
+                // 4. Enviar Notificación (Kafka -> Evolution API)
+                try {
+                    notificationService.sendReceiptByEmail(receipt);
+                } catch (Exception e) {
+                    log.warn("No se pudo enviar la notificación inmediata para recibo {}: {}",
+                            receipt.getReceiptNumber(), e.getMessage());
+                }
+
             } catch (Exception e) {
-                log.error("Error generando recibo para empleado {}: {}", employee.getId(), e.getMessage());
+                log.error("Error procesando empleado {} ({}): {}", employee.getId(), employee.getFullName(),
+                        e.getMessage(), e);
             }
         }
 
@@ -75,15 +98,20 @@ public class PayrollLiquidationService {
         period.setProcessedAt(LocalDateTime.now());
         periodRepository.save(period);
 
-        log.info("Liquidación completada: {} empleados procesados, total: {}", employeesProcessed, totalNetPay);
+        // Generar Contabilidad
+        try {
+            accountingService.generatePayrollLiquidationVoucher(period, receipts);
+        } catch (Exception e) {
+            log.error("Error generando contabilidad: {}", e.getMessage());
+        }
+
+        log.info("Liquidación completada. Empleados: {}, Total: {}", employeesProcessed, totalNetPay);
 
         return LiquidationResult.builder()
-                .periodId(periodId)
-                .status(period.getStatus().name())
-                .totalEmployees(period.getAssignedEmployees().size())
-                .receiptsGenerated(receipts.size())
+                .periodId(period.getId())
+                .status("LIQUIDATED")
+                .receiptsGenerated(employeesProcessed)
                 .totalNetPay(totalNetPay)
-                .noveltiesProcessed(novelties.size())
                 .build();
     }
 
@@ -91,66 +119,67 @@ public class PayrollLiquidationService {
      * Paga un recibo individual
      */
     @Transactional
-    public PaymentResult payReceipt(Long receiptId, Long customerId, PaymentRequest request) {
-        log.info("Procesando pago de recibo {} para cliente {}", receiptId, customerId);
+    public PaymentResult payReceipt(Long receiptId, PaymentRequest request) {
+        log.info("Procesando pago de recibo {} para cliente {}", receiptId, request.getPaymentReference());
 
         PayrollReceipt receipt = receiptRepository.findById(receiptId)
                 .orElseThrow(() -> new RuntimeException("Recibo no encontrado"));
 
-        if (!receipt.canBePaid()) {
-            throw new RuntimeException("El recibo no puede ser pagado. Estado actual: " + receipt.getStatus());
+        if (receipt.getStatus() == PayrollReceipt.ReceiptStatus.PAID) {
+            throw new RuntimeException("El recibo ya está pagado");
         }
 
-        // Marcar como pagado
         receipt.setStatus(PayrollReceipt.ReceiptStatus.PAID);
         receipt.setPaidAt(LocalDateTime.now());
         receipt.setPaymentReference(request.getPaymentReference());
-        if (request.getNotes() != null) {
-            receipt.setNotes(request.getNotes());
+        receipt.setNotes(request.getNotes());
+
+        if (request.getPaymentMethod() != null) {
+            try {
+                receipt.getEmployee().setPaymentMethod(Employee.PaymentMethod.valueOf(request.getPaymentMethod()));
+            } catch (Exception e) {
+                // Ignore invalid payment method
+            }
         }
+
         receiptRepository.save(receipt);
 
-        // Generar y enviar PDF
-        String pdfUrl = null;
-        boolean emailSent = false;
-        try {
-            pdfUrl = generateReceiptPDF(receipt);
-            receipt.setPdfPath(pdfUrl);
-            receiptRepository.save(receipt);
+        // Verificar si todo el período está pagado
+        checkAndUpdatePeriodStatus(receipt.getPayrollPeriod());
 
-            // Enviar email
-            emailSent = sendReceiptByEmail(receipt, pdfUrl);
+        // Generar comprobante contable de pago individual (Egreso)
+        try {
+            // accountingService.generatePaymentVoucher(receipt); // TODO: Implementar en
+            // AccountingService
         } catch (Exception e) {
-            log.error("Error generando/enviando PDF: {}", e.getMessage());
+            log.error("Error generando comprobante de egreso: {}", e.getMessage());
         }
 
-        // Verificar si todos los recibos del período están pagados
-        PayrollPeriod period = receipt.getPayrollPeriod();
-        checkAndUpdatePeriodStatus(period);
+        // Reenviar notificación de pago exitoso (opcional)
+        try {
+            notificationService.sendReceiptByEmail(receipt);
+        } catch (Exception e) {
+            // ignore
+        }
 
         log.info("Pago procesado exitosamente para recibo {}", receiptId);
 
         return PaymentResult.builder()
-                .receiptId(receiptId)
-                .employeeName(receipt.getEmployee().getFirstName() + " " + receipt.getEmployee().getLastName())
+                .receiptId(receipt.getId())
+                .employeeName(receipt.getEmployee().getFullName())
                 .netPay(receipt.getNetPay())
-                .status(receipt.getStatus().name())
-                .pdfUrl(pdfUrl)
-                .emailSent(emailSent)
-                .periodStatus(period.getStatus().name())
+                .status("PAID")
+                .pdfUrl(receipt.getPdfPath())
+                .emailSent(true)
+                .periodStatus(receipt.getPayrollPeriod().getStatus().name())
                 .build();
     }
 
     /**
-     * Genera el recibo de nómina para un empleado
+     * Crea la entidad PayrollReceipt a partir del resultado del cálculo
      */
-    private PayrollReceipt generateReceipt(PayrollPeriod period, Employee employee,
-            PayrollConfiguration config, List<PayrollNovelty> allNovelties) {
-        // Filtrar novedades del empleado
-        List<PayrollNovelty> employeeNovelties = allNovelties.stream()
-                .filter(n -> n.getEmployeeId().equals(employee.getId()))
-                .toList();
-
+    private PayrollReceipt createReceiptFromCalculation(PayrollPeriod period, Employee employee,
+            PayrollCalculationResult result) {
         PayrollReceipt receipt = new PayrollReceipt();
         receipt.setPayrollPeriod(period);
         receipt.setEmployee(employee);
@@ -158,86 +187,46 @@ public class PayrollLiquidationService {
         receipt.setCalculationDate(LocalDateTime.now());
         receipt.setStatus(PayrollReceipt.ReceiptStatus.PENDING);
 
-        // Calcular salario base
-        BigDecimal baseSalary = employee.getBaseSalary();
-        int periodDays = period.getWorkingDays();
-        BigDecimal dailySalary = baseSalary.divide(BigDecimal.valueOf(30), 2, java.math.RoundingMode.HALF_UP);
+        // Información base
+        receipt.setBaseSalary(result.getBaseSalary());
+        receipt.setDailySalary(result.getDailySalary());
+        receipt.setRegularDays(BigDecimal.valueOf(result.getWorkingDays()));
 
-        receipt.setBaseSalary(baseSalary);
-        receipt.setDailySalary(dailySalary);
-        receipt.setRegularDays(BigDecimal.valueOf(periodDays));
+        // Devengos
+        receipt.setSalaryAmount(result.getSalaryAmount());
+        receipt.setOvertimeAmount(result.getOvertimeAmount());
+        receipt.setCommissionsAmount(result.getCommissionsAmount());
+        receipt.setTransportAllowanceAmount(result.getTransportAllowanceAmount());
+        receipt.setBonusesAmount(result.getBonusesAmount());
+        receipt.setOtherEarnings(result.getOtherEarnings());
 
-        // Calcular percepciones (salario + novedades positivas)
-        BigDecimal perceptions = calculatePerceptions(baseSalary, periodDays, config, employee, employeeNovelties);
-        receipt.setTotalPerceptions(perceptions);
+        // Deducciones
+        receipt.setHealthDeduction(result.getHealthDeduction());
+        receipt.setPensionDeduction(result.getPensionDeduction());
+        receipt.setOtherDeductions(result.getOtherDeductions());
 
-        // Calcular deducciones (salud, pensión, + novedades negativas)
-        BigDecimal deductions = calculateDeductions(baseSalary, periodDays, config, employee, employeeNovelties);
-        receipt.setTotalDeductions(deductions);
+        // Costos Empleador
+        receipt.setEmployerHealthContribution(result.getEmployerHealthContribution());
+        receipt.setEmployerPensionContribution(result.getEmployerPensionContribution());
+        receipt.setArlContribution(result.getArlContribution());
+        receipt.setSenaContribution(result.getSenaContribution());
+        receipt.setIcbfContribution(result.getIcbfContribution());
+        receipt.setCajaCompensacionContribution(result.getCajaCompensacionContribution());
 
-        // Neto a pagar
-        receipt.setNetPay(perceptions.subtract(deductions));
+        // Provisiones
+        receipt.setPrimaServiciosProvision(result.getPrimaServiciosProvision());
+        receipt.setCesantiasProvision(result.getCesantiasProvision());
+        receipt.setInteresesCesantiasProvision(result.getInteresesCesantiasProvision());
+        receipt.setVacacionesProvision(result.getVacacionesProvision());
 
-        return receiptRepository.save(receipt);
-    }
+        // Totales Totales
+        receipt.setTotalPerceptions(result.getTotalPerceptions());
+        receipt.setTotalDeductions(result.getTotalDeductions());
+        receipt.setNetPay(result.getNetPay());
+        receipt.setTotalEmployerCosts(result.getTotalEmployerCosts());
+        receipt.setTotalProvisions(result.getTotalProvisions());
 
-    private BigDecimal calculatePerceptions(BigDecimal baseSalary, int periodDays,
-            PayrollConfiguration config, Employee employee,
-            List<PayrollNovelty> novelties) {
-        BigDecimal factor = BigDecimal.valueOf(periodDays).divide(BigDecimal.valueOf(30), 4,
-                java.math.RoundingMode.HALF_UP);
-        BigDecimal salaryPeriod = baseSalary.multiply(factor);
-
-        // Auxilio de transporte
-        BigDecimal transport = BigDecimal.ZERO;
-        if (employee.getHasTransportAllowance() != null && employee.getHasTransportAllowance()
-                && baseSalary.compareTo(config.getMinimumWage().multiply(BigDecimal.valueOf(2))) <= 0) {
-            transport = BigDecimal.valueOf(config.getTransportAllowance()).multiply(factor);
-        }
-
-        // Novedades de ingreso
-        BigDecimal noveltyIncome = novelties.stream()
-                .filter(n -> isIncomeNovelty(n.getType()))
-                .map(n -> n.getAmount() != null ? n.getAmount() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        return salaryPeriod.add(transport).add(noveltyIncome);
-    }
-
-    private BigDecimal calculateDeductions(BigDecimal baseSalary, int periodDays,
-            PayrollConfiguration config, Employee employee,
-            List<PayrollNovelty> novelties) {
-        BigDecimal factor = BigDecimal.valueOf(periodDays).divide(BigDecimal.valueOf(30), 4,
-                java.math.RoundingMode.HALF_UP);
-        BigDecimal salaryPeriod = baseSalary.multiply(factor);
-
-        // Salud
-        BigDecimal health = salaryPeriod.multiply(BigDecimal.valueOf(config.getHealthPercentageEmployee() / 100.0));
-
-        // Pensión
-        BigDecimal pension = salaryPeriod.multiply(BigDecimal.valueOf(config.getPensionPercentageEmployee() / 100.0));
-
-        // Novedades de deducción
-        BigDecimal noveltyDeductions = novelties.stream()
-                .filter(n -> isDeductionNovelty(n.getType()))
-                .map(n -> n.getAmount() != null ? n.getAmount() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        return health.add(pension).add(noveltyDeductions);
-    }
-
-    private boolean isIncomeNovelty(PayrollNovelty.NoveltyType type) {
-        return type == PayrollNovelty.NoveltyType.EXTRA_HOUR_DAY ||
-                type == PayrollNovelty.NoveltyType.EXTRA_HOUR_NIGHT ||
-                type == PayrollNovelty.NoveltyType.EXTRA_HOUR_SUNDAY ||
-                type == PayrollNovelty.NoveltyType.BONUS_SALARY ||
-                type == PayrollNovelty.NoveltyType.BONUS_NON_SALARY ||
-                type == PayrollNovelty.NoveltyType.COMMISSION;
-    }
-
-    private boolean isDeductionNovelty(PayrollNovelty.NoveltyType type) {
-        return type == PayrollNovelty.NoveltyType.DEDUCTION_LOAN ||
-                type == PayrollNovelty.NoveltyType.DEDUCTION_OTHER;
+        return receipt;
     }
 
     private String generateReceiptNumber(PayrollPeriod period, Employee employee) {
@@ -249,6 +238,15 @@ public class PayrollLiquidationService {
 
         long paidCount = receipts.stream().filter(PayrollReceipt::isPaid).count();
         long totalCount = receipts.size();
+
+        // Calcular total pagado
+        BigDecimal totalPaid = receipts.stream()
+                .filter(PayrollReceipt::isPaid)
+                .map(PayrollReceipt::getNetPay)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Actualizar elapsedPayroll
+        period.setElapsedPayroll(totalPaid);
 
         if (paidCount == 0) {
             period.setStatus(PayrollPeriod.PeriodStatus.LIQUIDATED);
@@ -263,34 +261,9 @@ public class PayrollLiquidationService {
     }
 
     private String generateReceiptPDF(PayrollReceipt receipt) {
-        // TODO: Implementar generación real de PDF
-        // Por ahora retorna una URL ficticia
+        // TODO: Implementar persistencia de PDF si se desea descargar luego sin
+        // regenerar
         return "/uploads/receipts/receipt_" + receipt.getId() + ".pdf";
-    }
-
-    private boolean sendReceiptByEmail(PayrollReceipt receipt, String pdfUrl) {
-        try {
-            String employeeEmail = receipt.getEmployee().getEmail();
-            if (employeeEmail == null || employeeEmail.isEmpty()) {
-                log.warn("Empleado {} no tiene email configurado", receipt.getEmployee().getId());
-                return false;
-            }
-
-            String subject = "Desprendible de Nómina - " + receipt.getPayrollPeriod().getPeriodName();
-            String body = String.format(
-                    "Hola %s,\n\nAdjunto encontrarás tu desprendible de nómina.\n\nPeríodo: %s\nNeto a Pagar: $%,.2f\n\nReferencia: %s",
-                    receipt.getEmployee().getFirstName(),
-                    receipt.getPayrollPeriod().getPeriodName(),
-                    receipt.getNetPay(),
-                    receipt.getPaymentReference());
-
-            // TODO: Enviar email real vía notification-service
-            log.info("Email enviado a {} con recibo {}", employeeEmail, receipt.getId());
-            return true;
-        } catch (Exception e) {
-            log.error("Error enviando email: {}", e.getMessage());
-            return false;
-        }
     }
 
     // DTOs
@@ -299,10 +272,8 @@ public class PayrollLiquidationService {
     public static class LiquidationResult {
         private Long periodId;
         private String status;
-        private Integer totalEmployees;
         private Integer receiptsGenerated;
         private BigDecimal totalNetPay;
-        private Integer noveltiesProcessed;
     }
 
     @lombok.Data

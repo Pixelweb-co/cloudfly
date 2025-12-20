@@ -28,26 +28,29 @@ public class Customer {
     @Column(name = "identificacion_cliente", unique = false, nullable = true)
     private String nit;
 
-    @Column(name = "telefono_cliente", nullable = true)  // Hacerlo opcional
+    @Column(name = "telefono_cliente", nullable = true) // Hacerlo opcional
     private String phone;
 
-    @Column(name = "email_cliente", nullable = true)  // Hacerlo opcional
+    @Column(name = "email_cliente", nullable = true) // Hacerlo opcional
     private String email;
 
-    @Column(name = "direccion_cliente", nullable = true)  // Hacerlo opcional
+    @Column(name = "direccion_cliente", nullable = true) // Hacerlo opcional
     private String address;
 
-    @Column(name = "contacto_cliente", nullable = true)  // Hacerlo opcional
+    @Column(name = "contacto_cliente", nullable = true) // Hacerlo opcional
     private String contact;
 
-    @Column(name = "cargo_cliente", nullable = true)  // Hacerlo opcional
+    @Column(name = "cargo_cliente", nullable = true) // Hacerlo opcional
     private String position;
 
-    @Column(name = "tipo_entidad", nullable = true)  // Hacerlo opcional
+    @Column(name = "tipo_entidad", nullable = true) // Hacerlo opcional
     private String type;
 
     @Column(name = "status_cliente", nullable = true)
     private Boolean status;
+
+    @Column(name = "logo_url")
+    private String logoUrl;
 
     @Column(name = "date_added", nullable = true)
     private LocalDate dateRegister;
@@ -58,7 +61,5 @@ public class Customer {
             this.dateRegister = LocalDate.now();
         }
     }
-
-
 
 }

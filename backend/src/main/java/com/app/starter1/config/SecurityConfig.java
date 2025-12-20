@@ -391,15 +391,15 @@ public class SecurityConfig {
 
                                         // 👉 Recursos Humanos (HR & Payroll)
                                         http.requestMatchers(HttpMethod.GET, "/api/hr/**")
-                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR");
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR", "USER", "BIOMEDICAL");
                                         http.requestMatchers(HttpMethod.POST, "/api/hr/**")
-                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR");
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR", "USER", "BIOMEDICAL");
                                         http.requestMatchers(HttpMethod.PUT, "/api/hr/**")
-                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR");
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR", "USER", "BIOMEDICAL");
                                         http.requestMatchers(HttpMethod.PATCH, "/api/hr/**")
-                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR");
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR", "USER", "BIOMEDICAL");
                                         http.requestMatchers(HttpMethod.DELETE, "/api/hr/**")
-                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR");
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR", "USER", "BIOMEDICAL");
 
                                         // Configurar el resto de los endpoints (no especificados)
                                         http.anyRequest().denyAll();
@@ -411,6 +411,9 @@ public class SecurityConfig {
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
                 configuration.addAllowedOrigin(allowedOrigin);
+                configuration.addAllowedOrigin("http://localhost:3000");
+                configuration.addAllowedOrigin("http://localhost:3001");
+                configuration.addAllowedOrigin("http://localhost:8080");
                 configuration.addAllowedMethod("*"); // Permitir todos los métodos (GET, POST, etc.)
                 configuration.addAllowedHeader("*"); // Permitir todos los encabezados
                 configuration.setAllowCredentials(true); // Permitir cookies/credenciales

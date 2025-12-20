@@ -149,6 +149,41 @@ public class PayrollProcessingController {
         }
 
         private PayrollReceiptDTO convertToDTO(PayrollReceipt receipt) {
+                PayrollReceiptDTO.DevengosDTO devengos = PayrollReceiptDTO.DevengosDTO.builder()
+                                .salario(receipt.getSalaryAmount())
+                                .horasExtras(receipt.getOvertimeAmount())
+                                .comisiones(receipt.getCommissionsAmount())
+                                .auxilioTransporte(receipt.getTransportAllowanceAmount())
+                                .bonos(receipt.getBonusesAmount())
+                                .otros(receipt.getOtherEarnings())
+                                .total(receipt.getTotalPerceptions())
+                                .build();
+
+                PayrollReceiptDTO.DeduccionesDTO deducciones = PayrollReceiptDTO.DeduccionesDTO.builder()
+                                .salud(receipt.getHealthDeduction())
+                                .pension(receipt.getPensionDeduction())
+                                .otras(receipt.getOtherDeductions())
+                                .total(receipt.getTotalDeductions())
+                                .build();
+
+                PayrollReceiptDTO.CostosEmpleadorDTO costos = PayrollReceiptDTO.CostosEmpleadorDTO.builder()
+                                .saludEmpleador(receipt.getEmployerHealthContribution())
+                                .pensionEmpleador(receipt.getEmployerPensionContribution())
+                                .arl(receipt.getArlContribution())
+                                .sena(receipt.getSenaContribution())
+                                .icbf(receipt.getIcbfContribution())
+                                .cajaCompensacion(receipt.getCajaCompensacionContribution())
+                                .total(receipt.getTotalEmployerCosts())
+                                .build();
+
+                PayrollReceiptDTO.ProvisionesDTO provisiones = PayrollReceiptDTO.ProvisionesDTO.builder()
+                                .prima(receipt.getPrimaServiciosProvision())
+                                .cesantias(receipt.getCesantiasProvision())
+                                .interesesCesantias(receipt.getInteresesCesantiasProvision())
+                                .vacaciones(receipt.getVacacionesProvision())
+                                .total(receipt.getTotalProvisions())
+                                .build();
+
                 return PayrollReceiptDTO.builder()
                                 .id(receipt.getId())
                                 .employeeId(receipt.getEmployee().getId())
@@ -163,13 +198,18 @@ public class PayrollProcessingController {
                                 .overtimeHours(receipt.getOvertimeHours())
                                 .baseSalary(receipt.getBaseSalary())
                                 .dailySalary(receipt.getDailySalary())
+                                .devengos(devengos)
+                                .deducciones(deducciones)
+                                .costosEmpleador(costos)
+                                .provisiones(provisiones)
                                 .totalPerceptions(receipt.getTotalPerceptions())
                                 .totalDeductions(receipt.getTotalDeductions())
                                 .netPay(receipt.getNetPay())
-                                .isrAmount(receipt.getIsrAmount())
-                                .imssAmount(receipt.getImssAmount())
+                                .totalEmployerCosts(receipt.getTotalEmployerCosts())
+                                .totalProvisions(receipt.getTotalProvisions())
                                 .status(receipt.getStatus().name())
                                 .isPaid(receipt.isPaid())
+                                .pdfPath(receipt.getPdfPath())
                                 .build();
         }
 }

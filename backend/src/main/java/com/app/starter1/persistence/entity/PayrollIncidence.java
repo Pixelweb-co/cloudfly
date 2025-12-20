@@ -100,7 +100,15 @@ public class PayrollIncidence {
         SUSPENSION("Suspensión", false),
 
         // Percepciones (impacto positivo)
-        HORAS_EXTRA("Horas extra", true),
+        // Percepciones (impacto positivo)
+        HORAS_EXTRA("Horas extra diurnas", true),
+        HORAS_EXTRA_NOCTURNA("Horas extra nocturnas", true),
+        RECARGO_NOCTURNO("Recargo nocturno", true),
+        DOMINICAL_FESTIVO("Dominical o Festivo", true),
+        HORAS_EXTRA_DOMINICAL("Horas extra dominicales", true),
+        HORAS_EXTRA_DOMINICAL_NOCTURNA("Horas extra dominicales nocturnas", true),
+        RECARGO_DOMINICAL_NOCTURNO("Recargo dominical nocturno", true),
+
         BONO("Bono", true),
         COMISION("Comisión", true),
         PRIMA_DOMINICAL("Prima dominical", true),
@@ -109,7 +117,7 @@ public class PayrollIncidence {
         // Neutras (pueden ser con o sin goce de sueldo)
         VACACIONES("Vacaciones", true),
         PERMISO_CON_GOCE("Permiso con goce de sueldo", true),
-        DIA_FESTIVO("Día festivo trabajado", true);
+        DIA_FESTIVO("Día festivo (Sin trabajar)", true);
 
         private final String description;
         private final boolean isPositive;

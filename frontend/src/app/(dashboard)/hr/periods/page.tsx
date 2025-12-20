@@ -41,7 +41,8 @@ import {
     Payment,
     Today,
     People,
-    AttachMoney
+    AttachMoney,
+    Visibility
 } from '@mui/icons-material'
 
 // Card del periodo actual con barra de progreso
@@ -398,9 +399,7 @@ export default function PeriodsPage() {
                                             <TableRow
                                                 key={period.id}
                                                 hover
-                                                onClick={() => router.push(`/hr/period/view?id=${period.id}`)}
                                                 sx={{
-                                                    cursor: 'pointer',
                                                     ...(period.status === 'OPEN' ? {
                                                         bgcolor: 'success.light',
                                                         '&:hover': { bgcolor: 'success.main' }
@@ -454,32 +453,48 @@ export default function PeriodsPage() {
                                                     />
                                                 </TableCell>
                                                 <TableCell align="center">
-                                                    {period.status === 'OPEN' ? (
-                                                        <Stack direction="row" spacing={0} justifyContent="center">
-                                                            <Tooltip title="Editar">
-                                                                <IconButton
-                                                                    size="small"
-                                                                    color="primary"
-                                                                    onClick={() => handleEditPeriod(period)}
-                                                                >
-                                                                    <Edit />
-                                                                </IconButton>
-                                                            </Tooltip>
-                                                            <Tooltip title="Eliminar">
-                                                                <IconButton
-                                                                    size="small"
-                                                                    color="error"
-                                                                    onClick={() => handleDeleteClick(period)}
-                                                                >
-                                                                    <Delete />
-                                                                </IconButton>
-                                                            </Tooltip>
-                                                        </Stack>
-                                                    ) : (
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            —
-                                                        </Typography>
-                                                    )}
+                                                    <Stack direction="row" spacing={0} justifyContent="center">
+                                                        <Tooltip title="Ver Detalle">
+                                                            <IconButton
+                                                                size="small"
+                                                                color="info"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    router.push(`/hr/period/view?id=${period.id}`)
+                                                                }}
+                                                            >
+                                                                <Visibility />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                        {period.status === 'OPEN' && (
+                                                            <>
+                                                                <Tooltip title="Editar">
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        color="primary"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation()
+                                                                            handleEditPeriod(period)
+                                                                        }}
+                                                                    >
+                                                                        <Edit />
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                                <Tooltip title="Eliminar">
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        color="error"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation()
+                                                                            handleDeleteClick(period)
+                                                                        }}
+                                                                    >
+                                                                        <Delete />
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                            </>
+                                                        )}
+                                                    </Stack>
                                                 </TableCell>
                                             </TableRow>
                                         ))}

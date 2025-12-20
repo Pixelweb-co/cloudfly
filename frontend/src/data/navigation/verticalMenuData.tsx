@@ -72,24 +72,11 @@ const verticalMenuData = (): VerticalMenuDataType[] => [
         href: '/hr/concepts',
         icon: 'tabler-list-details'
       },
-      // Liquidación (como Alegra)
+      // Periodos de Nómina
       {
-        label: 'Liquidación',
-        icon: 'tabler-calculator',
-        children: [
-          {
-            label: 'Periodos de Nómina',
-            href: '/hr/periods'
-          },
-          {
-            label: 'Procesar Nómina',
-            href: '/hr/process'
-          },
-          {
-            label: 'Recibos de Nómina',
-            href: '/hr/receipts'
-          }
-        ]
+        label: 'Periodos de Nómina',
+        href: '/hr/periods',
+        icon: 'tabler-calendar-stats'
       },
       // Emisión (futuro - Nómina Electrónica)
       {
