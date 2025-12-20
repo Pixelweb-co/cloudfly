@@ -74,10 +74,13 @@ export default function PeriodFormPage() {
     const loadInitialData = async () => {
         setLoadingData(true)
         try {
-            // Cargar configuración de nómina
-            // TODO: Obtener cliente dinámicamente
-            const configData = await payrollConfigService.getConfig(1)
-            setPayrollConfig(configData)
+            // Cargar configuración de nómina (opcional)
+            try {
+                const configData = await payrollConfigService.getConfig(1)
+                setPayrollConfig(configData)
+            } catch (configErr) {
+                console.warn('Config not found, using defaults')
+            }
 
             // Cargar empleados
             const empResponse = await employeeService.getAll(1, 0, 1000, true)
@@ -105,6 +108,10 @@ export default function PeriodFormPage() {
             } else {
                 // Modo crear: incluir todos los empleados
                 setIncludedEmployees(activeEmployees)
+
+                // Calcular el siguiente número de período
+                const nextNumber = await calculateNextPeriodNumber(formData.periodType, formData.year)
+                setFormData(prev => ({ ...prev, periodNumber: nextNumber }))
             }
         } catch (err) {
             console.error('Error loading data:', err)
@@ -114,8 +121,34 @@ export default function PeriodFormPage() {
         }
     }
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value })
+    const calculateNextPeriodNumber = async (periodType: string, year: number) => {
+        try {
+            const response = await payrollPeriodService.getAll(1, 0, 1000)
+            const periods = response.content || []
+            const samePeriods = periods.filter(
+                (p: any) => p.periodType === periodType && p.year === year
+            )
+            const maxNumber = samePeriods.length > 0
+                ? Math.max(...samePeriods.map((p: any) => p.periodNumber || 0))
+                : 0
+            return maxNumber + 1
+        } catch (err) {
+            console.error('Error calculating period number:', err)
+            return 1
+        }
+    }
+
+    const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target
+        setFormData({ ...formData, [name]: value })
+
+        // Auto-calcular número de período cuando cambia tipo o año (solo en modo crear)
+        if ((name === 'periodType' || name === 'year') && !periodId) {
+            const newPeriodType = name === 'periodType' ? value : formData.periodType
+            const newYear = name === 'year' ? parseInt(value) : formData.year
+            const nextNumber = await calculateNextPeriodNumber(newPeriodType, newYear)
+            setFormData(prev => ({ ...prev, [name]: value, periodNumber: nextNumber }))
+        }
     }
 
     const handleToggleSelect = (employeeId: number) => {
@@ -431,6 +464,7 @@ export default function PeriodFormPage() {
                                             value={formData.periodNumber}
                                             onChange={handleChange}
                                             required
+                                            disabled={!periodId}
                                             inputProps={{ min: 1, max: 24 }}
                                         />
                                     </Grid>

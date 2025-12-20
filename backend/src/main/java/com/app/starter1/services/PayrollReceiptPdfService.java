@@ -2,10 +2,7 @@ package com.app.starter1.services;
 
 import com.app.starter1.persistence.entity.Employee;
 import com.app.starter1.persistence.entity.PayrollReceipt;
-import com.app.starter1.persistence.entity.PayrollReceiptDetail;
 import com.app.starter1.persistence.entity.PayrollPeriod;
-import com.app.starter1.persistence.entity.PayrollConcept;
-import com.app.starter1.persistence.repository.PayrollReceiptDetailRepository;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
 import com.lowagie.text.pdf.draw.LineSeparator;
@@ -17,20 +14,17 @@ import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 
 /**
- * Servicio para generar PDFs de colillas de pago
+ * Servicio para generar PDFs de colillas de pago (Adaptado a Nómina Colombia)
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class PayrollReceiptPdfService {
 
-    private final PayrollReceiptDetailRepository detailRepository;
-
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final Color PRIMARY_COLOR = new Color(0, 128, 128); // Teal como Alegra
+    private static final Color PRIMARY_COLOR = new Color(0, 128, 128); // Teal
     private static final Color HEADER_BG = new Color(240, 248, 255);
     private static final Color LIGHT_GRAY = new Color(245, 245, 245);
 
@@ -116,11 +110,13 @@ public class PayrollReceiptPdfService {
         Font labelFont = new Font(Font.HELVETICA, 9, Font.BOLD);
         Font valueFont = new Font(Font.HELVETICA, 9, Font.NORMAL);
 
-        addLabelValueCell(table, "Período:", period.getPeriodName(), labelFont, valueFont);
-        addLabelValueCell(table, "Fecha Inicio:", period.getStartDate().format(DATE_FORMAT), labelFont, valueFont);
-        addLabelValueCell(table, "Fecha Fin:", period.getEndDate().format(DATE_FORMAT), labelFont, valueFont);
+        addLabelValueCell(table, "Período:", period != null ? period.getPeriodName() : "N/A", labelFont, valueFont);
+        addLabelValueCell(table, "Fecha Inicio:", period != null ? period.getStartDate().format(DATE_FORMAT) : "-",
+                labelFont, valueFont);
+        addLabelValueCell(table, "Fecha Fin:", period != null ? period.getEndDate().format(DATE_FORMAT) : "-",
+                labelFont, valueFont);
         addLabelValueCell(table, "Días Liquidados:",
-                receipt.getRegularDays() != null ? receipt.getRegularDays().toString() : "15",
+                receipt.getRegularDays() != null ? receipt.getRegularDays().toString() : "0",
                 labelFont, valueFont);
         addLabelValueCell(table, "Método Pago:",
                 receipt.getEmployee().getPaymentMethod() != null ? receipt.getEmployee().getPaymentMethod().name()
@@ -140,7 +136,7 @@ public class PayrollReceiptPdfService {
         Font valueFont = new Font(Font.HELVETICA, 11, Font.BOLD);
 
         // Headers
-        String[] headers = { "Salario Base", "Percepciones", "Deducciones", "NETO A PAGAR" };
+        String[] headers = { "Salario Base", "Total Devengado", "Total Deducciones", "NETO A PAGAR" };
         Color[] colors = { new Color(100, 149, 237), new Color(60, 179, 113),
                 new Color(220, 53, 69), PRIMARY_COLOR };
 
@@ -155,7 +151,7 @@ public class PayrollReceiptPdfService {
         // Values
         String[] values = {
                 formatCurrency(receipt.getBaseSalary()),
-                formatCurrency(receipt.getTotalPerceptions()),
+                formatCurrency(receipt.getTotalPerceptions()), // Usando el campo de la Entidad
                 formatCurrency(receipt.getTotalDeductions()),
                 formatCurrency(receipt.getNetPay())
         };
@@ -174,7 +170,7 @@ public class PayrollReceiptPdfService {
 
     private void addPerceptionsTable(Document document, PayrollReceipt receipt) throws DocumentException {
         Font sectionFont = new Font(Font.HELVETICA, 11, Font.BOLD, new Color(60, 179, 113));
-        Paragraph section = new Paragraph("INGRESOS / PERCEPCIONES", sectionFont);
+        Paragraph section = new Paragraph("DEVENGOS", sectionFont);
         section.setSpacingAfter(5);
         document.add(section);
 
@@ -183,19 +179,26 @@ public class PayrollReceiptPdfService {
         table.setWidths(new float[] { 3f, 1f, 1.5f });
 
         // Headers
-        addTableHeader(table, new String[] { "Concepto", "Cantidad", "Valor" });
+        addTableHeader(table, new String[] { "Concepto", "Detalle", "Valor" });
 
-        // Salario base como primera fila
-        addTableRow(table, "Salario Base", "-", formatCurrency(receipt.getBaseSalary()));
-
-        // Detalles de percepciones
-        List<PayrollReceiptDetail> perceptions = detailRepository.findByPayrollReceiptAndConceptType(
-                receipt, PayrollConcept.ConceptType.PERCEPCION);
-        for (PayrollReceiptDetail detail : perceptions) {
-            addTableRow(table,
-                    detail.getPayrollConcept().getName(),
-                    "-",
-                    formatCurrency(detail.getAmount()));
+        // Usando campos planos de la Entidad
+        if (hasValue(receipt.getSalaryAmount())) {
+            addTableRow(table, "Sueldo Básico", "-", formatCurrency(receipt.getSalaryAmount()));
+        }
+        if (hasValue(receipt.getTransportAllowanceAmount())) {
+            addTableRow(table, "Auxilio de Transporte", "-", formatCurrency(receipt.getTransportAllowanceAmount()));
+        }
+        if (hasValue(receipt.getOvertimeAmount())) {
+            addTableRow(table, "Horas Extras y Recargos", "-", formatCurrency(receipt.getOvertimeAmount()));
+        }
+        if (hasValue(receipt.getBonusesAmount())) {
+            addTableRow(table, "Bonificaciones", "-", formatCurrency(receipt.getBonusesAmount()));
+        }
+        if (hasValue(receipt.getCommissionsAmount())) {
+            addTableRow(table, "Comisiones", "-", formatCurrency(receipt.getCommissionsAmount()));
+        }
+        if (hasValue(receipt.getOtherEarnings())) {
+            addTableRow(table, "Otros Ingresos", "-", formatCurrency(receipt.getOtherEarnings()));
         }
 
         document.add(table);
@@ -212,28 +215,17 @@ public class PayrollReceiptPdfService {
         table.setWidthPercentage(100);
         table.setWidths(new float[] { 3f, 1f, 1.5f });
 
-        addTableHeader(table, new String[] { "Concepto", "Porcentaje", "Valor" });
+        addTableHeader(table, new String[] { "Concepto", "Detalle", "Valor" });
 
-        // ISR
-        if (receipt.getIsrAmount() != null && receipt.getIsrAmount().compareTo(BigDecimal.ZERO) > 0) {
-            addTableRow(table, "Retención en la Fuente / ISR", "-", formatCurrency(receipt.getIsrAmount()));
+        // Usando campos planos de la Entidad
+        if (hasValue(receipt.getHealthDeduction())) {
+            addTableRow(table, "Aporte Salud (4%)", "-", formatCurrency(receipt.getHealthDeduction()));
         }
-
-        // IMSS/Seguridad Social
-        if (receipt.getImssAmount() != null && receipt.getImssAmount().compareTo(BigDecimal.ZERO) > 0) {
-            addTableRow(table, "Seguridad Social", "-", formatCurrency(receipt.getImssAmount()));
+        if (hasValue(receipt.getPensionDeduction())) {
+            addTableRow(table, "Aporte Pensión (4%)", "-", formatCurrency(receipt.getPensionDeduction()));
         }
-
-        // Detalles de deducciones
-        List<PayrollReceiptDetail> deductions = detailRepository.findByPayrollReceiptAndConceptType(
-                receipt, PayrollConcept.ConceptType.DEDUCCION);
-        for (PayrollReceiptDetail detail : deductions) {
-            addTableRow(table,
-                    detail.getPayrollConcept().getName(),
-                    detail.getPayrollConcept().getCalculationFormula() != null
-                            ? detail.getPayrollConcept().getCalculationFormula()
-                            : "-",
-                    formatCurrency(detail.getAmount()));
+        if (hasValue(receipt.getOtherDeductions())) {
+            addTableRow(table, "Otras Deducciones/Libranzas", "-", formatCurrency(receipt.getOtherDeductions()));
         }
 
         document.add(table);
@@ -303,5 +295,9 @@ public class PayrollReceiptPdfService {
         if (amount == null)
             return "$0";
         return String.format("$%,.2f", amount);
+    }
+
+    private boolean hasValue(BigDecimal value) {
+        return value != null && value.compareTo(BigDecimal.ZERO) > 0;
     }
 }

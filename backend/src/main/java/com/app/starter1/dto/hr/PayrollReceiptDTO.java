@@ -22,22 +22,99 @@ public class PayrollReceiptDTO {
     private String receiptNumber;
     private LocalDateTime calculationDate;
 
+    // Días trabajados
     private BigDecimal regularDays;
     private BigDecimal absenceDays;
     private BigDecimal overtimeHours;
 
+    // Salarios base
     private BigDecimal baseSalary;
     private BigDecimal dailySalary;
 
+    // Devengos detallados
+    private DevengosDTO devengos;
+
+    // Deducciones detalladas
+    private DeduccionesDTO deducciones;
+
+    // Costos del empleador (opcional, solo para admin/contabilidad)
+    private CostosEmpleadorDTO costosEmpleador;
+
+    // Provisiones (opcional, solo para admin/contabilidad)
+    private ProvisionesDTO provisiones;
+
+    // Totales
     private BigDecimal totalPerceptions;
     private BigDecimal totalDeductions;
     private BigDecimal netPay;
+    private BigDecimal totalEmployerCosts;
+    private BigDecimal totalProvisions;
+    private BigDecimal totalCost; // Costo total para la empresa
 
-    private BigDecimal isrAmount;
-    private BigDecimal imssAmount;
-
+    // Estado y metadatos de pago
     private String status;
-    private String uuid;
+    private LocalDateTime paidAt;
+    private String paymentReference;
+    private String paymentMethod;
+    private String notes;
+
+    // Archivos
+    private String pdfPath;
+    private Boolean emailSent;
+
+    // Campos auxiliares
     private Boolean isPaid;
-    private Boolean isStamped;
+
+    // ===== DTOs Anidados =====
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DevengosDTO {
+        private BigDecimal salario;
+        private BigDecimal horasExtras;
+        private BigDecimal comisiones;
+        private BigDecimal auxilioTransporte;
+        private BigDecimal bonos;
+        private BigDecimal otros;
+        private BigDecimal total;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DeduccionesDTO {
+        private BigDecimal salud;
+        private BigDecimal pension;
+        private BigDecimal otras;
+        private BigDecimal total;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CostosEmpleadorDTO {
+        private BigDecimal saludEmpleador;
+        private BigDecimal pensionEmpleador;
+        private BigDecimal arl;
+        private BigDecimal sena;
+        private BigDecimal icbf;
+        private BigDecimal cajaCompensacion;
+        private BigDecimal total;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ProvisionesDTO {
+        private BigDecimal prima;
+        private BigDecimal cesantias;
+        private BigDecimal interesesCesantias;
+        private BigDecimal vacaciones;
+        private BigDecimal total;
+    }
 }

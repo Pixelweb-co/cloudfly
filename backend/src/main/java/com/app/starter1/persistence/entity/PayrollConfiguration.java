@@ -107,6 +107,19 @@ public class PayrollConfiguration {
     @Column(name = "vacaciones_percentage", precision = 5, scale = 2)
     private BigDecimal vacacionesPercentage = new BigDecimal("4.17"); // Vacaciones
 
+    // === FACTORES DE HORAS EXTRAS Y RECARGOS ===
+    @Column(name = "overtime_day_factor", precision = 5, scale = 4)
+    private BigDecimal overtimeDayFactor = new BigDecimal("1.2500"); // Extra Diurna
+
+    @Column(name = "overtime_night_factor", precision = 5, scale = 4)
+    private BigDecimal overtimeNightFactor = new BigDecimal("1.7500"); // Extra Nocturna
+
+    @Column(name = "night_surcharge_factor", precision = 5, scale = 4)
+    private BigDecimal nightSurchargeFactor = new BigDecimal("0.3500"); // Recargo Nocturno
+
+    @Column(name = "sunday_holiday_factor", precision = 5, scale = 4)
+    private BigDecimal sundayHolidayFactor = new BigDecimal("1.7500"); // Dominical/Festivo
+
     // === CONFIGURACIÓN DE NÓMINA ===
     @Column(name = "enable_cfdi_timbrado", nullable = false)
     private Boolean enableCfdiTimbrado = false; // Habilitar timbrado de CFDI
@@ -169,7 +182,7 @@ public class PayrollConfiguration {
                 // Salarios de referencia Colombia 2025
                 .minimumWage(new BigDecimal("1423500"))
                 .umaValue(new BigDecimal("47065"))
-                .transportAllowance(new BigDecimal("200000"))
+                .transportAllowance(new BigDecimal("140606"))
                 // Seguridad Social - Empleado
                 .healthPercentageEmployee(new BigDecimal("4.00"))
                 .pensionPercentageEmployee(new BigDecimal("4.00"))
@@ -187,6 +200,11 @@ public class PayrollConfiguration {
                 .cesantiasPercentage(new BigDecimal("8.33"))
                 .interesesCesantiasPercentage(new BigDecimal("12.00"))
                 .vacacionesPercentage(new BigDecimal("4.17"))
+                // Factores Horas Extras
+                .overtimeDayFactor(new BigDecimal("1.2500"))
+                .overtimeNightFactor(new BigDecimal("1.7500"))
+                .nightSurchargeFactor(new BigDecimal("0.3500"))
+                .sundayHolidayFactor(new BigDecimal("1.7500"))
                 // Otros
                 .enableCfdiTimbrado(false)
                 .bankLayoutFormat("STANDARD_CLABE")

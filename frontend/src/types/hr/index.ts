@@ -109,7 +109,7 @@ export interface PayrollPeriod {
     startDate: string
     endDate: string
     paymentDate: string
-    status: 'OPEN' | 'CALCULATED' | 'APPROVED' | 'PAID' | 'CLOSED'
+    status: 'OPEN' | 'LIQUIDATED' | 'PARTIALLY_PAID' | 'PAID' | 'CLOSED'
     description?: string
     periodName: string
     workingDays: number
@@ -121,35 +121,88 @@ export interface PayrollPeriod {
     elapsedPayroll?: number
 }
 
+export interface DevengosDTO {
+    salario: number
+    horasExtras: number
+    comisiones: number
+    auxilioTransporte: number
+    bonos: number
+    otros: number
+    total: number
+}
+
+export interface DeduccionesDTO {
+    salud: number
+    pension: number
+    otras: number
+    total: number
+}
+
+export interface CostosEmpleadorDTO {
+    saludEmpleador: number
+    pensionEmpleador: number
+    arl: number
+    sena: number
+    icbf: number
+    cajaCompensacion: number
+    total: number
+}
+
+export interface ProvisionesDTO {
+    prima: number
+    cesantias: number
+    interesesCesantias: number
+    vacaciones: number
+    total: number
+}
+
 export interface PayrollReceipt {
     id: number
     employeeId: number
     employeeName: string
+    employeeEmail?: string
     periodId: number
     periodName: string
     receiptNumber: string
     calculationDate: string
 
+    // Días trabajados
     regularDays: number
     absenceDays: number
     overtimeHours: number
 
+    // Salarios base
     baseSalary: number
     dailySalary: number
 
+    // Detalle
+    devengos?: DevengosDTO
+    deducciones?: DeduccionesDTO
+    costosEmpleador?: CostosEmpleadorDTO
+    provisiones?: ProvisionesDTO
+
+    // Totales
     totalPerceptions: number
     totalDeductions: number
     netPay: number
+    totalEmployerCosts?: number
+    totalProvisions?: number
+    totalCost?: number
 
-    isrAmount: number
-    imssAmount: number
+    status: 'PENDING' | 'PAID' | 'CANCELLED'
+    paidAt?: string
+    paymentReference?: string
+    paymentMethod?: string
+    notes?: string
 
-    status: 'CALCULATED' | 'APPROVED' | 'STAMPED' | 'PAID' | 'CANCELLED'
-    uuid?: string
+    // Archivos
+    pdfPath?: string
+
+    // Auxiliares
     isPaid: boolean
-    isStamped: boolean
 }
 
+// ... (PageResponse existing content)
 export interface PageResponse<T> {
     content: T[]
     totalElements: number
@@ -157,3 +210,21 @@ export interface PageResponse<T> {
     size: number
     number: number
 }
+
+export interface LiquidationResult {
+    periodId: number
+    status: string
+    receiptsGenerated: number
+    totalNetPay: number
+    liquidatedAt?: string
+    // Optional fields if backend sends them
+    totalEmployees?: number
+    noveltiesProcessed?: number
+}
+
+export interface PaymentRequest {
+    paymentReference: string
+    paymentMethod: string
+    notes?: string
+}
+

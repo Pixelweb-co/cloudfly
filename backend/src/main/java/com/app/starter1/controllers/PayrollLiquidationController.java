@@ -37,7 +37,7 @@ public class PayrollLiquidationController {
             @RequestParam Long customerId,
             @RequestBody PaymentRequest request) {
 
-        PaymentResult result = liquidationService.payReceipt(receiptId, customerId, request);
+        PaymentResult result = liquidationService.payReceipt(receiptId, request);
         return ResponseEntity.ok(result);
     }
 }

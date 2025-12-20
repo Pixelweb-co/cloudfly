@@ -114,24 +114,42 @@ public class PayrollProcessingService {
         receipt.setTotalDeductions(calculation.getTotalDeductions());
         receipt.setNetPay(calculation.getNetPay());
 
-        // Calcular ISR e IMSS de los detalles
-        receipt.setIsrAmount(calculation.getDeductions().stream()
-                .filter(d -> "ISR".equals(d.getCode()))
-                .map(d -> d.getAmount())
-                .findFirst()
-                .orElse(java.math.BigDecimal.ZERO));
+        // Costos Empleador (Informativos)
+        receipt.setTotalEmployerCosts(calculation.getTotalEmployerCosts());
+        receipt.setTotalProvisions(calculation.getTotalProvisions());
 
-        receipt.setImssAmount(calculation.getDeductions().stream()
-                .filter(d -> "IMSS".equals(d.getCode()))
-                .map(d -> d.getAmount())
-                .findFirst()
-                .orElse(java.math.BigDecimal.ZERO));
+        // Mapear campos detallados planos (Colombia)
+        for (PayrollCalculationService.Perception p : calculation.getPerceptions()) {
+            if ("001".equals(p.getCode())) {
+                receipt.setSalaryAmount(p.getAmount());
+            } else if (p.getCode().contains("HORA_") || p.getCode().contains("RECARGO")) {
+                receipt.setOvertimeAmount(receipt.getOvertimeAmount().add(p.getAmount()));
+            } else if ("AUX_TRANS".equals(p.getCode())) {
+                receipt.setTransportAllowanceAmount(p.getAmount());
+            } else if ("BONO".equals(p.getCode()) || "BONIFICACION".equals(p.getCode())) {
+                receipt.setBonusesAmount(receipt.getBonusesAmount().add(p.getAmount()));
+            } else if ("COMISION".equals(p.getCode())) {
+                receipt.setCommissionsAmount(receipt.getCommissionsAmount().add(p.getAmount()));
+            } else {
+                receipt.setOtherEarnings(receipt.getOtherEarnings().add(p.getAmount()));
+            }
+        }
+
+        for (PayrollCalculationService.Deduction d : calculation.getDeductions()) {
+            if ("SALUD".equals(d.getCode())) {
+                receipt.setHealthDeduction(d.getAmount());
+            } else if ("PENSION".equals(d.getCode())) {
+                receipt.setPensionDeduction(d.getAmount());
+            } else {
+                receipt.setOtherDeductions(receipt.getOtherDeductions().add(d.getAmount()));
+            }
+        }
 
         receipt.setStatus(PayrollReceipt.ReceiptStatus.PENDING);
 
         receipt = receiptRepository.save(receipt);
 
-        // Crear detalles de percepciones
+        // Crear detalles de percepciones (Persistencia legacy para compatibilidad)
         int sortOrder = 1;
         for (PayrollCalculationService.Perception perception : calculation.getPerceptions()) {
             PayrollReceiptDetail detail = new PayrollReceiptDetail();
@@ -140,7 +158,7 @@ public class PayrollProcessingService {
             detail.setConceptCode(perception.getCode());
             detail.setConceptName(perception.getName());
             detail.setAmount(perception.getAmount());
-            detail.setIsTaxable(true); // TODO: obtener del concepto
+            detail.setIsTaxable(true);
             detail.setSortOrder(sortOrder++);
             receiptDetailRepository.save(detail);
         }
@@ -180,7 +198,7 @@ public class PayrollProcessingService {
 
         List<PayrollReceipt> receipts = receiptRepository.findByPayrollPeriod(period);
         for (PayrollReceipt receipt : receipts) {
-            receipt.setStatus(PayrollReceipt.ReceiptStatus.APPROVED);
+            receipt.setStatus(PayrollReceipt.ReceiptStatus.PAID);
             receiptRepository.save(receipt);
         }
 
@@ -201,8 +219,8 @@ public class PayrollProcessingService {
         PayrollPeriod period = periodRepository.findByIdAndCustomer(periodId, customer)
                 .orElseThrow(() -> new RuntimeException("Period not found"));
 
-        if (period.getStatus() != PayrollPeriod.PeriodStatus.APPROVED) {
-            throw new RuntimeException("Period must be in APPROVED status to register payment");
+        if (period.getStatus() != PayrollPeriod.PeriodStatus.PAID) {
+            throw new RuntimeException("Period must be in PAID status to register payment");
         }
 
         List<PayrollReceipt> receipts = receiptRepository.findByPayrollPeriod(period);

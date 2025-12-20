@@ -1,4 +1,4 @@
-package com.app.starter1.persistence.repos;
+package com.app.starter1.persistence.repository;
 
 import com.app.starter1.persistence.entity.PayrollNovelty;
 import org.springframework.data.domain.Page;

@@ -107,6 +107,7 @@ public class EmployeeCreateDTO {
     // === TIPO DE SALARIO (Colombia) ===
     private String salaryType; // ORDINARIO o INTEGRAL
     private Boolean hasTransportAllowance = true; // ¿Aplica auxilio de transporte?
+    private Boolean hasFamilySubsidy = false; // ¿Aplica subsidio familiar?
     private String contractTypeEnum; // Tipo de contrato enum
 
     private Boolean isActive = true;

@@ -7,7 +7,7 @@ import com.app.starter1.persistence.entity.PayrollNovelty;
 import com.app.starter1.persistence.entity.PayrollPeriod;
 import com.app.starter1.persistence.repository.CustomerRepository;
 import com.app.starter1.persistence.repository.EmployeeRepository;
-import com.app.starter1.persistence.repos.PayrollNoveltyRepository; // Este si lo cree en repos
+import com.app.starter1.persistence.repository.PayrollNoveltyRepository; // Este si lo cree en repos
 import com.app.starter1.persistence.repository.PayrollPeriodRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

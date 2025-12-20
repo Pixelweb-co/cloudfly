@@ -2,10 +2,13 @@ package com.app.starter1.services;
 
 import com.app.starter1.dto.hr.EmployeeCreateDTO;
 import com.app.starter1.dto.hr.EmployeeDTO;
+import com.app.starter1.dto.hr.EmployeePayrollHistoryDTO;
 import com.app.starter1.persistence.entity.Employee;
 import com.app.starter1.persistence.entity.Customer;
+import com.app.starter1.persistence.entity.PayrollReceipt;
 import com.app.starter1.persistence.repository.EmployeeRepository;
 import com.app.starter1.persistence.repository.CustomerRepository;
+import com.app.starter1.persistence.repository.PayrollReceiptRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -14,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +27,7 @@ public class EmployeeService {
 
         private final EmployeeRepository employeeRepository;
         private final CustomerRepository customerRepository;
+        private final PayrollReceiptRepository payrollReceiptRepository;
 
         @Transactional(readOnly = true)
         public Page<EmployeeDTO> getAllEmployees(Long customerId, Pageable pageable) {
@@ -104,6 +110,9 @@ public class EmployeeService {
                                 .hasTransportAllowance(
                                                 dto.getHasTransportAllowance() != null ? dto.getHasTransportAllowance()
                                                                 : true)
+                                .hasFamilySubsidy(
+                                                dto.getHasFamilySubsidy() != null ? dto.getHasFamilySubsidy()
+                                                                : false)
                                 .contractTypeEnum(
                                                 dto.getContractTypeEnum() != null
                                                                 ? Employee.ContractTypeEnum
@@ -163,6 +172,9 @@ public class EmployeeService {
                 if (dto.getHasTransportAllowance() != null) {
                         employee.setHasTransportAllowance(dto.getHasTransportAllowance());
                 }
+                if (dto.getHasFamilySubsidy() != null) {
+                        employee.setHasFamilySubsidy(dto.getHasFamilySubsidy());
+                }
                 if (dto.getContractTypeEnum() != null) {
                         employee.setContractTypeEnum(Employee.ContractTypeEnum.valueOf(dto.getContractTypeEnum()));
                 }
@@ -206,6 +218,19 @@ public class EmployeeService {
                                 .orElseThrow(() -> new RuntimeException("Customer not found"));
                 return employeeRepository.searchEmployees(customer, search, pageable)
                                 .map(this::convertToDTO);
+        }
+
+        @Transactional(readOnly = true)
+        public List<EmployeePayrollHistoryDTO> getEmployeePayrollHistory(Long employeeId, Long customerId) {
+                Customer customer = customerRepository.findById(customerId)
+                                .orElseThrow(() -> new RuntimeException("Customer not found"));
+                Employee employee = employeeRepository.findByIdAndCustomer(employeeId, customer)
+                                .orElseThrow(() -> new RuntimeException("Employee not found"));
+
+                List<PayrollReceipt> receipts = payrollReceiptRepository.findByEmployee(employee);
+                return receipts.stream()
+                                .map(this::convertToPayrollHistoryDTO)
+                                .collect(Collectors.toList());
         }
 
         // Conversion methods
@@ -255,6 +280,26 @@ public class EmployeeService {
                                                 : null)
                                 .isActive(employee.getIsActive())
                                 .notes(employee.getNotes())
+                                .build();
+        }
+
+        private EmployeePayrollHistoryDTO convertToPayrollHistoryDTO(PayrollReceipt receipt) {
+                return EmployeePayrollHistoryDTO.builder()
+                                .id(receipt.getId())
+                                .receiptNumber(receipt.getReceiptNumber())
+                                .periodId(receipt.getPayrollPeriod().getId())
+                                .periodName(receipt.getPayrollPeriod().getPeriodName())
+                                .periodYear(receipt.getPayrollPeriod().getYear())
+                                .periodNumber(receipt.getPayrollPeriod().getPeriodNumber())
+                                .periodType(receipt.getPayrollPeriod().getPeriodType().name())
+                                .calculationDate(receipt.getCalculationDate())
+                                .baseSalary(receipt.getBaseSalary())
+                                .totalPerceptions(receipt.getTotalPerceptions())
+                                .totalDeductions(receipt.getTotalDeductions())
+                                .netPay(receipt.getNetPay())
+                                .status(receipt.getStatus().name())
+                                .paidAt(receipt.getPaidAt())
+                                .pdfPath(receipt.getPdfPath())
                                 .build();
         }
 }

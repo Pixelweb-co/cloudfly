@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Employee } from '@/types/hr'
 import { employeeService } from '@/services/hr/employeeService'
-import EmployeeFormDialog from '@/components/hr/EmployeeFormDialog'
 import {
     Box,
     Card,
@@ -47,8 +46,6 @@ export default function EmployeesPage() {
     const [employees, setEmployees] = useState<Employee[]>([])
     const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
-    const [dialogOpen, setDialogOpen] = useState(false)
-    const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null)
     const [page, setPage] = useState(1)
@@ -116,18 +113,11 @@ export default function EmployeesPage() {
     }
 
     const handleEdit = (employee: Employee) => {
-        setSelectedEmployee(employee)
-        setDialogOpen(true)
+        router.push(`/hr/employees/form?id=${employee.id}`)
     }
 
     const handleAddNew = () => {
-        setSelectedEmployee(null)
-        setDialogOpen(true)
-    }
-
-    const handleDialogClose = () => {
-        setDialogOpen(false)
-        setSelectedEmployee(null)
+        router.push('/hr/employees/form')
     }
 
     const formatCurrency = (amount: number) => {
@@ -212,6 +202,7 @@ export default function EmployeesPage() {
                                 variant="contained"
                                 startIcon={<PersonAdd />}
                                 sx={{ mt: 2 }}
+                                onClick={handleAddNew}
                             >
                                 Agregar Primer Empleado
                             </Button>
@@ -351,16 +342,6 @@ export default function EmployeesPage() {
                     )}
                 </CardContent>
             </Card>
-
-            <EmployeeFormDialog
-                open={dialogOpen}
-                onClose={handleDialogClose}
-                onSuccess={() => {
-                    loadEmployees()
-                    setSelectedEmployee(null)
-                }}
-                employee={selectedEmployee}
-            />
 
             {/* Delete Confirmation Dialog */}
             <Dialog
