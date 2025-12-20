@@ -20,6 +20,9 @@ export interface Employee {
     hireDate: string
     terminationDate?: string
     department?: string
+    costCenterId?: number
+    costCenterCode?: string
+    costCenterName?: string
     jobTitle?: string
     contractType?: string
 
@@ -228,3 +231,92 @@ export interface PaymentRequest {
     notes?: string
 }
 
+// ============================================
+// Payroll Cost by Cost Center Report Types
+// ============================================
+
+export interface CostCenterCost {
+    costCenterId?: number
+    costCenterCode: string
+    costCenterName: string
+    employeeCount: number
+
+    // Devengos
+    totalSalary: number
+    totalOvertime: number
+    totalTransport: number
+    totalPerceptions: number
+
+    // Deducciones
+    totalDeductions: number
+    totalNetPay: number
+
+    // Aportes patronales
+    totalEmployerHealth: number
+    totalEmployerPension: number
+    totalArl: number
+    totalCaja: number
+    totalIcbf: number
+    totalSena: number
+
+    // Provisiones
+    totalCesantias: number
+    totalPrima: number
+    totalVacaciones: number
+
+    // Totales
+    totalEmployerCost: number
+    percentageOfTotal: number
+}
+
+export interface PayrollCostSummary {
+    totalEmployees: number
+    totalCostCenters: number
+
+    grandTotalSalary: number
+    grandTotalOvertime: number
+    grandTotalTransport: number
+    grandTotalPerceptions: number
+    grandTotalDeductions: number
+    grandTotalNetPay: number
+
+    // Aportes patronales
+    grandTotalEmployerHealth: number
+    grandTotalEmployerPension: number
+    grandTotalArl: number
+    grandTotalCaja: number
+    grandTotalIcbf: number
+    grandTotalSena: number
+    grandTotalParafiscales: number
+    grandTotalSeguridadSocial: number
+
+    // Provisiones
+    grandTotalCesantias: number
+    grandTotalPrima: number
+    grandTotalVacaciones: number
+    grandTotalProvisiones: number
+
+    // Total empleador
+    grandTotalEmployerCost: number
+}
+
+export interface PayrollCostByCostCenter {
+    periodId: number
+    periodYear: number
+    periodNumber: number
+    periodType: string
+    periodName: string
+
+    costCenters: CostCenterCost[]
+    summary: PayrollCostSummary
+}
+
+// Centro de costo para selector
+export interface CostCenter {
+    id: number
+    code: string
+    name: string
+    description?: string
+    parentId?: number
+    isActive: boolean
+}

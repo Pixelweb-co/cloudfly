@@ -32,6 +32,9 @@ public class EmployeeDTO {
     private LocalDate hireDate;
     private LocalDate terminationDate;
     private String department;
+    private Long costCenterId;
+    private String costCenterCode;
+    private String costCenterName;
     private String jobTitle;
     private String contractType;
 

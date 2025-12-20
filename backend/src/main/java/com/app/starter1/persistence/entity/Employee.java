@@ -82,6 +82,13 @@ public class Employee {
     @Column(name = "department", length = 100)
     private String department; // Departamento o área
 
+    /**
+     * Centro de costo al que pertenece el empleado (para contabilidad analítica)
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cost_center_id")
+    private CostCenter costCenter;
+
     @Column(name = "job_title", length = 100)
     private String jobTitle; // Puesto o cargo
 
