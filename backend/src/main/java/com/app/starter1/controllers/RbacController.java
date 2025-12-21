@@ -32,12 +32,20 @@ public class RbacController {
     /**
      * Get menu for current authenticated user
      * This replaces the static verticalMenuData.json
+     * If tenantId is provided, filters by subscription modules
      */
     @GetMapping("/menu")
-    public ResponseEntity<List<MenuItemDTO>> getMenu() {
+    public ResponseEntity<List<MenuItemDTO>> getMenu(@RequestParam(required = false) Long tenantId) {
         List<String> roleCodes = getCurrentUserRoles();
-        log.info("GET /api/rbac/menu - Generating menu for roles: {}", roleCodes);
-        return ResponseEntity.ok(rbacService.generateMenu(roleCodes));
+        log.info("GET /api/rbac/menu - Generating menu for roles: {}, tenantId: {}", roleCodes, tenantId);
+
+        if (tenantId != null) {
+            // Filter by subscription modules
+            return ResponseEntity.ok(rbacService.generateMenu(roleCodes, tenantId));
+        } else {
+            // Just role-based filtering (no subscription)
+            return ResponseEntity.ok(rbacService.generateMenu(roleCodes));
+        }
     }
 
     /**

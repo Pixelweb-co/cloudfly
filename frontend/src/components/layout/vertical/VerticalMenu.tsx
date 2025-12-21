@@ -209,7 +209,6 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
 
         {/* Hardcoded item for SUPERADMIN */}
         {userRole === 'SUPERADMIN' && (
-
           <>
             <MenuItem href='/settings/menu' icon={<i className='tabler-layout-sidebar' />}>
               Gestor del Menú
@@ -219,6 +218,12 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
             </MenuItem>
             <MenuItem href='/administracion/modules' icon={<i className='tabler-box' />}>
               Módulos
+            </MenuItem>
+            <MenuItem href='/administracion/suscripciones' icon={<i className='tabler-package' />}>
+              Suscripciones
+            </MenuItem>
+            <MenuItem href='/administracion/consumo' icon={<i className='tabler-chart-pie' />}>
+              Dashboard Consumo
             </MenuItem>
           </>
         )}

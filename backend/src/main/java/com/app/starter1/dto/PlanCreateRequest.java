@@ -7,21 +7,23 @@ import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 
 public record PlanCreateRequest(
-        @NotBlank(message = "El nombre del plan es requerido") String name,
+                @NotBlank(message = "El nombre del plan es requerido") String name,
 
-        String description,
+                String description,
 
-        @NotNull(message = "El precio es requerido") @PositiveOrZero(message = "El precio debe ser 0 o mayor") BigDecimal price,
+                @NotNull(message = "El precio es requerido") @PositiveOrZero(message = "El precio debe ser 0 o mayor") BigDecimal price,
 
-        @NotNull(message = "La duración en días es requerida") @Positive(message = "La duración debe ser mayor a 0") Integer durationDays,
+                @NotNull(message = "La duración en días es requerida") @Positive(message = "La duración debe ser mayor a 0") Integer durationDays,
 
-        Long aiTokensLimit,
-        Integer electronicDocsLimit,
-        Integer usersLimit,
+                Boolean isFree,
 
-        Boolean allowOverage,
-        BigDecimal aiOveragePricePer1k,
-        BigDecimal docOveragePriceUnit,
+                Long aiTokensLimit,
+                Integer electronicDocsLimit,
+                Integer usersLimit,
 
-        java.util.Set<Long> moduleIds) {
+                Boolean allowOverage,
+                BigDecimal aiOveragePricePer1k,
+                BigDecimal docOveragePriceUnit,
+
+                java.util.Set<Long> moduleIds) {
 }

@@ -7,5 +7,8 @@ import java.util.Optional;
 
 public interface PlanRepository extends JpaRepository<Plan, Long> {
     Optional<Plan> findByName(String name);
+
     List<Plan> findByIsActiveTrue();
+
+    Optional<Plan> findByIsFreeAndIsActive(Boolean isFree, Boolean isActive);
 }

@@ -442,6 +442,21 @@ public class SecurityConfig {
                                         http.requestMatchers(HttpMethod.DELETE, "/api/v1/plans/**")
                                                         .hasAnyRole("SUPERADMIN", "ADMIN");
 
+                                        // Subscriptions (Gestión de Suscripciones)
+                                        http.requestMatchers(HttpMethod.GET, "/api/v1/subscriptions/tenant/*/active")
+                                                        .authenticated(); // Cualquier usuario puede ver su suscripción
+                                                                          // activa
+                                        http.requestMatchers(HttpMethod.GET, "/api/v1/subscriptions/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN");
+                                        http.requestMatchers(HttpMethod.POST, "/api/v1/subscriptions/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN");
+                                        http.requestMatchers(HttpMethod.PUT, "/api/v1/subscriptions/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN");
+                                        http.requestMatchers(HttpMethod.PATCH, "/api/v1/subscriptions/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN");
+                                        http.requestMatchers(HttpMethod.DELETE, "/api/v1/subscriptions/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN");
+
                                         // Configurar el resto de los endpoints (no especificados)
                                         http.anyRequest().denyAll();
                                 }).addFilterBefore(new JwtTokenValidator(jwtUtils), BasicAuthenticationFilter.class)

@@ -35,6 +35,10 @@ public class Plan {
     @Column(nullable = false)
     private Boolean isActive = true;
 
+    @Column(name = "is_free", nullable = false)
+    @Builder.Default
+    private Boolean isFree = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
