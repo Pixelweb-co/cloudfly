@@ -9,6 +9,7 @@ import { VerticalNavProvider } from '@menu/contexts/verticalNavContext'
 import { SettingsProvider } from '@core/contexts/settingsContext'
 import ThemeProvider from '@components/theme'
 import { NextAuthProvider } from '@/contexts/nextAuthProvider'
+import { PermissionProvider } from '@/contexts/PermissionContext'
 
 type Props = ChildrenType & {
   direction: Direction
@@ -24,11 +25,13 @@ const Providers = (props: Props) => {
   return (
     <NextAuthProvider>
       <VerticalNavProvider>
-        <SettingsProvider settingsCookie={settingsCookie} mode={mode}>
-          <ThemeProvider direction={direction} systemMode={systemMode ?? 'light'}>
-            {children}
-          </ThemeProvider>
-        </SettingsProvider>
+        <PermissionProvider>
+          <SettingsProvider settingsCookie={settingsCookie} mode={mode}>
+            <ThemeProvider direction={direction} systemMode={systemMode ?? 'light'}>
+              {children}
+            </ThemeProvider>
+          </SettingsProvider>
+        </PermissionProvider>
       </VerticalNavProvider>
     </NextAuthProvider>
   )

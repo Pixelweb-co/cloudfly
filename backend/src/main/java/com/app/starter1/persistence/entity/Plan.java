@@ -41,6 +41,32 @@ public class Plan {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    // --- SaaS Limits & Quotas ---
+    @Column(name = "ai_tokens_limit")
+    private Long aiTokensLimit;
+
+    @Column(name = "electronic_docs_limit")
+    private Integer electronicDocsLimit;
+
+    @Column(name = "users_limit")
+    private Integer usersLimit;
+
+    // --- Overage / Consumption Costs ---
+    @Column(name = "allow_overage")
+    @Builder.Default
+    private Boolean allowOverage = false;
+
+    @Column(name = "ai_overage_price_per_1k")
+    private BigDecimal aiOveragePricePer1k;
+
+    @Column(name = "doc_overage_price_unit")
+    private BigDecimal docOveragePriceUnit;
+
+    // --- Relationship with Modules ---
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "plans_modules", joinColumns = @JoinColumn(name = "plan_id"), inverseJoinColumns = @JoinColumn(name = "module_id"))
+    private java.util.Set<com.app.starter1.persistence.entity.rbac.RbacModule> modules = new java.util.HashSet<>();
+
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();

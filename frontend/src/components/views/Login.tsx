@@ -20,7 +20,6 @@ import Divider from '@mui/material/Divider'
 import Alert from '@mui/material/Alert'
 
 // Third-party Imports
-import { signIn } from 'next-auth/react'
 import { Controller, useForm } from 'react-hook-form'
 import { valibotResolver } from '@hookform/resolvers/valibot'
 import { email, object, minLength, string, pipe, nonEmpty } from 'valibot'
@@ -129,24 +128,38 @@ const Login = ({ mode }: { mode: SystemMode }) => {
 
   const handleClickShowPassword = () => setIsPasswordShown(show => !show)
 
+  // ... inside component ...
   const onSubmit: SubmitHandler<FormData> = async (data: FormData) => {
-    const res = await signIn('credentials', {
-      email: data.email,
-      password: data.password,
-      redirect: false
-    })
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password
+        })
+      })
 
-    if (res && res.ok && res.error === null) {
-      // Vars
-      const redirectURL = searchParams.get('redirectTo') ?? '/'
+      const responseData = await res.json()
 
-      router.replace(getLocalizedUrl(redirectURL, locale as Locale))
-    } else {
-      if (res?.error) {
-        const error = JSON.parse(res.error)
+      if (res.ok && responseData.accessToken) {
+        // Save token and user data
+        localStorage.setItem('accessToken', responseData.accessToken)
+        localStorage.setItem('userData', JSON.stringify(responseData))
 
-        setErrorState(error)
+        // Also set cookie if needed for some parts
+        document.cookie = `accessToken=${responseData.accessToken}; path=/`
+
+        const redirectURL = searchParams.get('redirectTo') ?? '/'
+        router.replace(getLocalizedUrl(redirectURL, locale as Locale))
+      } else {
+        setErrorState({ message: ['Invalid credentials'] })
       }
+    } catch (e) {
+      console.error(e)
+      setErrorState({ message: ['An error occurred during login'] })
     }
   }
 
@@ -181,7 +194,7 @@ const Login = ({ mode }: { mode: SystemMode }) => {
           <form
             noValidate
             autoComplete='off'
-            action={() => {}}
+            action={() => { }}
             onSubmit={handleSubmit(onSubmit)}
             className='flex flex-col gap-6'
           >

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { employeeService } from '@/services/hr/employeeService'
-import { Employee } from '@/types/hr'
+import { Employee, AvailableUser } from '@/types/hr'
 import {
     Dialog,
     DialogTitle,
@@ -18,8 +18,17 @@ import {
     Typography,
     Switch,
     FormControlLabel,
-    Box
+    Box,
+    Radio,
+    RadioGroup,
+    FormControl,
+    FormLabel,
+    CircularProgress,
+    Chip,
+    InputAdornment,
+    IconButton
 } from '@mui/material'
+import { Visibility, VisibilityOff, Refresh } from '@mui/icons-material'
 
 interface EmployeeFormDialogProps {
     open: boolean
@@ -84,10 +93,22 @@ const CAJA_COMPENSACION_OPTIONS = [
     'Otra'
 ]
 
+// Opciones de roles disponibles
+const ROLE_OPTIONS = [
+    { value: 'USER', label: 'Usuario' },
+    { value: 'VENDEDOR', label: 'Vendedor' },
+    { value: 'HR', label: 'Recursos Humanos' },
+    { value: 'CONTADOR', label: 'Contador' },
+    { value: 'ADMIN', label: 'Administrador' },
+]
+
 export default function EmployeeFormDialog({ open, onClose, onSuccess, employee }: EmployeeFormDialogProps) {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([])
+    const [loadingUsers, setLoadingUsers] = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
 
     const getInitialFormData = () => ({
         // Datos Personales
@@ -129,10 +150,37 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
         cajaCompensacion: '',
         workSchedule: 'TIEMPO_COMPLETO',
         monthlyWorkedDays: '30',
-        hasFamilySubsidy: false
+        hasFamilySubsidy: false,
+
+        // === ACCESO AL SISTEMA ===
+        accessOption: 'NONE', // NONE, EXISTING, CREATE_NEW
+        existingUserId: '',
+        newUsername: '',
+        newPassword: '',
+        newRole: 'USER',
+        sendCredentialsByEmail: false
     })
 
     const [formData, setFormData] = useState(getInitialFormData())
+
+    // Load available users when dialog opens
+    useEffect(() => {
+        if (open && !employee) {
+            loadAvailableUsers()
+        }
+    }, [open, employee])
+
+    const loadAvailableUsers = async () => {
+        setLoadingUsers(true)
+        try {
+            const users = await employeeService.getAvailableUsers(1) // TODO: get customerId from context
+            setAvailableUsers(users)
+        } catch (err) {
+            console.error('Error loading available users:', err)
+        } finally {
+            setLoadingUsers(false)
+        }
+    }
 
     // Populate form when editing an employee
     useEffect(() => {
@@ -166,7 +214,14 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
                 cajaCompensacion: employee.cajaCompensacion || '',
                 workSchedule: employee.workSchedule || 'TIEMPO_COMPLETO',
                 monthlyWorkedDays: employee.monthlyWorkedDays?.toString() || '30',
-                hasFamilySubsidy: employee.hasFamilySubsidy ?? false
+                hasFamilySubsidy: employee.hasFamilySubsidy ?? false,
+                // Acceso al sistema
+                accessOption: employee.hasSystemAccess ? 'EXISTING' : 'NONE',
+                existingUserId: employee.userId?.toString() || '',
+                newUsername: '',
+                newPassword: '',
+                newRole: 'USER',
+                sendCredentialsByEmail: false
             })
         } else if (!open) {
             // Reset form when dialog closes
@@ -182,6 +237,27 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
         })
     }
 
+    // Generate suggested username
+    const generateUsername = () => {
+        if (formData.firstName && formData.lastName) {
+            const username = `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase()}`
+                .replace(/\s+/g, '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '') // Remove accents
+            setFormData({ ...formData, newUsername: username })
+        }
+    }
+
+    // Generate random password
+    const generatePassword = () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%'
+        let password = ''
+        for (let i = 0; i < 12; i++) {
+            password += chars.charAt(Math.floor(Math.random() * chars.length))
+        }
+        setFormData({ ...formData, newPassword: password })
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
@@ -192,7 +268,8 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
                 ...formData,
                 baseSalary: parseFloat(formData.baseSalary),
                 monthlyWorkedDays: parseInt(formData.monthlyWorkedDays),
-                hireDate: formData.hireDate
+                hireDate: formData.hireDate,
+                existingUserId: formData.existingUserId ? parseInt(formData.existingUserId) : undefined
             }
 
             if (employee?.id) {
@@ -451,6 +528,162 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
                                 label="Aplica Auxilio de Transporte"
                             />
                         </Grid>
+
+                        {/* ========== ACCESO AL SISTEMA ========== */}
+                        <Grid item xs={12} sx={{ mt: 2 }}>
+                            <Typography variant="subtitle1" fontWeight="bold" color="primary">
+                                🔐 Acceso al Sistema
+                            </Typography>
+                            <Divider sx={{ mb: 2 }} />
+                        </Grid>
+
+                        {/* Show current user info if editing and has access */}
+                        {isEditMode && employee?.hasSystemAccess && (
+                            <Grid item xs={12}>
+                                <Alert severity="info" sx={{ mb: 2 }}>
+                                    <Typography variant="body2">
+                                        <strong>Usuario actual:</strong> {employee.username} ({employee.userRole})
+                                    </Typography>
+                                </Alert>
+                            </Grid>
+                        )}
+
+                        <Grid item xs={12}>
+                            <FormControl component="fieldset">
+                                <FormLabel component="legend">Opciones de acceso</FormLabel>
+                                <RadioGroup
+                                    row
+                                    name="accessOption"
+                                    value={formData.accessOption}
+                                    onChange={handleChange}
+                                >
+                                    <FormControlLabel
+                                        value="NONE"
+                                        control={<Radio />}
+                                        label="Sin acceso al sistema"
+                                    />
+                                    <FormControlLabel
+                                        value="EXISTING"
+                                        control={<Radio />}
+                                        label="Asociar usuario existente"
+                                        disabled={isEditMode && employee?.hasSystemAccess}
+                                    />
+                                    <FormControlLabel
+                                        value="CREATE_NEW"
+                                        control={<Radio />}
+                                        label="Crear nuevo usuario"
+                                        disabled={isEditMode && employee?.hasSystemAccess}
+                                    />
+                                </RadioGroup>
+                            </FormControl>
+                        </Grid>
+
+                        {/* Asociar usuario existente */}
+                        {formData.accessOption === 'EXISTING' && (
+                            <Grid item xs={12}>
+                                <TextField
+                                    fullWidth
+                                    select
+                                    label="Seleccionar Usuario"
+                                    name="existingUserId"
+                                    value={formData.existingUserId}
+                                    onChange={handleChange}
+                                    required
+                                    helperText={loadingUsers ? 'Cargando usuarios...' : `${availableUsers.length} usuarios disponibles`}
+                                    disabled={loadingUsers}
+                                    InputProps={{
+                                        endAdornment: loadingUsers ? <CircularProgress size={20} /> : null
+                                    }}
+                                >
+                                    {availableUsers.map(user => (
+                                        <MenuItem key={user.id} value={user.id.toString()}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <span>{user.nombres} {user.apellidos}</span>
+                                                <Chip label={user.username} size="small" />
+                                                {user.role && <Chip label={user.role} size="small" color="primary" variant="outlined" />}
+                                            </Box>
+                                        </MenuItem>
+                                    ))}
+                                </TextField>
+                            </Grid>
+                        )}
+
+                        {/* Crear nuevo usuario */}
+                        {formData.accessOption === 'CREATE_NEW' && (
+                            <>
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth
+                                        label="Username"
+                                        name="newUsername"
+                                        value={formData.newUsername}
+                                        onChange={handleChange}
+                                        required
+                                        helperText="Mínimo 8 caracteres, solo letras, números y _"
+                                        InputProps={{
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton onClick={generateUsername} title="Sugerir username">
+                                                        <Refresh />
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            )
+                                        }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth
+                                        label="Contraseña"
+                                        name="newPassword"
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={formData.newPassword}
+                                        onChange={handleChange}
+                                        required
+                                        helperText="Mínimo 8 caracteres"
+                                        InputProps={{
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton onClick={() => setShowPassword(!showPassword)}>
+                                                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                                                    </IconButton>
+                                                    <IconButton onClick={generatePassword} title="Generar contraseña">
+                                                        <Refresh />
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            )
+                                        }}
+                                    />
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <TextField
+                                        fullWidth
+                                        select
+                                        label="Rol"
+                                        name="newRole"
+                                        value={formData.newRole}
+                                        onChange={handleChange}
+                                        required
+                                    >
+                                        {ROLE_OPTIONS.map(role => (
+                                            <MenuItem key={role.value} value={role.value}>{role.label}</MenuItem>
+                                        ))}
+                                    </TextField>
+                                </Grid>
+                                <Grid item xs={12} sm={6}>
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={formData.sendCredentialsByEmail}
+                                                onChange={(e) => setFormData({ ...formData, sendCredentialsByEmail: e.target.checked })}
+                                                name="sendCredentialsByEmail"
+                                            />
+                                        }
+                                        label="Enviar credenciales por email"
+                                    />
+                                </Grid>
+                            </>
+                        )}
 
                         {/* ========== SEGURIDAD SOCIAL (Colombia) ========== */}
                         <Grid item xs={12} sx={{ mt: 2 }}>

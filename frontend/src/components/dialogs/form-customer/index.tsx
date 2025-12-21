@@ -25,6 +25,14 @@ import dotenv from "dotenv";
 
 import type { CustomersType } from '@/types/apps/customerType'
 
+// Opciones de tipo de negocio
+const BUSINESS_TYPE_OPTIONS = [
+  { value: 'VENTAS', label: '🛒 Ventas', description: 'Venta de productos físicos o digitales' },
+  { value: 'AGENDAMIENTO', label: '📅 Agendamiento', description: 'Servicios con citas o reservas' },
+  { value: 'SUSCRIPCION', label: '🔄 Suscripción', description: 'Modelo de suscripción recurrente' },
+  { value: 'MIXTO', label: '🎯 Mixto', description: 'Combinación de varios tipos' }
+]
+
 const schema = yup.object().shape({
   name: yup.string().required('El nombre es obligatorio'),
   nit: yup.string().required('El NIT es obligatorio'),
@@ -34,6 +42,8 @@ const schema = yup.object().shape({
   contact: yup.string().required('El contacto es obligatorio'),
   position: yup.string().required('El cargo es obligatorio'),
   type: yup.string().required('El tipo es obligatorio'),
+  businessType: yup.string().optional(),
+  businessDescription: yup.string().optional(),
   fechaInicio: yup.string().required('La fecha inicial es obligatoria'),
   fechaFinal: yup.string().required('La fecha final es obligatoria'),
   descripcionContrato: yup.string().optional(),
@@ -72,6 +82,8 @@ const ClienteForm = ({
       contact: '',
       position: '',
       type: '',
+      businessType: '',
+      businessDescription: '',
       fechaInicio: '',
       fechaFinal: '',
       descripcionContrato: '',
@@ -122,6 +134,8 @@ const ClienteForm = ({
       setValue('contact', '')
       setValue('position', '')
       setValue('type', '')
+      setValue('businessType', '')
+      setValue('businessDescription', '')
       setValue('fechaInicio', '')
       setValue('fechaFinal', '')
       setValue('descripcionContrato', '')
@@ -149,6 +163,8 @@ const ClienteForm = ({
       setValue('contact', rowSelect.contact || '')
       setValue('position', rowSelect.position || '')
       setValue('type', rowSelect.type || '')
+      setValue('businessType', rowSelect.businessType || '')
+      setValue('businessDescription', rowSelect.businessDescription || '')
       setValue('fechaInicio', rowSelect.contrato?.fechaInicio || '')
       setValue('fechaFinal', rowSelect.contrato?.fechaFinal || '')
       setValue('descripcionContrato', rowSelect.contrato?.descripcionContrato || '')
@@ -163,6 +179,8 @@ const ClienteForm = ({
       setValue('contact', '')
       setValue('position', '')
       setValue('type', '')
+      setValue('businessType', '')
+      setValue('businessDescription', '')
       setValue('fechaInicio', '')
       setValue('fechaFinal', '')
       setValue('descripcionContrato', '')
@@ -179,6 +197,8 @@ const ClienteForm = ({
         contact: '',
         position: '',
         type: '',
+        businessType: '',
+        businessDescription: '',
         fechaInicio: '',
         fechaFinal: '',
         descripcionContrato: '',
@@ -383,6 +403,80 @@ const ClienteForm = ({
                 )}
               />
             </Grid>
+
+            {/* === SECCIÓN TIPO DE NEGOCIO === */}
+            <Grid item xs={12} className='mt-4'>
+              <Typography variant="subtitle1" fontWeight="bold" color="primary">
+                🏢 Tipo de Negocio
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name='businessType'
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Tipo de Negocio</InputLabel>
+                    <Select
+                      {...field}
+                      value={editData ? editData.businessType || '' : ''}
+                      onChange={e => {
+                        setEditData({ ...editData, businessType: e.target.value })
+                        setValue('businessType', e.target.value)
+                      }}
+                    >
+                      <MenuItem value=''>-- Selecciona tipo de negocio --</MenuItem>
+                      {BUSINESS_TYPE_OPTIONS.map(option => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1, height: '100%' }}>
+                {editData?.businessType ? (
+                  <Typography variant="body2" color="text.secondary">
+                    {BUSINESS_TYPE_OPTIONS.find(o => o.value === editData.businessType)?.description || 'Selecciona un tipo de negocio'}
+                  </Typography>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    Selecciona el tipo de negocio para ver la descripción
+                  </Typography>
+                )}
+              </Box>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Controller
+                name='businessDescription'
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    value={editData ? editData.businessDescription || '' : ''}
+                    onChange={e => {
+                      setEditData({ ...editData, businessDescription: e.target.value })
+                      setValue('businessDescription', e.target.value)
+                    }}
+                    label='Descripción del Negocio / Objeto Social'
+                    placeholder='Describe brevemente a qué se dedica tu negocio, productos o servicios que ofreces...'
+                    multiline
+                    rows={3}
+                    helperText='Esta información ayuda a personalizar la experiencia del sistema'
+                  />
+                )}
+              />
+            </Grid>
+
+            {/* === SECCIÓN CONTRATO === */}
             <Grid item xs={12} sm={12} className='my-4'>
               <Typography>
                 <b>Contrato</b>

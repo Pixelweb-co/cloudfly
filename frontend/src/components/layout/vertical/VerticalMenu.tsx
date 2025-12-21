@@ -1,10 +1,16 @@
 'use client'
-// MUI Imports
 
+// React Imports
+import { useEffect, useState } from 'react'
+
+// MUI Imports
 import { useTheme } from '@mui/material/styles'
+import CircularProgress from '@mui/material/CircularProgress'
+import Box from '@mui/material/Box'
 
 // Third-party Imports
 import PerfectScrollbar from 'react-perfect-scrollbar'
+import { jwtDecode } from 'jwt-decode'
 
 // Type Imports
 import type { VerticalMenuContextProps } from '@menu/components/vertical-menu/Menu'
@@ -23,8 +29,12 @@ import StyledVerticalNavExpandIcon from '@menu/styles/vertical/StyledVerticalNav
 import menuItemStyles from '@core/styles/vertical/menuItemStyles'
 import menuSectionStyles from '@core/styles/vertical/menuSectionStyles'
 
-// Menu data import
-import verticalMenuData from './verticalMenuData.json'
+// RBAC Imports
+import type { MenuItem as MenuItemType } from '@/types/rbac'
+import { getMenu } from '@/services/rbac/rbacService'
+
+// Fallback static menu (used when backend is unavailable)
+import verticalMenuData from '@/data/navigation/verticalMenuData'
 
 type RenderExpandIconProps = {
   open?: boolean
@@ -47,19 +57,89 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
   const verticalNavOptions = useVerticalNav()
   const { isBreakpointReached, transitionDuration } = verticalNavOptions
 
+  // State for dynamic menu
+  const [menuData, setMenuData] = useState<MenuItemType[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
+
+  // Fetch menu from backend
+  useEffect(() => {
+    const fetchMenu = async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
+        // Get token from localStorage using the key defined in AuthManager
+        const token = typeof window !== 'undefined' ? localStorage.getItem('AuthToken') : null
+
+        if (token) {
+          try {
+            const decoded: any = jwtDecode(token)
+
+            // Extract role/authorities from various potential claims
+            const rawClaims = decoded.role || decoded.roles || decoded.authorities
+
+            let roles: string[] = []
+
+            if (Array.isArray(rawClaims)) {
+              roles = rawClaims
+            } else if (typeof rawClaims === 'string') {
+              // Handle comma-separated string (e.g. "DELETE,READ,ROLE_SUPERADMIN,WRITE")
+              roles = rawClaims.split(',')
+            }
+
+            // Find the specific role we care about
+            const hasSuperAdmin = roles.some(r => r.toUpperCase().includes('SUPERADMIN'))
+            const hasAdmin = roles.some(r => r.toUpperCase().includes('ADMIN') && !r.toUpperCase().includes('SUPERADMIN'))
+
+            if (hasSuperAdmin) {
+              setUserRole('SUPERADMIN')
+            } else if (hasAdmin) {
+              setUserRole('ADMIN')
+            }
+          } catch (e) {
+            console.error('Failed to decode token:', e)
+          }
+
+          const menu = await getMenu(token)
+          console.log("menu", menu)
+          setMenuData(menu)
+        } else {
+          // If no token, maybe we should redirect or show empty
+          setMenuData([])
+        }
+      } catch (err) {
+        console.error('Error loading menu from backend:', err)
+        setError('Error al cargar menú')
+
+        // Fallback to static menu
+        setMenuData(verticalMenuData() as unknown as MenuItemType[])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchMenu()
+  }, [])
+
   const ScrollWrapper = isBreakpointReached ? 'div' : PerfectScrollbar
 
-  // Render menu items dynamically (SIN FILTRO DE ROLES - para debug)
-  const renderMenuItems = (menuData: any[]) => {
-    return menuData.map((item, index) => {
+  // Convert backend menu format to component props
+  const renderMenuItems = (items: MenuItemType[]) => {
+    return items.map((item, index) => {
+      // Handle section headers
+      if (item.isSection) {
+        return null // Menu sections can be handled differently
+      }
+
       if (item.children && item.children.length > 0) {
         // Render SubMenu if there are children
         return (
           <SubMenu
-            key={index}
+            key={`${item.label}-${index}`}
             label={item.label}
-            icon={<i className={`tabler-${item.icon}`} />}
-            suffix={item.suffix && <CustomChip label={item.suffix} size='small' color='error' />}
+            icon={item.icon ? <i className={item.icon} /> : undefined}
+            suffix={item.suffix ? <CustomChip label={item.suffix} size='small' color='error' /> : undefined}
           >
             {renderMenuItems(item.children)}
           </SubMenu>
@@ -67,12 +147,29 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
       } else {
         // Render MenuItem for leaf nodes
         return (
-          <MenuItem key={index} href={item.route} icon={<i className={`tabler-${item.icon}`} />}>
+          <MenuItem
+            key={`${item.label}-${index}`}
+            href={item.href}
+            icon={item.icon ? <i className={item.icon} /> : undefined}
+            disabled={item.disabled}
+            {...(item.exactMatch === false && item.activeUrl
+              ? { exactMatch: false, activeUrl: item.activeUrl }
+              : { exactMatch: true })}
+          >
             {item.label}
           </MenuItem>
         )
       }
     })
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', p: 4 }}>
+        <CircularProgress size={30} />
+      </Box>
+    )
   }
 
   return (
@@ -94,11 +191,44 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
         renderExpandedMenuItemIcon={{ icon: <i className='tabler-circle text-xs' /> }}
         menuSectionStyles={menuSectionStyles(verticalNavOptions, theme)}
       >
-        <MenuItem href='/home' icon={<i className='tabler-info-circle' />} >
-          Dashboard
-        </MenuItem>
+        {/* Render dynamic menu from backend */}
+        {renderMenuItems(menuData)}
 
-        {renderMenuItems(verticalMenuData)}
+        {/* Hardcoded items for ADMIN and SUPERADMIN */}
+        {(userRole === 'ADMIN' || userRole === 'SUPERADMIN') && (
+          <>
+            <MenuItem href='/hr/employees' icon={<i className='tabler-users' />}>
+              Usuarios
+            </MenuItem>
+            <MenuItem href='/settings/roles/list' icon={<i className='tabler-lock' />}>
+              Roles
+            </MenuItem>
+
+          </>
+        )}
+
+        {/* Hardcoded item for SUPERADMIN */}
+        {userRole === 'SUPERADMIN' && (
+
+          <>
+            <MenuItem href='/settings/menu' icon={<i className='tabler-layout-sidebar' />}>
+              Gestor del Menú
+            </MenuItem>
+            <MenuItem href='/administracion/planes' icon={<i className='tabler-credit-card' />}>
+              Planes
+            </MenuItem>
+            <MenuItem href='/administracion/modules' icon={<i className='tabler-box' />}>
+              Módulos
+            </MenuItem>
+          </>
+        )}
+
+        {/* Show error message if menu failed to load */}
+        {error && (
+          <MenuItem disabled icon={<i className='tabler-alert-circle' />}>
+            {error}
+          </MenuItem>
+        )}
       </Menu>
     </ScrollWrapper>
   )

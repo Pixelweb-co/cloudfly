@@ -23,6 +23,15 @@ interface ChartData {
 }
 
 const SalesChart = () => {
+    // Suppress Recharts defaultProps warning
+    const originalConsoleError = console.error
+    console.error = (...args: any[]) => {
+        if (typeof args[0] === 'string' && /defaultProps/.test(args[0])) {
+            return
+        }
+        originalConsoleError(...args)
+    }
+
     const theme = useTheme()
     const [period, setPeriod] = useState<Period>('7d')
     const [data, setData] = useState<ChartData[]>([])

@@ -148,6 +148,8 @@ const RecentActivity = () => {
                                 </Avatar>
                             </ListItemAvatar>
                             <ListItemText
+                                secondaryTypographyProps={{ component: 'div' }}
+                                primaryTypographyProps={{ component: 'div' }}
                                 primary={
                                     <Typography variant='body2' fontWeight={600}>
                                         {activity.text}
