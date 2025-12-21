@@ -27,6 +27,7 @@ const SkeletonActivity = () => {
                             </ListItemAvatar>
                             <ListItemText
                                 primary={<Skeleton variant='text' width='70%' height={20} />}
+                                secondaryTypographyProps={{ component: 'div' }}
                                 secondary={
                                     <Box mt={0.5}>
                                         <Skeleton variant='text' width='50%' height={16} />

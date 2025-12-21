@@ -97,6 +97,20 @@ const verticalMenuData = (): VerticalMenuDataType[] => [
     ]
   },
   {
+    label: 'Usuarios y Roles',
+    icon: 'tabler-shield-lock',
+    children: [
+      {
+        label: 'Gestión de Usuarios',
+        href: '/accounts/user/list'
+      },
+      {
+        label: 'Roles y Permisos',
+        href: '/settings/roles/list'
+      }
+    ]
+  },
+  {
     label: 'Reportes',
     href: '/reportes',
     icon: 'tabler-info-circle'

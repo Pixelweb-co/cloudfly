@@ -391,15 +391,56 @@ public class SecurityConfig {
 
                                         // 👉 Recursos Humanos (HR & Payroll)
                                         http.requestMatchers(HttpMethod.GET, "/api/hr/**")
-                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR", "USER", "BIOMEDICAL");
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "NOMINA");
                                         http.requestMatchers(HttpMethod.POST, "/api/hr/**")
-                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR", "USER", "BIOMEDICAL");
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "NOMINA");
                                         http.requestMatchers(HttpMethod.PUT, "/api/hr/**")
-                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR", "USER", "BIOMEDICAL");
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "NOMINA");
                                         http.requestMatchers(HttpMethod.PATCH, "/api/hr/**")
-                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR", "USER", "BIOMEDICAL");
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "NOMINA");
                                         http.requestMatchers(HttpMethod.DELETE, "/api/hr/**")
-                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "HR", "USER", "BIOMEDICAL");
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN", "NOMINA");
+
+                                        // 👉 RBAC - Roles y Permisos
+                                        http.requestMatchers(HttpMethod.GET, "/api/rbac/menu")
+                                                        .authenticated();
+                                        http.requestMatchers(HttpMethod.GET, "/api/rbac/my-permissions")
+                                                        .authenticated();
+                                        http.requestMatchers(HttpMethod.GET, "/api/rbac/check")
+                                                        .authenticated();
+                                        http.requestMatchers(HttpMethod.GET, "/api/rbac/roles/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN");
+                                        http.requestMatchers(HttpMethod.POST, "/api/rbac/roles/**")
+                                                        .hasRole("SUPERADMIN");
+                                        http.requestMatchers(HttpMethod.PUT, "/api/rbac/roles/**")
+                                                        .hasRole("SUPERADMIN");
+                                        http.requestMatchers(HttpMethod.DELETE, "/api/rbac/roles/**")
+                                                        .hasRole("SUPERADMIN");
+
+                                        // RBAC Modules
+                                        http.requestMatchers(HttpMethod.GET, "/api/rbac/modules-list")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN");
+                                        http.requestMatchers(HttpMethod.GET, "/api/rbac/modules/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN");
+                                        http.requestMatchers(HttpMethod.POST, "/api/rbac/modules")
+                                                        .hasRole("SUPERADMIN");
+                                        http.requestMatchers(HttpMethod.PUT, "/api/rbac/modules/**")
+                                                        .hasRole("SUPERADMIN");
+                                        http.requestMatchers(HttpMethod.DELETE, "/api/rbac/modules/**")
+                                                        .hasRole("SUPERADMIN");
+                                        http.requestMatchers(HttpMethod.GET, "/api/rbac/modules")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN");
+
+                                        // Plans (Suscripciones)
+                                        http.requestMatchers(HttpMethod.GET, "/api/v1/plans/**").permitAll();
+                                        http.requestMatchers(HttpMethod.POST, "/api/v1/plans/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN");
+                                        http.requestMatchers(HttpMethod.PUT, "/api/v1/plans/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN");
+                                        http.requestMatchers(HttpMethod.PATCH, "/api/v1/plans/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN");
+                                        http.requestMatchers(HttpMethod.DELETE, "/api/v1/plans/**")
+                                                        .hasAnyRole("SUPERADMIN", "ADMIN");
 
                                         // Configurar el resto de los endpoints (no especificados)
                                         http.anyRequest().denyAll();

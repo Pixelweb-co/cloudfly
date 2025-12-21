@@ -55,6 +55,23 @@ export interface Employee {
 
     isActive: boolean
     notes?: string
+
+    // === INFORMACIÓN DE USUARIO DEL SISTEMA ===
+    userId?: number // ID del usuario vinculado (null si no tiene acceso)
+    username?: string // Username del usuario
+    userEmail?: string // Email del usuario
+    userRole?: string // Rol principal del usuario
+    hasSystemAccess?: boolean // true si tiene usuario vinculado
+}
+
+// Usuario disponible para vincular a un empleado
+export interface AvailableUser {
+    id: number
+    username: string
+    email: string
+    nombres: string
+    apellidos: string
+    role?: string
 }
 
 export interface EmployeeCreate {

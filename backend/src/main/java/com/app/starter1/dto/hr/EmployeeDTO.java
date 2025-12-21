@@ -67,4 +67,11 @@ public class EmployeeDTO {
 
     private Boolean isActive;
     private String notes;
+
+    // === INFORMACIÓN DE USUARIO DEL SISTEMA ===
+    private Long userId; // ID del usuario vinculado (null si no tiene acceso)
+    private String username; // Username del usuario
+    private String userEmail; // Email del usuario
+    private String userRole; // Rol principal del usuario
+    private Boolean hasSystemAccess; // true si tiene usuario vinculado
 }

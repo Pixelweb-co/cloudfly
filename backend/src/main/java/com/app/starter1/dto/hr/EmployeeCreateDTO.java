@@ -116,4 +116,37 @@ public class EmployeeCreateDTO {
     private Boolean isActive = true;
 
     private String notes;
+
+    // === ACCESO AL SISTEMA ===
+    /**
+     * Opción de acceso: NONE (sin acceso), EXISTING (vincular usuario existente),
+     * CREATE_NEW (crear nuevo usuario)
+     */
+    private String accessOption = "NONE";
+
+    /**
+     * ID del usuario existente (cuando accessOption = EXISTING)
+     */
+    private Long existingUserId;
+
+    /**
+     * Username para nuevo usuario (cuando accessOption = CREATE_NEW)
+     */
+    private String newUsername;
+
+    /**
+     * Password para nuevo usuario (cuando accessOption = CREATE_NEW)
+     */
+    private String newPassword;
+
+    /**
+     * Rol para nuevo usuario (cuando accessOption = CREATE_NEW)
+     * Ej: "VENDEDOR", "USER", "ADMIN"
+     */
+    private String newRole = "USER";
+
+    /**
+     * Enviar credenciales por email al crear nuevo usuario
+     */
+    private Boolean sendCredentialsByEmail = false;
 }

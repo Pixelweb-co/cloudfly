@@ -92,4 +92,30 @@ public class EmployeeController {
         List<EmployeePayrollHistoryDTO> history = employeeService.getEmployeePayrollHistory(id, customerId);
         return ResponseEntity.ok(history);
     }
+
+    /**
+     * Obtiene los usuarios disponibles para vincular a un empleado
+     * (usuarios del tenant que no tienen empleado asignado)
+     */
+    @GetMapping("/available-users")
+    public ResponseEntity<List<AvailableUserDTO>> getAvailableUsers(
+            @RequestParam Long customerId) {
+        List<AvailableUserDTO> users = employeeService.getAvailableUsers(customerId);
+        return ResponseEntity.ok(users);
+    }
+
+    /**
+     * DTO simple para usuarios disponibles
+     */
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    @lombok.NoArgsConstructor
+    public static class AvailableUserDTO {
+        private Long id;
+        private String username;
+        private String email;
+        private String nombres;
+        private String apellidos;
+        private String role;
+    }
 }

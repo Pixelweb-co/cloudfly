@@ -1,5 +1,5 @@
 import axiosInstance from '@/utils/axiosInterceptor'
-import { Employee, EmployeeCreate, PageResponse } from '@/types/hr'
+import { Employee, EmployeeCreate, PageResponse, AvailableUser } from '@/types/hr'
 
 export const employeeService = {
     // Get all employees with pagination
@@ -51,5 +51,12 @@ export const employeeService = {
     async toggleStatus(id: number, customerId: number): Promise<void> {
         const cid = typeof customerId === 'object' ? 1 : Number(customerId)
         await axiosInstance.patch(`/api/hr/employees/${id}/toggle-status?customerId=${cid}`)
+    },
+
+    // Get available users (users without employee assigned)
+    async getAvailableUsers(customerId: number): Promise<AvailableUser[]> {
+        const cid = typeof customerId === 'object' ? 1 : Number(customerId)
+        const response = await axiosInstance.get<AvailableUser[]>(`/api/hr/employees/available-users?customerId=${cid}`)
+        return response.data
     },
 }

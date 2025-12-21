@@ -3,22 +3,27 @@ package com.app.starter1.services;
 import com.app.starter1.dto.hr.EmployeeCreateDTO;
 import com.app.starter1.dto.hr.EmployeeDTO;
 import com.app.starter1.dto.hr.EmployeePayrollHistoryDTO;
-import com.app.starter1.persistence.entity.CostCenter;
 import com.app.starter1.persistence.entity.Employee;
 import com.app.starter1.persistence.entity.Customer;
 import com.app.starter1.persistence.entity.PayrollReceipt;
+import com.app.starter1.persistence.entity.UserEntity;
+import com.app.starter1.persistence.entity.RoleEntity;
 import com.app.starter1.persistence.repository.CostCenterRepository;
 import com.app.starter1.persistence.repository.EmployeeRepository;
 import com.app.starter1.persistence.repository.CustomerRepository;
 import com.app.starter1.persistence.repository.PayrollReceiptRepository;
+import com.app.starter1.persistence.repository.UserRepository;
+import com.app.starter1.persistence.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,6 +36,9 @@ public class EmployeeService {
         private final CustomerRepository customerRepository;
         private final PayrollReceiptRepository payrollReceiptRepository;
         private final CostCenterRepository costCenterRepository;
+        private final UserRepository userRepository;
+        private final RoleRepository roleRepository;
+        private final PasswordEncoder passwordEncoder;
 
         @Transactional(readOnly = true)
         public Page<EmployeeDTO> getAllEmployees(Long customerId, Pageable pageable) {
@@ -71,8 +79,12 @@ public class EmployeeService {
                         throw new RuntimeException("Employee number already exists");
                 }
 
+                // Manejar acceso al sistema
+                UserEntity user = handleUserAccess(dto, customer);
+
                 Employee employee = Employee.builder()
                                 .customer(customer)
+                                .user(user) // Vincular usuario si corresponde
                                 .firstName(dto.getFirstName())
                                 .lastName(dto.getLastName())
                                 .rfc(dto.getRfc())
@@ -129,9 +141,98 @@ public class EmployeeService {
                                 .build();
 
                 employee = employeeRepository.save(employee);
-                log.info("Employee created with ID: {}", employee.getId());
+                log.info("Employee created with ID: {}, User: {}", employee.getId(),
+                                user != null ? user.getUsername() : "none");
 
                 return convertToDTO(employee);
+        }
+
+        /**
+         * Maneja las opciones de acceso al sistema para un empleado
+         */
+        private UserEntity handleUserAccess(EmployeeCreateDTO dto, Customer customer) {
+                String accessOption = dto.getAccessOption() != null ? dto.getAccessOption() : "NONE";
+
+                switch (accessOption.toUpperCase()) {
+                        case "EXISTING":
+                                // Vincular usuario existente
+                                if (dto.getExistingUserId() == null) {
+                                        throw new RuntimeException("Se requiere el ID del usuario existente");
+                                }
+                                UserEntity existingUser = userRepository.findById(dto.getExistingUserId())
+                                                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: "
+                                                                + dto.getExistingUserId()));
+                                log.info("Linking existing user: {}", existingUser.getUsername());
+                                return existingUser;
+
+                        case "CREATE_NEW":
+                                // Crear nuevo usuario
+                                return createNewUserForEmployee(dto, customer);
+
+                        case "NONE":
+                        default:
+                                // Sin acceso al sistema
+                                return null;
+                }
+        }
+
+        /**
+         * Crea un nuevo usuario del sistema para el empleado
+         */
+        private UserEntity createNewUserForEmployee(EmployeeCreateDTO dto, Customer customer) {
+                // Validar campos requeridos
+                if (dto.getNewUsername() == null || dto.getNewUsername().isBlank()) {
+                        throw new RuntimeException("Se requiere el username para crear un nuevo usuario");
+                }
+                if (dto.getNewPassword() == null || dto.getNewPassword().isBlank()) {
+                        throw new RuntimeException("Se requiere el password para crear un nuevo usuario");
+                }
+
+                // Verificar que el username no exista
+                if (userRepository.existsByUsername(dto.getNewUsername())) {
+                        throw new RuntimeException("El username ya existe: " + dto.getNewUsername());
+                }
+
+                // Verificar que el email no exista (si tiene email)
+                String email = dto.getEmail() != null ? dto.getEmail()
+                                : dto.getNewUsername() + "@" + customer.getId() + ".local";
+                if (userRepository.existsByEmail(email)) {
+                        throw new RuntimeException("El email ya está registrado: " + email);
+                }
+
+                // Obtener el rol
+                String roleName = dto.getNewRole() != null ? dto.getNewRole().toUpperCase() : "USER";
+                List<RoleEntity> roles = roleRepository.findRoleEntitiesByRoleEnumIn(List.of(roleName));
+                if (roles.isEmpty()) {
+                        throw new RuntimeException("Rol no encontrado: " + roleName);
+                }
+
+                // Crear el usuario
+                UserEntity newUser = UserEntity.builder()
+                                .nombres(dto.getFirstName())
+                                .apellidos(dto.getLastName())
+                                .username(dto.getNewUsername())
+                                .password(passwordEncoder.encode(dto.getNewPassword()))
+                                .email(email)
+                                .isEnabled(true)
+                                .accountNoExpired(true)
+                                .accountNoLocked(true)
+                                .credentialNoExpired(true)
+                                .customer(customer)
+                                .roles(new HashSet<>(roles))
+                                .build();
+
+                newUser = userRepository.save(newUser);
+                log.info("Created new user for employee: {} with role: {}", newUser.getUsername(), roleName);
+
+                // TODO: Enviar credenciales por email si dto.getSendCredentialsByEmail() es
+                // true
+                if (Boolean.TRUE.equals(dto.getSendCredentialsByEmail())) {
+                        log.info("Should send credentials by email to: {}", email);
+                        // Aquí se puede integrar con un servicio de email
+                }
+
+                return newUser;
         }
 
         @Transactional
@@ -245,8 +346,61 @@ public class EmployeeService {
                                 .collect(Collectors.toList());
         }
 
+        /**
+         * Obtiene usuarios del tenant que no tienen empleado asignado
+         */
+        @Transactional(readOnly = true)
+        public List<com.app.starter1.controllers.EmployeeController.AvailableUserDTO> getAvailableUsers(
+                        Long customerId) {
+                Customer customer = customerRepository.findById(customerId)
+                                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+                // Obtener IDs de usuarios ya asignados a empleados
+                List<Long> assignedUserIds = employeeRepository.findByCustomerAndDeletedAtIsNull(customer)
+                                .stream()
+                                .filter(e -> e.getUser() != null)
+                                .map(e -> e.getUser().getId())
+                                .collect(Collectors.toList());
+
+                // Obtener todos los usuarios del tenant
+                List<UserEntity> allUsers = new java.util.ArrayList<>();
+                userRepository.findAll().forEach(user -> {
+                        if (user.getCustomer() != null &&
+                                        user.getCustomer().getId().equals(customer.getId()) &&
+                                        !assignedUserIds.contains(user.getId())) {
+                                allUsers.add(user);
+                        }
+                });
+
+                return allUsers.stream()
+                                .map(user -> {
+                                        String role = user.getRoles() != null && !user.getRoles().isEmpty()
+                                                        ? user.getRoles().stream().findFirst()
+                                                                        .map(r -> r.getRoleEnum().name()).orElse(null)
+                                                        : null;
+                                        return new com.app.starter1.controllers.EmployeeController.AvailableUserDTO(
+                                                        user.getId(),
+                                                        user.getUsername(),
+                                                        user.getEmail(),
+                                                        user.getNombres(),
+                                                        user.getApellidos(),
+                                                        role);
+                                })
+                                .collect(Collectors.toList());
+        }
+
         // Conversion methods
         private EmployeeDTO convertToDTO(Employee employee) {
+                // Obtener información del usuario si existe
+                UserEntity user = employee.getUser();
+                String userRole = null;
+                if (user != null && user.getRoles() != null && !user.getRoles().isEmpty()) {
+                        userRole = user.getRoles().stream()
+                                        .findFirst()
+                                        .map(role -> role.getRoleEnum().name())
+                                        .orElse(null);
+                }
+
                 return EmployeeDTO.builder()
                                 .id(employee.getId())
                                 .firstName(employee.getFirstName())
@@ -298,6 +452,12 @@ public class EmployeeService {
                                                 : null)
                                 .isActive(employee.getIsActive())
                                 .notes(employee.getNotes())
+                                // Información de usuario del sistema
+                                .userId(user != null ? user.getId() : null)
+                                .username(user != null ? user.getUsername() : null)
+                                .userEmail(user != null ? user.getEmail() : null)
+                                .userRole(userRole)
+                                .hasSystemAccess(user != null)
                                 .build();
         }
 

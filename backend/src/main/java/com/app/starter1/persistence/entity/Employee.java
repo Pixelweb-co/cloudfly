@@ -32,6 +32,11 @@ public class Employee {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
+    // Relación con UserEntity (Acceso al sistema - opcional)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private UserEntity user;
+
     // === DATOS PERSONALES ===
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;

@@ -52,4 +52,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
         // Buscar empleados con fecha de terminación nula (activos)
         List<Employee> findByCustomerAndTerminationDateIsNullAndDeletedAtIsNull(Customer customer);
+
+        // Buscar todos los empleados por customer (sin paginación) - para obtener
+        // usuarios asignados
+        List<Employee> findByCustomerAndDeletedAtIsNull(Customer customer);
 }
