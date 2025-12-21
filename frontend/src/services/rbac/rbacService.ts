@@ -180,6 +180,22 @@ export const getAllModules = async (): Promise<ModulePermission[]> => {
     return response.json()
 }
 
+/**
+ * Get simple modules list (for plan configuration)
+ */
+export const getModulesList = async (): Promise<any[]> => {
+    const response = await fetch(`${API_URL}/api/rbac/modules-list`, {
+        method: 'GET',
+        headers: getAuthHeaders()
+    })
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch modules list')
+    }
+
+    return response.json()
+}
+
 // ========================
 // Utility functions
 // ========================
@@ -218,3 +234,25 @@ export const isAdmin = (roles: string[]): boolean => {
 export const isSuperAdmin = (roles: string[]): boolean => {
     return roles.includes('SUPERADMIN')
 }
+
+// Default export for convenience
+export const rbacService = {
+    getMenu,
+    getMyPermissions,
+    checkPermission,
+    getAllRoles,
+    getRoleById,
+    getRoleByCode,
+    createRole,
+    updateRole,
+    deleteRole,
+    getAllModules,
+    getModulesList,
+    hasPermission,
+    hasModuleAccess,
+    hasRole,
+    isAdmin,
+    isSuperAdmin
+}
+
+export default rbacService

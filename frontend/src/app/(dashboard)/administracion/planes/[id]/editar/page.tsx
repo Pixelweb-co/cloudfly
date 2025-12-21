@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import CardHeader from '@mui/material/CardHeader'
@@ -19,23 +19,29 @@ import Chip from '@mui/material/Chip'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import CustomTextField from '@core/components/mui/TextField'
-import { PlanValues } from '@/types/plans'
+import { PlanValues, PlanResponse } from '@/types/plans'
 import { planService } from '@/services/plans/planService'
 import { rbacService } from '@/services/rbac/rbacService'
 import { useForm, Controller } from 'react-hook-form'
+import { toast } from 'react-hot-toast'
 
-const NewPlanPage = () => {
+const EditPlanPage = () => {
     const router = useRouter()
+    const params = useParams()
+    const planId = Number(params.id)
+
     const [selectedModules, setSelectedModules] = useState<number[]>([])
     const [availableModules, setAvailableModules] = useState<any[]>([])
     const [allowOverage, setAllowOverage] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
 
     const {
         control,
         handleSubmit,
         formState: { errors },
-        watch
+        watch,
+        reset
     } = useForm<PlanValues>({
         defaultValues: {
             name: '',
@@ -59,17 +65,41 @@ const NewPlanPage = () => {
     }, [watchAllowOverage])
 
     useEffect(() => {
-        const fetchModules = async () => {
+        const fetchData = async () => {
             try {
+                setIsLoading(true)
+                // Fetch modules
                 const modules = await rbacService.getModulesList()
-                console.log('Loaded modules:', modules)
                 setAvailableModules(modules)
+
+                // Fetch plan data
+                const planData = await planService.getPlanById(planId)
+
+                // Populate form
+                reset({
+                    name: planData.name,
+                    description: planData.description || '',
+                    price: planData.price,
+                    durationDays: planData.durationDays,
+                    aiTokensLimit: planData.aiTokensLimit,
+                    electronicDocsLimit: planData.electronicDocsLimit,
+                    usersLimit: planData.usersLimit,
+                    allowOverage: planData.allowOverage || false,
+                    aiOveragePricePer1k: planData.aiOveragePricePer1k,
+                    docOveragePriceUnit: planData.docOveragePriceUnit,
+                    moduleIds: planData.moduleIds || []
+                })
+
+                setSelectedModules(planData.moduleIds || [])
             } catch (error) {
-                console.error('Error fetching modules:', error)
+                console.error('Error fetching data:', error)
+                toast.error('Error al cargar el plan')
+            } finally {
+                setIsLoading(false)
             }
         }
-        fetchModules()
-    }, [])
+        fetchData()
+    }, [planId, reset])
 
     const onSubmit = async (formData: PlanValues) => {
         try {
@@ -79,10 +109,12 @@ const NewPlanPage = () => {
                 moduleIds: selectedModules
             }
 
-            await planService.createPlan(payload)
+            await planService.updatePlan(planId, payload)
+            toast.success('Plan actualizado exitosamente')
             router.push('/administracion/planes')
         } catch (error) {
-            console.error('Error creating plan:', error)
+            console.error('Error updating plan:', error)
+            toast.error('Error al actualizar plan')
         } finally {
             setIsSubmitting(false)
         }
@@ -93,16 +125,24 @@ const NewPlanPage = () => {
         setSelectedModules(typeof value === 'string' ? value.split(',').map(Number) : value)
     }
 
+    if (isLoading) {
+        return (
+            <Box className='flex items-center justify-center min-h-screen'>
+                <Typography>Cargando plan...</Typography>
+            </Box>
+        )
+    }
+
     return (
         <div className='flex flex-col gap-6'>
             {/* Header */}
             <div className='flex items-center justify-between'>
                 <div>
                     <Typography variant='h4' className='font-semibold mb-1'>
-                        Crear Nuevo Plan de Suscripción
+                        Editar Plan de Suscripción
                     </Typography>
                     <Typography variant='body2' color='text.secondary'>
-                        Define los límites, módulos y precios para este plan
+                        Modifica los límites, módulos y precios para este plan
                     </Typography>
                 </div>
                 <Button
@@ -136,7 +176,6 @@ const NewPlanPage = () => {
                                                     {...field}
                                                     fullWidth
                                                     label='Nombre del Plan'
-                                                    placeholder='Ej. Plan Premium'
                                                     error={!!errors.name}
                                                     helperText={errors.name?.message}
                                                 />
@@ -155,7 +194,6 @@ const NewPlanPage = () => {
                                                     multiline
                                                     rows={4}
                                                     label='Descripción'
-                                                    placeholder='Describe las características principales de este plan...'
                                                 />
                                             )}
                                         />
@@ -227,7 +265,6 @@ const NewPlanPage = () => {
                                                     fullWidth
                                                     type='number'
                                                     label='Tokens IA'
-                                                    placeholder='100000'
                                                     helperText='Por mes'
                                                     InputProps={{
                                                         inputProps: { min: 0 },
@@ -248,7 +285,6 @@ const NewPlanPage = () => {
                                                     fullWidth
                                                     type='number'
                                                     label='Docs Electrónicos'
-                                                    placeholder='50'
                                                     helperText='Facturas DIAN'
                                                     InputProps={{
                                                         inputProps: { min: 0 },
@@ -269,7 +305,6 @@ const NewPlanPage = () => {
                                                     fullWidth
                                                     type='number'
                                                     label='Usuarios'
-                                                    placeholder='10'
                                                     helperText='Máximo'
                                                     InputProps={{
                                                         inputProps: { min: 1 },
@@ -332,7 +367,6 @@ const NewPlanPage = () => {
                                                             fullWidth
                                                             type='number'
                                                             label='Precio por 1k Tokens IA'
-                                                            placeholder='500'
                                                             helperText='Costo por cada 1000 tokens adicionales (COP)'
                                                             InputProps={{ inputProps: { min: 0, step: 100 } }}
                                                         />
@@ -350,7 +384,6 @@ const NewPlanPage = () => {
                                                             fullWidth
                                                             type='number'
                                                             label='Precio por Doc. Adicional'
-                                                            placeholder='1000'
                                                             helperText='Costo por documento electrónico extra (COP)'
                                                             InputProps={{ inputProps: { min: 0, step: 100 } }}
                                                         />
@@ -439,7 +472,7 @@ const NewPlanPage = () => {
                         disabled={isSubmitting}
                         startIcon={isSubmitting ? <i className='tabler-loader-2 animate-spin' /> : <i className='tabler-check' />}
                     >
-                        {isSubmitting ? 'Creando...' : 'Crear Plan'}
+                        {isSubmitting ? 'Actualizando...' : 'Actualizar Plan'}
                     </Button>
                 </Box>
             </form>
@@ -447,4 +480,4 @@ const NewPlanPage = () => {
     )
 }
 
-export default NewPlanPage
+export default EditPlanPage
