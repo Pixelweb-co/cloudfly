@@ -23,6 +23,7 @@ import { PlanValues } from '@/types/plans'
 import { planService } from '@/services/plans/planService'
 import { rbacService } from '@/services/rbac/rbacService'
 import { useForm, Controller } from 'react-hook-form'
+import { toast } from 'react-hot-toast'
 
 const NewPlanPage = () => {
     const router = useRouter()
@@ -35,13 +36,15 @@ const NewPlanPage = () => {
         control,
         handleSubmit,
         formState: { errors },
-        watch
+        watch,
+        setValue
     } = useForm<PlanValues>({
         defaultValues: {
             name: '',
             description: '',
             price: 0,
             durationDays: 30,
+            isFree: false,
             aiTokensLimit: undefined,
             electronicDocsLimit: undefined,
             usersLimit: undefined,
@@ -53,10 +56,17 @@ const NewPlanPage = () => {
     })
 
     const watchAllowOverage = watch('allowOverage')
+    const watchIsFree = watch('isFree')
 
     useEffect(() => {
         setAllowOverage(watchAllowOverage || false)
     }, [watchAllowOverage])
+
+    useEffect(() => {
+        if (watchIsFree) {
+            setValue('price', 0)
+        }
+    }, [watchIsFree, setValue])
 
     useEffect(() => {
         const fetchModules = async () => {
@@ -80,9 +90,12 @@ const NewPlanPage = () => {
             }
 
             await planService.createPlan(payload)
+            toast.success('Plan creado exitosamente')
             router.push('/administracion/planes')
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error creating plan:', error)
+            const errorMessage = error?.response?.data?.message || error?.message || 'Error al crear el plan'
+            toast.error(errorMessage)
         } finally {
             setIsSubmitting(false)
         }
@@ -200,6 +213,34 @@ const NewPlanPage = () => {
                                                     InputProps={{ inputProps: { min: 1 } }}
                                                     error={!!errors.durationDays}
                                                     helperText={errors.durationDays?.message}
+                                                />
+                                            )}
+                                        />
+                                    </Grid>
+
+                                    <Grid item xs={12}>
+                                        <Controller
+                                            name='isFree'
+                                            control={control}
+                                            render={({ field }) => (
+                                                <FormControlLabel
+                                                    control={
+                                                        <Switch
+                                                            {...field}
+                                                            checked={field.value}
+                                                            color='success'
+                                                        />
+                                                    }
+                                                    label={
+                                                        <Box>
+                                                            <Typography variant='body1' className='font-medium'>
+                                                                Plan Gratis
+                                                            </Typography>
+                                                            <Typography variant='caption' color='text.secondary'>
+                                                                El precio se establecerá automáticamente en $0
+                                                            </Typography>
+                                                        </Box>
+                                                    }
                                                 />
                                             )}
                                         />

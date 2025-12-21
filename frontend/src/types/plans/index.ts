@@ -3,6 +3,7 @@ export interface PlanValues {
     description: string
     price: number
     durationDays: number
+    isFree?: boolean
     isActive?: boolean
     aiTokensLimit?: number
     electronicDocsLimit?: number
@@ -15,6 +16,8 @@ export interface PlanValues {
 
 export interface PlanResponse extends PlanValues {
     id: number
+    isActive: boolean
+    isFree: boolean
     createdAt: string
     updatedAt: string
     moduleNames?: string[]

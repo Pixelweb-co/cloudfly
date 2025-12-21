@@ -23,6 +23,7 @@ public class RbacService {
     private final ModuleActionRepository moduleActionRepository;
     private final RbacRoleRepository roleRepository;
     private final RolePermissionRepository rolePermissionRepository;
+    private final com.app.starter1.persistence.services.SubscriptionService subscriptionService;
 
     // ========================
     // PERMISSION CHECKING
@@ -216,6 +217,99 @@ public class RbacService {
 
     private boolean hasModuleAccess(Set<String> permissions, String moduleCode) {
         return permissions.stream().anyMatch(p -> p.startsWith(moduleCode + "."));
+    }
+
+    /**
+     * Generate menu structure based on user roles AND tenant subscription
+     * This filters the menu by both permissions and active subscription modules
+     */
+    public List<MenuItemDTO> generateMenu(List<String> roleCodes, Long tenantId) {
+        // Get base menu from roles/permissions
+        List<MenuItemDTO> baseMenu = generateMenu(roleCodes);
+
+        // If SUPERADMIN, no subscription filtering
+        if (roleCodes.contains("SUPERADMIN")) {
+            return baseMenu;
+        }
+
+        // Get tenant's active subscription modules
+        try {
+            var subscription = subscriptionService.getActiveTenantSubscription(tenantId);
+            Set<String> subscriptionModuleCodes = subscription.moduleNames().stream()
+                    .map(String::toUpperCase)
+                    .collect(Collectors.toSet());
+
+            // Filter menu by subscription modules
+            return filterMenuByModules(baseMenu, subscriptionModuleCodes);
+        } catch (Exception e) {
+            log.warn("No active subscription found for tenant {}. Returning empty menu.", tenantId);
+            // No subscription = no access
+            return List.of();
+        }
+    }
+
+    /**
+     * Filters menu items by allowed module codes
+     */
+    private List<MenuItemDTO> filterMenuByModules(List<MenuItemDTO> menu, Set<String> allowedModules) {
+        return menu.stream()
+                .map(item -> {
+                    // If has children, filter children
+                    if (item.getChildren() != null && !item.getChildren().isEmpty()) {
+                        List<MenuItemDTO> filteredChildren = filterMenuByModules(item.getChildren(), allowedModules);
+                        if (filteredChildren.isEmpty()) {
+                            return null; // Remove parent if no children
+                        }
+                        return MenuItemDTO.builder()
+                                .label(item.getLabel())
+                                .href(item.getHref())
+                                .icon(item.getIcon())
+                                .children(filteredChildren)
+                                .build();
+                    }
+
+                    // Leaf item - check if module is allowed
+                    // Extract module from href (e.g., /ventas/... -> VENTAS)
+                    if (item.getHref() != null) {
+                        String moduleFromPath = extractModuleFromPath(item.getHref());
+                        if (moduleFromPath != null && allowedModules.contains(moduleFromPath)) {
+                            return item;
+                        }
+                    }
+
+                    // Dashboard and settings always allowed
+                    if (item.getLabel().equals("Dashboard") || item.getLabel().equals("Administración")) {
+                        return item;
+                    }
+
+                    return null;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Extract module code from menu path
+     */
+    private String extractModuleFromPath(String path) {
+        if (path == null || path.isEmpty())
+            return null;
+
+        String[] parts = path.split("/");
+        if (parts.length > 1) {
+            String module = parts[1]; // e.g., /ventas/productos -> ventas
+
+            // Map paths to module codes
+            return switch (module.toLowerCase()) {
+                case "ventas" -> "SALES";
+                case "contabilidad" -> "ACCOUNTING";
+                case "hr" -> "HR";
+                case "marketing", "comunicaciones" -> "MARKETING";
+                case "reportes" -> "REPORTS";
+                default -> module.toUpperCase();
+            };
+        }
+        return null;
     }
 
     // ========================

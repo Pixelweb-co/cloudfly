@@ -29,10 +29,10 @@ public class Subscription {
     @JoinColumn(name = "plan_id", nullable = false)
     private Plan plan;
 
-    // Referencia al Tenant (organización)
+    // Referencia al Customer (tenant/organización)
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "tenant_id", nullable = false)
-    private TenantEntity tenant;
+    @JoinColumn(name = "customer_id", nullable = false)
+    private Customer customer;
 
     // Usuario que creó/gestiona la suscripción (opcional)
     @ManyToOne(fetch = FetchType.LAZY)

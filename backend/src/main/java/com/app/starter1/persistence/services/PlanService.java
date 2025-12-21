@@ -20,12 +20,24 @@ public class PlanService {
 
         @Transactional
         public PlanResponse createPlan(PlanCreateRequest request) {
+                // Validar que solo exista un plan gratuito activo
+                if (request.isFree() != null && request.isFree()) {
+                        Optional<Plan> existingFreePlan = planRepository.findByIsFreeAndIsActive(true, true);
+                        if (existingFreePlan.isPresent()) {
+                                throw new RuntimeException(
+                                                "Ya existe un plan gratuito activo: " + existingFreePlan.get().getName()
+                                                                +
+                                                                ". Desactívalo antes de crear uno nuevo.");
+                        }
+                }
+
                 Plan plan = Plan.builder()
                                 .name(request.name())
                                 .description(request.description())
                                 .price(request.price())
                                 .durationDays(request.durationDays())
                                 .isActive(true)
+                                .isFree(request.isFree() != null ? request.isFree() : false)
                                 .aiTokensLimit(request.aiTokensLimit())
                                 .electronicDocsLimit(request.electronicDocsLimit())
                                 .usersLimit(request.usersLimit())
@@ -70,10 +82,22 @@ public class PlanService {
                 Plan plan = planRepository.findById(id)
                                 .orElseThrow(() -> new RuntimeException("Plan no encontrado con ID: " + id));
 
+                // Validar que solo exista un plan gratuito activo
+                if (request.isFree() != null && request.isFree() && plan.getIsActive()) {
+                        Optional<Plan> existingFreePlan = planRepository.findByIsFreeAndIsActive(true, true);
+                        if (existingFreePlan.isPresent() && !existingFreePlan.get().getId().equals(id)) {
+                                throw new RuntimeException(
+                                                "Ya existe un plan gratuito activo: " + existingFreePlan.get().getName()
+                                                                +
+                                                                ". Desactívalo antes de activar este como gratuito.");
+                        }
+                }
+
                 plan.setName(request.name());
                 plan.setDescription(request.description());
                 plan.setPrice(request.price());
                 plan.setDurationDays(request.durationDays());
+                plan.setIsFree(request.isFree() != null ? request.isFree() : false);
                 plan.setAiTokensLimit(request.aiTokensLimit());
                 plan.setElectronicDocsLimit(request.electronicDocsLimit());
                 plan.setUsersLimit(request.usersLimit());
@@ -117,6 +141,7 @@ public class PlanService {
                                 plan.getPrice(),
                                 plan.getDurationDays(),
                                 plan.getIsActive(),
+                                plan.getIsFree(),
                                 plan.getCreatedAt(),
                                 plan.getUpdatedAt(),
                                 plan.getAiTokensLimit(),
