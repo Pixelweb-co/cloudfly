@@ -26,6 +26,7 @@ import {
 import tableStyles from '@core/styles/table.module.css'
 import CustomTextField from '@core/components/mui/TextField'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
+import ConfirmDialog from '@/components/dialogs/ConfirmDialog'
 import { ModuleDTO } from '@/types/modules'
 import { moduleService } from '@/services/modules/moduleService'
 import { toast } from 'react-hot-toast'
@@ -37,6 +38,8 @@ const ModuleListTable = () => {
     const [data, setData] = useState<ModuleDTO[]>([])
     const [globalFilter, setGlobalFilter] = useState('')
     const [isLoading, setIsLoading] = useState(true)
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const [moduleToDelete, setModuleToDelete] = useState<number | null>(null)
 
     const fetchData = async () => {
         try {
@@ -55,17 +58,30 @@ const ModuleListTable = () => {
         fetchData()
     }, [])
 
-    const handleDelete = async (id: number) => {
-        if (confirm('¿Estás seguro de eliminar este módulo? Esto puede afectar los planes que lo incluyen.')) {
-            try {
-                await moduleService.deleteModule(id)
-                toast.success('Módulo eliminado')
-                fetchData()
-            } catch (error) {
-                console.error('Error deleting module:', error)
-                toast.error('Error al eliminar módulo')
-            }
+    const handleDeleteClick = (id: number) => {
+        setModuleToDelete(id)
+        setDeleteDialogOpen(true)
+    }
+
+    const handleDeleteConfirm = async () => {
+        if (moduleToDelete === null) return
+
+        try {
+            await moduleService.deleteModule(moduleToDelete)
+            toast.success('Módulo eliminado exitosamente')
+            setDeleteDialogOpen(false)
+            setModuleToDelete(null)
+            fetchData()
+        } catch (error) {
+            console.error('Error deleting module:', error)
+            toast.error('Error al eliminar módulo')
+            setDeleteDialogOpen(false)
         }
+    }
+
+    const handleDeleteCancel = () => {
+        setDeleteDialogOpen(false)
+        setModuleToDelete(null)
     }
 
     const handleCreate = () => {
@@ -172,7 +188,7 @@ const ModuleListTable = () => {
                         </IconButton>
                         <IconButton
                             size='small'
-                            onClick={() => handleDelete(row.original.id)}
+                            onClick={() => handleDeleteClick(row.original.id)}
                             title='Eliminar'
                         >
                             <i className='tabler-trash text-textSecondary' />
@@ -296,6 +312,17 @@ const ModuleListTable = () => {
                 rowsPerPage={table.getState().pagination.pageSize}
                 page={table.getState().pagination.pageIndex}
                 onPageChange={(_, page) => table.setPageIndex(page)}
+            />
+
+            <ConfirmDialog
+                open={deleteDialogOpen}
+                title='Eliminar Módulo'
+                message='¿Estás seguro de que deseas eliminar este módulo? Esta acción puede afectar los planes que lo incluyen y no se puede deshacer.'
+                confirmText='Eliminar'
+                cancelText='Cancelar'
+                confirmColor='error'
+                onConfirm={handleDeleteConfirm}
+                onCancel={handleDeleteCancel}
             />
         </Card>
     )

@@ -34,6 +34,7 @@ import tableStyles from '@core/styles/table.module.css'
 import CustomTextField from '@core/components/mui/TextField'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
 import PlanForm from '../form/PlanForm'
+import ConfirmDialog from '@/components/dialogs/ConfirmDialog'
 
 // Type Imports
 import { PlanResponse } from '@/types/plans'
@@ -54,6 +55,8 @@ const PlanListTable = () => {
     const [isFormOpen, setIsFormOpen] = useState(false)
     const [selectedPlan, setSelectedPlan] = useState<PlanResponse | null>(null)
     const [isLoading, setIsLoading] = useState(true)
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const [planToDelete, setPlanToDelete] = useState<number | null>(null)
 
     const fetchData = async () => {
         try {
@@ -72,17 +75,30 @@ const PlanListTable = () => {
         fetchData()
     }, [])
 
-    const handleDelete = async (id: number) => {
-        if (confirm('¿Estás seguro de eliminar este plan?')) {
-            try {
-                await planService.deletePlan(id)
-                toast.success('Plan eliminado')
-                fetchData()
-            } catch (error) {
-                console.error('Error deleting plan:', error)
-                toast.error('Error al eliminar plan')
-            }
+    const handleDeleteClick = (id: number) => {
+        setPlanToDelete(id)
+        setDeleteDialogOpen(true)
+    }
+
+    const handleDeleteConfirm = async () => {
+        if (planToDelete === null) return
+
+        try {
+            await planService.deletePlan(planToDelete)
+            toast.success('Plan eliminado exitosamente')
+            setDeleteDialogOpen(false)
+            setPlanToDelete(null)
+            fetchData()
+        } catch (error) {
+            console.error('Error deleting plan:', error)
+            toast.error('Error al eliminar plan')
+            setDeleteDialogOpen(false)
         }
+    }
+
+    const handleDeleteCancel = () => {
+        setDeleteDialogOpen(false)
+        setPlanToDelete(null)
     }
 
     const handleToggleStatus = async (id: number) => {
@@ -97,8 +113,7 @@ const PlanListTable = () => {
     }
 
     const handleEdit = (plan: PlanResponse) => {
-        setSelectedPlan(plan)
-        setIsFormOpen(true)
+        router.push(`/administracion/planes/${plan.id}/editar`)
     }
 
     const handleCreate = () => {
@@ -156,7 +171,7 @@ const PlanListTable = () => {
                         <IconButton onClick={() => handleEdit(row.original)}>
                             <i className='tabler-edit text-textSecondary' />
                         </IconButton>
-                        <IconButton onClick={() => handleDelete(row.original.id)}>
+                        <IconButton onClick={() => handleDeleteClick(row.original.id)}>
                             <i className='tabler-trash text-textSecondary' />
                         </IconButton>
                     </div>
@@ -279,6 +294,17 @@ const PlanListTable = () => {
                 setOpen={setIsFormOpen}
                 onClose={fetchData}
                 data={selectedPlan}
+            />
+
+            <ConfirmDialog
+                open={deleteDialogOpen}
+                title='Eliminar Plan'
+                message='¿Estás seguro de que deseas eliminar este plan? Esta acción no se puede deshacer.'
+                confirmText='Eliminar'
+                cancelText='Cancelar'
+                confirmColor='error'
+                onConfirm={handleDeleteConfirm}
+                onCancel={handleDeleteCancel}
             />
         </Card>
     )
