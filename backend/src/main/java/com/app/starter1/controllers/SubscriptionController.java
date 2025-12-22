@@ -22,7 +22,7 @@ public class SubscriptionController {
      * Create a new subscription for a tenant from a plan
      */
     @PostMapping
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<SubscriptionResponse> createSubscription(
             @Valid @RequestBody SubscriptionCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -33,7 +33,7 @@ public class SubscriptionController {
      * Get subscription by ID
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<SubscriptionResponse> getSubscriptionById(@PathVariable Long id) {
         return ResponseEntity.ok(subscriptionService.getSubscriptionById(id));
     }
@@ -51,7 +51,7 @@ public class SubscriptionController {
      * Get all subscriptions for a tenant
      */
     @GetMapping("/tenant/{tenantId}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<List<SubscriptionResponse>> getTenantSubscriptions(@PathVariable Long tenantId) {
         return ResponseEntity.ok(subscriptionService.getTenantSubscriptions(tenantId));
     }
@@ -60,7 +60,7 @@ public class SubscriptionController {
      * Update subscription modules
      */
     @PatchMapping("/{id}/modules")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<SubscriptionResponse> updateModules(
             @PathVariable Long id,
             @Valid @RequestBody SubscriptionModulesUpdateRequest request) {
@@ -71,7 +71,7 @@ public class SubscriptionController {
      * Update subscription limits
      */
     @PatchMapping("/{id}/limits")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<SubscriptionResponse> updateLimits(
             @PathVariable Long id,
             @Valid @RequestBody SubscriptionLimitsUpdateRequest request) {
@@ -82,7 +82,7 @@ public class SubscriptionController {
      * Add a module to subscription
      */
     @PostMapping("/{id}/modules/{moduleId}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<SubscriptionResponse> addModule(
             @PathVariable Long id,
             @PathVariable Long moduleId) {
@@ -93,7 +93,7 @@ public class SubscriptionController {
      * Remove a module from subscription
      */
     @DeleteMapping("/{id}/modules/{moduleId}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<SubscriptionResponse> removeModule(
             @PathVariable Long id,
             @PathVariable Long moduleId) {
@@ -104,7 +104,7 @@ public class SubscriptionController {
      * Cancel a subscription
      */
     @PatchMapping("/{id}/cancel")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<SubscriptionResponse> cancelSubscription(@PathVariable Long id) {
         return ResponseEntity.ok(subscriptionService.cancelSubscription(id));
     }
@@ -113,7 +113,7 @@ public class SubscriptionController {
      * Renew a subscription
      */
     @PostMapping("/{id}/renew")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<SubscriptionResponse> renewSubscription(@PathVariable Long id) {
         return ResponseEntity.ok(subscriptionService.renewSubscription(id));
     }
@@ -122,7 +122,7 @@ public class SubscriptionController {
      * Change subscription plan
      */
     @PatchMapping("/{id}/change-plan/{planId}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<SubscriptionResponse> changePlan(
             @PathVariable Long id,
             @PathVariable Long planId) {

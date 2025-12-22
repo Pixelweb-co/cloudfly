@@ -5,24 +5,23 @@ import { useEffect, useState, useMemo } from 'react'
 
 // Next Imports
 import Link from 'next/link'
+import axiosInstance from '@/utils/axiosInterceptor'
 
 // MUI Imports
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
-import Chip from '@mui/material/Chip'
 import Checkbox from '@mui/material/Checkbox'
 import IconButton from '@mui/material/IconButton'
-
+import MenuItem from '@mui/material/MenuItem'
 import TablePagination from '@mui/material/TablePagination'
 import type { TextFieldProps } from '@mui/material/TextField'
-import MenuItem from '@mui/material/MenuItem'
 
 // Style Imports
 import tableStyles from '@core/styles/table.module.css'
 
-// Third-party Importss
+// Third-party Imports
 import classnames from 'classnames'
 import { rankItem } from '@tanstack/match-sorter-utils'
 import {
@@ -40,14 +39,13 @@ import {
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
 
-// Type Imports
+// Component Imports
 import TablePaginationComponent from '@components/TablePaginationComponent'
-
-
-
 import CustomTextField from '@core/components/mui/TextField'
 
-import type { RolesType } from '@/types/apps/roleType'
+// Type Imports
+// Usaremos any temporalmente para adaptar a la nueva API sin refactorizar todo el tipado estricto ahora mismo
+type RolesTypeWithAction = any
 
 declare module '@tanstack/table-core' {
   interface FilterFns {
@@ -58,20 +56,9 @@ declare module '@tanstack/table-core' {
   }
 }
 
-type RolesTypeWithAction = RolesType & {
-  action?: string
-}
-
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
-  // Rank the item
   const itemRank = rankItem(row.getValue(columnId), value)
-
-  // Store the itemRank info
-  addMeta({
-    itemRank
-  })
-
-  // Return if the item should be filtered in/out
+  addMeta({ itemRank })
   return itemRank.passed
 }
 
@@ -85,7 +72,6 @@ const DebouncedInput = ({
   onChange: (value: string | number) => void
   debounce?: number
 } & Omit<TextFieldProps, 'onChange'>) => {
-  // States
   const [value, setValue] = useState(initialValue)
 
   useEffect(() => {
@@ -98,21 +84,21 @@ const DebouncedInput = ({
     }, debounce)
 
     return () => clearTimeout(timeout)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value])
 
   return <CustomTextField {...props} value={value} onChange={e => setValue(e.target.value)} />
 }
 
-// Column Definitions
 const columnHelper = createColumnHelper<RolesTypeWithAction>()
 
-const RolesListTable = ({ tableData }: { tableData?: RolesType[] }) => {
-  // States
-
+const RolesListTable = ({ tableData }: { tableData?: any[] }) => {
   const [rowSelection, setRowSelection] = useState({})
-  const [data, setData] = useState<RolesType[]>(tableData || [])
+  const [data, setData] = useState<any[]>(tableData || [])
   const [globalFilter, setGlobalFilter] = useState('')
+
+  useEffect(() => {
+    if (tableData) setData(tableData)
+  }, [tableData])
 
   const columns = useMemo<ColumnDef<RolesTypeWithAction, any>[]>(
     () => [
@@ -120,63 +106,61 @@ const RolesListTable = ({ tableData }: { tableData?: RolesType[] }) => {
         id: 'select',
         header: ({ table }) => (
           <Checkbox
-            {...{
-              checked: table.getIsAllRowsSelected(),
-              indeterminate: table.getIsSomeRowsSelected(),
-              onChange: table.getToggleAllRowsSelectedHandler()
-            }}
+            checked={table.getIsAllRowsSelected()}
+            indeterminate={table.getIsSomeRowsSelected()}
+            onChange={table.getToggleAllRowsSelectedHandler()}
           />
         ),
         cell: ({ row }) => (
           <Checkbox
-            {...{
-              checked: row.getIsSelected(),
-              disabled: !row.getCanSelect(),
-              indeterminate: row.getIsSomeSelected(),
-              onChange: row.getToggleSelectedHandler()
-            }}
+            checked={row.getIsSelected()}
+            disabled={!row.getCanSelect()}
+            indeterminate={row.getIsSomeSelected()}
+            onChange={row.getToggleSelectedHandler()}
           />
         )
       },
-      columnHelper.accessor('roleEnum', {
+      columnHelper.accessor('name', {
         header: 'Role',
         cell: ({ row }) => (
           <div className='flex items-center gap-4'>
             <div className='flex flex-col'>
               <Typography color='text.primary' className='font-medium'>
-                {row.original.roleEnum}
+                {row.original.name || row.original.roleEnum}
+              </Typography>
+              <Typography variant='caption' color='text.secondary'>
+                {row.original.code}
               </Typography>
             </div>
           </div>
         )
       }),
-      columnHelper.accessor('permissionList', {
-        header: 'Permisos',
+      columnHelper.accessor('description', {
+        header: 'Descripción',
         cell: ({ row }) => (
           <div className='flex items-center gap-2'>
-            {row.original.permissionList &&
-              row.original.permissionList.map((permission: any) => (
-                <Chip
-                  key={permission.id}
-                  variant='outlined'
-                  label={permission.name}
-                  color='primary' // Cambiar el color dinámicamente si es necesario
-                  className='capitalize'
-                />
-              ))}
+            <Typography color='text.secondary'>
+              {row.original.description || 'Sin descripción'}
+            </Typography>
           </div>
         )
       }),
-
       columnHelper.accessor('action', {
         header: 'Action',
         cell: ({ row }) => (
           <div className='flex items-center'>
-            <IconButton onClick={() => setData(data.filter(product => product.id !== row.original.id))}>
+            <IconButton onClick={async () => {
+              if (confirm('¿Eliminar rol?')) {
+                try {
+                  await axiosInstance.delete(`/api/roles/${row.original.id}`)
+                  setData(prev => prev.filter(item => item.id !== row.original.id))
+                } catch (e) { console.error(e); alert('Error eliminando'); }
+              }
+            }}>
               <i className='tabler-trash text-textSecondary' />
             </IconButton>
             <IconButton>
-              <Link href={'/apps/permission/view'} className='flex'>
+              <Link href={`/accounts/roles/form/${row.original.id}`} className='flex'>
                 <i className='tabler-edit text-textSecondary' />
               </Link>
             </IconButton>
@@ -185,7 +169,6 @@ const RolesListTable = ({ tableData }: { tableData?: RolesType[] }) => {
         enableSorting: false
       })
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [data]
   )
 
@@ -204,8 +187,7 @@ const RolesListTable = ({ tableData }: { tableData?: RolesType[] }) => {
         pageSize: 10
       }
     },
-    enableRowSelection: true, //enable row selection for all rows
-    // enableRowSelection: row => row.original.age > 18, // or enable row selection conditionally per row
+    enableRowSelection: true,
     globalFilterFn: fuzzyFilter,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
@@ -221,7 +203,7 @@ const RolesListTable = ({ tableData }: { tableData?: RolesType[] }) => {
   return (
     <>
       <Card>
-        <CardHeader title='Filters' className='pbe-4' />
+        <CardHeader title='Roles del Sistema' className='pbe-4' />
         <div className='flex justify-between flex-col items-start md:flex-row md:items-center p-6 border-bs gap-4'>
           <CustomTextField
             select
@@ -237,11 +219,11 @@ const RolesListTable = ({ tableData }: { tableData?: RolesType[] }) => {
             <DebouncedInput
               value={globalFilter ?? ''}
               onChange={value => setGlobalFilter(String(value))}
-              placeholder='Buscar'
+              placeholder='Buscar Role...'
               className='max-sm:is-full'
             />
 
-            <Link href='permissions/form' passHref>
+            <Link href='/accounts/roles/form' passHref>
               <Button variant='contained' startIcon={<i className='tabler-plus' />} className='max-sm:is-full'>
                 Agregar Rol
               </Button>
@@ -256,21 +238,19 @@ const RolesListTable = ({ tableData }: { tableData?: RolesType[] }) => {
                   {headerGroup.headers.map(header => (
                     <th key={header.id}>
                       {header.isPlaceholder ? null : (
-                        <>
-                          <div
-                            className={classnames({
-                              'flex items-center': header.column.getIsSorted(),
-                              'cursor-pointer select-none': header.column.getCanSort()
-                            })}
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {{
-                              asc: <i className='tabler-chevron-up text-xl' />,
-                              desc: <i className='tabler-chevron-down text-xl' />
-                            }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
-                          </div>
-                        </>
+                        <div
+                          className={classnames({
+                            'flex items-center': header.column.getIsSorted(),
+                            'cursor-pointer select-none': header.column.getCanSort()
+                          })}
+                          onClick={header.column.getToggleSortingHandler()}
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {{
+                            asc: <i className='tabler-chevron-up text-xl' />,
+                            desc: <i className='tabler-chevron-down text-xl' />
+                          }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
+                        </div>
                       )}
                     </th>
                   ))}

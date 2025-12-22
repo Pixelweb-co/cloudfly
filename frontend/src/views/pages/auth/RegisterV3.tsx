@@ -65,7 +65,7 @@ const RegisterV3 = ({ id }: { id: string }) => {
 
   useEffect(() => {
     console.log('load role admin', userMethods.isRole('SUPERADMIN'))
-    alert("id"+id)
+    alert("id" + id)
     // Cargar las opciones de clientes y roles
     fetchOptions()
   }, [])
@@ -242,7 +242,7 @@ const RegisterV3 = ({ id }: { id: string }) => {
             <form onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-6'>
               {/* Cliente */}
 
-              {userMethods.isRole('SUPERADMIN') && (
+              {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('MANAGER')) && (
                 <Controller
                   name='customer'
                   control={control}
@@ -291,7 +291,8 @@ const RegisterV3 = ({ id }: { id: string }) => {
                     {roleList.map((item: any) => {
                       if (
                         userMethods.isRole('SUPERADMIN') ||
-                        (userMethods.isRole('ADMIN') && item.roleEnum != 'SUPERADMIN' && item.roleEnum != 'BIOMEDICAL')
+                        userMethods.isRole('MANAGER') ||
+                        (userMethods.isRole('ADMIN') && item.roleEnum != 'SUPERADMIN' && item.roleEnum != 'BIOMEDICAL' && item.roleEnum != 'MANAGER')
                       ) {
                         return (
                           <MenuItem key={item.id} value={item.id}>
@@ -314,7 +315,7 @@ const RegisterV3 = ({ id }: { id: string }) => {
                   <CustomTextField
                     {...field}
                     fullWidth
-                    disabled={id !== ''? true : false}
+                    disabled={id !== '' ? true : false}
                     label='Nombre de usuario'
                     error={Boolean(errors.username)}
                     helperText={errors.username?.message}
@@ -330,7 +331,7 @@ const RegisterV3 = ({ id }: { id: string }) => {
                   <CustomTextField
                     {...field}
                     fullWidth
-                    disabled={id !== ''? true : false}
+                    disabled={id !== '' ? true : false}
                     label='Correo electrónico'
                     type='email'
                     error={Boolean(errors.email)}

@@ -20,6 +20,11 @@ public interface RbacModuleRepository extends JpaRepository<RbacModule, Long> {
 
         List<RbacModule> findByIsActiveTrueOrderByDisplayOrderAsc();
 
+        // Alias para compatibilidad
+        default List<RbacModule> findAllByIsActiveTrueOrderByDisplayOrder() {
+                return findByIsActiveTrueOrderByDisplayOrderAsc();
+        }
+
         @Query("SELECT DISTINCT m FROM RbacModule m " +
                         "JOIN m.actions ma " +
                         "JOIN RolePermission rp ON rp.moduleAction = ma " +

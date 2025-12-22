@@ -86,7 +86,7 @@ public class RbacController {
      * Get all roles
      */
     @GetMapping("/roles")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<List<RoleDTO>> getAllRoles() {
         log.info("GET /api/rbac/roles - Fetching all roles");
         return ResponseEntity.ok(rbacService.getAllRoles());
@@ -96,7 +96,7 @@ public class RbacController {
      * Get role by ID
      */
     @GetMapping("/roles/{id}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<RoleDTO> getRoleById(@PathVariable Long id) {
         log.info("GET /api/rbac/roles/{} - Fetching role", id);
         return ResponseEntity.ok(rbacService.getRoleById(id));
@@ -106,7 +106,7 @@ public class RbacController {
      * Get role by code
      */
     @GetMapping("/roles/code/{code}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<RoleDTO> getRoleByCode(@PathVariable String code) {
         log.info("GET /api/rbac/roles/code/{} - Fetching role", code);
         return ResponseEntity.ok(rbacService.getRoleByCode(code));
@@ -153,7 +153,7 @@ public class RbacController {
      * Get all modules (simple list for management)
      */
     @GetMapping("/modules-list")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<List<ModuleDTO>> getAllModulesList() {
         log.info("GET /api/rbac/modules-list - Fetching all modules");
         return ResponseEntity.ok(rbacService.getAllModules());
@@ -163,7 +163,7 @@ public class RbacController {
      * Get module by ID
      */
     @GetMapping("/modules/{id}")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<ModuleDTO> getModuleById(@PathVariable Long id) {
         log.info("GET /api/rbac/modules/{} - Fetching module", id);
         return ResponseEntity.ok(rbacService.getModuleById(id));
@@ -205,7 +205,7 @@ public class RbacController {
      * Get all modules with their actions for the permission matrix UI
      */
     @GetMapping("/modules")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<List<ModulePermissionDTO>> getAllModules() {
         log.info("GET /api/rbac/modules - Fetching all modules with actions");
         return ResponseEntity.ok(rbacService.getAllModulesWithActions());

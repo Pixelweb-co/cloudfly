@@ -80,35 +80,27 @@ const FormCustomer = ({ onSuccess }: FormCustomerProps = {}) => {
     }
   })
 
+  const [editData, setEditData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
 
   const router = useRouter()
 
-  // Verificar autenticación al cargar el componente
-  useEffect(() => {
-    const user = userMethods.getUserLogin()
-    if (!user || !user.id) {
-      router.push('/login')
-    }
-  }, [router])
-
   const onSubmit = async (data: any) => {
     try {
       setLoading(true)
+      const token = localStorage.getItem('AuthToken')
 
-      // Verificar que el usuario esté logueado
-      const user = userMethods.getUserLogin()
-      if (!user || !user.id) {
-        // Redirigir al login si no hay sesión
-        router.push('/login')
-        return
+      console.log('token ', token)
+
+      if (!token) {
+        throw new Error('Token no disponible. Por favor, inicia sesión nuevamente.')
       }
 
       // Creación del customer
       const response = await axiosInstance.post(
         '/customers/account-setup',
         {
-          userId: user.id,
+          userId: userMethods.getUserLogin().id,
           form: { ...data, status: '1', type: '1' }
         }
       )
@@ -162,6 +154,7 @@ const FormCustomer = ({ onSuccess }: FormCustomerProps = {}) => {
             render={({ field }) => (
               <TextField
                 {...field}
+                
                 fullWidth
                 label='NIT'
                 error={!!errors.nit}
@@ -178,6 +171,7 @@ const FormCustomer = ({ onSuccess }: FormCustomerProps = {}) => {
               <TextField
                 {...field}
                 fullWidth
+                
                 label='Teléfono'
                 error={!!errors.phone}
                 helperText={errors.phone?.message}
@@ -193,6 +187,7 @@ const FormCustomer = ({ onSuccess }: FormCustomerProps = {}) => {
               <TextField
                 {...field}
                 fullWidth
+                
                 label='Email'
                 type='email'
                 error={!!errors.email}
@@ -209,6 +204,7 @@ const FormCustomer = ({ onSuccess }: FormCustomerProps = {}) => {
               <TextField
                 {...field}
                 fullWidth
+                
                 label='Dirección'
                 multiline
                 maxRows={4}
@@ -239,6 +235,7 @@ const FormCustomer = ({ onSuccess }: FormCustomerProps = {}) => {
                       <Box
                         onClick={() => {
                           field.onChange(type.value)
+                          setEditData({ ...editData, businessType: type.value })
                         }}
                         sx={{
                           p: 2,
@@ -282,6 +279,7 @@ const FormCustomer = ({ onSuccess }: FormCustomerProps = {}) => {
                       <Box
                         onClick={() => {
                           field.onChange(type.value)
+                          setEditData({ ...editData, businessType: type.value })
                         }}
                         sx={{
                           p: 2,
@@ -325,6 +323,7 @@ const FormCustomer = ({ onSuccess }: FormCustomerProps = {}) => {
                       <Box
                         onClick={() => {
                           field.onChange(type.value)
+                          setEditData({ ...editData, businessType: type.value })
                         }}
                         sx={{
                           p: 2,
@@ -377,7 +376,7 @@ const FormCustomer = ({ onSuccess }: FormCustomerProps = {}) => {
               <TextField
                 {...field}
                 fullWidth
-
+                
                 label='Objeto Social / Descripción del Negocio'
                 placeholder='Describe tu negocio, productos o servicios principales. Ej: Somos un salón de belleza especializado en cortes modernos, colorimetría y tratamientos capilares...'
                 multiline
@@ -397,6 +396,7 @@ const FormCustomer = ({ onSuccess }: FormCustomerProps = {}) => {
               <TextField
                 {...field}
                 fullWidth
+                
                 label='Contacto'
                 error={!!errors.contact}
                 helperText={errors.contact?.message}
@@ -413,6 +413,7 @@ const FormCustomer = ({ onSuccess }: FormCustomerProps = {}) => {
                 {...field}
                 fullWidth
                 label='Cargo'
+                
                 error={!!errors.position}
                 helperText={errors.position?.message}
               />

@@ -79,7 +79,7 @@ const RegisterV2 = ({ mode }: { mode: any }) => {
 
     setDisabled(false)
 
-  } , [])
+  }, [])
 
   // Vars
   const darkImg = '/images/pages/auth-mask-dark.png'
@@ -189,7 +189,7 @@ const RegisterV2 = ({ mode }: { mode: any }) => {
       router.push('/verify-email') // Redirigir al usuario al home después de login exitoso
 
 
-    } catch (error:any) {
+    } catch (error: any) {
 
       console.error('Error al registrar:', error)
       setError(error.message)
@@ -203,228 +203,305 @@ const RegisterV2 = ({ mode }: { mode: any }) => {
   return (
     <div className='flex bs-full justify-center'>
       <div
-  className={classnames(
-    'flex bs-full flex-1 min-bs-[100dvh] relative max-md:hidden',
-    {
-      'border-ie': settings.skin === 'bordered'
-    }
-  )}
->
-  <div className='m-auto w-full max-w-4xl ps-10 pe-6 flex flex-col gap-6'>
-    {/* Título y descripción */}
-    <div className='text-left'>
-      <Typography variant='h4' component='h2' className='mb-2'>
-        Planes y precios
-      </Typography>
-      <Typography variant='body1' className='text-textSecondary'>
-        Todos los planes incluyen automatización con IA, chatbots y panel de control. 
-        Empieza gratis y escala solo cuando tu negocio lo necesite.
-      </Typography>
-    </div>
+        className={classnames(
+          'flex bs-full flex-1 min-bs-[100dvh] relative max-md:hidden',
+          {
+            'border-ie': settings.skin === 'bordered'
+          }
+        )}
+      >
+        <div className='m-auto w-full max-w-4xl ps-10 pe-6 flex flex-col gap-8'>
+          {/* Hero Section con Urgencia */}
+          <div className='text-left'>
+            <div className='inline-flex items-center gap-2 bg-success/10 text-success px-4 py-2 rounded-full mb-4'>
+              <i className='tabler-sparkles text-xl' />
+              <Typography variant='body2' className='font-semibold'>
+                🎁 14 días GRATIS • Sin tarjeta de crédito
+              </Typography>
+            </div>
 
-    {/* Toggle mensual/anual (solo visual por ahora) */}
-    <div className='flex items-center gap-4 text-sm'>
-      <span className='font-medium'>Mensual</span>
+            <Typography variant='h2' component='h1' className='mb-3 font-bold leading-tight'>
+              Automatiza tu negocio con <span className='text-primary'>IA en minutos</span>
+            </Typography>
 
-      <div className='relative inline-flex h-6 w-11 items-center rounded-full bg-primary/10'>
-        <span className='inline-block h-5 w-5 rounded-full bg-primary translate-x-1'></span>
+            <Typography variant='h6' className='text-textSecondary font-normal mb-6'>
+              Más de <strong className='text-primary'>10,000 empresas</strong> ya confían en CloudFly para
+              impulsar sus ventas con chatbots inteligentes, gestión automatizada y análisis en tiempo real.
+            </Typography>
+          </div>
+
+          {/* Beneficios Clave con Iconos */}
+          <div className='grid gap-6 lg:grid-cols-2'>
+            {/* Beneficio 1 */}
+            <div className='flex gap-4'>
+              <div className='flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center'>
+                <i className='tabler-rocket text-2xl text-primary' />
+              </div>
+              <div>
+                <Typography variant='h6' className='mb-1 font-semibold'>
+                  Lanzamiento en 5 minutos
+                </Typography>
+                <Typography variant='body2' className='text-textSecondary'>
+                  No necesitas ser experto. Nuestros asistentes IA configuran todo por ti automáticamente.
+                </Typography>
+              </div>
+            </div>
+
+            {/* Beneficio 2 */}
+            <div className='flex gap-4'>
+              <div className='flex-shrink-0 w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center'>
+                <i className='tabler-chart-line text-2xl text-success' />
+              </div>
+              <div>
+                <Typography variant='h6' className='mb-1 font-semibold'>
+                  +300% más conversiones
+                </Typography>
+                <Typography variant='body2' className='text-textSecondary'>
+                  Responde a tus clientes 24/7, captura leads mientras duermes y nunca pierdas una venta.
+                </Typography>
+              </div>
+            </div>
+
+            {/* Beneficio 3 */}
+            <div className='flex gap-4'>
+              <div className='flex-shrink-0 w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center'>
+                <i className='tabler-clock text-2xl text-warning' />
+              </div>
+              <div>
+                <Typography variant='h6' className='mb-1 font-semibold'>
+                  Ahorra 20 horas semanales
+                </Typography>
+                <Typography variant='body2' className='text-textSecondary'>
+                  Automatiza respuestas, seguimientos y reportes. Enfócate en hacer crecer tu negocio.
+                </Typography>
+              </div>
+            </div>
+
+            {/* Beneficio 4 */}
+            <div className='flex gap-4'>
+              <div className='flex-shrink-0 w-12 h-12 rounded-xl bg-info/10 flex items-center justify-center'>
+                <i className='tabler-shield-check text-2xl text-info' />
+              </div>
+              <div>
+                <Typography variant='h6' className='mb-1 font-semibold'>
+                  Datos 100% seguros
+                </Typography>
+                <Typography variant='body2' className='text-textSecondary'>
+                  Encriptación de nivel bancario. Tus datos y los de tus clientes están protegidos.
+                </Typography>
+              </div>
+            </div>
+          </div>
+
+          {/* Prueba Social */}
+          <div className='bg-backgroundPaper rounded-2xl p-6 border border-divider'>
+            <div className='flex items-center gap-3 mb-4'>
+              <div className='flex -space-x-2'>
+                <div className='w-10 h-10 rounded-full bg-primary/20 border-2 border-backgroundPaper flex items-center justify-center'>
+                  <i className='tabler-user text-primary' />
+                </div>
+                <div className='w-10 h-10 rounded-full bg-success/20 border-2 border-backgroundPaper flex items-center justify-center'>
+                  <i className='tabler-user text-success' />
+                </div>
+                <div className='w-10 h-10 rounded-full bg-warning/20 border-2 border-backgroundPaper flex items-center justify-center'>
+                  <i className='tabler-user text-warning' />
+                </div>
+                <div className='w-10 h-10 rounded-full bg-info/20 border-2 border-backgroundPaper flex items-center justify-center text-sm font-semibold'>
+                  +10K
+                </div>
+              </div>
+              <div className='flex gap-1'>
+                {[...Array(5)].map((_, i) => (
+                  <i key={i} className='tabler-star-filled text-warning text-lg' />
+                ))}
+              </div>
+            </div>
+            <Typography variant='body2' className='text-textSecondary italic'>
+              "Increíble. En 2 meses duplicamos nuestras ventas online. El chatbot responde mejor
+              que nuestro equipo humano y está disponible 24/7. Mejor inversión del año."
+            </Typography>
+            <Typography variant='caption' className='text-textSecondary mt-2 block'>
+              — María González, CEO de TechStore Colombia
+            </Typography>
+          </div>
+
+          {/* Carrusel de Empresas */}
+          <div className='bg-backgroundPaper rounded-2xl p-6 border border-divider'>
+            <Typography variant='body2' className='text-textSecondary text-center mb-4 font-medium'>
+              Empresas que confían en CloudFly
+            </Typography>
+            <div className='flex gap-6 items-center justify-center flex-wrap'>
+              {/* Retail */}
+              <div className='w-20 h-20 rounded-xl bg-[#2D3748] flex items-center justify-center hover:bg-[#1a202c] transition-colors'>
+                <i className='tabler-shopping-cart text-4xl text-gray-400' />
+              </div>
+
+              {/* Food & Delivery */}
+              <div className='w-20 h-20 rounded-xl bg-[#2D3748] flex items-center justify-center hover:bg-[#1a202c] transition-colors'>
+                <i className='tabler-bike text-4xl text-gray-400' />
+              </div>
+
+              {/* Banking */}
+              <div className='w-20 h-20 rounded-xl bg-[#2D3748] flex items-center justify-center hover:bg-[#1a202c] transition-colors'>
+                <i className='tabler-building-bank text-4xl text-gray-400' />
+              </div>
+
+              {/* Tech */}
+              <div className='w-20 h-20 rounded-xl bg-[#2D3748] flex items-center justify-center hover:bg-[#1a202c] transition-colors'>
+                <i className='tabler-code text-4xl text-gray-400' />
+              </div>
+
+              {/* eCommerce */}
+              <div className='w-20 h-20 rounded-xl bg-[#2D3748] flex items-center justify-center hover:bg-[#1a202c] transition-colors'>
+                <i className='tabler-package text-4xl text-gray-400' />
+              </div>
+            </div>
+          </div>
+
+          {/* CTA con Escasez */}
+          <div className='bg-gradient-to-r from-primary/10 to-success/10 rounded-2xl p-6 text-center'>
+            <Typography variant='h6' className='mb-2 font-semibold'>
+              ⏰ Prueba <span className='text-primary'>14 días gratis</span> todas las funciones
+            </Typography>
+            <Typography variant='body2' className='text-textSecondary'>
+              Sin compromiso. Cancela cuando quieras. Configuración personalizada incluida (valor $500 USD)
+            </Typography>
+          </div>
+        </div>
+
+        {!hidden && (
+          <MaskImg
+            alt='mask'
+            src={authBackground}
+            className={classnames({ 'scale-x-[-1]': theme.direction === 'rtl' })}
+          />
+        )}
       </div>
-
-      <span className='text-textSecondary'>Anual</span>
-
-      <span className='rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary'>
-        Ahorra hasta 10%
-      </span>
-    </div>
-
-    {/* Cards de planes */}
-    <div className='grid gap-4 lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-1'>
-      {/* BASIC */}
-      <div className='rounded-2xl border border-divider bg-backgroundPaper/80 p-5 shadow-sm flex flex-col'>
-        <div className='mb-4'>
-          <div className='text-3xl mb-3'>🐷</div>
-          <Typography variant='h6' className='mb-1'>
-            Basic
-          </Typography>
-          <Typography variant='body2' className='text-textSecondary'>
-            Un inicio simple para todos.
-          </Typography>
-        </div>
-
-        <div className='mb-4'>
-          <Typography variant='h4' component='p' className='leading-none'>
-            $0
-            <span className='text-sm font-normal text-textSecondary'> /mes</span>
-          </Typography>
-        </div>
-
-        <ul className='space-y-1 text-sm text-textSecondary mb-4'>
-          <li>Hasta 100 conversaciones al mes</li>
-          <li>Formularios y flujos básicos</li>
-          <li>Campos ilimitados</li>
-          <li>Hasta 2 subcuentas / sucursales</li>
-        </ul>
-
-        <Button variant='outlined' fullWidth size='small'>
-          Tu plan actual
-        </Button>
-      </div>
-
-      {/* STANDARD (Popular) */}
-      <div className='rounded-2xl border-2 border-primary bg-backgroundPaper p-5 shadow-md flex flex-col relative'>
-        <span className='absolute right-4 top-4 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary'>
-          Popular
-        </span>
-
-        <div className='mb-4'>
-          <div className='text-3xl mb-3'>💼</div>
-          <Typography variant='h6' className='mb-1'>
-            Standard
-          </Typography>
-          <Typography variant='body2' className='text-textSecondary'>
-            Para pequeñas y medianas empresas.
-          </Typography>
-        </div>
-
-        <div className='mb-4'>
-          <Typography variant='h4' component='p' className='leading-none'>
-            $40
-            <span className='text-sm font-normal text-textSecondary'> /mes</span>
-          </Typography>
-          <Typography variant='caption' className='text-textSecondary'>
-            USD 480 /año
-          </Typography>
-        </div>
-
-        <ul className='space-y-1 text-sm text-textSecondary mb-4'>
-          <li>Respuestas ilimitadas</li>
-          <li>Campañas y embudos de venta</li>
-          <li>Integración con Instagram y WhatsApp</li>
-          <li>Integraciones con Google Sheets / Docs</li>
-        </ul>
-
-        <Button variant='contained' fullWidth size='small'>
-          Upgrade
-        </Button>
-      </div>
-
-      {/* ENTERPRISE */}
-      <div className='rounded-2xl border border-divider bg-backgroundPaper/80 p-5 shadow-sm flex flex-col'>
-        <div className='mb-4'>
-          <div className='text-3xl mb-3'>🚀</div>
-          <Typography variant='h6' className='mb-1'>
-            Enterprise
-          </Typography>
-          <Typography variant='body2' className='text-textSecondary'>
-            Ideal para grandes equipos y agencias.
-          </Typography>
-        </div>
-
-        <div className='mb-4'>
-          <Typography variant='h4' component='p' className='leading-none'>
-            $80
-            <span className='text-sm font-normal text-textSecondary'> /mes</span>
-          </Typography>
-          <Typography variant='caption' className='text-textSecondary'>
-            USD 960 /año
-          </Typography>
-        </div>
-
-        <ul className='space-y-1 text-sm text-textSecondary mb-4'>
-          <li>Soporte para múltiples marcas / clientes</li>
-          <li>Dominio y branding personalizados</li>
-          <li>Mayor almacenamiento y registros</li>
-          <li>Integraciones avanzadas (ERP / CRM)</li>
-        </ul>
-
-        <Button variant='outlined' fullWidth size='small'>
-          Upgrade
-        </Button>
-      </div>
-    </div>
-  </div>
-
-  {!hidden && (
-    <MaskImg
-      alt='mask'
-      src={authBackground}
-      className={classnames({ 'scale-x-[-1]': theme.direction === 'rtl' })}
-    />
-  )}
-</div>
 
       <div className='flex justify-center items-center bs-full bg-backgroundPaper !min-is-full p-6 md:!min-is-[unset] md:p-12 md:is-[480px]'>
         <Link href='/' className='absolute block-start-5 sm:block-start-[33px] inline-start-6 sm:inline-start-[38px]'>
           <Logo />
         </Link>
+
         <div className='flex flex-col gap-6 is-full sm:is-auto md:is-full sm:max-is-[400px] md:max-is-[unset] mbs-11 sm:mbs-14 md:mbs-0'>
-          <div className='flex flex-col gap-1'>
-            <Typography variant='h4'>Comienza tu prueba gratuita 🚀</Typography>
-            <Typography>¡Comience con una cuenta demo en cloudfly!</Typography>
+          {/* Header mejorado */}
+          <div className='flex flex-col gap-2 text-center'>
+            <div className='inline-flex items-center justify-center w-16 h-16 mx-auto mb-2 rounded-2xl bg-gradient-to-br from-primary/20 to-success/20'>
+              <i className='tabler-rocket text-4xl text-primary' />
+            </div>
+            <Typography variant='h4' className='font-bold'>
+              ¡Prueba Gratis 14 Días! 🚀
+            </Typography>
+            <Typography variant='body2' className='text-textSecondary'>
+              Crea tu cuenta en 30 segundos. Sin tarjeta, cancela cuando quieras.
+            </Typography>
           </div>
 
           {success && (
-            <Alert icon={<CheckIcon fontSize='inherit' />} severity='success'>
-              Bienvenido te haz registrado exitosamente!
+            <Alert
+              icon={<CheckIcon fontSize='inherit' />}
+              severity='success'
+              className='rounded-xl'
+            >
+              ¡Bienvenido! Te has registrado exitosamente. Revisa tu correo para activar tu cuenta.
             </Alert>
           )}
 
           {error && (
-            <Alert icon={<DangerousIcon fontSize='inherit' />} severity='error'>
+            <Alert
+              icon={<DangerousIcon fontSize='inherit' />}
+              severity='error'
+              className='rounded-xl'
+            >
               {error}
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} noValidate autoComplete='off' className='flex flex-col gap-6'>
-            <CustomTextField
-              autoFocus
-              fullWidth
-              label='Nombre completo'
-              placeholder='Ingresa tu nombre completo'
-              {...register('nombres')}
-              error={!!errors.nombres}
-              helperText={errors.nombres?.message}
-            />
-            <CustomTextField
-              autoFocus
-              fullWidth
-              label='Apellidos'
-              placeholder='Ingresa tus apellidos'
-              {...register('apellidos')}
-              error={!!errors.apellidos}
-              helperText={errors.apellidos?.message}
-            />
+          <form onSubmit={handleSubmit(onSubmit)} noValidate autoComplete='off' className='flex flex-col gap-5'>
+            {/* Nombres y Apellidos en grid */}
+            <div className='grid grid-cols-2 gap-4'>
+              <CustomTextField
+                fullWidth
+                label='Nombre'
+                placeholder='Juan'
+                {...register('nombres')}
+                error={!!errors.nombres}
+                helperText={errors.nombres?.message}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <i className='tabler-user text-textSecondary' />
+                    </InputAdornment>
+                  )
+                }}
+              />
+              <CustomTextField
+                fullWidth
+                label='Apellido'
+                placeholder='Pérez'
+                {...register('apellidos')}
+                error={!!errors.apellidos}
+                helperText={errors.apellidos?.message}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position='start'>
+                      <i className='tabler-user text-textSecondary' />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </div>
 
             <CustomTextField
-              autoFocus
               fullWidth
               label='Nombre de usuario'
-              placeholder='Ingresa tu nombre de usuario'
+              placeholder='juanperez123'
               {...register('username', {
-                onBlur: () => trigger('username') // Valida cuando el usuario abandona el campo
+                onBlur: () => trigger('username')
               })}
               error={!!errors.username}
               helperText={errors.username?.message}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position='start'>
+                    <i className='tabler-at text-textSecondary' />
+                  </InputAdornment>
+                )
+              }}
             />
+
             <CustomTextField
               fullWidth
               label='Correo electrónico'
-              placeholder='Ingresa tu correo electrónico'
+              placeholder='tu@email.com'
               {...register('email', {
-                onBlur: () => trigger('email') // Valida cuando el usuario abandona el campo
+                onBlur: () => trigger('email')
               })}
               error={!!errors.email}
               helperText={errors.email?.message}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position='start'>
+                    <i className='tabler-mail text-textSecondary' />
+                  </InputAdornment>
+                )
+              }}
             />
+
             <CustomTextField
               fullWidth
               label='Contraseña'
-              placeholder='············'
+              placeholder='Mínimo 8 caracteres'
               type={isPasswordShown ? 'text' : 'password'}
               {...register('password')}
               error={!!errors.password}
               helperText={errors.password?.message}
               InputProps={{
+                startAdornment: (
+                  <InputAdornment position='start'>
+                    <i className='tabler-lock text-textSecondary' />
+                  </InputAdornment>
+                ),
                 endAdornment: (
                   <InputAdornment position='end'>
                     <IconButton edge='end' onClick={handleClickShowPassword} onMouseDown={e => e.preventDefault()}>
@@ -434,15 +511,21 @@ const RegisterV2 = ({ mode }: { mode: any }) => {
                 )
               }}
             />
+
             <CustomTextField
               fullWidth
               label='Confirmar Contraseña'
-              placeholder='············'
+              placeholder='Repite tu contraseña'
               type={isConfirmPasswordShown ? 'text' : 'password'}
               {...register('confirmPassword')}
               error={!!errors.confirmPassword}
               helperText={errors.confirmPassword?.message}
               InputProps={{
+                startAdornment: (
+                  <InputAdornment position='start'>
+                    <i className='tabler-lock text-textSecondary' />
+                  </InputAdornment>
+                ),
                 endAdornment: (
                   <InputAdornment position='end'>
                     <IconButton
@@ -456,34 +539,84 @@ const RegisterV2 = ({ mode }: { mode: any }) => {
                 )
               }}
             />
+
             <FormControlLabel
-              control={<Checkbox />}
+              control={<Checkbox defaultChecked />}
               label={
                 <>
-                  <span>Acepto </span>
-                  <Link className='text-primary' href='/' onClick={e => e.preventDefault()}>
+                  <span className='text-sm'>Acepto </span>
+                  <Link className='text-primary text-sm font-medium' href='/' onClick={e => e.preventDefault()}>
                     la política de privacidad y los términos
                   </Link>
                 </>
               }
             />
-            <Button disabled={disabled} fullWidth variant='contained' type='submit'>
-              Registrarse
+
+            <Button
+              disabled={disabled}
+              fullWidth
+              variant='contained'
+              type='submit'
+              size='large'
+              className='py-3 font-semibold text-base rounded-lg shadow-lg hover:shadow-xl transition-all'
+            >
+              {disabled ? (
+                <>
+                  <i className='tabler-loader-2 animate-spin mr-2' />
+                  Creando cuenta...
+                </>
+              ) : (
+                <>
+                  <i className='tabler-rocket mr-2' />
+                  Iniciar prueba gratis de 14 días
+                </>
+              )}
             </Button>
+
             <div className='flex justify-center items-center flex-wrap gap-2'>
-              <Typography>¿Ya tienes una cuenta?</Typography>
-              <Typography component={Link} href='/login' color='primary'>
-                Inicia sesión en su lugar
+              <Typography variant='body2' className='text-textSecondary'>
+                ¿Ya tienes una cuenta?
+              </Typography>
+              <Typography
+                component={Link}
+                href='/login'
+                className='text-primary font-semibold hover:underline'
+              >
+                Iniciar sesión
               </Typography>
             </div>
-            <Divider className='gap-2 text-textPrimary'>o</Divider>
-            <div className='flex justify-center items-center gap-1.5'>
-              <IconButton className='text-facebook' size='small'>
-                <i className='tabler-brand-facebook' />
-              </IconButton>
-              <IconButton className='text-google' size='small'>
-                <i className='tabler-brand-google' />
-              </IconButton>
+
+            <Divider className='gap-2 text-textPrimary'>
+              <Typography variant='caption' className='text-textSecondary'>
+                O continúa con
+              </Typography>
+            </Divider>
+
+            <div className='flex justify-center items-center gap-3'>
+              <Button
+                variant='outlined'
+                className='flex-1 py-2.5 rounded-lg hover:bg-backgroundPaper/50'
+                startIcon={<i className='tabler-brand-facebook' />}
+              >
+                Facebook
+              </Button>
+              <Button
+                variant='outlined'
+                className='flex-1 py-2.5 rounded-lg hover:bg-backgroundPaper/50'
+                startIcon={<i className='tabler-brand-google' />}
+              >
+                Google
+              </Button>
+            </div>
+
+            {/* Seguridad footer */}
+            <div className='mt-2 p-4 bg-success/5 rounded-xl border border-success/20'>
+              <div className='flex items-center gap-2'>
+                <i className='tabler-shield-check text-success text-xl' />
+                <Typography variant='caption' className='text-textSecondary'>
+                  <strong>100% Seguro.</strong> Encriptación SSL. Nunca compartimos tu información.
+                </Typography>
+              </div>
             </div>
           </form>
         </div>
