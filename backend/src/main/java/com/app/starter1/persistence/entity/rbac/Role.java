@@ -5,6 +5,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * Role Entity - Represents a system role (SUPERADMIN, ADMIN, VENDEDOR, etc.)
@@ -32,6 +33,10 @@ public class Role {
     @Column(length = 255)
     private String description;
 
+    // Campo legacy para compatibilidad con RoleEntity (RoleEnum)
+    @Column(name = "role_name", length = 50)
+    private String roleName;
+
     @Column(name = "is_system")
     @Builder.Default
     private Boolean isSystem = false;
@@ -49,6 +54,7 @@ public class Role {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "role", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
     private Set<RolePermission> permissions = new HashSet<>();
@@ -57,11 +63,19 @@ public class Role {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        syncRoleName();
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+        syncRoleName();
+    }
+
+    private void syncRoleName() {
+        if (this.code != null) {
+            this.roleName = this.code;
+        }
     }
 
     /**

@@ -202,7 +202,7 @@ public class EmployeeService {
 
                 // Obtener el rol
                 String roleName = dto.getNewRole() != null ? dto.getNewRole().toUpperCase() : "USER";
-                List<RoleEntity> roles = roleRepository.findRoleEntitiesByRoleEnumIn(List.of(roleName));
+                List<RoleEntity> roles = roleRepository.findRoleEntitiesByRoleIn(List.of(roleName));
                 if (roles.isEmpty()) {
                         throw new RuntimeException("Rol no encontrado: " + roleName);
                 }
@@ -376,7 +376,7 @@ public class EmployeeService {
                                 .map(user -> {
                                         String role = user.getRoles() != null && !user.getRoles().isEmpty()
                                                         ? user.getRoles().stream().findFirst()
-                                                                        .map(r -> r.getRoleEnum().name()).orElse(null)
+                                                                        .map(r -> r.getRoleEnum()).orElse(null)
                                                         : null;
                                         return new com.app.starter1.controllers.EmployeeController.AvailableUserDTO(
                                                         user.getId(),
@@ -397,7 +397,7 @@ public class EmployeeService {
                 if (user != null && user.getRoles() != null && !user.getRoles().isEmpty()) {
                         userRole = user.getRoles().stream()
                                         .findFirst()
-                                        .map(role -> role.getRoleEnum().name())
+                                        .map(role -> role.getRoleEnum())
                                         .orElse(null);
                 }
 

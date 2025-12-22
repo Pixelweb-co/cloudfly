@@ -401,6 +401,10 @@ public class SecurityConfig {
                                         http.requestMatchers(HttpMethod.DELETE, "/api/hr/**")
                                                         .hasAnyRole("SUPERADMIN", "ADMIN", "NOMINA");
 
+                                        // 👉 Menu dinámico
+                                        http.requestMatchers(HttpMethod.GET, "/api/menu")
+                                                        .authenticated();
+
                                         // 👉 RBAC - Roles y Permisos
                                         http.requestMatchers(HttpMethod.GET, "/api/rbac/menu")
                                                         .authenticated();
@@ -430,6 +434,9 @@ public class SecurityConfig {
                                                         .hasRole("SUPERADMIN");
                                         http.requestMatchers(HttpMethod.GET, "/api/rbac/modules")
                                                         .hasAnyRole("SUPERADMIN", "ADMIN");
+
+                                        // New Role Management (Granular)
+                                        http.requestMatchers("/api/roles/**").hasAnyRole("SUPERADMIN", "ADMIN");
 
                                         // Plans (Suscripciones)
                                         http.requestMatchers(HttpMethod.GET, "/api/v1/plans/**").permitAll();

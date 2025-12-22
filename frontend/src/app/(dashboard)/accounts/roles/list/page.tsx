@@ -1,51 +1,23 @@
-'use client' // Esto indica que este archivo es un Componente del Cliente
-// Component Imports
+'use client'
+
 import { useEffect, useState } from 'react'
-
-import axios from 'axios'
-import dotenv from "dotenv";
-
-// eslint-disable-next-line import/no-unresolved
 import RoleList from '@/views/apps/roles/list'
-
-const getRoleData = async () => {
-  console.log('roleList ', process.env.NEXT_PUBLIC_API_URL)
-
-  try {
-    // Recupera el token desde localStorage
-    const token = localStorage.getItem('AuthToken')
-
-    console.log('token ', token)
-
-    // Realiza la petición con el token en el encabezado Authorization
-    const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/roles`, {
-      headers: {
-        'Content-Type': 'application/json', // Asegúrate de que el contenido sea JSON
-        Authorization: `Bearer ${token}` // Añade el token en el encabezado
-      }
-    })
-
-    return res.data
-  } catch (error) {
-    console.error('Error fetching role data:', error)
-    throw error
-  }
-}
+import axiosInstance from '@/utils/axiosInterceptor'
 
 const RoleListApp = () => {
   const [roleData, setRoleData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data = await getRoleData()
-
-        console.log('Datos', data)
-        setRoleData(data)
+        setLoading(true)
+        const res = await axiosInstance.get('/api/roles')
+        setRoleData(res.data)
       } catch (err: any) {
-        setError(err)
+        console.error('Error loading roles:', err)
+        setError('Error cargando roles')
       } finally {
         setLoading(false)
       }
@@ -54,8 +26,8 @@ const RoleListApp = () => {
     fetchData()
   }, [])
 
-  if (loading) return <p>Loading...</p>
-  if (error) return <p>Error loading role data: {String(error)}</p>
+  if (loading) return <p>Cargando roles...</p>
+  if (error) return <p>{error}</p>
 
   return <RoleList roleData={roleData} />
 }

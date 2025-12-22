@@ -222,10 +222,10 @@ export const hasRole = (roles: string[], role: string): boolean => {
 }
 
 /**
- * Check if user is admin (SUPERADMIN or ADMIN)
+ * Check if user is admin (SUPERADMIN, ADMIN, or MANAGER)
  */
 export const isAdmin = (roles: string[]): boolean => {
-    return roles.includes('SUPERADMIN') || roles.includes('ADMIN')
+    return roles.includes('SUPERADMIN') || roles.includes('ADMIN') || roles.includes('MANAGER')
 }
 
 /**

@@ -78,6 +78,7 @@ export interface PermissionGrant {
 export type RoleCode =
     | 'SUPERADMIN'
     | 'ADMIN'
+    | 'MANAGER'
     | 'VENDEDOR'
     | 'CONTABILIDAD'
     | 'NOMINA'

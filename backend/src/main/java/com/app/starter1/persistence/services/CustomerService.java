@@ -18,7 +18,11 @@ public class CustomerService {
     @Autowired
     private CustomerRepository customerRepository;
 
+    @Autowired
+    private com.app.starter1.persistence.repository.PlanRepository planRepository;
 
+    @Autowired
+    private SubscriptionService subscriptionService;
 
     // Obtener todos los clientes
     public List<Customer> getAllCustomersWithContracts() {
@@ -38,7 +42,40 @@ public class CustomerService {
                 .status(request.getStatus() == 1)
                 .build();
 
-        return customerRepository.save(customer);
+        Customer savedCustomer = customerRepository.save(customer);
+
+        // Buscar el plan gratuito activo y crear suscripción automáticamente
+        try {
+            Optional<com.app.starter1.persistence.entity.Plan> freePlan = planRepository.findByIsFreeAndIsActive(true,
+                    true);
+
+            if (freePlan.isPresent()) {
+                com.app.starter1.dto.SubscriptionCreateRequest subscriptionRequest = new com.app.starter1.dto.SubscriptionCreateRequest(
+                        freePlan.get().getId(),
+                        savedCustomer.getId(),
+                        com.app.starter1.persistence.entity.BillingCycle.MONTHLY,
+                        false, // autoRenew
+                        null, // customModuleIds
+                        null, // customAiTokensLimit
+                        null, // customElectronicDocsLimit
+                        null, // customUsersLimit
+                        null, // customMonthlyPrice
+                        null, // discountPercent
+                        "Suscripción automática al plan gratuito");
+
+                subscriptionService.createSubscriptionFromPlan(subscriptionRequest);
+                System.out.println(
+                        "Suscripción gratuita creada automáticamente para el customer: " + savedCustomer.getName());
+            } else {
+                System.out.println(
+                        "ADVERTENCIA: No se encontró un plan gratuito activo. El customer fue creado sin suscripción.");
+            }
+        } catch (Exception e) {
+            System.err.println("Error al crear suscripción automática: " + e.getMessage());
+            // No lanzamos la excepción para no fallar la creación del customer
+        }
+
+        return savedCustomer;
     }
 
     public Customer updateCustomerAndContract(Long customerId, Customer updatedCustomer) {
@@ -62,11 +99,9 @@ public class CustomerService {
         existingCustomer.setType(updatedCustomer.getType());
         existingCustomer.setStatus(updatedCustomer.getStatus());
 
-
         // Guardar los cambios del cliente (esto persiste también el contrato asociado)
         return customerRepository.save(existingCustomer);
     }
-
 
     // DELETE
     public void deleteCustomer(Long id) {
@@ -75,7 +110,6 @@ public class CustomerService {
     }
 
     // CREATE or UPDATE CONTRACT
-
 
     public Customer getById(Long id) {
         return customerRepository.findById(id).orElseThrow(() -> new RuntimeException("Cliente no encontrado"));

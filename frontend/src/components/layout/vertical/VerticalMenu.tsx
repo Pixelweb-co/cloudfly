@@ -31,7 +31,7 @@ import menuSectionStyles from '@core/styles/vertical/menuSectionStyles'
 
 // RBAC Imports
 import type { MenuItem as MenuItemType } from '@/types/rbac'
-import { getMenu } from '@/services/rbac/rbacService'
+import { menuService, type MenuItem as MenuItemData } from '@/services/menuService'
 
 // Fallback static menu (used when backend is unavailable)
 import verticalMenuData from '@/data/navigation/verticalMenuData'
@@ -58,10 +58,11 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
   const { isBreakpointReached, transitionDuration } = verticalNavOptions
 
   // State for dynamic menu
-  const [menuData, setMenuData] = useState<MenuItemType[]>([])
+  const [menuData, setMenuData] = useState<MenuItemData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<string | null>(null)
+  const [userRoles, setUserRoles] = useState<string[]>([])
 
   // Fetch menu from backend
   useEffect(() => {
@@ -69,8 +70,11 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
       try {
         setIsLoading(true)
         setError(null)
-        // Get token from localStorage using the key defined in AuthManager
-        const token = typeof window !== 'undefined' ? localStorage.getItem('AuthToken') : null
+        // Get token from localStorage
+        // Try multiple keys for token
+        const token = typeof window !== 'undefined'
+          ? (localStorage.getItem('accessToken') || localStorage.getItem('AuthToken'))
+          : null
 
         if (token) {
           try {
@@ -88,12 +92,19 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
               roles = rawClaims.split(',')
             }
 
-            // Find the specific role we care about
-            const hasSuperAdmin = roles.some(r => r.toUpperCase().includes('SUPERADMIN'))
-            const hasAdmin = roles.some(r => r.toUpperCase().includes('ADMIN') && !r.toUpperCase().includes('SUPERADMIN'))
+            // Clean roles (remove whitespace, uppercase)
+            roles = roles.map(r => r.trim().toUpperCase())
+            setUserRoles(roles)
+
+            // Find the specific role we care about for hardcoded logic
+            const hasSuperAdmin = roles.some(r => r.includes('SUPERADMIN'))
+            const hasManager = roles.some(r => r.includes('MANAGER'))
+            const hasAdmin = roles.some(r => r.includes('ADMIN') && !r.includes('SUPERADMIN'))
 
             if (hasSuperAdmin) {
               setUserRole('SUPERADMIN')
+            } else if (hasManager) {
+              setUserRole('MANAGER')
             } else if (hasAdmin) {
               setUserRole('ADMIN')
             }
@@ -101,19 +112,18 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
             console.error('Failed to decode token:', e)
           }
 
-          const menu = await getMenu(token)
-          console.log("menu", menu)
+          // Fetch menu from new endpoint /api/menu
+          const menu = await menuService.getMenu()
           setMenuData(menu)
         } else {
-          // If no token, maybe we should redirect or show empty
           setMenuData([])
         }
       } catch (err) {
         console.error('Error loading menu from backend:', err)
         setError('Error al cargar menú')
-
-        // Fallback to static menu
-        setMenuData(verticalMenuData() as unknown as MenuItemType[])
+        // Fallback to static menu if available, parsed as MenuItem[]
+        // @ts-ignore
+        setMenuData(verticalMenuData())
       } finally {
         setIsLoading(false)
       }
@@ -125,23 +135,35 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
   const ScrollWrapper = isBreakpointReached ? 'div' : PerfectScrollbar
 
   // Convert backend menu format to component props
-  const renderMenuItems = (items: MenuItemType[]) => {
+  const renderMenuItems = (items: MenuItemData[]) => {
     return items.map((item, index) => {
-      // Handle section headers
-      if (item.isSection) {
-        return null // Menu sections can be handled differently
+      // Filter by excludedRoles
+      if (item.excludedRoles && item.excludedRoles.length > 0) {
+        // If user has ANY of the excluded roles, do not render this item
+        const isExcluded = item.excludedRoles.some(excluded =>
+          userRoles.some(ur => ur.includes(excluded.toUpperCase()))
+        )
+        if (isExcluded) return null
       }
 
       if (item.children && item.children.length > 0) {
         // Render SubMenu if there are children
+        const children = renderMenuItems(item.children)
+        // If all children are null (filtered out), don't render the parent
+        if (children.every(child => child === null)) return null
+
         return (
           <SubMenu
             key={`${item.label}-${index}`}
             label={item.label}
             icon={item.icon ? <i className={item.icon} /> : undefined}
-            suffix={item.suffix ? <CustomChip label={item.suffix} size='small' color='error' /> : undefined}
+            suffix={
+              item.suffix ? (
+                <CustomChip label={item.suffix.label} size='small' color={item.suffix.color as any} />
+              ) : undefined
+            }
           >
-            {renderMenuItems(item.children)}
+            {children}
           </SubMenu>
         )
       } else {
@@ -151,10 +173,6 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
             key={`${item.label}-${index}`}
             href={item.href}
             icon={item.icon ? <i className={item.icon} /> : undefined}
-            disabled={item.disabled}
-            {...(item.exactMatch === false && item.activeUrl
-              ? { exactMatch: false, activeUrl: item.activeUrl }
-              : { exactMatch: true })}
           >
             {item.label}
           </MenuItem>
@@ -194,25 +212,26 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
         {/* Render dynamic menu from backend */}
         {renderMenuItems(menuData)}
 
-        {/* Hardcoded items for ADMIN and SUPERADMIN */}
-        {(userRole === 'ADMIN' || userRole === 'SUPERADMIN') && (
+        {/* Hardcoded items for ADMIN, SUPERADMIN and MANAGER */}
+        {(userRole === 'ADMIN' || userRole === 'SUPERADMIN' || userRole === 'MANAGER') && (
           <>
             <MenuItem href='/hr/employees' icon={<i className='tabler-users' />}>
               Usuarios
             </MenuItem>
-            <MenuItem href='/settings/roles/list' icon={<i className='tabler-lock' />}>
+            <MenuItem href='/accounts/roles/list' icon={<i className='tabler-lock' />}>
               Roles
             </MenuItem>
 
           </>
         )}
 
-        {/* Hardcoded item for SUPERADMIN */}
-        {userRole === 'SUPERADMIN' && (
+        {/* Hardcoded item for SUPERADMIN or MANAGER */}
+        {(userRole === 'SUPERADMIN' || userRole === 'MANAGER') && (
           <>
-            <MenuItem href='/settings/menu' icon={<i className='tabler-layout-sidebar' />}>
-              Gestor del Menú
+            <MenuItem href='/clientes' icon={<i className='tabler-credit-card' />}>
+              Clientes
             </MenuItem>
+
             <MenuItem href='/administracion/planes' icon={<i className='tabler-credit-card' />}>
               Planes
             </MenuItem>
