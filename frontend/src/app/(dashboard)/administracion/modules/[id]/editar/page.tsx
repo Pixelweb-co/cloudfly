@@ -64,7 +64,6 @@ const EditModulePage = () => {
             icon: '',
             menuPath: '',
             displayOrder: 0,
-            isActive: true,
             menuItems: undefined
         }
     })
@@ -96,8 +95,7 @@ const EditModulePage = () => {
                     icon: moduleData.icon || '',
                     menuPath: moduleData.menuPath || '',
                     displayOrder: moduleData.displayOrder,
-                    isActive: moduleData.isActive,
-                    menuItems: moduleData.menuItems
+                    menuItems: moduleData.menuItems || undefined
                 })
             } catch (error) {
                 console.error('Error fetching module:', error)
@@ -115,7 +113,7 @@ const EditModulePage = () => {
 
             // Serialize menuItems to JSON
             const filteredMenuItems = menuItems.filter(item => item.name.trim() !== '' && item.path.trim() !== '')
-            const menuItemsJson = filteredMenuItems.length > 0 ? JSON.stringify(filteredMenuItems) : null
+            const menuItemsJson = filteredMenuItems.length > 0 ? JSON.stringify(filteredMenuItems) : undefined
 
             const payload: ModuleCreateRequest = {
                 ...formData,
