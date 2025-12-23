@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { payrollPeriodService } from '@/services/hr/payrollPeriodService'
 import { employeeService } from '@/services/hr/employeeService'
+import { payrollConfigService } from '@/services/hr/payrollConfigService'
 import { PayrollPeriod, Employee } from '@/types/hr'
 import {
     Card,
