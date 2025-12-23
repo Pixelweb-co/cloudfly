@@ -299,7 +299,7 @@ export default function ReceiptsPage() {
                                 <Paper elevation={0} sx={{ p: 2, flex: 1, minWidth: 150, bgcolor: 'success.50', borderRadius: 2 }}>
                                     <Typography variant="caption" color="text.secondary">Total Devengado</Typography>
                                     <Typography variant="h6" color="success.main" fontWeight="bold">
-                                        {formatCurrency(filteredReceipts.reduce((sum, r) => sum + (r.totalEarnings || 0), 0))}
+                                        {formatCurrency(filteredReceipts.reduce((sum, r) => sum + (r.totalPerceptions || 0), 0))}
                                     </Typography>
                                 </Paper>
                                 <Paper elevation={0} sx={{ p: 2, flex: 1, minWidth: 150, bgcolor: 'error.50', borderRadius: 2 }}>
@@ -361,7 +361,7 @@ export default function ReceiptsPage() {
                                                 <TableCell align="right">{receipt.regularDays}</TableCell>
                                                 <TableCell align="right">{formatCurrency(receipt.baseSalary)}</TableCell>
                                                 <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'medium' }}>
-                                                    {formatCurrency(receipt.totalEarnings)}
+                                                    {formatCurrency(receipt.totalPerceptions)}
                                                 </TableCell>
                                                 <TableCell align="right" sx={{ color: 'error.main', fontWeight: 'medium' }}>
                                                     {formatCurrency(receipt.totalDeductions)}
@@ -493,30 +493,30 @@ export default function ReceiptsPage() {
                                             <TableBody>
                                                 <TableRow>
                                                     <TableCell>Sueldo Básico</TableCell>
-                                                    <TableCell align="right">{formatCurrency(selectedReceipt.earnings?.salary || 0)}</TableCell>
+                                                    <TableCell align="right">{formatCurrency(selectedReceipt.devengos?.salario || 0)}</TableCell>
                                                 </TableRow>
                                                 {selectedReceipt.earnings?.transportAid > 0 && (
                                                     <TableRow>
                                                         <TableCell>Auxilio de Transporte</TableCell>
-                                                        <TableCell align="right">{formatCurrency(selectedReceipt.earnings.transportAid)}</TableCell>
+                                                        <TableCell align="right">{formatCurrency(selectedReceipt.devengos.auxilioTransporte)}</TableCell>
                                                     </TableRow>
                                                 )}
                                                 {selectedReceipt.earnings?.overtime > 0 && (
                                                     <TableRow>
                                                         <TableCell>Horas Extras y Recargos</TableCell>
-                                                        <TableCell align="right">{formatCurrency(selectedReceipt.earnings.overtime)}</TableCell>
+                                                        <TableCell align="right">{formatCurrency(selectedReceipt.devengos.horasExtras)}</TableCell>
                                                     </TableRow>
                                                 )}
                                                 {selectedReceipt.earnings?.bonuses > 0 && (
                                                     <TableRow>
                                                         <TableCell>Bonificaciones</TableCell>
-                                                        <TableCell align="right">{formatCurrency(selectedReceipt.earnings.bonuses)}</TableCell>
+                                                        <TableCell align="right">{formatCurrency(selectedReceipt.devengos.bonos)}</TableCell>
                                                     </TableRow>
                                                 )}
                                                 <TableRow sx={{ bgcolor: 'success.50' }}>
                                                     <TableCell sx={{ fontWeight: 'bold' }}>TOTAL DEVENGADO</TableCell>
                                                     <TableCell align="right" sx={{ fontWeight: 'bold', color: 'success.dark', fontSize: '1.1rem' }}>
-                                                        {formatCurrency(selectedReceipt.totalEarnings)}
+                                                        {formatCurrency(selectedReceipt.totalPerceptions)}
                                                     </TableCell>
                                                 </TableRow>
                                             </TableBody>
@@ -534,22 +534,22 @@ export default function ReceiptsPage() {
                                             <TableBody>
                                                 <TableRow>
                                                     <TableCell>Salud (4%)</TableCell>
-                                                    <TableCell align="right">{formatCurrency(selectedReceipt.deductions?.health || 0)}</TableCell>
+                                                    <TableCell align="right">{formatCurrency(selectedReceipt.deducciones?.health || 0)}</TableCell>
                                                 </TableRow>
                                                 <TableRow>
                                                     <TableCell>Pensión (4%)</TableCell>
-                                                    <TableCell align="right">{formatCurrency(selectedReceipt.deductions?.pension || 0)}</TableCell>
+                                                    <TableCell align="right">{formatCurrency(selectedReceipt.deducciones?.pension || 0)}</TableCell>
                                                 </TableRow>
-                                                {selectedReceipt.deductions?.solidarityFund > 0 && (
+                                                {selectedReceipt.deducciones?.solidarityFund > 0 && (
                                                     <TableRow>
                                                         <TableCell>Fondo Solidaridad</TableCell>
-                                                        <TableCell align="right">{formatCurrency(selectedReceipt.deductions.solidarityFund)}</TableCell>
+                                                        <TableCell align="right">{formatCurrency(selectedReceipt.deducciones.solidarityFund)}</TableCell>
                                                     </TableRow>
                                                 )}
-                                                {selectedReceipt.deductions?.loans > 0 && (
+                                                {selectedReceipt.deducciones?.loans > 0 && (
                                                     <TableRow>
                                                         <TableCell>Préstamos / Libranzas</TableCell>
-                                                        <TableCell align="right">{formatCurrency(selectedReceipt.deductions.loans)}</TableCell>
+                                                        <TableCell align="right">{formatCurrency(selectedReceipt.deducciones.loans)}</TableCell>
                                                     </TableRow>
                                                 )}
                                                 <TableRow sx={{ bgcolor: 'error.50' }}>
@@ -583,15 +583,15 @@ export default function ReceiptsPage() {
                                             <Typography variant="body2" fontWeight="bold" gutterBottom>Seguridad Social Patronal</Typography>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <Typography variant="body2">Salud (8.5%):</Typography>
-                                                <Typography variant="body2">{formatCurrency(selectedReceipt.employerCosts?.health || 0)}</Typography>
+                                                <Typography variant="body2">{formatCurrency(selectedReceipt.costosEmpleador?.health || 0)}</Typography>
                                             </Box>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <Typography variant="body2">Pensión (12%):</Typography>
-                                                <Typography variant="body2">{formatCurrency(selectedReceipt.employerCosts?.pension || 0)}</Typography>
+                                                <Typography variant="body2">{formatCurrency(selectedReceipt.costosEmpleador?.pension || 0)}</Typography>
                                             </Box>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <Typography variant="body2">ARL:</Typography>
-                                                <Typography variant="body2">{formatCurrency(selectedReceipt.employerCosts?.arl || 0)}</Typography>
+                                                <Typography variant="body2">{formatCurrency(selectedReceipt.costosEmpleador?.arl || 0)}</Typography>
                                             </Box>
                                         </Paper>
                                     </Grid>
@@ -600,15 +600,15 @@ export default function ReceiptsPage() {
                                             <Typography variant="body2" fontWeight="bold" gutterBottom>Provisiones Prestaciones</Typography>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <Typography variant="body2">Cesantías (8.33%):</Typography>
-                                                <Typography variant="body2">{formatCurrency(selectedReceipt.provisions?.severance || 0)}</Typography>
+                                                <Typography variant="body2">{formatCurrency(selectedReceipt.provisiones?.severance || 0)}</Typography>
                                             </Box>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <Typography variant="body2">Prima (8.33%):</Typography>
-                                                <Typography variant="body2">{formatCurrency(selectedReceipt.provisions?.serviceBonus || 0)}</Typography>
+                                                <Typography variant="body2">{formatCurrency(selectedReceipt.provisiones?.serviceBonus || 0)}</Typography>
                                             </Box>
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                                 <Typography variant="body2">Vacaciones (4.17%):</Typography>
-                                                <Typography variant="body2">{formatCurrency(selectedReceipt.provisions?.vacations || 0)}</Typography>
+                                                <Typography variant="body2">{formatCurrency(selectedReceipt.provisiones?.vacations || 0)}</Typography>
                                             </Box>
                                         </Paper>
                                     </Grid>

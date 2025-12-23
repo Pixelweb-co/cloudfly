@@ -368,7 +368,7 @@ export default function PeriodFormPage() {
         setError(null)
 
         try {
-            const periodData: Partial<PayrollPeriod> = {
+            const periodData: Omit<PayrollPeriod, 'id' | 'periodName' | 'workingDays'> = {
                 periodType: formData.periodType as 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY',
                 periodNumber: formData.periodNumber,
                 year: formData.year,
@@ -377,11 +377,11 @@ export default function PeriodFormPage() {
                 paymentDate: formData.paymentDate,
                 description: formData.description,
                 employeeIds: includedEmployees.map(e => e.id),
-                status: 'OPEN' as const
+                status: 'OPEN'
             }
 
             if (isEditMode && periodId) {
-                await payrollPeriodService.update(parseInt(periodId), periodData, 1)
+                await payrollPeriodService.update(parseInt(periodId), periodData as Partial<PayrollPeriod>, 1)
                 setSuccess('Período actualizado exitosamente')
             } else {
                 await payrollPeriodService.create(periodData, 1)
