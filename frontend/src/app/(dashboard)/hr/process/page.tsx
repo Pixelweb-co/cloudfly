@@ -46,7 +46,7 @@ export default function ProcessPage() {
         try {
             setLoading(true)
             const response = await payrollPeriodService.getAll(customerId, 0, 20)
-            setPeriods(response.content.filter(p => p.status === 'OPEN' || p.status === 'CALCULATED' || p.status === 'APPROVED'))
+            setPeriods(response.content.filter(p => p.status === 'OPEN'))
         } catch (err) {
             setError('Error al cargar periodos')
         } finally {
@@ -218,8 +218,8 @@ export default function ProcessPage() {
                                                     <TableCell align="right"><strong>Días</strong></TableCell>
                                                     <TableCell align="right"><strong>Percepciones</strong></TableCell>
                                                     <TableCell align="right"><strong>Deducciones</strong></TableCell>
-                                                    <TableCell align="right"><strong>ISR</strong></TableCell>
-                                                    <TableCell align="right"><strong>IMSS</strong></TableCell>
+                                                    {/* <TableCell align="right"><strong>ISR</strong></TableCell>
+                                                    <TableCell align="right"><strong>IMSS</strong></TableCell> */}
                                                     <TableCell align="right"><strong>NETO</strong></TableCell>
                                                 </TableRow>
                                             </TableHead>
@@ -234,8 +234,8 @@ export default function ProcessPage() {
                                                         <TableCell align="right" sx={{ color: 'error.main' }}>
                                                             {formatCurrency(receipt.totalDeductions)}
                                                         </TableCell>
-                                                        <TableCell align="right">{formatCurrency(receipt.isrAmount)}</TableCell>
-                                                        <TableCell align="right">{formatCurrency(receipt.imssAmount)}</TableCell>
+                                                        {/* <TableCell align="right">{formatCurrency(receipt.isrAmount)}</TableCell>
+                                                        <TableCell align="right">{formatCurrency(receipt.imssAmount)}</TableCell> */}
                                                         <TableCell align="right" sx={{ fontWeight: 'bold' }}>
                                                             {formatCurrency(receipt.netPay)}
                                                         </TableCell>
@@ -249,12 +249,12 @@ export default function ProcessPage() {
                                                     <TableCell align="right" sx={{ fontWeight: 'bold', color: 'error.main' }}>
                                                         {formatCurrency(receipts.reduce((sum, r) => sum + r.totalDeductions, 0))}
                                                     </TableCell>
-                                                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                                                    {/* <TableCell align="right" sx={{ fontWeight: 'bold' }}>
                                                         {formatCurrency(receipts.reduce((sum, r) => sum + r.isrAmount, 0))}
                                                     </TableCell>
                                                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>
                                                         {formatCurrency(receipts.reduce((sum, r) => sum + r.imssAmount, 0))}
-                                                    </TableCell>
+                                                    </TableCell> */}
                                                     <TableCell align="right" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
                                                         {formatCurrency(receipts.reduce((sum, r) => sum + r.netPay, 0))}
                                                     </TableCell>
