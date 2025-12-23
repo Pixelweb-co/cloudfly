@@ -65,7 +65,7 @@ const EditModulePage = () => {
             menuPath: '',
             displayOrder: 0,
             isActive: true,
-            menuItems: null
+            menuItems: undefined
         }
     })
 
