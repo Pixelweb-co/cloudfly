@@ -133,13 +133,13 @@ const RoleFormPage = () => {
 
     // Toggle all permissions for a module
     const toggleModuleAll = (moduleCode: string, checked: boolean) => {
-        const module = modules.find(m => m.moduleCode === moduleCode)
+        const foundModule = modules.find(m => m.moduleCode === moduleCode)
 
-        if (!module) return
+        if (!foundModule) return
 
         setPermissions(prev => ({
             ...prev,
-            [moduleCode]: module.actions.reduce((acc, a) => {
+            [moduleCode]: foundModule.actions.reduce((acc, a) => {
                 acc[a.code] = checked
 
                 return acc
@@ -149,21 +149,21 @@ const RoleFormPage = () => {
 
     // Check if all permissions for a module are selected
     const isModuleFullySelected = (moduleCode: string): boolean => {
-        const module = modules.find(m => m.moduleCode === moduleCode)
+        const foundModule = modules.find(m => m.moduleCode === moduleCode)
 
-        if (!module) return false
+        if (!foundModule) return false
 
-        return module.actions.every(a => permissions[moduleCode]?.[a.code])
+        return foundModule.actions.every(a => permissions[moduleCode]?.[a.code])
     }
 
     // Check if some permissions for a module are selected
     const isModulePartiallySelected = (moduleCode: string): boolean => {
-        const module = modules.find(m => m.moduleCode === moduleCode)
+        const foundModule = modules.find(m => m.moduleCode === moduleCode)
 
-        if (!module) return false
-        const selected = module.actions.filter(a => permissions[moduleCode]?.[a.code]).length
+        if (!foundModule) return false
+        const selected = foundModule.actions.filter(a => permissions[moduleCode]?.[a.code]).length
 
-        return selected > 0 && selected < module.actions.length
+        return selected > 0 && selected < foundModule.actions.length
     }
 
     // Handle form submit
