@@ -43,6 +43,7 @@ public class MenuController {
      * Endpoint de diagnóstico para verificar roles y permisos del usuario
      */
     @GetMapping("/debug")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> getMenuDebug() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         UserEntity user = userRepository.findByUsername(username).orElse(null);

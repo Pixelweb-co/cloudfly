@@ -76,15 +76,14 @@ public class RbacService {
 
     /**
      * Generate menu structure based on user roles
-     * This replaces the static verticalMenuData.json
+     * Now builds menu dynamically from database menu_items
      */
     public List<MenuItemDTO> generateMenu(List<String> roleCodes) {
-        Set<String> permissions = getPermissions(roleCodes);
         boolean isSuperAdmin = roleCodes.contains("SUPERADMIN");
         List<MenuItemDTO> menu = new ArrayList<>();
 
         // Dashboard - everyone with any permission gets this
-        if (isSuperAdmin || !permissions.isEmpty()) {
+        if (isSuperAdmin || !roleCodes.isEmpty()) {
             menu.add(MenuItemDTO.builder()
                     .label("Dashboard")
                     .href("/home")
@@ -92,131 +91,97 @@ public class RbacService {
                     .build());
         }
 
-        // Comunicaciones (Marketing + Chatbot)
-        List<MenuItemDTO> comChildren = new ArrayList<>();
-        if (isSuperAdmin || hasModuleAccess(permissions, "chatbot")) {
-            comChildren.add(MenuItemDTO.item("Chatbot IA WhatsApp", "/settings/chatbot", null));
-            if (isSuperAdmin) {
-                comChildren.add(MenuItemDTO.item("Tipos de Chatbot", "/settings/chatbot-types/list", null));
+        // Get all accessible modules based on role permissions
+        List<RbacModule> accessibleModules;
+        if (isSuperAdmin) {
+            // SUPERADMIN sees all active modules
+            accessibleModules = moduleRepository.findByIsActiveTrueOrderByDisplayOrderAsc();
+        } else {
+            // Get only modules where user has at least one permission
+            accessibleModules = moduleRepository.findModulesByRoleCodes(roleCodes);
+        }
+
+        // Build menu from modules
+        for (RbacModule module : accessibleModules) {
+            // Get user's granted permissions for this specific module
+            Set<String> userModulePermissions = getUserPermissionsForModule(roleCodes, module.getCode());
+
+            List<MenuItemDTO> children = parseMenuItems(module.getMenuItems(), userModulePermissions, isSuperAdmin);
+
+            // Only add parent if it has children (after permission filtering)
+            if (!children.isEmpty()) {
+                menu.add(MenuItemDTO.builder()
+                        .label(module.getName())
+                        .icon(module.getIcon())
+                        .href(module.getMenuPath()) // May be null for parents
+                        .children(children)
+                        .build());
             }
-        }
-        if (isSuperAdmin || hasModuleAccess(permissions, "marketing")) {
-            comChildren.add(MenuItemDTO.item("Conversaciones", "/comunicaciones/conversaciones", null));
-        }
-        if (!comChildren.isEmpty()) {
-            menu.add(MenuItemDTO.parent("Comunicaciones", "tabler-message-circle", comChildren));
-        }
-
-        // Marketing
-        List<MenuItemDTO> mktChildren = new ArrayList<>();
-        if (isSuperAdmin || hasModuleAccess(permissions, "marketing")) {
-            mktChildren.add(MenuItemDTO.item("Campañas", "/marketing/campanas", null));
-        }
-        if (isSuperAdmin || hasModuleAccess(permissions, "contacts")) {
-            mktChildren.add(MenuItemDTO.item("Terceros", "/marketing/contacts/list", null));
-        }
-        if (!mktChildren.isEmpty()) {
-            menu.add(MenuItemDTO.parent("Marketing", "tabler-speakerphone", mktChildren));
-        }
-
-        // Ventas
-        List<MenuItemDTO> ventasChildren = new ArrayList<>();
-        if (isSuperAdmin || hasModuleAccess(permissions, "products")) {
-            ventasChildren.add(MenuItemDTO.item("Categorías", "/ventas/categorias/list", null));
-            ventasChildren.add(MenuItemDTO.item("Productos", "/ventas/productos/list", null));
-        }
-        if (isSuperAdmin || hasModuleAccess(permissions, "quotes")) {
-            ventasChildren.add(MenuItemDTO.item("Cotizaciones", "/ventas/cotizaciones/list", null));
-        }
-        if (isSuperAdmin || hasModuleAccess(permissions, "pos")) {
-            ventasChildren.add(MenuItemDTO.item("Pedidos", "/ventas/pedidos", null));
-        }
-        if (isSuperAdmin || hasModuleAccess(permissions, "invoices")) {
-            ventasChildren.add(MenuItemDTO.item("Facturas", "/ventas/facturas/list", null));
-        }
-        if (!ventasChildren.isEmpty()) {
-            menu.add(MenuItemDTO.parent("Ventas", "tabler-shopping-cart", ventasChildren));
-        }
-
-        // Contabilidad
-        List<MenuItemDTO> contaChildren = new ArrayList<>();
-        if (isSuperAdmin || hasModuleAccess(permissions, "accounting")) {
-            contaChildren.add(MenuItemDTO.item("Plan de Cuentas", "/contabilidad/plan-cuentas", null));
-            contaChildren.add(MenuItemDTO.item("Comprobantes", "/contabilidad/comprobantes", null));
-            contaChildren.add(MenuItemDTO.item("Terceros", "/contabilidad/terceros", null));
-            contaChildren.add(MenuItemDTO.item("Centros de Costo", "/contabilidad/centros-costo", null));
-            contaChildren.add(MenuItemDTO.item("Balance de Prueba", "/contabilidad/balance-prueba", null));
-            contaChildren.add(MenuItemDTO.item("Libro Diario", "/contabilidad/libro-diario", null));
-            contaChildren.add(MenuItemDTO.item("Libro Mayor", "/contabilidad/libro-mayor", null));
-            contaChildren.add(MenuItemDTO.item("Estado de Resultados", "/contabilidad/estado-resultados", null));
-            contaChildren.add(MenuItemDTO.item("Balance General", "/contabilidad/balance-general", null));
-        }
-        if (!contaChildren.isEmpty()) {
-            menu.add(MenuItemDTO.parent("Contabilidad", "tabler-calculator", contaChildren));
-        }
-
-        // Recursos Humanos / Nómina (Actualizado a NOMINA)
-        List<MenuItemDTO> hrChildren = new ArrayList<>();
-        if (isSuperAdmin || hasModuleAccess(permissions, "hr") || hasModuleAccess(permissions, "payroll")) {
-            hrChildren.add(MenuItemDTO.item("Dashboard", "/hr/dashboard", "tabler-chart-pie"));
-        }
-        if (isSuperAdmin || hasModuleAccess(permissions, "hr")) {
-            hrChildren.add(MenuItemDTO.item("Empleados", "/hr/employees", "tabler-user-circle"));
-        }
-        if (isSuperAdmin || hasModuleAccess(permissions, "payroll")) {
-            hrChildren.add(MenuItemDTO.item("Conceptos de Nómina", "/hr/concepts", "tabler-list-details"));
-            hrChildren.add(MenuItemDTO.item("Novedades", "/hr/novelties", "tabler-news"));
-            hrChildren.add(MenuItemDTO.item("Periodos de Nómina", "/hr/periods", "tabler-calendar-stats"));
-            hrChildren.add(MenuItemDTO.item("Recibos", "/hr/receipts", "tabler-receipt"));
-        }
-        if ((isSuperAdmin || hasModuleAccess(permissions, "hr") || hasModuleAccess(permissions, "payroll"))
-                && (roleCodes.contains("SUPERADMIN") || roleCodes.contains("ADMIN"))) {
-            hrChildren.add(MenuItemDTO.item("Configuración", "/hr/config", "tabler-settings"));
-        }
-        if (!hrChildren.isEmpty()) {
-            menu.add(MenuItemDTO.parent("Recursos Humanos", "tabler-users", hrChildren));
-        }
-
-        // Usuarios y Roles
-        List<MenuItemDTO> adminChildren = new ArrayList<>();
-        if (isSuperAdmin || hasModuleAccess(permissions, "users")) {
-            adminChildren.add(MenuItemDTO.item("Gestión de Usuarios", "/accounts/user/list", null));
-        }
-        if (isSuperAdmin || hasModuleAccess(permissions, "roles")) {
-            adminChildren.add(MenuItemDTO.item("Roles y Permisos", "/settings/roles/list", null));
-        }
-        if (!adminChildren.isEmpty()) {
-            menu.add(MenuItemDTO.parent("Usuarios y Roles", "tabler-shield-lock", adminChildren));
-        }
-
-        // Administración (solo SUPERADMIN/ADMIN)
-        if (roleCodes.contains("SUPERADMIN") || roleCodes.contains("ADMIN")) {
-            List<MenuItemDTO> settingsChildren = new ArrayList<>();
-            if (isSuperAdmin || hasModuleAccess(permissions, "customers")) {
-                settingsChildren.add(MenuItemDTO.item("Clientes", "/administracion/clientes/list", null));
-            }
-            if (isSuperAdmin || hasModuleAccess(permissions, "settings")) {
-                settingsChildren.add(MenuItemDTO.item("Configuración General", "/settings/general", null));
-            }
-            if (!settingsChildren.isEmpty()) {
-                menu.add(MenuItemDTO.parent("Administración", "tabler-settings", settingsChildren));
-            }
-        }
-
-        // Reportes
-        if (isSuperAdmin || hasModuleAccess(permissions, "reports")) {
-            menu.add(MenuItemDTO.builder()
-                    .label("Reportes")
-                    .href("/reportes")
-                    .icon("tabler-chart-bar")
-                    .build());
         }
 
         return menu;
     }
 
-    private boolean hasModuleAccess(Set<String> permissions, String moduleCode) {
-        return permissions.stream().anyMatch(p -> p.startsWith(moduleCode + "."));
+    /**
+     * Get user's specific action permissions for a module
+     */
+    private Set<String> getUserPermissionsForModule(List<String> roleCodes, String moduleCode) {
+        if (roleCodes.contains("SUPERADMIN")) {
+            // SUPERADMIN has all permissions
+            return Set.of("*"); // Wildcard for all permissions
+        }
+
+        return rolePermissionRepository.findGrantedPermissionsByRoleCodes(roleCodes).stream()
+                .filter(rp -> rp.getModuleAction().getModule().getCode().equalsIgnoreCase(moduleCode))
+                .map(rp -> rp.getModuleAction().getCode().toUpperCase())
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * Parse menu_items JSON string to MenuItemDTO list, filtering by user
+     * permissions
+     * Example JSON:
+     * [{"label":"Cotizaciones","href":"/ventas/cotizaciones","icon":"tabler-file","action":"VIEW"}]
+     * If "action" is not specified or user is SUPERADMIN, the item is included
+     */
+    private List<MenuItemDTO> parseMenuItems(String menuItemsJson, Set<String> userPermissions, boolean isSuperAdmin) {
+        if (menuItemsJson == null || menuItemsJson.trim().isEmpty()) {
+            return List.of();
+        }
+
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.core.type.TypeReference<List<java.util.Map<String, String>>> typeRef = new com.fasterxml.jackson.core.type.TypeReference<List<java.util.Map<String, String>>>() {
+            };
+
+            List<java.util.Map<String, String>> items = mapper.readValue(menuItemsJson, typeRef);
+
+            return items.stream()
+                    .filter(item -> {
+                        // If no action specified, show the item
+                        String requiredAction = item.get("action");
+                        if (requiredAction == null || requiredAction.isEmpty()) {
+                            return true;
+                        }
+
+                        // SUPERADMIN sees everything
+                        if (isSuperAdmin || userPermissions.contains("*")) {
+                            return true;
+                        }
+
+                        // Check if user has the required permission
+                        return userPermissions.contains(requiredAction.toUpperCase());
+                    })
+                    .map(item -> MenuItemDTO.builder()
+                            .label(item.get("label"))
+                            .href(item.get("href"))
+                            .icon(item.getOrDefault("icon", null))
+                            .build())
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Failed to parse menu_items JSON: {}", menuItemsJson, e);
+            return List.of();
+        }
     }
 
     /**
@@ -224,12 +189,11 @@ public class RbacService {
      * This filters the menu by both permissions and active subscription modules
      */
     public List<MenuItemDTO> generateMenu(List<String> roleCodes, Long tenantId) {
-        // Get base menu from roles/permissions
-        List<MenuItemDTO> baseMenu = generateMenu(roleCodes);
+        boolean isSuperAdmin = roleCodes.contains("SUPERADMIN");
 
-        // If SUPERADMIN, no subscription filtering
-        if (roleCodes.contains("SUPERADMIN")) {
-            return baseMenu;
+        // If SUPERADMIN, no subscription filtering - return full menu
+        if (isSuperAdmin) {
+            return generateMenu(roleCodes);
         }
 
         // Get tenant's active subscription modules
@@ -239,8 +203,41 @@ public class RbacService {
                     .map(String::toUpperCase)
                     .collect(Collectors.toSet());
 
-            // Filter menu by subscription modules
-            return filterMenuByModules(baseMenu, subscriptionModuleCodes);
+            log.info("Filtering menu for tenant {} with subscription modules: {}", tenantId, subscriptionModuleCodes);
+
+            // Get modules that user has permission for AND are in the subscription
+            List<RbacModule> accessibleModules = moduleRepository.findModulesByRoleCodes(roleCodes).stream()
+                    .filter(module -> subscriptionModuleCodes.contains(module.getCode().toUpperCase()))
+                    .collect(Collectors.toList());
+
+            // Build menu
+            List<MenuItemDTO> menu = new ArrayList<>();
+
+            // Dashboard - everyone gets this
+            menu.add(MenuItemDTO.builder()
+                    .label("Dashboard")
+                    .href("/home")
+                    .icon("tabler-smart-home")
+                    .build());
+
+            // Add module menus
+            for (RbacModule module : accessibleModules) {
+                // Get user's granted permissions for this specific module
+                Set<String> userModulePermissions = getUserPermissionsForModule(roleCodes, module.getCode());
+
+                List<MenuItemDTO> children = parseMenuItems(module.getMenuItems(), userModulePermissions, false);
+
+                if (!children.isEmpty()) {
+                    menu.add(MenuItemDTO.builder()
+                            .label(module.getName())
+                            .icon(module.getIcon())
+                            .href(module.getMenuPath())
+                            .children(children)
+                            .build());
+                }
+            }
+
+            return menu;
         } catch (Exception e) {
             log.warn("No active subscription found for tenant {}. Returning empty menu.", tenantId);
             // No subscription = no access

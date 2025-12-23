@@ -6,6 +6,7 @@ import classnames from 'classnames'
 import NavToggle from './NavToggle'
 import ModeDropdown from '@components/layout/shared/ModeDropdown'
 import UserDropdown from '@components/layout/shared/UserDropdown'
+import PlanName from '@components/layout/shared/PlanName'
 
 // Util Imports
 import { verticalLayoutClasses } from '@layouts/utils/layoutClasses'
@@ -19,7 +20,8 @@ const NavbarContent = () => {
         {/* <ModeDropdown /> */}
         <CustomerName />
       </div>
-      <div className='flex items-center'>
+      <div className='flex items-center gap-4'>
+        <PlanName />
         <UserDropdown />
       </div>
     </div>

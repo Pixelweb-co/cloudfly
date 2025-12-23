@@ -133,7 +133,7 @@ public class SubscriptionController {
      * Get all active subscriptions
      */
     @GetMapping("/active")
-    @PreAuthorize("hasAnyRole('SUPERADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'MANAGER')")
     public ResponseEntity<List<SubscriptionResponse>> getActiveSubscriptions() {
         return ResponseEntity.ok(subscriptionService.getActiveSubscriptions());
     }
