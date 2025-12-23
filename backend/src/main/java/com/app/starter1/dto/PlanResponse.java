@@ -10,7 +10,18 @@ public record PlanResponse(
         BigDecimal price,
         Integer durationDays,
         Boolean isActive,
+        Boolean isFree,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
-) {
+        LocalDateTime updatedAt,
+
+        Long aiTokensLimit,
+        Integer electronicDocsLimit,
+        Integer usersLimit,
+
+        Boolean allowOverage,
+        BigDecimal aiOveragePricePer1k,
+        BigDecimal docOveragePriceUnit,
+
+        java.util.Set<Long> moduleIds,
+        java.util.List<String> moduleNames) {
 }

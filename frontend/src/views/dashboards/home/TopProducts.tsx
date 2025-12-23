@@ -109,7 +109,8 @@ const TopProducts = () => {
                                         primary={product.name}
                                         primaryTypographyProps={{
                                             variant: 'body2',
-                                            fontWeight: 600
+                                            fontWeight: 600,
+                                            component: 'div'
                                         }}
                                     />
                                 </Box>

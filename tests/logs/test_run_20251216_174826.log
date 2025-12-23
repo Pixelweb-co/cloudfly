@@ -1,0 +1,5 @@
+2025-12-16 17:48:26,251 - conftest - INFO - Initializing WebDriver
+2025-12-16 17:48:26,251 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 17:48:28,101 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 17:48:28,215 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 17:48:28,292 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache

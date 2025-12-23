@@ -60,7 +60,7 @@ const QuoteForm = () => {
     const loadInitialData = async () => {
         try {
             const user = userMethods.getUserLogin()
-            const tenantId = user.customer.id
+            const tenantId = user.tenantId || (user.customer ? user.customer.id : 1)
 
             const [contactsData, productsData] = await Promise.all([
                 ContactService.getAll(tenantId),
@@ -171,7 +171,7 @@ const QuoteForm = () => {
             const user = userMethods.getUserLogin()
 
             const payload = {
-                tenantId: user.customer.id,
+                tenantId: user.tenantId || (user.customer ? user.customer.id : 1),
                 customerId: Number(formData.customerId),
                 expirationDate: formData.expirationDate ? new Date(formData.expirationDate).toISOString() : null,
                 status: formData.status,
@@ -372,7 +372,7 @@ const QuoteForm = () => {
                                                     onChange={(e) => handleUpdateItem(index, 'discount', Number(e.target.value))}
                                                 />
                                             </TableCell>
-                                            <TableCell>${item.total.toFixed(2)}</TableCell>
+                                            <TableCell>${(item.total || 0).toFixed(2)}</TableCell>
                                             <TableCell>
                                                 <IconButton size="small" color="error" onClick={() => handleRemoveItem(index)}>
                                                     <Trash size={18} />

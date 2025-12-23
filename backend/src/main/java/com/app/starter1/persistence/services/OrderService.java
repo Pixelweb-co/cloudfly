@@ -58,7 +58,7 @@ public class OrderService {
                             "Cliente no encontrado con id " + dto.getCustomerId()));
 
             // Validar que el cliente pertenezca al tenant
-            if (!customer.getTenantId().equals(dto.getTenantId())) {
+            if (customer.getTenantId().longValue() != dto.getTenantId().longValue()) {
                 throw new IllegalArgumentException(
                         "El cliente no pertenece al tenant " + dto.getTenantId());
             }
@@ -319,6 +319,7 @@ public class OrderService {
                 .quantity(item.getQuantity())
                 .discount(item.getDiscount())
                 .subtotal(item.getSubtotal())
+                .total(item.getTotal())
                 .build();
     }
 }

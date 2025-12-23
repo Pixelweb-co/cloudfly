@@ -1,0 +1,10 @@
+2025-12-16 17:49:01,108 - conftest - INFO - Initializing WebDriver
+2025-12-16 17:49:01,108 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 17:49:02,454 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 17:49:02,503 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 17:49:02,556 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 17:49:02,557 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 17:49:05,393 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 17:49:05,395 - test_01_login - INFO - TC-001: Testing login page load
+2025-12-16 17:49:10,834 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_174910.png
+2025-12-16 17:49:10,834 - conftest - INFO - Closing WebDriver

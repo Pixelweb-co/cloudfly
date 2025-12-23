@@ -1,179 +1,200 @@
 [
   {
     "label": "Comunicaciones",
-    "icon": "chat",
-    "route": "#",
-    "roles": [
-      "SUPERADMIN",
-      "ADMIN",
-      "USER"
-    ],
+    "icon": "tabler-message-circle",
+    "suffix": {
+      "label": "New",
+      "color": "info"
+    },
     "children": [
       {
         "label": "Chatbot IA WhatsApp",
-        "route": "/settings/chatbot",
-        "roles": [
-          "SUPERADMIN",
-          "ADMIN"
-        ]
+        "href": "/settings/chatbot"
       },
       {
         "label": "Tipos de Chatbot",
-        "route": "/settings/chatbot-types/list",
-        "roles": [
-          "SUPERADMIN"
+        "href": "/settings/chatbot-types/list",
+        "excludedRoles": [
+          "VENDEDOR",
+          "CONTABILIDAD",
+          "MARKETING"
         ]
       },
       {
         "label": "Conversaciones",
-        "route": "/comunicaciones/conversaciones",
-        "roles": [
-          "SUPERADMIN",
-          "ADMIN",
-          "USER"
-        ]
+        "href": "/comunicaciones/conversaciones"
       }
     ]
   },
   {
-    "label": "Marqueting",
-    "icon": "megaphone",
-    "route": "#",
-    "roles": [
-      "SUPERADMIN",
-      "ADMIN",
-      "USER"
-    ],
+    "label": "Marketing",
+    "icon": "tabler-speakerphone",
     "children": [
       {
         "label": "Campañas",
-        "route": "/marketing/campanas",
-        "roles": [
-          "SUPERADMIN",
-          "ADMIN",
-          "USER"
-        ]
+        "href": "/marketing/campanas"
       },
       {
         "label": "Terceros",
-        "route": "/marketing/contacts/list",
-        "roles": [
-          "SUPERADMIN",
-          "ADMIN",
-          "USER"
-        ]
+        "href": "/marketing/contacts/list"
       }
     ]
   },
   {
     "label": "Calendario",
-    "icon": "calendar",
-    "route": "/calendar",
-    "roles": [
-      "SUPERADMIN",
-      "BIOMEDICAL",
-      "ADMIN",
-      "USER"
-    ]
+    "icon": "tabler-calendar",
+    "href": "/calendar"
   },
   {
     "label": "Usuarios y Roles",
-    "icon": "users",
-    "roles": [
-      "SUPERADMIN",
-      "ADMIN"
+    "icon": "tabler-users",
+    "excludedRoles": [
+      "VENDEDOR",
+      "CONTABILIDAD",
+      "MARKETING"
     ],
     "children": [
       {
         "label": "Gestión de Usuarios",
-        "route": "/accounts/user/list",
-        "roles": [
-          "SUPERADMIN",
-          "ADMIN"
-        ]
+        "href": "/accounts/user/list"
       }
     ]
   },
   {
     "label": "Ventas",
-    "route": "/ventas/list",
-    "roles": [
-      "SUPERADMIN",
-      "ADMIN",
-      "USER"
-    ],
-    "icon": "shopping-cart",
+    "icon": "tabler-shopping-cart",
     "children": [
       {
         "label": "Categorías",
-        "route": "/ventas/categorias/list",
-        "roles": [
-          "SUPERADMIN",
-          "ADMIN",
-          "USER"
-        ]
+        "href": "/ventas/categorias/list"
       },
       {
         "label": "Productos",
-        "route": "/ventas/productos/list",
-        "roles": [
-          "SUPERADMIN",
-          "ADMIN",
-          "USER"
-        ]
+        "href": "/ventas/productos/list"
       },
       {
         "label": "Cotizaciones",
-        "route": "/ventas/cotizaciones/list",
-        "roles": [
-          "SUPERADMIN",
-          "ADMIN",
-          "USER"
-        ]
+        "href": "/ventas/cotizaciones/list"
       },
       {
         "label": "Pedidos",
-        "route": "/ventas/pedidos",
-        "roles": [
-          "SUPERADMIN",
-          "ADMIN",
-          "USER"
-        ]
+        "href": "/ventas/pedidos"
       },
       {
         "label": "Facturas",
-        "route": "/ventas/facturas/list",
-        "roles": [
-          "SUPERADMIN",
-          "ADMIN",
-          "USER"
+        "href": "/ventas/facturas/list"
+      }
+    ]
+  },
+  {
+    "label": "Recursos Humanos",
+    "icon": "tabler-users",
+    "excludedRoles": [
+      "VENDEDOR",
+      "MARKETING"
+    ],
+    "children": [
+      {
+        "label": "Dashboard",
+        "href": "/hr/dashboard",
+        "icon": "tabler-chart-pie"
+      },
+      {
+        "label": "Empleados",
+        "href": "/hr/employees"
+      },
+      {
+        "label": "Conceptos de Nómina",
+        "href": "/hr/concepts"
+      },
+      {
+        "label": "Novedades",
+        "href": "/hr/novelties"
+      },
+      {
+        "label": "Periodos",
+        "href": "/hr/periods"
+      },
+      {
+        "label": "Procesar Nómina",
+        "href": "/hr/process"
+      },
+      {
+        "label": "Recibos",
+        "href": "/hr/receipts"
+      },
+      {
+        "label": "Configuración",
+        "href": "/hr/config",
+        "excludedRoles": [
+          "HR"
         ]
       }
     ]
   },
   {
-    "label": "Administracion",
-    "icon": "settings",
-    "roles": [
-      "SUPERADMIN",
-      "ADMIN"
+    "label": "Contabilidad",
+    "icon": "tabler-calculator",
+    "excludedRoles": [
+      "VENDEDOR",
+      "MARKETING"
+    ],
+    "children": [
+      {
+        "label": "Plan de Cuentas",
+        "href": "/contabilidad/plan-cuentas"
+      },
+      {
+        "label": "Comprobantes",
+        "href": "/contabilidad/comprobantes"
+      },
+      {
+        "label": "Terceros",
+        "href": "/contabilidad/terceros"
+      },
+      {
+        "label": "Centros de Costo",
+        "href": "/contabilidad/centros-costo"
+      },
+      {
+        "label": "Balance de Prueba",
+        "href": "/contabilidad/balance-prueba"
+      },
+      {
+        "label": "Libro Diario",
+        "href": "/contabilidad/libro-diario"
+      },
+      {
+        "label": "Libro Mayor",
+        "href": "/contabilidad/libro-mayor"
+      },
+      {
+        "label": "Estado de Resultados",
+        "href": "/contabilidad/estado-resultados"
+      },
+      {
+        "label": "Balance General",
+        "href": "/contabilidad/balance-general"
+      }
+    ]
+  },
+  {
+    "label": "Administración",
+    "icon": "tabler-settings",
+    "excludedRoles": [
+      "VENDEDOR",
+      "CONTABILIDAD",
+      "MARKETING",
+      "HR"
     ],
     "children": [
       {
         "label": "Clientes",
-        "route": "/administracion/clientes/list",
-        "roles": [
-          "SUPERADMIN",
-          "ADMIN"
-        ]
+        "href": "/administracion/clientes/list"
       },
       {
         "label": "Tipos de Chatbot",
-        "route": "/settings/chatbot-types/list",
-        "roles": [
-          "SUPERADMIN",
-          "ADMIN"
-        ]
+        "href": "/settings/chatbot-types/list"
       }
     ]
   }

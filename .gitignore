@@ -12,8 +12,8 @@
 /backend/images/
 
 
-/backend/src/main/resources/application.properties
-/backend/src/main/resources/application.yml
+#/backend/src/main/resources/application.properties
+#/backend/src/main/resources/application.yml
 
 
 /backup-service/public/secret_client.json

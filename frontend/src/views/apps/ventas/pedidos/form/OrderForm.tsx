@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import {
     Card,
     CardContent,
@@ -33,6 +33,8 @@ const OrderForm = () => {
     const router = useRouter()
     const params = useParams()
     const id = params?.id
+    const searchParams = useSearchParams()
+    const quoteId = searchParams.get('quoteId')
 
     const [loading, setLoading] = useState(false)
     const [customers, setCustomers] = useState<Contact[]>([])
@@ -53,13 +55,16 @@ const OrderForm = () => {
         loadInitialData()
         if (id) {
             loadOrder(id as string)
+        } else if (quoteId) {
+            loadQuoteData(quoteId)
         }
-    }, [id])
+    }, [id, quoteId])
 
     const loadInitialData = async () => {
         try {
             const user = userMethods.getUserLogin()
-            const tenantId = user.customer.id
+            // Fix seguro para tenantId
+            const tenantId = user.tenantId || (user.customer ? user.customer.id : 1)
 
             const [contactsData, productsData] = await Promise.all([
                 ContactService.getAll(tenantId),
@@ -71,6 +76,37 @@ const OrderForm = () => {
         } catch (error) {
             console.error('Error loading initial data:', error)
             toast.error('Error al cargar datos')
+        }
+    }
+
+    const loadQuoteData = async (qId: string) => {
+        try {
+            setLoading(true)
+            const res = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/quotes/${qId}`)
+            const quote = res.data
+
+            setFormData({
+                customerId: quote.customerId || '',
+                status: 'PENDING',
+                paymentMethod: 'CASH',
+                notes: `Generado desde Cotización #${quote.quoteNumber}`
+            })
+
+            setItems(quote.items.map((item: any) => ({
+                productId: item.productId,
+                productName: item.productName || item.product?.productName, // Back may return nested product
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                discount: item.discount,
+                subtotal: item.subtotal,
+                total: item.total
+            })))
+            toast.success('Datos cargados desde la cotización')
+        } catch (error) {
+            console.error('Error loading quote:', error)
+            toast.error('Error al cargar datos de la cotización')
+        } finally {
+            setLoading(false)
         }
     }
 
@@ -86,6 +122,8 @@ const OrderForm = () => {
                 paymentMethod: order.paymentMethod,
                 notes: '' // Order entity doesn't have notes field in backend yet, but keeping for UI consistency
             })
+
+            // Fix tenantId extraction for existing order if needed or just display
 
             setItems(order.items.map((item: any) => ({
                 productId: item.productId,

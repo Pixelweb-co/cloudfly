@@ -86,12 +86,14 @@ public class QuoteService {
         return mapToDTO(savedQuote);
     }
 
+    @Transactional
     public List<QuoteResponseDTO> getQuotesByTenant(Long tenantId) {
         return quoteRepository.findByTenantId(tenantId).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public QuoteResponseDTO getQuoteById(Long id) {
         return quoteRepository.findById(id)
                 .map(this::mapToDTO)

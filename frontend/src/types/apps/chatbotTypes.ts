@@ -1,4 +1,4 @@
-export type ChatbotType = 'SALES' | 'SUPPORT' | 'SCHEDULING'
+export type ChatbotType = 'SALES' | 'SUPPORT' | 'SCHEDULING' | 'SUBSCRIPTIONS'
 
 export interface ChatbotConfig {
     id?: number
@@ -9,6 +9,7 @@ export interface ChatbotConfig {
     n8nWebhookUrl: string
     context: string
     agentName?: string
+    phoneNumber?: string
     apiKey?: string
     qrCode?: string
 }

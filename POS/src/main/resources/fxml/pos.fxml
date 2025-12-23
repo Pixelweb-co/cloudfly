@@ -1,115 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.text.*?>
 
-<BorderPane xmlns="http://javafx.com/javafx"
-            xmlns:fx="http://javafx.com/fxml"
+<BorderPane xmlns="http://javafx.com/javafx/21" 
+            xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.cloudfly.pos.controllers.POSController"
-            styleClass="pos-root">
+            prefHeight="700" prefWidth="1200">
     
-    <!-- Header -->
     <top>
-        <HBox alignment="CENTER_LEFT" spacing="20" styleClass="header">
-            <padding>
-                <Insets top="15" right="20" bottom="15" left="20"/>
-            </padding>
-            
-            <VBox>
-                <Label text="CloudFly POS" styleClass="header-title"/>
-                <Label fx:id="userLabel" text="Usuario" styleClass="header-subtitle"/>
-            </VBox>
-            
-            <Region HBox.hgrow="ALWAYS"/>
-            
-            <Label fx:id="dateTimeLabel" styleClass="header-subtitle"/>
-            
-            <Button text="CERRAR SESIÓN" 
-                   onAction="#handleLogout"
-                   styleClass="logout-button"/>
+        <HBox alignment="CENTER_LEFT" spacing="20" style="-fx-background-color: #6366f1; -fx-padding: 15 20;">
+            <Label text="CloudFly POS" style="-fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            <Label fx:id="userLabel" text="Usuario" style="-fx-text-fill: white; -fx-font-size: 14px;"/>
+            <Label fx:id="dateTimeLabel" style="-fx-text-fill: white; -fx-font-size: 14px;" minWidth="200"/>
+            <Button text="CERRAR" onAction="#handleLogout"
+                   style="-fx-background-color: #ef4444; -fx-text-fill: white; -fx-padding: 10 20;"/>
         </HBox>
     </top>
     
-    <!-- Main Content -->
     <center>
-        <HBox spacing="0">
-            <!-- Products Section -->
-            <VBox spacing="15" HBox.hgrow="ALWAYS" style="-fx-padding: 20;">
-                
-                <!-- Search Bar -->
+        <SplitPane dividerPositions="0.7">
+            <VBox spacing="15" style="-fx-padding: 20;">
                 <HBox spacing="10">
-                    <TextField fx:id="searchField" 
-                              promptText="Buscar producto por nombre o código de barras..."
-                              styleClass="search-field"
-                              prefHeight="45"
-                              HBox.hgrow="ALWAYS"/>
-                    <Button text="BUSCAR" 
-                           onAction="#handleSearch"
-                           styleClass="primary-button"
-                           prefWidth="120"
-                           prefHeight="45"/>
+                    <TextField fx:id="searchField" promptText="Buscar..." prefHeight="45" prefWidth="300"/>
+                    <Button text="BUSCAR" onAction="#handleSearch" prefHeight="45"
+                           style="-fx-background-color: #6366f1; -fx-text-fill: white;"/>
                 </HBox>
-                
-                <!-- Products Grid -->
-                <ScrollPane fitToWidth="true" fitToHeight="true">
-                    <FlowPane fx:id="productsPane" 
-                             hgap="15" 
-                             vgap="15"
-                             padding="10"/>
+                <ScrollPane fitToWidth="true" prefHeight="600">
+                    <FlowPane fx:id="productsPane" hgap="15" vgap="15" style="-fx-padding: 10;"/>
                 </ScrollPane>
             </VBox>
             
-            <!-- Cart Section (Sidebar) -->
-            <VBox spacing="15" prefWidth="400" styleClass="sidebar">
-                <padding>
-                    <Insets top="20" right="20" bottom="20" left="20"/>
-                </padding>
-                
-                <Label text="CARRITO DE COMPRAS" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
-                
-                <!-- Cart Items List -->
-                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+            <VBox spacing="15" style="-fx-background-color: #f3f4f6; -fx-padding: 20;" prefWidth="350">
+                <Label text="CARRITO" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+                <ScrollPane fitToWidth="true" prefHeight="400">
                     <VBox fx:id="cartPane" spacing="10"/>
                 </ScrollPane>
-                
                 <Separator/>
-                
-                <!-- Totals -->
-                <VBox spacing="10">
-                    <HBox>
-                        <Label text="Subtotal:" style="-fx-font-size: 16px;"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Label fx:id="subtotalLabel" text="$0.00" style="-fx-font-size: 16px;"/>
-                    </HBox>
-                    <HBox>
-                        <Label text="Descuento:" style="-fx-font-size: 16px;"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Label fx:id="discountLabel" text="$0.00" style="-fx-font-size: 16px;"/>
-                    </HBox>
-                    <Separator/>
-                    <HBox>
-                        <Label text="TOTAL:" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Label fx:id="totalLabel" text="$0.00" styleClass="total-label"/>
-                    </HBox>
-                </VBox>
-                
-                <!-- Action Buttons -->
-                <VBox spacing="10">
-                    <Button text="PROCESAR VENTA" 
-                           onAction="#handleCheckout"
-                           styleClass="action-button"
-                           maxWidth="Infinity"
-                           prefHeight="50"/>
-                    <Button text="LIMPIAR CARRITO" 
-                           onAction="#handleClearCart"
-                           styleClass="danger-button"
-                           maxWidth="Infinity"
-                           prefHeight="50"/>
-                </VBox>
+                <GridPane hgap="10" vgap="10">
+                    <Label text="Subtotal:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <Label fx:id="subtotalLabel" text="0.00" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                    <Label text="Descuento:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <Label fx:id="discountLabel" text="0.00" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                    <Label text="TOTAL:" style="-fx-font-size: 20px; -fx-font-weight: bold;" 
+                           GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                    <Label fx:id="totalLabel" text="0.00" style="-fx-font-size: 20px; -fx-font-weight: bold;" 
+                           GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                </GridPane>
+                <Button text="PROCESAR VENTA" onAction="#handleCheckout" prefHeight="50"
+                       style="-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-size: 16px;"/>
+                <Button text="LIMPIAR" onAction="#handleClearCart" prefHeight="50"
+                       style="-fx-background-color: #ef4444; -fx-text-fill: white; -fx-font-size: 16px;"/>
             </VBox>
-        </HBox>
+        </SplitPane>
     </center>
 </BorderPane>

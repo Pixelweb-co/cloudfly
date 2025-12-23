@@ -253,23 +253,23 @@ services:
       - "traefik.http.services.eapi.loadbalancer.server.port=8080"
 
 
-  xtts:
-    image: local-xtts
-    build:
-      context: .
-      dockerfile: Dockerfile.TTS
-    environment:
-      - API_KEY=sellerbot2025
-      - DEFAULT_LANG=es
-      - TTS_MODEL=tts_models/multilingual/multi-dataset/xtts_v2
-      - SAMPLE_RATE=24000
-      - OUTPUT_DIR=/data/outputs
-    volumes:
-      - ./data:/data/outputs
-    ports:
-      - "8030:8000"
-    networks:
-      - app-net
+  # xtts:
+  #   image: local-xtts
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.TTS
+  #   environment:
+  #     - API_KEY=sellerbot2025
+  #     - DEFAULT_LANG=es
+  #     - TTS_MODEL=tts_models/multilingual/multi-dataset/xtts_v2
+  #     - SAMPLE_RATE=24000
+  #     - OUTPUT_DIR=/data/outputs
+  #   volumes:
+  #     - ./data:/data/outputs
+  #   ports:
+  #     - "8030:8000"
+  #   networks:
+  #     - app-net
 
   chat-socket-service:
     build:
