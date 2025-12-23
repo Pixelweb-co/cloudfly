@@ -1,0 +1,394 @@
+2025-12-16 18:45:00,555 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:45:00,556 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:45:02,157 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:45:02,219 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:45:02,278 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:45:02,279 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:45:03,821 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:45:03,821 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:45:06,265 - conftest - INFO - Already logged in
+2025-12-16 18:45:06,268 - test_02_employees - INFO - TC-101: Navigating to Employees page
+2025-12-16 18:45:06,268 - conftest - INFO - Navigating via menu: Recursos Humanos > Empleados
+2025-12-16 18:45:16,837 - conftest - ERROR - Menu navigation failed: Message: 
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0x1081223
+	0x1081264
+	0xe6e6dd
+	0xeb93a5
+	0xeb977b
+	0xf00382
+	0xedb534
+	0xefdb13
+	0xedb2e6
+	0xead321
+	0xeae1d4
+	0x12d5264
+	0x12d081b
+	0x12ed0fa
+	0x109b128
+	0x10a312d
+	0x1089528
+	0x10896e9
+	0x1073a78
+	0x76385d49
+	0x76f0d5db
+	0x76f0d561
+
+2025-12-16 18:45:17,414 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_184517.png
+2025-12-16 18:45:17,415 - conftest - INFO - Closing WebDriver
+2025-12-16 18:45:22,221 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:45:22,222 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:45:23,950 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:45:24,014 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:45:24,072 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:45:24,072 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:45:25,479 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:45:25,479 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:45:27,758 - conftest - INFO - Already logged in
+2025-12-16 18:45:27,760 - test_02_employees - INFO - TC-102: Verifying employee list
+2025-12-16 18:45:27,761 - conftest - INFO - Navigating via menu: Recursos Humanos > Empleados
+2025-12-16 18:45:38,315 - conftest - ERROR - Menu navigation failed: Message: 
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0x1081223
+	0x1081264
+	0xe6e6dd
+	0xeb93a5
+	0xeb977b
+	0xf00382
+	0xedb534
+	0xefdb13
+	0xedb2e6
+	0xead321
+	0xeae1d4
+	0x12d5264
+	0x12d081b
+	0x12ed0fa
+	0x109b128
+	0x10a312d
+	0x1089528
+	0x10896e9
+	0x1073a78
+	0x76385d49
+	0x76f0d5db
+	0x76f0d561
+
+2025-12-16 18:45:38,594 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_184538.png
+2025-12-16 18:45:38,594 - conftest - INFO - Closing WebDriver
+2025-12-16 18:45:42,846 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:45:42,847 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:45:44,405 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:45:44,455 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:45:44,502 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:45:44,502 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:45:45,869 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:45:45,870 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:45:49,145 - conftest - INFO - Already logged in
+2025-12-16 18:45:49,148 - test_02_employees - INFO - TC-103: Opening create employee dialog
+2025-12-16 18:45:49,148 - conftest - INFO - Navigating via menu: Recursos Humanos > Empleados
+2025-12-16 18:45:59,722 - conftest - ERROR - Menu navigation failed: Message: 
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0x1081223
+	0x1081264
+	0xe6e6dd
+	0xeb93a5
+	0xeb977b
+	0xf00382
+	0xedb534
+	0xefdb13
+	0xedb2e6
+	0xead321
+	0xeae1d4
+	0x12d5264
+	0x12d081b
+	0x12ed0fa
+	0x109b128
+	0x10a312d
+	0x1089528
+	0x10896e9
+	0x1073a78
+	0x76385d49
+	0x76f0d5db
+	0x76f0d561
+
+2025-12-16 18:45:59,942 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_184559.png
+2025-12-16 18:45:59,942 - conftest - INFO - Closing WebDriver
+2025-12-16 18:46:03,839 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:46:03,839 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:46:05,299 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:46:05,359 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:46:05,407 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:46:05,407 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:46:06,765 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:46:06,766 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:46:09,114 - conftest - INFO - Already logged in
+2025-12-16 18:46:09,115 - test_02_employees - INFO - TC-104: Creating new employee
+2025-12-16 18:46:09,116 - conftest - INFO - Navigating via menu: Recursos Humanos > Empleados
+2025-12-16 18:46:19,694 - conftest - ERROR - Menu navigation failed: Message: 
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0x1081223
+	0x1081264
+	0xe6e6dd
+	0xeb93a5
+	0xeb977b
+	0xf00382
+	0xedb534
+	0xefdb13
+	0xedb2e6
+	0xead321
+	0xeae1d4
+	0x12d5264
+	0x12d081b
+	0x12ed0fa
+	0x109b128
+	0x10a312d
+	0x1089528
+	0x10896e9
+	0x1073a78
+	0x76385d49
+	0x76f0d5db
+	0x76f0d561
+
+2025-12-16 18:46:20,036 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_184619.png
+2025-12-16 18:46:20,037 - conftest - INFO - Closing WebDriver
+2025-12-16 18:46:24,004 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:46:24,004 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:46:25,583 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:46:25,633 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:46:25,686 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:46:25,687 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:46:27,340 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:46:27,341 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:46:30,284 - conftest - INFO - Already logged in
+2025-12-16 18:46:30,286 - test_02_employees - INFO - TC-105: Testing toggle employee status
+2025-12-16 18:46:30,287 - conftest - INFO - Navigating via menu: Recursos Humanos > Empleados
+2025-12-16 18:46:38,368 - conftest - ERROR - Menu navigation failed: ('Connection aborted.', ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None))
+2025-12-16 18:46:59,176 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002115DCD6E70>: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión')': /session/b87981e32d932f6e481f165014afe75a/screenshot
+2025-12-16 18:47:03,245 - urllib3.connectionpool - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002115DE2F570>: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión')': /session/b87981e32d932f6e481f165014afe75a/screenshot
+2025-12-16 18:47:07,308 - urllib3.connectionpool - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002115DE2F130>: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión')': /session/b87981e32d932f6e481f165014afe75a/screenshot
+2025-12-16 18:47:11,751 - test_03_payroll_processing - INFO - Setting up demo data
+2025-12-16 18:47:11,757 - test_03_payroll_processing - INFO - Demo data response: {"error": "Acceso no autorizado", "message": "Full authentication is required to access this resource"}
+2025-12-16 18:47:11,758 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:47:11,758 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:47:13,314 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:47:13,369 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:47:13,421 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:47:13,421 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:47:14,924 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:47:14,925 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:47:16,759 - conftest - INFO - Already logged in
+2025-12-16 18:47:16,761 - test_03_payroll_processing - INFO - TC-201: Navigating to Periods page
+2025-12-16 18:47:16,761 - conftest - INFO - Navigating via menu: Recursos Humanos > Periodos
+2025-12-16 18:47:40,998 - conftest - ERROR - Menu navigation failed: Message: 
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0x1081223
+	0x1081264
+	0xe6e6dd
+	0xeb93a5
+	0xeb977b
+	0xf00382
+	0xedb534
+	0xefdb13
+	0xedb2e6
+	0xead321
+	0xeae1d4
+	0x12d5264
+	0x12d081b
+	0x12ed0fa
+	0x109b128
+	0x10a312d
+	0x1089528
+	0x10896e9
+	0x1073a78
+	0x76385d49
+	0x76f0d5db
+	0x76f0d561
+
+2025-12-16 18:47:41,369 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_184741.png
+2025-12-16 18:47:41,370 - conftest - INFO - Closing WebDriver
+2025-12-16 18:47:43,762 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:47:43,763 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:47:45,523 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:47:45,578 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:47:45,633 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:47:45,634 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:47:47,290 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:47:47,291 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:47:50,706 - conftest - INFO - Already logged in
+2025-12-16 18:47:50,709 - test_03_payroll_processing - INFO - TC-202: Creating payroll period
+2025-12-16 18:47:50,709 - conftest - INFO - Navigating via menu: Recursos Humanos > Periodos
+2025-12-16 18:48:00,401 - conftest - ERROR - Menu navigation failed: ('Connection aborted.', ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None))
+2025-12-16 18:48:08,958 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002115DD67CE0>: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión')': /session/441c80b71f49e22d4553bf8a9a679abc/screenshot
+2025-12-16 18:48:13,018 - urllib3.connectionpool - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002115DE2E470>: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión')': /session/441c80b71f49e22d4553bf8a9a679abc/screenshot
+2025-12-16 18:48:17,045 - urllib3.connectionpool - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002115DE2F790>: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión')': /session/441c80b71f49e22d4553bf8a9a679abc/screenshot
+2025-12-16 18:48:21,536 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:48:21,538 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:48:23,180 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:48:23,241 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:48:23,297 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:48:23,298 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:48:24,853 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:48:24,854 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:48:26,721 - conftest - INFO - Already logged in
+2025-12-16 18:48:26,723 - test_03_payroll_processing - INFO - TC-203: Navigating to Process page
+2025-12-16 18:48:26,723 - conftest - INFO - Navigating via menu: Recursos Humanos > Procesar
+2025-12-16 18:48:37,255 - conftest - ERROR - Menu navigation failed: Message: 
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0x1081223
+	0x1081264
+	0xe6e6dd
+	0xeb93a5
+	0xeb977b
+	0xf00382
+	0xedb534
+	0xefdb13
+	0xedb2e6
+	0xead321
+	0xeae1d4
+	0x12d5264
+	0x12d081b
+	0x12ed0fa
+	0x109b128
+	0x10a312d
+	0x1089528
+	0x10896e9
+	0x1073a78
+	0x76385d49
+	0x76f0d5db
+	0x76f0d561
+
+2025-12-16 18:48:37,548 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_184837.png
+2025-12-16 18:48:37,551 - conftest - INFO - Closing WebDriver
+2025-12-16 18:48:41,723 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:48:41,724 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:48:43,424 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:48:43,478 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:48:43,542 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:48:43,542 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:48:45,105 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:48:45,106 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:48:48,061 - conftest - INFO - Already logged in
+2025-12-16 18:48:48,065 - test_03_payroll_processing - INFO - TC-204: Testing payroll calculation
+2025-12-16 18:48:48,066 - conftest - INFO - Navigating via menu: Recursos Humanos > Procesar
+2025-12-16 18:48:54,003 - conftest - ERROR - Menu navigation failed: ('Connection aborted.', ConnectionResetError(10054, 'Se ha forzado la interrupción de una conexión existente por el host remoto', None, 10054, None))
+2025-12-16 18:49:02,503 - urllib3.connectionpool - WARNING - Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002115DD67020>: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión')': /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot
+2025-12-16 18:49:06,570 - urllib3.connectionpool - WARNING - Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002115DD67F00>: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión')': /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot
+2025-12-16 18:49:10,637 - urllib3.connectionpool - WARNING - Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000002115DE3ABE0>: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión')': /session/e92df233b4e3b459034e56d22f8a8c8b/screenshot
+2025-12-16 18:49:15,251 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:49:15,252 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:49:16,865 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:49:16,921 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:49:16,971 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:49:16,971 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:49:18,316 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:49:18,316 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:49:20,902 - conftest - INFO - Already logged in
+2025-12-16 18:49:20,905 - test_03_payroll_processing - INFO - TC-205: Testing payroll approval
+2025-12-16 18:49:31,570 - test_03_payroll_processing - WARNING - TC-205: Could not approve (might not be in correct state): Message: 
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0x1081223
+	0x1081264
+	0xe6e6dd
+	0xeb93a5
+	0xeb977b
+	0xf00382
+	0xedb534
+	0xefdb13
+	0xedb2e6
+	0xead321
+	0xeae1d4
+	0x12d5264
+	0x12d081b
+	0x12ed0fa
+	0x109b128
+	0x10a312d
+	0x1089528
+	0x10896e9
+	0x1073a78
+	0x76385d49
+	0x76f0d5db
+	0x76f0d561
+
+2025-12-16 18:49:31,574 - conftest - INFO - Closing WebDriver
+2025-12-16 18:49:34,138 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:49:34,139 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:49:35,846 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:49:35,899 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:49:35,949 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:49:35,949 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:49:37,512 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:49:37,513 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:49:40,337 - conftest - INFO - Already logged in
+2025-12-16 18:49:40,339 - test_03_payroll_processing - INFO - TC-206: Testing payment registration
+2025-12-16 18:49:50,937 - test_03_payroll_processing - WARNING - TC-206: Could not register payment: Message: 
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0x1081223
+	0x1081264
+	0xe6e6dd
+	0xeb93a5
+	0xeb977b
+	0xf00382
+	0xedb534
+	0xefdb13
+	0xedb2e6
+	0xead321
+	0xeae1d4
+	0x12d5264
+	0x12d081b
+	0x12ed0fa
+	0x109b128
+	0x10a312d
+	0x1089528
+	0x10896e9
+	0x1073a78
+	0x76385d49
+	0x76f0d5db
+	0x76f0d561
+
+2025-12-16 18:49:50,940 - conftest - INFO - Closing WebDriver
+2025-12-16 18:49:53,244 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:49:53,244 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:49:55,194 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:50:03,372 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:50:03,419 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:50:03,420 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:50:04,941 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:50:04,942 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:50:07,245 - conftest - INFO - Already logged in
+2025-12-16 18:50:07,247 - test_03_payroll_processing - INFO - TC-207: Viewing receipts
+2025-12-16 18:50:07,248 - conftest - INFO - Navigating via menu: Recursos Humanos > Recibos
+2025-12-16 18:50:17,917 - conftest - ERROR - Menu navigation failed: Message: 
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0x1081223
+	0x1081264
+	0xe6e6dd
+	0xeb93a5
+	0xeb977b
+	0xf00382
+	0xedb534
+	0xefdb13
+	0xedb2e6
+	0xead321
+	0xeae1d4
+	0x12d5264
+	0x12d081b
+	0x12ed0fa
+	0x109b128
+	0x10a312d
+	0x1089528
+	0x10896e9
+	0x1073a78
+	0x76385d49
+	0x76f0d5db
+	0x76f0d561
+
+2025-12-16 18:50:18,163 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_185017.png
+2025-12-16 18:50:18,164 - conftest - INFO - Closing WebDriver

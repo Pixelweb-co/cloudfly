@@ -1,0 +1,114 @@
+2025-12-16 18:39:21,383 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:39:21,384 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:39:23,030 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:39:23,098 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:39:23,160 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:39:23,161 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:39:24,664 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:39:24,664 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:39:27,130 - conftest - INFO - Already logged in
+2025-12-16 18:39:27,133 - test_02_employees - INFO - TC-101: Navigating to Employees page
+2025-12-16 18:39:47,789 - test_02_employees - ERROR - Menu navigation failed: Message: 
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0x1081223
+	0x1081264
+	0xe6e6dd
+	0xeb93a5
+	0xeb977b
+	0xf00382
+	0xedb534
+	0xefdb13
+	0xedb2e6
+	0xead321
+	0xeae1d4
+	0x12d5264
+	0x12d081b
+	0x12ed0fa
+	0x109b128
+	0x10a312d
+	0x1089528
+	0x10896e9
+	0x1073a78
+	0x76385d49
+	0x76f0d5db
+	0x76f0d561
+
+2025-12-16 18:39:48,178 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_183947.png
+2025-12-16 18:39:48,179 - conftest - INFO - Closing WebDriver
+2025-12-16 18:39:50,445 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:39:50,446 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:39:52,498 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:39:52,563 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:39:52,625 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:39:52,625 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:39:54,083 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:39:54,083 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:39:56,326 - conftest - INFO - Already logged in
+2025-12-16 18:39:56,328 - test_02_employees - INFO - TC-102: Verifying employee list
+2025-12-16 18:40:17,312 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_184017.png
+2025-12-16 18:40:17,312 - conftest - INFO - Closing WebDriver
+2025-12-16 18:40:19,699 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:40:19,700 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:40:21,719 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:40:21,767 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:40:21,831 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:40:21,832 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:40:23,179 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:40:23,179 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:40:25,603 - conftest - INFO - Already logged in
+2025-12-16 18:40:25,606 - test_02_employees - INFO - TC-103: Opening create employee dialog
+2025-12-16 18:40:36,206 - test_02_employees - WARNING - Could not click menu item directly
+2025-12-16 18:40:56,027 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_184055.png
+2025-12-16 18:40:56,027 - conftest - INFO - Closing WebDriver
+2025-12-16 18:40:58,395 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:40:58,396 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:41:00,254 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:41:00,306 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:41:00,358 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:41:00,359 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:41:02,430 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:41:02,431 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:41:05,088 - conftest - INFO - Already logged in
+2025-12-16 18:41:05,091 - test_02_employees - INFO - TC-104: Creating new employee
+2025-12-16 18:41:15,618 - test_02_employees - WARNING - Could not click menu item directly
+2025-12-16 18:41:30,596 - conftest - ERROR - Test failed. Screenshot saved to: C:\apps\cloudfly\tests\logs\failure_20251216_184130.png
+2025-12-16 18:41:30,596 - conftest - INFO - Closing WebDriver
+2025-12-16 18:41:32,906 - conftest - INFO - Initializing WebDriver
+2025-12-16 18:41:32,907 - WDM - INFO - ====== WebDriver manager ======
+2025-12-16 18:41:34,593 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:41:34,638 - WDM - INFO - Get LATEST chromedriver version for google-chrome
+2025-12-16 18:41:34,686 - WDM - INFO - Driver [C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32/THIRD_PARTY_NOTICES.chromedriver] found in cache
+2025-12-16 18:41:34,686 - conftest - INFO - Using ChromeDriver at: C:\Users\Edwin\.wdm\drivers\chromedriver\win64\143.0.7499.146\chromedriver-win32\chromedriver.exe
+2025-12-16 18:41:36,914 - conftest - INFO - WebDriver initialized successfully
+2025-12-16 18:41:36,915 - conftest - INFO - Navigating to login page: http://localhost:3000
+2025-12-16 18:41:40,430 - conftest - INFO - Already logged in
+2025-12-16 18:41:40,433 - test_02_employees - INFO - TC-105: Testing toggle employee status
+2025-12-16 18:42:04,856 - test_02_employees - WARNING - TC-105: Could not test toggle (might not have employees): Message: no such element: Unable to locate element: {"method":"css selector","selector":"[data-testid="ToggleOnIcon"], [data-testid="ToggleOffIcon"]"}
+  (Session info: chrome=143.0.7499.42); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#no-such-element-exception
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0x1081223
+	0x1081264
+	0xe6e6dd
+	0xeb93a5
+	0xeb977b
+	0xf00382
+	0xedb534
+	0xefdb13
+	0xedb2e6
+	0xead321
+	0xeae1d4
+	0x12d5264
+	0x12d081b
+	0x12ed0fa
+	0x109b128
+	0x10a312d
+	0x1089528
+	0x10896e9
+	0x1073a78
+	0x76385d49
+	0x76f0d5db
+	0x76f0d561
+
+2025-12-16 18:42:04,858 - conftest - INFO - Closing WebDriver

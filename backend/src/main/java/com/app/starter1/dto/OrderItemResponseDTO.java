@@ -22,4 +22,5 @@ public class OrderItemResponseDTO {
     private Integer quantity;
     private BigDecimal discount;
     private BigDecimal subtotal;
+    private BigDecimal total;
 }

@@ -1,17 +1,10 @@
-import dotenv  from 'dotenv';
+import dotenv from 'dotenv';
 // Third-party Imports
 import CredentialProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
-import { PrismaAdapter } from '@auth/prisma-adapter'
-import { PrismaClient } from '@prisma/client'
 import type { NextAuthOptions } from 'next-auth'
-import type { Adapter } from 'next-auth/adapters'
-
-
-const prisma = new PrismaClient()
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as Adapter,
 
   // ** Configure one or more authentication providers
   // ** Please refer to https://next-auth.js.org/configuration/options#providers for more `providers` options
@@ -101,28 +94,27 @@ export const authOptions: NextAuthOptions = {
 
   // ** Please refer to https://next-auth.js.org/configuration/options#callbacks for more `callbacks` options
   callbacks: {
-    /*
-     * While using `jwt` as a strategy, `jwt()` callback will be called before
-     * the `session()` callback. So we have to add custom parameters in `token`
-     * via `jwt()` callback to make them accessible in the `session()` callback
-     */
     async jwt({ token, user }) {
       if (user) {
-        /*
-         * For adding custom parameters to user in session, we first need to add those parameters
-         * in token which then will be available in the `session()` callback
-         */
-        token.name = user.name
+        // When user signs in, user object maps to the return value of authorize callback
+        const u = user as any
+        token.accessToken = u.token || u.accessToken
+        token.id = u.id
+        token.role = u.role
+        token.name = u.fullName || u.name
+        token.userCapabilities = u.userCapabilities
       }
-
       return token
     },
     async session({ session, token }) {
       if (session.user) {
-        // ** Add custom params to user in session which are added in `jwt()` callback via `token` parameter
-        session.user.name = token.name
+        // Pass properties from token to session
+        ; (session as any).accessToken = token.accessToken
+          ; (session as any).user.id = token.id
+          ; (session as any).user.role = token.role
+          ; (session as any).user.name = token.name
+          ; (session as any).user.userCapabilities = token.userCapabilities
       }
-
       return session
     }
   }

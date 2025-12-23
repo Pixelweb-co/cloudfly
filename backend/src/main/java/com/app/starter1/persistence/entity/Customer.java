@@ -28,29 +28,48 @@ public class Customer {
     @Column(name = "identificacion_cliente", unique = false, nullable = true)
     private String nit;
 
-    @Column(name = "telefono_cliente", nullable = true)  // Hacerlo opcional
+    @Column(name = "telefono_cliente", nullable = true) // Hacerlo opcional
     private String phone;
 
-    @Column(name = "email_cliente", nullable = true)  // Hacerlo opcional
+    @Column(name = "email_cliente", nullable = true) // Hacerlo opcional
     private String email;
 
-    @Column(name = "direccion_cliente", nullable = true)  // Hacerlo opcional
+    @Column(name = "direccion_cliente", nullable = true) // Hacerlo opcional
     private String address;
 
-    @Column(name = "contacto_cliente", nullable = true)  // Hacerlo opcional
+    @Column(name = "contacto_cliente", nullable = true) // Hacerlo opcional
     private String contact;
 
-    @Column(name = "cargo_cliente", nullable = true)  // Hacerlo opcional
+    @Column(name = "cargo_cliente", nullable = true) // Hacerlo opcional
     private String position;
 
-    @Column(name = "tipo_entidad", nullable = true)  // Hacerlo opcional
+    @Column(name = "tipo_entidad", nullable = true) // Hacerlo opcional
     private String type;
 
     @Column(name = "status_cliente", nullable = true)
     private Boolean status;
 
+    @Column(name = "logo_url")
+    private String logoUrl;
+
     @Column(name = "date_added", nullable = true)
     private LocalDate dateRegister;
+
+    // === TIPO DE NEGOCIO Y DESCRIPCIÓN ===
+
+    /**
+     * Tipo de negocio del cliente
+     * Determina el modelo de operación: VENTAS, AGENDAMIENTO, SUSCRIPCION, MIXTO
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "business_type", length = 30)
+    private BusinessType businessType;
+
+    /**
+     * Descripción detallada del negocio / objeto social
+     */
+    @Column(name = "business_description", columnDefinition = "TEXT")
+    private String businessDescription;
 
     @PrePersist
     public void prePersist() {
@@ -59,6 +78,11 @@ public class Customer {
         }
     }
 
-
-
+    // Enum para tipo de negocio
+    public enum BusinessType {
+        VENTAS, // Venta de productos físicos o digitales
+        AGENDAMIENTO, // Servicios con citas o reservas
+        SUSCRIPCION, // Modelo de suscripción recurrente
+        MIXTO // Combinación de varios tipos
+    }
 }

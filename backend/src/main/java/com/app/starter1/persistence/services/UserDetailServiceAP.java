@@ -153,7 +153,7 @@ public class UserDetailServiceAP implements UserDetailsService {
                 // registrar roles en lista de autorizacion sprng security
                 userEntity.getRoles().forEach(
                                 role -> autorityList.add(
-                                                new SimpleGrantedAuthority("ROLE_".concat(role.getRoleEnum().name()))));
+                                                new SimpleGrantedAuthority("ROLE_".concat(role.getRoleEnum()))));
 
                 userEntity.getRoles().stream().flatMap(role -> role.getPermissionList().stream())
                                 .forEach(permission -> autorityList
@@ -232,7 +232,7 @@ public class UserDetailServiceAP implements UserDetailsService {
                         throw new IllegalArgumentException("The email '" + email + "' is already in use.");
                 }
 
-                Set<RoleEntity> roleEntityList = roleRepository.findRoleEntitiesByRoleEnumIn(rolesRequest).stream()
+                Set<RoleEntity> roleEntityList = roleRepository.findRoleEntitiesByRoleIn(rolesRequest).stream()
                                 .collect(Collectors.toSet());
 
                 if (roleEntityList.isEmpty()) {
@@ -282,7 +282,7 @@ public class UserDetailServiceAP implements UserDetailsService {
                 // Roles
                 userCreated.getRoles().forEach(
                                 role -> authorityList.add(
-                                                new SimpleGrantedAuthority("ROLE_".concat(role.getRoleEnum().name()))));
+                                                new SimpleGrantedAuthority("ROLE_".concat(role.getRoleEnum()))));
 
                 // Permisos
                 userCreated.getRoles()

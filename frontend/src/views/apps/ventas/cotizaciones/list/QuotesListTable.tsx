@@ -197,6 +197,11 @@ const QuotesListTable = ({ reload, tableData }: any) => {
                 header: 'Acciones',
                 cell: ({ row }) => (
                     <div className='flex items-center'>
+                        <Tooltip title='Convertir a Pedido'>
+                            <IconButton onClick={() => router.push(`/ventas/pedidos/form?quoteId=${row.original.id}`)}>
+                                <i className='tabler-shopping-cart-plus text-textSecondary' />
+                            </IconButton>
+                        </Tooltip>
                         <Tooltip title='Editar'>
                             <IconButton onClick={() => router.push(`/ventas/cotizaciones/form/${row.original.id}`)}>
                                 <i className='tabler-edit text-textSecondary' />
