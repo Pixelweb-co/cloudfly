@@ -36,7 +36,7 @@ public class Subscription {
 
     // Usuario que creó/gestiona la suscripción (opcional)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = true)
     private UserEntity user;
 
     // ==================== PERIODO Y FACTURACIÓN ====================
