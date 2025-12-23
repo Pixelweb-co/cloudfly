@@ -495,19 +495,19 @@ export default function ReceiptsPage() {
                                                     <TableCell>Sueldo Básico</TableCell>
                                                     <TableCell align="right">{formatCurrency(selectedReceipt.devengos?.salario || 0)}</TableCell>
                                                 </TableRow>
-                                                {selectedReceipt.earnings?.transportAid > 0 && (
+                                                {selectedReceipt.devengos?.auxilioTransporte > 0 && (
                                                     <TableRow>
                                                         <TableCell>Auxilio de Transporte</TableCell>
                                                         <TableCell align="right">{formatCurrency(selectedReceipt.devengos.auxilioTransporte)}</TableCell>
                                                     </TableRow>
                                                 )}
-                                                {selectedReceipt.earnings?.overtime > 0 && (
+                                                {selectedReceipt.devengos?.horasExtras > 0 && (
                                                     <TableRow>
                                                         <TableCell>Horas Extras y Recargos</TableCell>
                                                         <TableCell align="right">{formatCurrency(selectedReceipt.devengos.horasExtras)}</TableCell>
                                                     </TableRow>
                                                 )}
-                                                {selectedReceipt.earnings?.bonuses > 0 && (
+                                                {selectedReceipt.devengos?.bonos > 0 && (
                                                     <TableRow>
                                                         <TableCell>Bonificaciones</TableCell>
                                                         <TableCell align="right">{formatCurrency(selectedReceipt.devengos.bonos)}</TableCell>
