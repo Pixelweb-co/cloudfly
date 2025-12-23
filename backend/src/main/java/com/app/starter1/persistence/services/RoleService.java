@@ -5,6 +5,8 @@ import com.app.starter1.dto.rbac.RoleFormDTO;
 import com.app.starter1.dto.rbac.RoleModulePermissionsDTO;
 import com.app.starter1.persistence.entity.rbac.*;
 import com.app.starter1.persistence.repository.rbac.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,9 @@ public class RoleService {
     private final RbacModuleRepository moduleRepository;
     private final ModuleActionRepository actionRepository;
     private final RolePermissionRepository permissionRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public List<Role> getAllRoles() {
         return roleRepository.findAll();
@@ -90,6 +95,11 @@ public class RoleService {
             // Ojo: orphanRemoval=true en la entidad debería manejar esto si limpiamos la
             // colección
             role.getPermissions().clear();
+
+            // CRITICAL: Flush to ensure deletions are committed to DB before new inserts
+            // This prevents duplicate key violations on the unique constraint (role_id,
+            // module_action_id)
+            entityManager.flush();
         } else {
             role = new Role();
             role.setCode(formDTO.getName().toUpperCase().replace(" ", "_")); // Generar código simple

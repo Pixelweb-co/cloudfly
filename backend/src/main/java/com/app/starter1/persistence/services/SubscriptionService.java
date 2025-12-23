@@ -5,6 +5,7 @@ import com.app.starter1.persistence.entity.*;
 import com.app.starter1.persistence.entity.rbac.RbacModule;
 import com.app.starter1.persistence.repository.*;
 import com.app.starter1.persistence.repository.rbac.RbacModuleRepository;
+import com.app.starter1.utils.UserMethods;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ public class SubscriptionService {
         private final PlanRepository planRepository;
         private final CustomerRepository customerRepository;
         private final RbacModuleRepository rbacModuleRepository;
+        private final UserMethods userMethods;
 
         /**
          * Crea una suscripción para un tenant basada en un plan
@@ -28,6 +30,14 @@ public class SubscriptionService {
          */
         @Transactional
         public SubscriptionResponse createSubscriptionFromPlan(SubscriptionCreateRequest request) {
+                // Obtener usuario autenticado (opcional para auditoría)
+                UserEntity currentUser = null;
+                try {
+                        currentUser = userMethods.getCurrentUser();
+                } catch (IllegalStateException e) {
+                        // No hay usuario autenticado, continuar sin usuario
+                }
+
                 // Validar Plan
                 Plan plan = planRepository.findById(request.planId())
                                 .orElseThrow(() -> new RuntimeException(
@@ -65,6 +75,7 @@ public class SubscriptionService {
                 Subscription subscription = Subscription.builder()
                                 .plan(plan)
                                 .customer(customer)
+                                .user(currentUser) // Opcional: puede ser null
                                 .billingCycle(billingCycle)
                                 .startDate(startDate)
                                 .endDate(endDate)
