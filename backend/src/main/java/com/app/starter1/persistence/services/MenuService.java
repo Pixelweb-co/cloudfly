@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -35,95 +36,141 @@ public class MenuService {
     /**
      * Obtiene el menú del sistema filtrado por Suscripción (Tenant) y Permisos
      * (Rol)
+     * 
+     * Flujo:
+     * - MANAGER: Ve TODOS los módulos sin restricciones (no requiere suscripción)
+     * - Otros roles (SUPERADMIN, ADMIN, etc.):
+     * 1. Obtener la suscripción del customer al que pertenece el usuario
+     * 2. Obtener los módulos asociados a la suscripción
+     * 3. Filtrar los módulos de la suscripción si el rol tiene acceso a ellos
+     * 4. Devolver en formato MenuItemDTO para renderizar en el frontend
      */
+    @Transactional(readOnly = true)
     public List<MenuItemDTO> getMenuData() {
         // 1. Obtener usuario autenticado
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         UserEntity user = userRepository.findByUsername(username).orElse(null);
 
-        // Si no hay usuario, devolver lista vacía o menú público (aquí asumimos auth)
         if (user == null) {
             log.warn("Usuario no encontrado para generar menú: {}", username);
             return new ArrayList<>();
         }
 
-        // 2. Obtener Roles RBAC del usuario (mapeo legacy -> nuevo por ID)
+        // 2. Obtener Roles RBAC del usuario (necesarios para filtrado posterior)
         List<Long> roleIds = user.getRoles().stream().map(RoleEntity::getId).collect(Collectors.toList());
         List<Role> userRoles = rbacRoleRepository.findAllById(roleIds);
 
-        boolean isSuperAdmin = userRoles.stream()
-                .anyMatch(r -> "SUPERADMIN".equals(r.getCode()) || "ADMIN".equals(r.getCode())
-                        || "MANAGER".equals(r.getCode())); // Admin y Manager también ven
-        // todo por
-        // compatibilidad si se
-        // desea
+        // Identificar si es un rol de SISTEMA (MANAGER, SUPERADMIN) con acceso total
+        // multi-tenant
+        // ADMIN es un rol de TENANT controlado por permisos en base de datos
+        boolean isSystemRole = userRoles.stream()
+                .anyMatch(r -> "MANAGER".equals(r.getCode()) ||
+                        "SUPERADMIN".equals(r.getCode()));
 
-        // 3. Obtener Módulos permitidos por Suscripción (si aplica)
-        Set<Long> subscriptionModuleIds = new HashSet<>();
-        boolean checkSubscription = false;
+        // ============================================================
+        // MANAGER/SUPERADMIN: Acceso total a todos los módulos (roles de sistema
+        // multi-tenant)
+        // ============================================================
+        if (isSystemRole) {
+            log.info("Usuario {} tiene rol de SISTEMA - Acceso total multi-tenant", username);
 
-        if (!isSuperAdmin && user.getCustomer() != null) {
-            checkSubscription = true;
-            // Buscar suscripción activa con módulos (fetch eager idealmente, o
-            // transaccional)
-            Optional<Subscription> sub = subscriptionRepository
-                    .findActiveTenantSubscriptionWithModules(user.getCustomer().getId());
+            List<RbacModule> allModules = moduleRepository.findAllByIsActiveTrueOrderByDisplayOrder();
+            List<MenuItemDTO> menuItems = new ArrayList<>();
 
-            if (sub.isPresent()) {
-                // Prioridad: Módulos custom en suscripción
-                Set<RbacModule> customModules = sub.get().getModules();
-                if (customModules != null && !customModules.isEmpty()) {
-                    subscriptionModuleIds
-                            .addAll(customModules.stream().map(RbacModule::getId).collect(Collectors.toSet()));
-                } else {
-                    // Fallback: Módulos del Plan
-                    Set<RbacModule> planModules = sub.get().getPlan().getModules();
-                    if (planModules != null) {
-                        subscriptionModuleIds
-                                .addAll(planModules.stream().map(RbacModule::getId).collect(Collectors.toSet()));
-                    }
-                }
-            } else {
-                // Si no tiene suscripción activa, ¿ve algo?
-                // Asumamos que no ve módulos premium, lista vacía.
-                // Pero dejaremos pasar módulos marcados como "is_free" o "core" si tuviéramos
-                // flag.
-                log.info("Usuario {} de tenant {} no tiene suscripción activa.", username, user.getCustomer().getId());
-            }
-        }
-
-        // 4. Filtrar y construir menú
-        List<RbacModule> allModules = moduleRepository.findAllByIsActiveTrueOrderByDisplayOrder();
-        List<MenuItemDTO> menuItems = new ArrayList<>();
-
-        for (RbacModule module : allModules) {
-            // A. Filtro Suscripción
-            if (checkSubscription && !subscriptionModuleIds.contains(module.getId())) {
-                continue;
-            }
-
-            // B. Filtro Rol (Acceso al Módulo Padre)
-            boolean hasAccess = isSuperAdmin;
-            if (!hasAccess) {
-                // Verificar permiso ACCESS general
-                hasAccess = userRoles.stream().anyMatch(role -> role.hasPermission(module.getCode(), "ACCESS"));
-            }
-
-            if (hasAccess) {
-                MenuItemDTO menuItem = convertToMenuItemDTO(module, userRoles, isSuperAdmin);
-                // Si el módulo quedó sin hijos (porque se filtraron todos) y tenía hijos
-                // originalmente, ¿lo mostramos?
-                // Depende de si tiene enlace propio.
+            for (RbacModule module : allModules) {
+                MenuItemDTO menuItem = convertToMenuItemDTO(module, userRoles, true); // true = ver todos los sub-items
                 if (menuItem != null) {
                     menuItems.add(menuItem);
                 }
             }
+
+            log.info("Rol de sistema {} generó menú con {} items (todos los módulos activos)",
+                    username, menuItems.size());
+            return menuItems;
         }
+
+        // ============================================================
+        // Otros Roles (SUPERADMIN, ADMIN, etc.): Filtro de suscripción
+        // ============================================================
+
+        // 3. PASO 1: Obtener suscripción del customer (OBLIGATORIO para no-MANAGER)
+        if (user.getCustomer() == null) {
+            log.warn("Usuario {} no tiene customer asociado. No se puede generar menú.", username);
+            return new ArrayList<>();
+        }
+
+        Optional<Subscription> subscriptionOpt = subscriptionRepository
+                .findActiveTenantSubscriptionWithModules(user.getCustomer().getId());
+
+        if (!subscriptionOpt.isPresent()) {
+            log.info("Customer {} no tiene suscripción activa. Usuario {} no verá módulos.",
+                    user.getCustomer().getId(), username);
+            return new ArrayList<>();
+        }
+
+        Subscription subscription = subscriptionOpt.get();
+
+        // 4. PASO 2: Obtener módulos asociados a la suscripción
+        Set<Long> subscriptionModuleIds = new HashSet<>();
+        Set<RbacModule> customModules = subscription.getModules();
+
+        if (customModules != null && !customModules.isEmpty()) {
+            // Prioridad: Módulos custom configurados en la suscripción
+            subscriptionModuleIds.addAll(customModules.stream()
+                    .map(RbacModule::getId)
+                    .collect(Collectors.toSet()));
+            log.debug("Usuario {} tiene {} módulos custom en suscripción", username, customModules.size());
+        } else {
+            // Fallback: Módulos del Plan asociado a la suscripción
+            Set<RbacModule> planModules = subscription.getPlan().getModules();
+            if (planModules != null && !planModules.isEmpty()) {
+                subscriptionModuleIds.addAll(planModules.stream()
+                        .map(RbacModule::getId)
+                        .collect(Collectors.toSet()));
+                log.debug("Usuario {} tiene {} módulos del plan", username, planModules.size());
+            } else {
+                log.warn("Suscripción {} no tiene módulos configurados ni en custom ni en plan",
+                        subscription.getId());
+                return new ArrayList<>();
+            }
+        }
+
+        // 5. PASO 3: Filtrar módulos por suscripción Y por permisos del rol
+        List<RbacModule> allModules = moduleRepository.findAllByIsActiveTrueOrderByDisplayOrder();
+        List<MenuItemDTO> menuItems = new ArrayList<>();
+
+        for (RbacModule module : allModules) {
+            // Filtro 1: El módulo DEBE estar en la suscripción
+            if (!subscriptionModuleIds.contains(module.getId())) {
+                log.trace("Módulo {} no está en suscripción de usuario {}", module.getCode(), username);
+                continue;
+            }
+
+            // Filtro 2: El rol del usuario DEBE tener permiso ACCESS al módulo
+            boolean hasAccess = userRoles.stream()
+                    .anyMatch(role -> role.hasPermission(module.getCode(), "ACCESS"));
+
+            if (!hasAccess) {
+                log.trace("Usuario {} no tiene permiso ACCESS al módulo {}", username, module.getCode());
+                continue;
+            }
+
+            // Convertir el módulo a MenuItemDTO (con filtrado de sub-items)
+            MenuItemDTO menuItem = convertToMenuItemDTO(module, userRoles, false); // false = filtrar sub-items por
+                                                                                   // permisos
+
+            if (menuItem != null) {
+                menuItems.add(menuItem);
+            }
+        }
+
+        log.info("Usuario {} generó menú con {} items (de {} módulos en suscripción)",
+                username, menuItems.size(), subscriptionModuleIds.size());
 
         return menuItems;
     }
 
-    private MenuItemDTO convertToMenuItemDTO(RbacModule module, List<Role> userRoles, boolean isSuperAdmin) {
+    private MenuItemDTO convertToMenuItemDTO(RbacModule module, List<Role> userRoles, boolean showAllSubItems) {
         try {
             MenuItemDTO menuItem = MenuItemDTO.builder()
                     .label(module.getName())
@@ -142,36 +189,40 @@ public class MenuService {
                 for (Map<String, Object> childData : childrenData) {
                     String label = (String) childData.get("label");
 
-                    // Verificar acceso al subitem
-                    boolean hasChildAccess = isSuperAdmin;
+                    // Si showAllSubItems es true (MANAGER), mostrar todos los sub-items sin filtrar
+                    // Si es false, verificar permisos explícitos
+                    boolean hasChildAccess = showAllSubItems;
+
                     if (!hasChildAccess) {
+                        // Verificar acceso al subitem - usuarios normales necesitan permiso explícito
                         String actionCode = "ACCESS_" + normalizeLabel(label);
                         hasChildAccess = userRoles.stream()
                                 .anyMatch(role -> role.hasPermission(module.getCode(), actionCode));
 
-                        // Fallback opcional: Si el usuario tiene acceso TOTAL al módulo y no
-                        // granularidad específica...
-                        // Pero aquí aplicamos granularidad estricta si la acción existe.
-                    }
-
-                    if (hasChildAccess) {
-                        MenuItemDTO child = MenuItemDTO.builder()
-                                .label(label)
-                                .href((String) childData.get("href"))
-                                .icon((String) childData.get("icon"))
-                                .build();
-
-                        if (childData.containsKey("suffix")) {
-                            @SuppressWarnings("unchecked")
-                            Map<String, String> suffixData = (Map<String, String>) childData.get("suffix");
-                            MenuSuffixDTO suffix = MenuSuffixDTO.builder()
-                                    .label(suffixData.get("label"))
-                                    .color(suffixData.get("color"))
-                                    .build();
-                            child.setSuffix(suffix);
+                        if (!hasChildAccess) {
+                            log.trace("Usuario no tiene permiso {} para sub-item '{}' del módulo {}",
+                                    actionCode, label, module.getCode());
+                            continue;
                         }
-                        children.add(child);
                     }
+
+                    // Usuario tiene acceso al sub-item
+                    MenuItemDTO child = MenuItemDTO.builder()
+                            .label(label)
+                            .href((String) childData.get("href"))
+                            .icon((String) childData.get("icon"))
+                            .build();
+
+                    if (childData.containsKey("suffix")) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, String> suffixData = (Map<String, String>) childData.get("suffix");
+                        MenuSuffixDTO suffix = MenuSuffixDTO.builder()
+                                .label(suffixData.get("label"))
+                                .color(suffixData.get("color"))
+                                .build();
+                        child.setSuffix(suffix);
+                    }
+                    children.add(child);
                 }
                 menuItem.setChildren(children);
             }

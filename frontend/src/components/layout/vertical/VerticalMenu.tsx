@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 
 // MUI Imports
 import { useTheme } from '@mui/material/styles'
@@ -57,12 +57,59 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
   const verticalNavOptions = useVerticalNav()
   const { isBreakpointReached, transitionDuration } = verticalNavOptions
 
-  // State for dynamic menu
+  // Extract roles from JWT token once and memoize to prevent hydration issues
+  const { userRole: initialUserRole, userRoles: initialUserRoles } = useMemo(() => {
+    try {
+      const token = typeof window !== 'undefined'
+        ? (localStorage.getItem('accessToken') || localStorage.getItem('AuthToken'))
+        : null
+
+      if (!token) return { userRole: null, userRoles: [] }
+
+      const decoded: any = jwtDecode(token)
+
+      // Extract role/authorities from various potential claims
+      const rawClaims = decoded.role || decoded.roles || decoded.authorities
+
+      let roles: string[] = []
+
+      if (Array.isArray(rawClaims)) {
+        roles = rawClaims
+      } else if (typeof rawClaims === 'string') {
+        // Handle comma-separated string (e.g. "DELETE,READ,ROLE_SUPERADMIN,WRITE")
+        roles = rawClaims.split(',')
+      }
+
+      // Clean roles (remove whitespace, uppercase)
+      roles = roles.map(r => r.trim().toUpperCase())
+
+      // Find the specific role we care about for hardcoded logic
+      const hasSuperAdmin = roles.some(r => r.includes('SUPERADMIN'))
+      const hasManager = roles.some(r => r.includes('MANAGER'))
+      const hasAdmin = roles.some(r => r.includes('ADMIN') && !r.includes('SUPERADMIN'))
+
+      let userRole: string | null = null
+      if (hasSuperAdmin) {
+        userRole = 'SUPERADMIN'
+      } else if (hasManager) {
+        userRole = 'MANAGER'
+      } else if (hasAdmin) {
+        userRole = 'ADMIN'
+      }
+
+      return { userRole, userRoles: roles }
+    } catch (e) {
+      console.error('Failed to decode token:', e)
+      return { userRole: null, userRoles: [] }
+    }
+  }, []) // Empty deps means this runs once on mount
+
+  // State for dynamic menu - initialize roles synchronously to prevent hydration mismatches
   const [menuData, setMenuData] = useState<MenuItemData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [userRole, setUserRole] = useState<string | null>(null)
-  const [userRoles, setUserRoles] = useState<string[]>([])
+  const [userRole, setUserRole] = useState<string | null>(initialUserRole)
+  const [userRoles, setUserRoles] = useState<string[]>(initialUserRoles)
 
   // Fetch menu from backend
   useEffect(() => {
@@ -70,48 +117,13 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
       try {
         setIsLoading(true)
         setError(null)
+
         // Get token from localStorage
-        // Try multiple keys for token
         const token = typeof window !== 'undefined'
           ? (localStorage.getItem('accessToken') || localStorage.getItem('AuthToken'))
           : null
 
         if (token) {
-          try {
-            const decoded: any = jwtDecode(token)
-
-            // Extract role/authorities from various potential claims
-            const rawClaims = decoded.role || decoded.roles || decoded.authorities
-
-            let roles: string[] = []
-
-            if (Array.isArray(rawClaims)) {
-              roles = rawClaims
-            } else if (typeof rawClaims === 'string') {
-              // Handle comma-separated string (e.g. "DELETE,READ,ROLE_SUPERADMIN,WRITE")
-              roles = rawClaims.split(',')
-            }
-
-            // Clean roles (remove whitespace, uppercase)
-            roles = roles.map(r => r.trim().toUpperCase())
-            setUserRoles(roles)
-
-            // Find the specific role we care about for hardcoded logic
-            const hasSuperAdmin = roles.some(r => r.includes('SUPERADMIN'))
-            const hasManager = roles.some(r => r.includes('MANAGER'))
-            const hasAdmin = roles.some(r => r.includes('ADMIN') && !r.includes('SUPERADMIN'))
-
-            if (hasSuperAdmin) {
-              setUserRole('SUPERADMIN')
-            } else if (hasManager) {
-              setUserRole('MANAGER')
-            } else if (hasAdmin) {
-              setUserRole('ADMIN')
-            }
-          } catch (e) {
-            console.error('Failed to decode token:', e)
-          }
-
           // Fetch menu from new endpoint /api/menu
           const menu = await menuService.getMenu()
           setMenuData(menu)
@@ -228,7 +240,7 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
         {/* Hardcoded item for SUPERADMIN or MANAGER */}
         {(userRole === 'SUPERADMIN' || userRole === 'MANAGER') && (
           <>
-            <MenuItem href='/clientes' icon={<i className='tabler-credit-card' />}>
+            <MenuItem href='/administracion/clientes/list' icon={<i className='tabler-credit-card' />}>
               Clientes
             </MenuItem>
 
