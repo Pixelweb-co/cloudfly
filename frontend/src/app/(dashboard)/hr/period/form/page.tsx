@@ -368,8 +368,14 @@ export default function PeriodFormPage() {
         setError(null)
 
         try {
-            const periodData = {
-                ...formData,
+            const periodData: Partial<PayrollPeriod> = {
+                periodType: formData.periodType as 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY',
+                periodNumber: formData.periodNumber,
+                year: formData.year,
+                startDate: formData.startDate,
+                endDate: formData.endDate,
+                paymentDate: formData.paymentDate,
+                description: formData.description,
                 employeeIds: includedEmployees.map(e => e.id),
                 status: 'OPEN'
             }
