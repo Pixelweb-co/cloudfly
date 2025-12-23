@@ -49,9 +49,11 @@ export const getCostCenterById = async (id: number): Promise<CostCenter> => {
     return response.data
 }
 
-export default {
+const payrollReportService = {
     getPayrollCostsByCostCenter,
     getPayrollCostsByCostCenterForYear,
     getCostCenters,
     getCostCenterById
 }
+
+export default payrollReportService
