@@ -1,7 +1,5 @@
 // types/apps/contabilidadTypes.ts
 
-import { ChartOfAccount } from './chartOfAccountTypes'
-
 // ============== ENUMS ==============
 
 export enum VoucherType {
