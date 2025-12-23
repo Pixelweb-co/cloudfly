@@ -377,7 +377,7 @@ export default function PeriodFormPage() {
                 paymentDate: formData.paymentDate,
                 description: formData.description,
                 employeeIds: includedEmployees.map(e => e.id),
-                status: 'OPEN'
+                status: 'OPEN' as const
             }
 
             if (isEditMode && periodId) {
