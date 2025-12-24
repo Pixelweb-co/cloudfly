@@ -119,7 +119,7 @@ public class UserDetailServiceAP implements UserDetailsService {
                                         + userEntity.getVerificationToken();
 
                         String to = userEntity.getEmail();
-                        String subject = "Ahora eres parte de CloudFly, " + request.getUsername();
+                        String subject = "✨ Bienvenido a CloudFly Marketing AI Pro";
                         String body = activationLink;
                         String type = "register";
 
@@ -263,10 +263,11 @@ public class UserDetailServiceAP implements UserDetailsService {
                 // emailService.sendEmail(userEntity.getEmail(), "Email Verification", "Click
                 // the link to verify your email: " + confirmationUrl);
 
-                String activationLink = "http://equibiomedic.co:3000/verificate/" + userEntity.getVerificationToken();
+                String activationLink = "https://dashboard.cloudfly.com.co/verificate/"
+                                + userEntity.getVerificationToken();
 
                 String to = userEntity.getEmail();
-                String subject = "Registro exitoso! " + "Bienvenido a GM2, " + nombres + ' ' + apellidos;
+                String subject = "✨ Bienvenido a CloudFly Marketing AI Pro";
                 String body = activationLink;
                 String type = "register";
 
@@ -334,11 +335,11 @@ public class UserDetailServiceAP implements UserDetailsService {
                 userRepository.save(user);
 
                 // Lógica para enviar el correo con el token
-                String resetLink = "http://localhost:3000/reset-password/" + token;
+                String resetLink = "https://dashboard.cloudfly.com.co/reset-password/" + token;
                 // Enviar correo con el enlace
 
                 String to = user.getEmail();
-                String subject = "GM2 Recuperación de contraseña";
+                String subject = "🔐 Recuperación de Contraseña - CloudFly";
                 String body = resetLink;
                 String type = "recover-password";
                 String username = user.getUsername();

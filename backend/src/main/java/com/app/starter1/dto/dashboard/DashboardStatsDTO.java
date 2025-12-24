@@ -1,13 +1,41 @@
 package com.app.starter1.dto.dashboard;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class DashboardStatsDTO {
+    // Sales Module Fields
+    private Double totalRevenue;
+    private Double revenueChange;
+    private Integer totalOrders;
+    private Double ordersChange;
+    private Integer totalCustomers;
+    private Double customersChange;
+    private Integer totalProducts;
+    private Double productsChange;
+
+    // Accounting Module Fields
+    private Integer totalInvoices;
+    private Double invoicesChange;
+    private Integer pendingQuotes;
+    private Integer lowStockProducts;
+
+    // HR Module Fields
+    private Integer totalEmployees;
+    private Double employeesChange;
+    private Double totalPayroll;
+
+    // Communications Module Fields
+    private Integer activeConversations;
+    private Double messagesChange;
+
+    // Legacy structure (for backward compatibility)
     private SalesStats sales;
     private CustomersStats customers;
     private InventoryStats inventory;
