@@ -1,4 +1,4 @@
-import api from '@/utils/axiosInterceptor'
+import { axiosInstance as api } from '@/utils/axiosInstance'
 
 export interface PayrollNovelty {
     id?: number

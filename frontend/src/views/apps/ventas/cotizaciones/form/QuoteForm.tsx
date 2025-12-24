@@ -23,7 +23,7 @@ import {
 import CustomTextField from '@core/components/mui/TextField'
 import { toast } from 'react-hot-toast'
 import { Plus, Trash, Save, ArrowLeft, Search } from 'lucide-react'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import { userMethods } from '@/utils/userMethods'
 import { ProductService, ContactService } from '@/views/apps/pos/services/api'
 import { Contact } from '@/views/apps/pos/types'

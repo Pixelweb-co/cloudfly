@@ -144,13 +144,13 @@ const Login = ({ mode }: { mode: SystemMode }) => {
 
       const responseData = await res.json()
 
-      if (res.ok && responseData.accessToken) {
-        // Save token and user data
-        localStorage.setItem('accessToken', responseData.accessToken)
+      if (res.ok && responseData.jwt) {
+        // ESTANDARIZADO: Save token usando el mismo nombre que devuelve la API
+        localStorage.setItem('jwt', responseData.jwt)
         localStorage.setItem('userData', JSON.stringify(responseData))
 
         // Also set cookie if needed for some parts
-        document.cookie = `accessToken=${responseData.accessToken}; path=/`
+        document.cookie = `jwt=${responseData.jwt}; path=/`
 
         const redirectURL = searchParams.get('redirectTo') ?? '/'
         router.replace(getLocalizedUrl(redirectURL, locale as Locale))

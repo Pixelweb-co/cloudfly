@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 import TypeDeviceListTable from '../../../../../views/apps/typeDevice/list/TypeDeviceListTable'
 
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import TemplateVerificationListTable from '@/views/apps/templateVerification/list/TemplateVerificationListTable'
 
 const getTemplatesVerification = async () => {

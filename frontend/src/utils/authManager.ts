@@ -16,8 +16,9 @@ export const AuthManager = {
       })
 
       console.log(response.data)
-      localStorage.setItem('AuthToken', response.data.jwt)
-      localStorage.setItem('UserLogin', JSON.stringify(response.data.userEntity))
+      // ESTANDARIZADO: usar 'jwt'
+      localStorage.setItem('jwt', response.data.jwt)
+      localStorage.setItem('userData', JSON.stringify(response.data.userEntity))
 
       return response.data
     } catch (error) {
@@ -34,8 +35,9 @@ export const AuthManager = {
         }
       })
 
-      localStorage.setItem('AuthToken', response.data.jwt)
-      localStorage.setItem('UserLogin', JSON.stringify(response.data.userEntity))
+      // ESTANDARIZADO: usar 'jwt'
+      localStorage.setItem('jwt', response.data.jwt)
+      localStorage.setItem('userData', JSON.stringify(response.data.userEntity))
 
       return response.data
     } catch (error) {
@@ -91,8 +93,9 @@ export const AuthManager = {
 
   async logout() {
     try {
-      localStorage.removeItem('AuthToken')
-      localStorage.removeItem('UserLogin')
+      // ESTANDARIZADO: limpiar 'jwt'
+      localStorage.removeItem('jwt')
+      localStorage.removeItem('userData')
     } catch (error: any) {
       console.log(error)
     }
@@ -100,12 +103,13 @@ export const AuthManager = {
 
   async validateToken() {
     try {
-      const token = localStorage.getItem('AuthToken')
+      // ESTANDARIZADO: usar 'jwt'
+      const token = localStorage.getItem('jwt')
       if (!token) {
 
         console.error('Token no encontrado')
-        localStorage.removeItem('AuthToken')
-        localStorage.removeItem('UserLogin')
+        localStorage.removeItem('jwt')
+        localStorage.removeItem('userData')
         location.href = '/login'
         return false
       }
@@ -120,8 +124,8 @@ export const AuthManager = {
       const currentDate = new Date()
       if (expirationDate < currentDate) {
         console.error('Token expirado')
-        localStorage.removeItem('AuthToken')
-        localStorage.removeItem('UserLogin')
+        localStorage.removeItem('jwt')
+        localStorage.removeItem('userData')
         location.href = '/login'
         return false
       }

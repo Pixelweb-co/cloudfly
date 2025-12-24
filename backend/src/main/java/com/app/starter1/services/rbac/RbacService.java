@@ -114,6 +114,7 @@ public class RbacService {
                         .label(module.getName())
                         .icon(module.getIcon())
                         .href(module.getMenuPath()) // May be null for parents
+                        .moduleCode(module.getCode()) // Código del módulo para frontend
                         .children(children)
                         .build());
             }
@@ -232,6 +233,7 @@ public class RbacService {
                             .label(module.getName())
                             .icon(module.getIcon())
                             .href(module.getMenuPath())
+                            .moduleCode(module.getCode()) // Código del módulo para frontend
                             .children(children)
                             .build());
                 }

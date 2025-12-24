@@ -1,5 +1,5 @@
 // Third-party Imports
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import type { EventInput } from '@fullcalendar/core'
 
 // Vars

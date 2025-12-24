@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { LinearProgress } from '@mui/material'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import ChatbotTypeList from '@views/apps/settings/chatbot-types/list'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'

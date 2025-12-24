@@ -5,7 +5,7 @@ import Image from 'next/image'
 
 import { Grid, Card, CardHeader, CardContent, Typography, TextField, Button, Box, Checkbox, Alert } from '@mui/material'
 
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import Documents from '@/components/Documents'
 import DeviceReports from '@/components/DeviceReports'
 import CheckIcon from '@mui/icons-material/Check';

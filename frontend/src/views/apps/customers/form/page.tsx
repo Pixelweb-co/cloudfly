@@ -6,7 +6,7 @@ import type { SyntheticEvent } from 'react'
 
 import { useRouter } from 'next/navigation'
 
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import dotenv from "dotenv"
 
 // MUI Imports

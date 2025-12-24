@@ -1,4 +1,4 @@
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import { PayrollReceipt, LiquidationResult, PaymentRequest } from '@/types/hr'
 
 export interface PaymentResult {

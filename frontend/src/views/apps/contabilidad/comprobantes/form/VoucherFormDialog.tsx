@@ -11,7 +11,7 @@ import { Add, Delete, Save, Close, Check } from '@mui/icons-material'
 import toast from 'react-hot-toast'
 import { VoucherService, type VoucherRequest, type VoucherEntry } from '@/services/accounting/voucherService'
 import { userMethods } from '@/utils/userMethods'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 interface Account {
     code: string

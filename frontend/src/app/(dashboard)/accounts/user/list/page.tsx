@@ -1,34 +1,18 @@
-'use client' // Esto indica que este archivo es un Componente del Cliente
-// Component Imports
-import { useEffect, useState } from 'react'
+'use client'
 
+// React Imports
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-import axios from 'axios'
-import dotenv from "dotenv";
+// Component Imports
 import UserList from '@views/apps/user/list'
-import { userMethods } from '@/utils/userMethods'
 import { AuthManager } from '@/utils/authManager'
-
-
+import { axiosInstance } from '@/utils/axiosInstance'
 
 const getUserData = async () => {
-  console.log('userList ', process.env.NEXT_PUBLIC_API_URL)
-
   try {
-    // Recupera el token desde localStorage
-    const token = localStorage.getItem('AuthToken')
-
-    console.log('token ', token)
-
-    // Realiza la petición con el token en el encabezado Authorization
-    const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
-      headers: {
-        'Content-Type': 'application/json', // Asegúrate de que el contenido sea JSON
-        Authorization: `Bearer ${token}` // Añade el token en el encabezado
-      }
-    })
-
+    // axiosInstance ya incluye el token automáticamente
+    const res = await axiosInstance.get('/users')
     return res.data
   } catch (error) {
     console.error('Error fetching user data:', error)
@@ -45,21 +29,9 @@ const UserListApp = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // El backend ya filtra según el rol (MANAGER ve todos, otros solo su customer)
         const data = await getUserData()
-
-        if (userMethods.isRole('ADMIN')) {
-          const userLogin = userMethods.getUserLogin()
-
-          console.log('data users', data)
-          const dataf = data.filter((item: any) => item.customer && item.customer.id === userLogin.customer.id)
-
-          console.log('data users f', dataf)
-          setUserData(dataf)
-        } else {
-          const dataf = data
-
-          setUserData(dataf)
-        }
+        setUserData(data)
       } catch (err: any) {
         setError(err)
       } finally {
