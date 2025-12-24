@@ -26,63 +26,116 @@ public class DashboardService {
         private final CustomerRepository customerRepository;
 
         public DashboardStatsDTO getStats() {
-                // Ventas de hoy
+                // Fecha actual y rangos
                 LocalDate today = LocalDate.now();
                 LocalDateTime startOfDay = today.atStartOfDay();
                 LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+                LocalDate firstDayOfMonth = today.withDayOfMonth(1);
+                LocalDate firstDayOfLastMonth = firstDayOfMonth.minusMonths(1);
+                LocalDateTime startOfMonth = firstDayOfMonth.atStartOfDay();
+                LocalDateTime startOfLastMonth = firstDayOfLastMonth.atStartOfDay();
 
-                List<Order> todayOrders = orderRepository.findByCreatedAtBetween(startOfDay, endOfDay);
-                Double todaySales = todayOrders.stream()
+                // ===== SALES MODULE =====
+                // Ventas del mes actual
+                List<Order> monthOrders = orderRepository.findByCreatedAtBetween(startOfMonth, endOfDay);
+                Double totalRevenue = monthOrders.stream()
                                 .map(Order::getTotal)
                                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                                 .doubleValue();
 
-                // Ventas de ayer para comparación
-                LocalDateTime startOfYesterday = today.minusDays(1).atStartOfDay();
-                List<Order> yesterdayOrders = orderRepository.findByCreatedAtBetween(startOfYesterday, startOfDay);
-                Double yesterdaySales = yesterdayOrders.stream()
+                // Ventas del mes anterior para comparación
+                List<Order> lastMonthOrders = orderRepository.findByCreatedAtBetween(startOfLastMonth, startOfMonth);
+                Double lastMonthRevenue = lastMonthOrders.stream()
                                 .map(Order::getTotal)
                                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                                 .doubleValue();
 
-                Double salesChange = yesterdaySales > 0
-                                ? ((todaySales - yesterdaySales) / yesterdaySales) * 100
+                Double revenueChange = lastMonthRevenue > 0
+                                ? ((totalRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
                                 : 0.0;
 
-                DashboardStatsDTO.SalesStats salesStats = new DashboardStatsDTO.SalesStats(
-                                todaySales,
-                                String.format("%+.0f%%", salesChange),
-                                "vs ayer",
-                                salesChange > 0 ? "up" : salesChange < 0 ? "down" : "neutral");
+                // Total de pedidos del mes
+                Integer totalOrders = monthOrders.size();
+                Integer lastMonthOrdersCount = lastMonthOrders.size();
+                Double ordersChange = lastMonthOrdersCount > 0
+                                ? ((double) (totalOrders - lastMonthOrdersCount) / lastMonthOrdersCount) * 100
+                                : 0.0;
 
-                // Clientes activos (últimos 7 días)
-                LocalDate weekAgo = LocalDate.now().minusDays(7);
-                Long activeCustomers = customerRepository.countByDateRegisterAfter(weekAgo);
+                // Total de clientes
+                Long totalCustomers = customerRepository.count();
+                LocalDate lastWeek = today.minusDays(7);
+                Long newCustomersThisWeek = customerRepository.countByDateRegisterAfter(lastWeek);
+                Double customersChange = totalCustomers > 0
+                                ? ((double) newCustomersThisWeek / totalCustomers) * 100
+                                : 0.0;
+
+                // Total de productos
+                Long totalProducts = productRepository.count();
+
+                // ===== ACCOUNTING MODULE =====
+                // Facturas (simulado por ahora)
+                Integer totalInvoices = monthOrders.size(); // TODO: usar InvoiceRepository cuando esté disponible
+                Integer lowStockProducts = productRepository.findByInventoryQtyLessThan(10).size();
+
+                // ===== HR MODULE =====
+                // Empleados (simulado por ahora)
+                Integer totalEmployees = 0; // TODO: conectar con EmployeeRepository
+                Double employeesChange = 0.0;
+
+                // ===== COMMUNICATIONS MODULE =====
+                // Conversaciones activas (simulado)
+                Integer activeConversations = 12; // TODO: conectar con sistema de chat real
+
+                // Legacy stats para backward compatibility
+                DashboardStatsDTO.SalesStats salesStats = new DashboardStatsDTO.SalesStats(
+                                totalRevenue,
+                                String.format("%+.1f%%", revenueChange),
+                                "vs mes anterior",
+                                revenueChange > 0 ? "up" : revenueChange < 0 ? "down" : "neutral");
 
                 DashboardStatsDTO.CustomersStats customersStats = new DashboardStatsDTO.CustomersStats(
-                                activeCustomers.intValue(),
-                                "+8%",
+                                totalCustomers.intValue(),
+                                String.format("+%.0f%%", customersChange),
                                 "esta semana",
                                 "up");
 
-                // Inventario
-                Long totalProducts = productRepository.count();
-                List<Product> lowStockProducts = productRepository.findByInventoryQtyLessThan(10);
-
                 DashboardStatsDTO.InventoryStats inventoryStats = new DashboardStatsDTO.InventoryStats(
                                 totalProducts.intValue(),
-                                lowStockProducts.size(),
-                                lowStockProducts.size() + " productos con stock bajo",
-                                lowStockProducts.isEmpty() ? "neutral" : "down");
+                                lowStockProducts,
+                                lowStockProducts + " productos con stock bajo",
+                                lowStockProducts > 0 ? "down" : "neutral");
 
-                // Chatbot (datos simulados - TODO: conectar con sistema real de chat)
                 DashboardStatsDTO.ChatbotStats chatbotStats = new DashboardStatsDTO.ChatbotStats(
-                                12,
+                                activeConversations,
                                 "Activo ✓",
                                 "Hace 2 min",
                                 "up");
 
-                return new DashboardStatsDTO(salesStats, customersStats, inventoryStats, chatbotStats);
+                return DashboardStatsDTO.builder()
+                                // New fields for modular dashboard
+                                .totalRevenue(totalRevenue)
+                                .revenueChange(revenueChange)
+                                .totalOrders(totalOrders)
+                                .ordersChange(ordersChange)
+                                .totalCustomers(totalCustomers.intValue())
+                                .customersChange(customersChange)
+                                .totalProducts(totalProducts.intValue())
+                                .productsChange(0.0)
+                                .totalInvoices(totalInvoices)
+                                .invoicesChange(0.0)
+                                .pendingQuotes(0)
+                                .lowStockProducts(lowStockProducts)
+                                .totalEmployees(totalEmployees)
+                                .employeesChange(employeesChange)
+                                .totalPayroll(0.0)
+                                .activeConversations(activeConversations)
+                                .messagesChange(15.0)
+                                // Legacy fields
+                                .sales(salesStats)
+                                .customers(customersStats)
+                                .inventory(inventoryStats)
+                                .chatbot(chatbotStats)
+                                .build();
         }
 
         public SalesChartDTO getSalesChart(String period) {
