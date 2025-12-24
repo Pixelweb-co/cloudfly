@@ -22,7 +22,7 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
 
   useEffect(() => {
     const user = userMethods.getUserLogin?.()
-    const r = user?.roles?.[0]?.roleEnum
+    const r = user?.roles?.[0]?.role
     if (r) setUserRole(String(r))
   }, [])
 
@@ -42,7 +42,7 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
     if (!tableData || !Array.isArray(tableData)) return
 
     const filteredData = tableData.filter(user => {
-      const matchRole = role ? user?.roles?.some(r => String(r.roleEnum).toUpperCase() === role.toUpperCase()) : true
+      const matchRole = role ? user?.roles?.some(r => String(r.role).toUpperCase() === role.toUpperCase()) : true
       const matchStatus = status !== '' ? user.enabled === status : true
       return matchRole && matchStatus
     })

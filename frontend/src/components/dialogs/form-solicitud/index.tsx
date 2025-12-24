@@ -47,17 +47,17 @@ interface Solicitud {
   horasg?: string;
 }
 
-interface Asig{
-  id?:string
+interface Asig {
+  id?: string
 }
 
 const schema = yup.object().shape({
   entidad: yup.string().notOneOf(['0'], 'El cliente es obligatorio'),
   fecha: yup.string().required('La fecha es obligatoria'),
 
-  tipoServicio:  yup.string().notOneOf(['0'], 'El tipo de servicio es obligatorio'),
+  tipoServicio: yup.string().notOneOf(['0'], 'El tipo de servicio es obligatorio'),
   descr: yup.string().required('descripcion es obligatorio'),
-  asig:  yup.string().notOneOf(['0'], 'El ingeniero asignado es obligatorio'),
+  asig: yup.string().notOneOf(['0'], 'El ingeniero asignado es obligatorio'),
   fchasg: yup.string().notRequired(),
   horasg: yup.string().notRequired()
 })
@@ -82,7 +82,7 @@ const SolicitudForm = ({
   const [checked, setChecked] = useState<any[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('')
- 
+
   const selectedProducts = React.useMemo(() => (
     Array.isArray(productsList)
       ? productsList.filter((p: any) => checked.includes(p?.id))
@@ -121,7 +121,7 @@ const SolicitudForm = ({
     setFilteredProducts(filtered.filter((p: any) => !checked.includes(p?.id)))
   }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 
   const fetchOptions = async () => {
     try {
@@ -131,7 +131,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
         throw new Error('Token no disponible. Por favor, inicia sesión nuevamente.')
       }
 
-      const [customersRes,userRes,typeServiceRes] = await Promise.all([
+      const [customersRes, userRes, typeServiceRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/customers`, {
           headers: {
             'Content-Type': 'application/json',
@@ -166,7 +166,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
   const fetchProducts = async (idCustomer: any) => {
     try {
 
-      console.log("Fp: ",idCustomer)
+      console.log("Fp: ", idCustomer)
 
       const token = localStorage.getItem('AuthToken')
 
@@ -189,22 +189,22 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
       if ((searchTerm ?? '').trim().length >= 2) {
         const term = (searchTerm ?? '').toString().toLowerCase().trim()
         if (term.length >= 2) {
-         setFilteredProducts(productos.filter((p:any)=>
-           String(p?.productName ?? '').toLowerCase().includes(term) ||
-           String(p?.brand ?? '').toLowerCase().includes(term) ||
-           String(p?.model ?? '').toLowerCase().includes(term) ||
-           String(p?.licensePlate ?? p?.serial ?? '').toLowerCase().includes(term)
-         ).filter((p:any)=> !checked.includes(p?.id)))
+          setFilteredProducts(productos.filter((p: any) =>
+            String(p?.productName ?? '').toLowerCase().includes(term) ||
+            String(p?.brand ?? '').toLowerCase().includes(term) ||
+            String(p?.model ?? '').toLowerCase().includes(term) ||
+            String(p?.licensePlate ?? p?.serial ?? '').toLowerCase().includes(term)
+          ).filter((p: any) => !checked.includes(p?.id)))
         } else {
-         setFilteredProducts(productos.filter((p:any)=> !checked.includes(p?.id)))
+          setFilteredProducts(productos.filter((p: any) => !checked.includes(p?.id)))
         }
       } else {
-        setFilteredProducts(productos.filter((p:any)=> !checked.includes(p?.id)))
+        setFilteredProducts(productos.filter((p: any) => !checked.includes(p?.id)))
       }
 
       return true
 
-    }catch(e){
+    } catch (e) {
       console.log(e)
     }
 
@@ -220,7 +220,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
     if (len >= 2) {
       filterProducts(searchTerm)
     } else {
-      setFilteredProducts(Array.isArray(productsList) ? productsList.filter((p:any)=> !checked.includes(p?.id)) : [])
+      setFilteredProducts(Array.isArray(productsList) ? productsList.filter((p: any) => !checked.includes(p?.id)) : [])
     }
   }, [checked, productsList])
 
@@ -249,15 +249,15 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
       const token = localStorage.getItem('AuthToken')
 
       console.log('token ', token)
-      console.log("pids ",checked)
+      console.log("pids ", checked)
 
       if (!token) {
         throw new Error('Token no disponible. Por favor, inicia sesión nuevamente.')
       }
 
       // Filtrar solo IDs pertenecientes al cliente actualmente cargado
-      const currentIds = new Set((Array.isArray(productsList) ? productsList : []).map((p:any) => String(p?.id)))
-      const selectedIds = (Array.isArray(checked) ? checked : []).filter((id:any) => currentIds.has(String(id)))
+      const currentIds = new Set((Array.isArray(productsList) ? productsList : []).map((p: any) => String(p?.id)))
+      const selectedIds = (Array.isArray(checked) ? checked : []).filter((id: any) => currentIds.has(String(id)))
 
       // Si tienes un ID, significa que estás actualizando el usuario, de lo contrario, creas uno nuevo
 
@@ -267,7 +267,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
       const response = await axios({
         method: method, // Usa 'put' para actualización o 'post' para creación
         url: apiUrl,
-        data: {...data, productsToInsert:selectedIds, status:1},
+        data: { ...data, productsToInsert: selectedIds, status: 1 },
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
@@ -361,7 +361,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <Typography variant="h3">Datos de la solicitud</Typography>
-              
+
               {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('BIOMEDICAL')) && <Controller
                 name='entidad'
                 control={control}
@@ -375,17 +375,17 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
                     value={editData?.entidad ? editData?.entidad : '1'}
                     onChange={e => {
                       setEditData({ ...editData, entidad: e.target.value })
-setValue('entidad', e.target.value)
-setSearchTerm('')
-setChecked([])
-fetchProducts(e.target.value)
+                      setValue('entidad', e.target.value)
+                      setSearchTerm('')
+                      setChecked([])
+                      fetchProducts(e.target.value)
                     }}
                     label='Cliente'
                     error={Boolean(errors.entidad)}
                     helperText={errors.entidad?.message}
                   >
-                   <MenuItem key={0} value={'0'}>
-                        Seleccionar ...
+                    <MenuItem key={0} value={'0'}>
+                      Seleccionar ...
                     </MenuItem>
 
                     {customersList.map(item => (
@@ -398,26 +398,26 @@ fetchProducts(e.target.value)
               />}
 
 
-            <Controller
-                      name='fecha'
-                      control={control}
-                      render={({ field }) => (
-                        <CustomTextField
-                          {...field}
-                          className='mt-2'
-                          fullWidth
-                          type='date'
-                          label='Fecha'
-                          error={Boolean(errors.fecha)}
-                          helperText={errors.fecha?.message}
-                        />
-                      )}
-                    />
+              <Controller
+                name='fecha'
+                control={control}
+                render={({ field }) => (
+                  <CustomTextField
+                    {...field}
+                    className='mt-2'
+                    fullWidth
+                    type='date'
+                    label='Fecha'
+                    error={Boolean(errors.fecha)}
+                    helperText={errors.fecha?.message}
+                  />
+                )}
+              />
 
 
 
 
-<Controller
+              <Controller
                 name='tipoServicio'
                 control={control}
                 render={({ field }) => (
@@ -437,7 +437,7 @@ fetchProducts(e.target.value)
                     helperText={errors.tipoServicio?.message}
                   >
                     <MenuItem key={0} value={'0'}>
-                        Seleccionar ...
+                      Seleccionar ...
                     </MenuItem>
 
                     {typeServiceList.map(item => (
@@ -448,7 +448,7 @@ fetchProducts(e.target.value)
                   </CustomTextField>
                 )}
               />
-<Controller
+              <Controller
                 name='asig'
                 control={control}
                 render={({ field }) => (
@@ -459,7 +459,7 @@ fetchProducts(e.target.value)
                     fullWidth
                     value={editData?.asig?.id ? editData?.asig?.id : '0'}
                     onChange={e => {
-                      setEditData({ ...editData, asig: {...(editData?.asig || {}), id: e.target.value }})
+                      setEditData({ ...editData, asig: { ...(editData?.asig || {}), id: e.target.value } })
                       setValue('asig', e.target.value)
 
                     }}
@@ -468,11 +468,11 @@ fetchProducts(e.target.value)
                     helperText={errors.asig?.message}
                   >
                     <MenuItem key={0} value={'0'}>
-                        Seleccionar ...
+                      Seleccionar ...
                     </MenuItem>
-                    {userList.filter((user)=>user.roles?.find((rol)=>['BIOMEDICAL','SUPERADMIN'].find(roln=>roln === rol.roleEnum )))?.map(item => (
+                    {userList.filter((user) => user.roles?.find((rol) => ['BIOMEDICAL', 'SUPERADMIN'].find(roln => roln === rol.role)))?.map(item => (
                       <MenuItem key={item.id} value={item.id}>
-                        {item.nombres} {item.apellidos} {`(${item.roles && item.roles[0] ? item.roles[0].roleEnum : 'N/A'})`}
+                        {item.nombres} {item.apellidos} {`(${item.roles && item.roles[0] ? item.roles[0].role : 'N/A'})`}
                       </MenuItem>
                     ))}
                   </CustomTextField>
@@ -480,29 +480,29 @@ fetchProducts(e.target.value)
               />
 
               <Controller
-                              name='descr'
-                              control={control}
-                              render={({ field }) => (
-                                <TextField
-                                  {...field}
-                                  className='mt-4'
-                                  fullWidth
-                                  value={editData?.descripcion ? editData.descripcion : ''}
-                                  onChange={e => {
-                                    setEditData({
-                                      ...editData,
-                                      descripcion: e.target.value
-                                    })
-                                    setValue('descr', e.target.value)
-                                  }}
-                                  label='Descripción'
-                                  multiline
-                                  maxRows={6}
-                                  error={!!errors.descr}
-                                  helperText={errors.descr?.message}
-                                />
-                              )}
-                            />
+                name='descr'
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    className='mt-4'
+                    fullWidth
+                    value={editData?.descripcion ? editData.descripcion : ''}
+                    onChange={e => {
+                      setEditData({
+                        ...editData,
+                        descripcion: e.target.value
+                      })
+                      setValue('descr', e.target.value)
+                    }}
+                    label='Descripción'
+                    multiline
+                    maxRows={6}
+                    error={!!errors.descr}
+                    helperText={errors.descr?.message}
+                  />
+                )}
+              />
 
 
 
@@ -512,126 +512,126 @@ fetchProducts(e.target.value)
             <Grid item xs={12} sm={6}>
 
               <h3>Equipos</h3>
-                <Card>
+              <Card>
                 <CardContent>
 
-                <TextField
-                  fullWidth
-                  id='busqueda_input'
-                  label='Buscar equipo'
-                  placeholder='Escribe al menos 2 caracteres'
-                  value={searchTerm}
-                  onChange={(e) => {
-                    const term = (e.target.value ?? '').toString()
-                    setSearchTerm(term)
-                    if ((term ?? '').toString().trim().length >= 2) {
-                       filterProducts(term)
-                     } else {
-                       setFilteredProducts(Array.isArray(productsList) ? productsList.filter((p:any)=> !checked.includes(p?.id)) : [])
-                     }
-                   }}
-                 />
+                  <TextField
+                    fullWidth
+                    id='busqueda_input'
+                    label='Buscar equipo'
+                    placeholder='Escribe al menos 2 caracteres'
+                    value={searchTerm}
+                    onChange={(e) => {
+                      const term = (e.target.value ?? '').toString()
+                      setSearchTerm(term)
+                      if ((term ?? '').toString().trim().length >= 2) {
+                        filterProducts(term)
+                      } else {
+                        setFilteredProducts(Array.isArray(productsList) ? productsList.filter((p: any) => !checked.includes(p?.id)) : [])
+                      }
+                    }}
+                  />
 
 
-                {/* Lista de seleccionados */}
-                {selectedProducts.length > 0 && (
-                  <>
-                    <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>Seleccionados</Typography>
-                    <List sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
-                      {selectedProducts.map(value => {
-                        const labelId = `checkbox-list-label-selected-${value.id}`
-                        const handleToggle = (val: any) => () => {
-                          const idVal = val?.id
-                          setChecked((prevChecked: any[]) =>
-                            prevChecked.includes(idVal) ? prevChecked.filter((item) => item !== idVal) : [...prevChecked, idVal]
+                  {/* Lista de seleccionados */}
+                  {selectedProducts.length > 0 && (
+                    <>
+                      <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>Seleccionados</Typography>
+                      <List sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
+                        {selectedProducts.map(value => {
+                          const labelId = `checkbox-list-label-selected-${value.id}`
+                          const handleToggle = (val: any) => () => {
+                            const idVal = val?.id
+                            setChecked((prevChecked: any[]) =>
+                              prevChecked.includes(idVal) ? prevChecked.filter((item) => item !== idVal) : [...prevChecked, idVal]
+                            )
+                          }
+                          return (
+                            <ListItem key={`selected-${value.id}`} disablePadding>
+                              <ListItemButton role={undefined} onClick={handleToggle(value)} dense>
+                                <ListItemIcon>
+                                  {!id && (
+                                    <Checkbox
+                                      edge='start'
+                                      checked={checked.includes(value.id)}
+                                      tabIndex={-1}
+                                      inputProps={{ 'aria-labelledby': labelId }}
+                                    />
+                                  )}
+                                </ListItemIcon>
+                                <ListItemText id={labelId} primary={`${value.productName}`} />
+                              </ListItemButton>
+                            </ListItem>
                           )
-                        }
+                        })}
+                      </List>
+                      <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>Resultados</Typography>
+                    </>
+                  )}
+
+                  <List sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
+
+
+                    {filteredProducts.map(value => {
+                      const labelId = `checkbox-list-label-${value.id}`
+                      const handleToggle = (val: any) => () => {
+                        const idVal = val?.id
+                        setChecked((prevChecked: any[]) =>
+                          prevChecked.includes(idVal) ? prevChecked.filter((item) => item !== idVal) : [...prevChecked, idVal]
+                        )
+                      };
+
+                      if (rowSelect.idSolicitud && value.id === editData.idEquipo) {
+
                         return (
-                          <ListItem key={`selected-${value.id}`} disablePadding>
+
+                          <ListItem
+                            key={value.id}
+
+                            disablePadding
+                          >
                             <ListItemButton role={undefined} onClick={handleToggle(value)} dense>
                               <ListItemIcon>
-                                {!id && (
-                                  <Checkbox
-                                    edge='start'
-                                    checked={checked.includes(value.id)}
-                                    tabIndex={-1}
-                                    inputProps={{ 'aria-labelledby': labelId }}
-                                  />
-                                )}
+                                {!id && <Checkbox
+                                  edge='start'
+                                  checked={checked.includes(value.id)}
+                                  tabIndex={-1}
+                                  inputProps={{ 'aria-labelledby': labelId }}
+                                />}
                               </ListItemIcon>
                               <ListItemText id={labelId} primary={`${value.productName}`} />
                             </ListItemButton>
                           </ListItem>
                         )
-                      })}
-                    </List>
-                    <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>Resultados</Typography>
-                  </>
-                )}
 
-              <List sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
+                      }
 
 
-                {filteredProducts.map(value => {
-                   const labelId = `checkbox-list-label-${value.id}`
-                  const handleToggle = (val: any) => () => {
-                    const idVal = val?.id
-                    setChecked((prevChecked: any[]) =>
-                      prevChecked.includes(idVal) ? prevChecked.filter((item) => item !== idVal) : [...prevChecked, idVal]
-                    )
-                  };
+                      if (!rowSelect.idSolicitud) {
+                        return (
+                          <ListItem
+                            key={value.id}
 
-                if(rowSelect.idSolicitud && value.id === editData.idEquipo){
+                            disablePadding
+                          >
+                            <ListItemButton role={undefined} onClick={handleToggle(value)} dense>
+                              <ListItemIcon>
+                                {!id && <Checkbox
+                                  edge='start'
+                                  checked={checked.includes(value.id)}
+                                  tabIndex={-1}
+                                  inputProps={{ 'aria-labelledby': labelId }}
+                                />}
+                              </ListItemIcon>
+                              <ListItemText id={labelId} primary={`${value.productName}`} />
+                            </ListItemButton>
+                          </ListItem>
+                        )
+                      }
 
-                  return (
-
-                    <ListItem
-                      key={value.id}
-
-                      disablePadding
-                    >
-                      <ListItemButton role={undefined} onClick={handleToggle(value)} dense>
-                        <ListItemIcon>
-                          {!id && <Checkbox
-                            edge='start'
-                            checked={checked.includes(value.id)}
-                            tabIndex={-1}
-                            inputProps={{ 'aria-labelledby': labelId }}
-                          />}
-                        </ListItemIcon>
-                        <ListItemText id={labelId} primary={`${value.productName}`} />
-                      </ListItemButton>
-                    </ListItem>
-                  )
-
-                }
-
-
-                if(!rowSelect.idSolicitud){
-                  return (
-                    <ListItem
-                      key={value.id}
-
-                      disablePadding
-                    >
-                      <ListItemButton role={undefined} onClick={handleToggle(value)} dense>
-                        <ListItemIcon>
-                          {!id && <Checkbox
-                            edge='start'
-                            checked={checked.includes(value.id)}
-                            tabIndex={-1}
-                            inputProps={{ 'aria-labelledby': labelId }}
-                          />}
-                        </ListItemIcon>
-                        <ListItemText id={labelId} primary={`${value.productName}`} />
-                      </ListItemButton>
-                    </ListItem>
-                  )
-                }
-
-                })}
-              </List>
-              </CardContent>
+                    })}
+                  </List>
+                </CardContent>
               </Card>
             </Grid>
           </Grid>

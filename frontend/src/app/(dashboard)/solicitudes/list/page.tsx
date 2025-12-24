@@ -57,7 +57,7 @@ const SolicitudListApp = () => {
 
       let product_url = `${process.env.NEXT_PUBLIC_API_URL}/solicitudes`
 
-      if (user.roles[0].roleEnum === 'ADMIN' || user.roles[0].roleEnum === 'USER') {
+      if (user.roles[0].role === 'ADMIN' || user.roles[0].role === 'USER') {
 
         const id_customer = user.customer.id
 

@@ -38,7 +38,7 @@ const ProductListApp = () => {
 
       let product_url = `${API_BASE_URL}/productos`
 
-      if (user.roles[0].roleEnum === 'ADMIN' || user.roles[0].roleEnum === 'USER') {
+      if (user.roles[0].role === 'ADMIN' || user.roles[0].role === 'USER') {
 
         const id_customer = user.customer.id
 

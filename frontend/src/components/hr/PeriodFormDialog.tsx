@@ -325,6 +325,7 @@ export default function PeriodFormDialog({ open, onClose, onSuccess, period }: P
         try {
             const periodData = {
                 ...formData,
+                periodType: formData.periodType as 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY',
                 periodNumber: parseInt(formData.periodNumber.toString()),
                 year: parseInt(formData.year.toString()),
                 status: 'OPEN' as const,

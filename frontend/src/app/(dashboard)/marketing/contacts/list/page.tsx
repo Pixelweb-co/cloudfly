@@ -25,10 +25,10 @@ const ContactsListApp = () => {
             let contacts_url = `${API_BASE_URL}/contacts`
 
             // Si es ADMIN o USER, obtener solo los contactos de su tenant
-            if (user.roles[0].roleEnum === 'ADMIN' || user.roles[0].roleEnum === 'USER') {
+            if (user.roles[0].role === 'ADMIN' || user.roles[0].role === 'USER') {
                 const id_customer = user.customer.id
                 contacts_url = `${API_BASE_URL}/contacts/tenant/${id_customer}`
-            } else if (user.roles[0].roleEnum === 'SUPERADMIN') {
+            } else if (user.roles[0].role === 'SUPERADMIN') {
                 // SUPERADMIN podría ver todos, pero por ahora también filtramos por tenant
                 const id_customer = user.customer.id
                 contacts_url = `${API_BASE_URL}/contacts/tenant/${id_customer}`

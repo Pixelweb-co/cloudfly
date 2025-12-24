@@ -106,7 +106,7 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
 
           // Redirección por roles
           const roles = result.userEntity.roles || []
-          const hasRole = (role: string) => roles.some((r: any) => r.roleEnum === role)
+          const hasRole = (role: string) => roles.some((r: any) => r.role === role)
 
           if (hasRole('SUPERADMIN') || hasRole('ADMIN') || hasRole('MANAGER')) {
             router.push('/home')

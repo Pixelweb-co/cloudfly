@@ -22,7 +22,7 @@ const OrdersListApp = () => {
       const user = userMethods.getUserLogin()
       let orders_url = `${API_BASE_URL}/orders`
 
-      if (user.roles[0].roleEnum === 'ADMIN' || user.roles[0].roleEnum === 'USER' || user.roles[0].roleEnum === 'SUPERADMIN') {
+      if (user.roles[0].role === 'ADMIN' || user.roles[0].role === 'USER' || user.roles[0].role === 'SUPERADMIN') {
         const id_customer = user.customer.id
         orders_url = `${API_BASE_URL}/orders/tenant/${id_customer}`
       }
