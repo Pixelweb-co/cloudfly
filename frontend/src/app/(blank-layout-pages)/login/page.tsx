@@ -17,7 +17,7 @@ const LoginPage = () => {
       if (!userStr) return
       const user = JSON.parse(userStr)
       const roles = user?.roles || []
-      const hasRole = (role: string) => roles.some((r: any) => r.roleEnum === role)
+      const hasRole = (role: string) => roles.some((r: any) => r.role === role)
 
       if (hasRole('SUPERADMIN') || hasRole('ADMIN')) {
         router.replace('/home')

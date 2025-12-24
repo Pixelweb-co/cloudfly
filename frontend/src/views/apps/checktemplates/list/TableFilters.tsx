@@ -27,7 +27,7 @@ const TableFilters = ({
     if (!tableData || !Array.isArray(tableData)) return // Verificar si tableData es un array
 
     const filteredData = tableData.filter(customer => {
-      // const matchRole = role ? customer.roles.some(r => r.roleEnum === role) : true // Comparar roles
+      // const matchRole = role ? customer.roles.some(r => r.role === role) : true // Comparar roles
 
       const matchStatus = status !== '' ? customer.status === status : true // Comparar el estado
 

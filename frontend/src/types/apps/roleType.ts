@@ -27,5 +27,6 @@ export type RolesType = {
   id: number | string
   name: string
   description?: string
+  role?: string // Role designation (e.g., 'SUPERADMIN', 'BIOMEDICAL')
   permissions?: any[] // Legacy support if needed
 }

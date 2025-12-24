@@ -164,7 +164,7 @@ const UsersListTable = ({ tableData }: { tableData?: UsersType[] }) => {
                 <Chip
                   key={role.id}
                   variant='outlined'
-                  label={role.roleEnum}
+                  label={role.role}
                   color='primary' // Cambiar el color dinámicamente si es necesario
                   className='capitalize'
                 />

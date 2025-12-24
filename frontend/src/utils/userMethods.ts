@@ -22,7 +22,7 @@ export const userMethods = {
       return false
     }
 
-    return userLogin.roles.find((role: any) => role.roleEnum === roleName)
+    return userLogin.roles.find((role: any) => role.role === roleName)
   },
 
   getUserLogin: () => {

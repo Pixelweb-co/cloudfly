@@ -22,7 +22,7 @@ const QuotesListApp = () => {
             const user = userMethods.getUserLogin()
             let quotes_url = `${API_BASE_URL}/quotes`
 
-            if (user.roles[0].roleEnum === 'ADMIN' || user.roles[0].roleEnum === 'USER' || user.roles[0].roleEnum === 'SUPERADMIN') {
+            if (user.roles[0].role === 'ADMIN' || user.roles[0].role === 'USER' || user.roles[0].role === 'SUPERADMIN') {
                 const tenantId = user.tenantId || (user.customer ? user.customer.id : 1)
                 quotes_url = `${API_BASE_URL}/quotes/tenant/${tenantId}`
             }
