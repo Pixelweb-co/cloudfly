@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/categorias")
+@RequestMapping({ "/categorias", "/categories" }) // Soportar ambas rutas
 @RequiredArgsConstructor
 public class CategoryController {
 
@@ -28,8 +28,6 @@ public class CategoryController {
     public ResponseEntity<CategoryResponse> getCategoryById(@PathVariable Long id) {
         return ResponseEntity.ok(categoryService.getCategoryById(id));
     }
-
-
 
     @GetMapping("/customer/{tenantId}")
     public ResponseEntity<List<CategoryResponse>> getAllTenantCategories(@PathVariable Long tenantId) {

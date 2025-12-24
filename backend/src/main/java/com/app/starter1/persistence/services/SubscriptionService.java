@@ -202,6 +202,20 @@ public class SubscriptionService {
         }
 
         /**
+         * Alterna el estado de auto-renovación
+         */
+        @Transactional
+        public SubscriptionResponse toggleAutoRenew(Long subscriptionId) {
+                Subscription subscription = subscriptionRepository.findById(subscriptionId)
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Suscripción no encontrada: " + subscriptionId));
+
+                subscription.setIsAutoRenew(!subscription.getIsAutoRenew());
+                Subscription updated = subscriptionRepository.save(subscription);
+                return mapToResponse(updated);
+        }
+
+        /**
          * Renueva una suscripción (crea una nueva basada en la anterior)
          */
         @Transactional
