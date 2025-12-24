@@ -3,12 +3,12 @@
 <div align="center">
 
 ![CloudFly Logo](https://img.shields.io/badge/CloudFly-ERP%20Platform-blue?style=for-the-badge)
-![Version](https://img.shields.io/badge/version-1.0.0-green?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-2.0.0-green?style=for-the-badge)
 ![License](https://img.shields.io/badge/license-Proprietary-red?style=for-the-badge)
 
 **Plataforma ERP Multi-tenant Completa con Inteligencia Artificial**
 
-*Gestión empresarial integral: Ventas, Contabilidad, POS, CRM y Chatbot IA*
+*Gestión empresarial integral: Ventas, Contabilidad, POS, CRM, Recursos Humanos y Chatbot IA*
 
 [Características](#-características-principales) •
 [Tecnologías](#-stack-tecnológico) •
@@ -22,82 +22,157 @@
 
 ## 📖 Descripción
 
-**CloudFly** es una plataforma ERP (Enterprise Resource Planning) moderna y completa, diseñada para empresas que buscan digitalizar y optimizar sus procesos de negocio. Combina módulos tradicionales de gestión empresarial con tecnologías de vanguardia como chatbots con IA, comunicación omnicanal y automatización inteligente.
+**CloudFly** es una plataforma ERP (Enterprise Resource Planning) moderna y completa, diseñada para empresas que buscan digitalizar y optimizar sus procesos de negocio. Combina módulos tradicionales de gestión empresarial con tecnologías de vanguardia como chatbots con IA, comunicación omnicanal, gestión de recursos humanos y automatización inteligente.
 
 ### ✨ ¿Qué hace CloudFly único?
 
 - 🏢 **Multi-tenant**: Soporta múltiples empresas en una sola instancia
 - 🤖 **IA Integrada**: Chatbots inteligentes con RAG (Retrieval Augmented Generation)
 - 📱 **Omnicanal**: WhatsApp, Email, SMS, Facebook, Instagram
-- 📊 **Contabilidad Completa**: Cumple con principios contables NIIF
+- 📊 **Contabilidad Completa**: Cumple con principios contables NIIF y normativa colombiana
+- 💼 **Nómina Electrónica**: Sistema completo de nómina colombiana con todas las prestaciones sociales
 - 🛒 **POS Moderno**: Punto de venta rápido y eficiente
-- 🔄 **Automatización**: Flujos de trabajo con N8N
-- 🔐 **Seguro**: Autenticación JWT, roles granulares, multi-factor
+- 🔄 **Automatización**: Flujos de trabajo con N8N y procedimientos almacenados
+- 🔐 **Seguro**: Autenticación JWT, roles granulares RBAC, multi-factor
 
 ---
 
 ## 🚀 Características Principales
 
 ### 💼 Módulo de Ventas
-- ✅ Cotizaciones con múltiples ítems y estados
-- ✅ Gestión de pedidos con tracking
-- ✅ Facturación electrónica
+- ✅ Cotizaciones con múltiples ítems y estados (DRAFT, SENT, ACCEPTED, REJECTED, EXPIRED)
+- ✅ Gestión de pedidos con tracking completo (PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED)
+- ✅ Facturación electrónica con numeración automática
 - ✅ Conversión automática: Cotización → Pedido → Factura
-- ✅ Generación de PDFs
-- ✅ Envío por email
+- ✅ Generación de PDFs profesionales
+- ✅ Envío automático por email
+- ✅ Integración contable automática
+- ✅ Gestión de descuentos e impuestos
+- ✅ Historial de versiones y modificaciones
 
 ### 📚 Módulo de Contabilidad
-- ✅ Plan de cuentas jerárquico (5 niveles)
-- ✅ Comprobantes contables (Ingreso, Egreso, Notas)
-- ✅ Centros de costo con jerarquía
-- ✅ Libro Diario y Libro Mayor
-- ✅ Balance de Prueba
-- ✅ Estado de Resultados
-- ✅ Balance General
-- ✅ Integración con módulo de ventas
+- ✅ Plan de cuentas jerárquico (5 niveles) compatible con PUC Colombia
+- ✅ Comprobantes contables (Ingreso, Egreso, Notas Contables, Apertura, Cierre)
+- ✅ Centros de costo con jerarquía multinivel
+- ✅ Libro Diario completo con filtros avanzados
+- ✅ Libro Mayor por cuenta con saldos acumulados
+- ✅ Balance de Prueba a cualquier fecha
+- ✅ Estado de Resultados (P&L) con comparativos
+- ✅ Balance General con clasificación por naturaleza
+- ✅ Integración automática con ventas, compras y nómina
+- ✅ Validación de cuadre débitos = créditos
+- ✅ Estados de comprobantes (DRAFT, POSTED, VOID)
+- ✅ Asignación de terceros y centros de costo por línea
 
 ### 🛍️ Punto de Venta (POS)
-- ✅ Catálogo de productos y servicios
-- ✅ Gestión de categorías
-- ✅ Control de inventario
-- ✅ Códigos de barras
-- ✅ Alertas de stock mínimo
-- ✅ Múltiples precios y descuentos
+- ✅ Catálogo completo de productos y servicios
+- ✅ Gestión de categorías jerárquicas
+- ✅ Control de inventario en tiempo real
+- ✅ Códigos de barras y SKU únicos
+- ✅ Alertas de stock mínimo configurable
+- ✅ Múltiples precios y descuentos por producto
+- ✅ Imágenes de productos
+- ✅ Gestión de impuestos (IVA configurable)
+- ✅ Búsqueda rápida por nombre, SKU o código de barras
+
+### 👥 Módulo de Recursos Humanos (Nómina Colombiana)
+- ✅ **Gestión de Empleados**
+  - Información personal y de contacto
+  - Datos de contrato (salario, cargo, fecha de ingreso)
+  - Asignación a centros de costo
+  - Vinculación con cuentas de usuario
+  - Historial laboral completo
+
+- ✅ **Conceptos de Nómina Configurables**
+  - Devengos (salario básico, horas extras, comisiones, bonificaciones)
+  - Deducciones (salud, pensión, préstamos, embargos)
+  - Aportes patronales (salud, pensión, ARL, caja compensación)
+  - Provisiones (cesantías, intereses, prima, vacaciones)
+  - Configuración de fórmulas de cálculo
+  - Tipos: EARNING (devengo), DEDUCTION (deducción), EMPLOYER_CONTRIBUTION (aporte)
+
+- ✅ **Liquidación de Nómina**
+  - Períodos de nómina configurables (quincenal, mensual)
+  - Cálculo automático de prestaciones sociales
+  - Generación de colillas de pago en PDF
+  - Estados: DRAFT, LIQUIDATED, PAID, VOID
+  - Novedades de nómina (incapacidades, vacaciones, horas extras)
+  - Integración contable automática con comprobantes
+
+- ✅ **Provisiones y Prestaciones Sociales**
+  - Cesantías (8.33% mensual)
+  - Intereses sobre cesantías (1% mensual)
+  - Prima de servicios (8.33% mensual)
+  - Vacaciones (4.17% mensual)
+  - Cálculo y provisión automática
+
+- ✅ **Reportes de Nómina**
+  - Colillas de pago individuales en PDF
+  - Reporte de costos por centro de costo
+  - Resumen de nómina por período
+  - Exportación a Excel
+  - Dashboard de análisis de costos laborales
+
+- ✅ **Integración Contable**
+  - Generación automática de comprobantes contables
+  - Asientos por centro de costo
+  - Cuentas configurables por concepto de nómina
+  - Procedimientos almacenados para optimización
+  - Trazabilidad completa
 
 ### 👥 CRM (Gestión de Contactos)
 - ✅ Clientes, proveedores, empleados
 - ✅ Pipeline Kanban (Lead → Potencial → Cliente)
-- ✅ Información fiscal completa
+- ✅ Información fiscal completa (NIT, RUC, DNI)
 - ✅ Historial de interacciones
 - ✅ Integración contable (cuentas por cobrar/pagar)
+- ✅ Gestión de direcciones y múltiples contactos
+- ✅ Avatar/foto de perfil
 
 ### 🤖 Chatbot e Inteligencia Artificial
 - ✅ Chatbots especializados por tipo de negocio
-  - 📈 Ventas (SALES)
-  - 📅 Agendamiento (SCHEDULING)
-  - 🛠️ Soporte (SUPPORT)
-  - ⚙️ Personalizado (CUSTOM)
-- ✅ Integración con WhatsApp Business API
-- ✅ RAG con Qdrant (búsqueda semántica)
-- ✅ Automatización con N8N
+  - 📈 Ventas (SALES) - Atención automatizada de ventas
+  - 📅 Agendamiento (SCHEDULING) - Reservas y citas
+  - 🛠️ Soporte (SUPPORT) - Asistencia técnica
+  - ⚙️ Personalizado (CUSTOM) - Flujos personalizados
+- ✅ Integración con WhatsApp Business API vía Evolution API
+- ✅ RAG con Qdrant (búsqueda semántica en documentación)
+- ✅ Automatización con N8N para workflows complejos
 - ✅ Respuestas contextuales inteligentes
+- ✅ Gestión de instancias de WhatsApp
+- ✅ Webhooks configurables por tenant
 
 ### 💬 Comunicación Omnicanal
-- ✅ WhatsApp
-- ✅ Email
+- ✅ WhatsApp Business (vía Evolution API)
+- ✅ Email (SMTP configurable)
 - ✅ SMS
 - ✅ Facebook Messenger
-- ✅ Instagram DM
+- ✅ Instagram Direct Messages
 - ✅ Telegram
 - ✅ Centro de atención unificado (Chatwoot)
+- ✅ Socket.IO para mensajería en tiempo real
+- ✅ Historial completo de conversaciones
+- ✅ Estados de mensajes (PENDING, SENT, DELIVERED, READ, FAILED)
+
+### 🔐 Control de Acceso (RBAC)
+- ✅ Sistema de roles y permisos granular
+- ✅ Roles predefinidos: SUPERADMIN, ADMIN, MANAGER, CONTADOR, USER
+- ✅ Permisos por módulo (READ, WRITE, UPDATE, DELETE)
+- ✅ Gestión de módulos del sistema
+- ✅ Asignación de módulos por rol
+- ✅ Menú dinámico basado en permisos
+- ✅ Validación de acceso en backend y frontend
 
 ### 📊 Dashboard y Reportes
-- ✅ KPIs en tiempo real
-- ✅ Gráficos de ventas
+- ✅ KPIs en tiempo real por tenant
+- ✅ Gráficos de ventas (diario, mensual, anual)
 - ✅ Productos más vendidos
-- ✅ Stock crítico
-- ✅ Indicadores contables
+- ✅ Stock crítico y alertas
+- ✅ Indicadores contables y financieros
+- ✅ Dashboard de consumo por cliente
+- ✅ Reportes de nómina y costos laborales
 - ✅ Exportación a Excel/PDF
+- ✅ Gráficos interactivos con ApexCharts
 
 ---
 
@@ -186,19 +261,51 @@ docker-compose ps
 - Backend API: https://api.cloudfly.com.co
 - N8N: https://autobot.cloudfly.com.co
 - Chatwoot: https://chatcenter.cloudfly.com.co
+- Evolution API: https://eapi.cloudfly.com.co
 - phpMyAdmin: http://localhost:8000
 - Portainer: http://localhost:9000
+- Kafdrop (Kafka Monitor): http://localhost:9100
 
 ### Usuarios por Defecto
 
+**Usuarios del Sistema**:
 ```
 Superadmin:
-  Email: admin@cloudfly.com
+  Username: juanpepe
+  Password: Elian2020*
+  Roles: SUPERADMIN, ADMIN, MANAGER
+  Acceso: Total al sistema
+
+Admin:
+  Username: admin
   Password: admin123
+  Roles: ADMIN
+  Acceso: Administración del tenant
 
 Contador:
-  Email: contador@cloudfly.com
+  Username: contador
   Password: contador123
+  Roles: CONTADOR
+  Acceso: Módulo contable completo
+```
+
+**Bases de Datos**:
+```
+MySQL (Principal):
+  Database: cloud_master
+  User: root
+  Password: widowmaker
+  Port: 3306
+
+PostgreSQL (Chatbot/Chatwoot):
+  Database: chatbotdb, chatwoot_production
+  User: chatbot_user
+  Password: chatbot_pass
+  Port: 5432
+
+Redis:
+  Password: Elian2020#
+  Port: 6379
 ```
 
 ---
@@ -238,19 +345,30 @@ Contador:
 ### Documentación Principal
 - 📖 [Especificaciones Completas](docs/ESPECIFICACIONES_CLOUDFLY.md) - Documentación técnica detallada
 - 🏗️ [Arquitectura del Sistema](docs/ARQUITECTURA.md)
-- 🔐 [Seguridad](docs/SEGURIDAD.md)
+- 🔐 [Seguridad y RBAC](docs/SEGURIDAD.md)
 
 ### Módulos Específicos
-- 💼 [Sistema POS Completo](docs/SISTEMA_POS_COMPLETO.md)
-- 📚 [Módulo de Contabilidad](docs/COMPROBANTES_TERMINADO_100.md)
-- 💬 [Sistema de Chat](docs/CHAT_SYSTEM_COMPLETE.md)
-- 🤖 [Tipos de Chatbot](docs/CHATBOT_TYPES_README.md)
-- 💰 [Centros de Costo](docs/GUIA_USO_CENTROS_COSTO.md)
+- 💼 [Sistema POS Completo](SISTEMA_POS_COMPLETO.md) - Punto de venta y gestión de inventario
+- 📚 [Módulo de Contabilidad](COMPROBANTES_TERMINADO_100.md) - Sistema contable completo
+- 💰 [Centros de Costo](INTEGRACION_NOMINA_CENTRO_COSTOS.md) - Gestión de centros de costo
+- 💬 [Sistema de Chat Completo](CHAT_SYSTEM_COMPLETE.md) - Mensajería omnicanal
+- 🤖 [Tipos de Chatbot](CHATBOT_TYPES_README.md) - Configuración de bots especializados
+- 📋 [Validación del Sistema POS](GUIA_VALIDACION_POS.md) - Guía de pruebas del POS
+- 💼 [Integración Nómina y Centros de Costo](INTEGRACION_NOMINA_CENTRO_COSTOS.md) - Nómina colombiana
 
-### Guías de Desarrollo
-- 🚀 [Guía de Inicio Rápido](docs/QUICKSTART.md)
-- 🧪 [Pruebas](docs/TESTING.md)
-- 🐛 [Solución de Problemas](docs/TROUBLESHOOTING.md)
+### Guías Operativas
+- ⚙️ [Instrucciones de Reinicio](INSTRUCCIONES_REINICIO.md) - Cómo reiniciar servicios
+- 📝 [Instrucciones Finales](INSTRUCCIONES_FINAL.md) - Configuración final del sistema
+- 🔧 [Solución Error 401 Contactos](SOLUCION_ERROR_401_CONTACTS.md) - Troubleshooting
+- 🚀 [Despliegue del Sistema de Chat](DEPLOYMENT_CHAT.md) - Deployment de comunicaciones
+
+### Scripts de Prueba
+El proyecto incluye múltiples scripts PowerShell para validación y pruebas:
+- `validate_complete_system.ps1` - Validación completa del sistema
+- `test_complete_flow.ps1` - Flujo completo de ventas
+- `simulate_payroll.ps1` - Simulación de nómina
+- `test_accounting.ps1` - Pruebas del módulo contable
+- `test_payroll_flow.ps1` - Flujo completo de nómina
 
 ---
 
@@ -266,22 +384,84 @@ cloudfly/
 │   │   │   ├── java/
 │   │   │   │   └── com/app/starter1/
 │   │   │   │       ├── controllers/     # REST Controllers
+│   │   │   │       │   ├── AccountingVoucherController.java
+│   │   │   │       │   ├── ContactController.java
+│   │   │   │       │   ├── EmployeeController.java
+│   │   │   │       │   ├── InvoiceController.java
+│   │   │   │       │   ├── MenuController.java
+│   │   │   │       │   ├── PayrollController.java
+│   │   │   │       │   ├── ProductController.java
+│   │   │   │       │   └── ... (35 controllers)
 │   │   │   │       ├── services/        # Business Logic
+│   │   │   │       │   ├── AccountingVoucherService.java
+│   │   │   │       │   ├── EmployeeService.java
+│   │   │   │       │   ├── PayrollCalculationService.java
+│   │   │   │       │   ├── PayrollLiquidationService.java
+│   │   │   │       │   ├── PayrollAccountingService.java
+│   │   │   │       │   ├── PayrollPdfService.java
+│   │   │   │       │   ├── LibroDiarioService.java
+│   │   │   │       │   ├── BalanceGeneralService.java
+│   │   │   │       │   └── ... (21 services)
 │   │   │   │       ├── persistence/     # Entities & Repos
+│   │   │   │       │   ├── entity/
+│   │   │   │       │   │   ├── accounting/
+│   │   │   │       │   │   ├── hr/      # Entidades de nómina
+│   │   │   │       │   │   ├── rbac/    # Roles y permisos
+│   │   │   │       │   │   ├── sales/
+│   │   │   │       │   │   └── ...
+│   │   │   │       │   └── repository/
 │   │   │   │       ├── dto/             # Data Transfer Objects
+│   │   │   │       │   ├── accounting/
+│   │   │   │       │   ├── hr/
+│   │   │   │       │   ├── sales/
+│   │   │   │       │   └── ...
 │   │   │   │       └── config/          # Configuration
 │   │   │   └── resources/
-│   │   │       └── db/migration/        # Flyway migrations
+│   │   │       ├── db/migration/        # Flyway migrations
+│   │   │       │   ├── V1__initial_schema.sql
+│   │   │       │   ├── V20__add_hr_tables.sql
+│   │   │       │   ├── V24__seed_modules_data.sql
+│   │   │       │   └── ... (100+ migrations)
+│   │   │       └── application.properties
 │   │   └── test/
 │   └── pom.xml
 │
 ├── frontend/                # Next.js Frontend
 │   ├── src/
 │   │   ├── app/             # App Router (Next.js 14)
+│   │   │   ├── (dashboard)/
+│   │   │   │   ├── ventas/          # Módulo de ventas
+│   │   │   │   ├── contabilidad/    # Módulo contable
+│   │   │   │   ├── hr/              # Recursos Humanos
+│   │   │   │   │   ├── employees/   # Gestión empleados
+│   │   │   │   │   ├── periods/     # Períodos de nómina
+│   │   │   │   │   ├── concepts/    # Conceptos de nómina
+│   │   │   │   │   ├── receipts/    # Colillas de pago
+│   │   │   │   │   └── reports/     # Reportes de nómina
+│   │   │   │   ├── productos/       # Catálogo de productos
+│   │   │   │   ├── accounts/        # Usuarios y roles
+│   │   │   │   ├── settings/        # Configuración
+│   │   │   │   ├── comunicaciones/  # Mensajería
+│   │   │   │   └── home/            # Dashboard principal
+│   │   │   └── login/
 │   │   ├── components/      # Reusable Components
-│   │   ├── views/           # Page Views
+│   │   │   ├── accounting/  # Componentes contables
+│   │   │   ├── hr/          # Componentes de nómina
+│   │   │   ├── sales/       # Componentes de ventas
+│   │   │   └── views/       # Vistas de login, etc.
 │   │   ├── services/        # API Services
+│   │   │   ├── accounting/
+│   │   │   ├── hr/
+│   │   │   │   ├── employeeService.ts
+│   │   │   │   ├── payrollService.ts
+│   │   │   │   └── payrollLiquidationService.ts
+│   │   │   ├── sales/
+│   │   │   └── ...
 │   │   ├── types/           # TypeScript Types
+│   │   │   ├── accounting/
+│   │   │   ├── hr/          # Tipos de nómina
+│   │   │   ├── rbac/        # Tipos de RBAC
+│   │   │   └── sales/
 │   │   └── utils/           # Utilities
 │   ├── public/
 │   └── package.json
@@ -289,7 +469,9 @@ cloudfly/
 ├── notifications/           # Notification Service (Spring)
 ├── chat-socket-service/     # Socket.IO Service (Node.js)
 ├── n8n/                     # N8N Workflows
+├── backup-service/          # Backup Service (PHP)
 ├── docs/                    # Documentation
+├── tests/                   # Test Scripts
 ├── docker-compose.yml       # Production Compose
 └── .env                     # Environment Variables
 ```
