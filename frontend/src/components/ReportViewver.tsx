@@ -16,7 +16,7 @@ import DialogContentText from '@mui/material/DialogContentText'
 
 import MaintenanceReport from './reports/ReportMP'
 
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import ReporteMantenimientoV from './reports/ReporteMantenimientoV'
 
 const ReportViewver = ({open,onClose,rowSelect}:{open:boolean,onClose:any,rowSelect:any}) => {

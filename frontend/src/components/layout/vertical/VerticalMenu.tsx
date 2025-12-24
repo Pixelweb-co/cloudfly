@@ -61,7 +61,7 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
   const { userRole: initialUserRole, userRoles: initialUserRoles } = useMemo(() => {
     try {
       const token = typeof window !== 'undefined'
-        ? (localStorage.getItem('accessToken') || localStorage.getItem('AuthToken'))
+        ? localStorage.getItem('jwt')  // ESTANDARIZADO
         : null
 
       if (!token) return { userRole: null, userRoles: [] }
@@ -111,25 +111,28 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
   const [userRole, setUserRole] = useState<string | null>(initialUserRole)
   const [userRoles, setUserRoles] = useState<string[]>(initialUserRoles)
 
-  // Fetch menu from backend
+  // Fetch menu from backend - SOLO si existe un token JWT
   useEffect(() => {
     const fetchMenu = async () => {
+      // Get token from localStorage - ESTANDARIZADO
+      const token = typeof window !== 'undefined'
+        ? localStorage.getItem('jwt')
+        : null
+
+      // Solo cargar el menú si el usuario está autenticado (tiene token)
+      if (!token) {
+        setMenuData([])
+        setIsLoading(false)
+        return
+      }
+
       try {
         setIsLoading(true)
         setError(null)
 
-        // Get token from localStorage
-        const token = typeof window !== 'undefined'
-          ? (localStorage.getItem('accessToken') || localStorage.getItem('AuthToken'))
-          : null
-
-        if (token) {
-          // Fetch menu from new endpoint /api/menu
-          const menu = await menuService.getMenu()
-          setMenuData(menu)
-        } else {
-          setMenuData([])
-        }
+        // Fetch menu from endpoint /api/rbac/menu
+        const menu = await menuService.getMenu()
+        setMenuData(menu)
       } catch (err) {
         console.error('Error loading menu from backend:', err)
         setError('Error al cargar menú')

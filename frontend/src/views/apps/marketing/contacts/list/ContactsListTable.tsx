@@ -37,7 +37,7 @@ import TableFilters from './TableFilters'
 import CustomTextField from '@core/components/mui/TextField'
 import tableStyles from '@core/styles/table.module.css'
 import { userMethods } from '@/utils/userMethods'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import ErrorDialog from '@/components/dialogs/ErrorDialog'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'

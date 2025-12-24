@@ -121,10 +121,12 @@ const UserDropdown = () => {
                     <Avatar alt='John Doe' src='/images/avatars/1.png' />
                     <div className='flex items-start flex-col'>
                       <Typography className='font-medium' color='text.primary'>
-                        {user.username}
+                        {user?.username || user?.userEntity?.username || 'Usuario'}
                       </Typography>
-                      <Typography variant='caption'>{user.email}</Typography>
-                      <Typography variant='caption'>{user.roles[0].role}</Typography>
+                      <Typography variant='caption'>{user?.email || user?.userEntity?.email || ''}</Typography>
+                      {user?.roles?.[0]?.role && (
+                        <Typography variant='caption'>{user.roles[0].role}</Typography>
+                      )}
                     </div>
                   </div>
                   <Divider className='mlb-1' />

@@ -1,4 +1,4 @@
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import { PlanCreateRequest, PlanResponse } from '@/types/plans'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'

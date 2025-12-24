@@ -9,6 +9,9 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Alert from '@mui/material/Alert'
 import CircularProgress from '@mui/material/CircularProgress'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Button from '@mui/material/Button'
 
 // Icon Imports
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart'
@@ -19,6 +22,8 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance'
 import PaymentIcon from '@mui/icons-material/Payment'
 import ChatIcon from '@mui/icons-material/Chat'
 import PersonIcon from '@mui/icons-material/Person'
+import WarningIcon from '@mui/icons-material/Warning'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 
 // Component Imports
 import StatCard from '@/components/dashboard/StatCard'
@@ -39,16 +44,46 @@ import type { DashboardStats } from '@/services/dashboardService'
 import { formatCurrency } from '@/utils/format'
 
 const HomeDashboard = () => {
-    const { modules, loading: permissionsLoading, hasModule } = usePermissions()
+    // usePermissions ya carga el menú con módulos de la suscripción
+    const { modules, roles, menu, loading: permissionsLoading, hasModule } = usePermissions()
     const [stats, setStats] = useState<DashboardStats | null>(null)
     const [statsLoading, setStatsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
+    // Obtener info del plan desde userData
+    const [planInfo, setPlanInfo] = useState<{ planName: string; endDate: string } | null>(null)
+
+    useEffect(() => {
+        // Obtener información del plan desde localStorage
+        const userDataStr = localStorage.getItem('userData')
+        if (userDataStr) {
+            try {
+                const userData = JSON.parse(userDataStr)
+                console.log('User data:', userData)
+                // Intentar obtener info del plan si está disponible
+                setPlanInfo({
+                    planName: userData.subscription?.planName || 'Plan Activo',
+                    endDate: userData.subscription?.endDate || ''
+                })
+            } catch (err) {
+                console.error('Error parsing user data:', err)
+            }
+        }
+    }, [])
+
+    // Cargar estadísticas solo si tiene módulos
     useEffect(() => {
         const fetchStats = async () => {
+            // Si no hay módulos, no cargar stats
+            if (modules.length === 0 && !permissionsLoading) {
+                setStatsLoading(false)
+                return
+            }
+
             try {
                 setStatsLoading(true)
                 const data = await dashboardService.getStats()
+                console.log('Dashboard stats loaded:', data)
                 setStats(data)
                 setError(null)
             } catch (err) {
@@ -62,21 +97,61 @@ const HomeDashboard = () => {
         if (!permissionsLoading) {
             fetchStats()
         }
-    }, [permissionsLoading])
+    }, [permissionsLoading, modules.length])
 
     const loading = permissionsLoading || statsLoading
 
-    // Determine which widgets to show based on user's modules
-    const showSalesStats = hasModule('VENTAS')
-    const showAccountingStats = hasModule('CONTABILIDAD')
-    const showHRStats = hasModule('RECURSOS_HUMANOS')
-    const showCommunicationsStats = hasModule('COMUNICACIONES')
-    const showMarketingStats = hasModule('MARKETING')
+    // Determine which widgets to show based on user's modules  
+    const showSalesStats = hasModule('SALES') || hasModule('VENTAS')
+    const showAccountingStats = hasModule('ACCOUNTING') || hasModule('CONTABILIDAD')
+    const showHRStats = hasModule('HR') || hasModule('RECURSOS_HUMANOS')
+    const showCommunicationsStats = hasModule('COMMUNICATIONS') || hasModule('COMUNICACIONES')
 
-    if (error) {
+    console.log('Modules:', modules)
+    console.log('Show sales:', showSalesStats)
+    console.log('Show accounting:', showAccountingStats)
+    console.log('Show HR:', showHRStats)
+    console.log('Show communications:', showCommunicationsStats)
+
+    // Error State
+    if (error && modules.length > 0) {
         return (
             <Box sx={{ p: 3 }}>
                 <Alert severity="error">{error}</Alert>
+            </Box>
+        )
+    }
+
+    // No Modules State (verificar solo después de cargar)
+    if (!permissionsLoading && modules.length === 0 && menu.length === 0) {
+        return (
+            <Box sx={{ p: 3 }}>
+                <Grid container spacing={6}>
+                    <Grid item xs={12}>
+                        <WelcomeBanner />
+                    </Grid>
+                    <Grid item xs={12}>
+                        <Card>
+                            <CardContent sx={{ textAlign: 'center', py: 8 }}>
+                                <WarningIcon sx={{ fontSize: 80, color: 'warning.main', mb: 3 }} />
+                                <Typography variant="h4" gutterBottom>
+                                    No tienes módulos asignados actualmente
+                                </Typography>
+                                {planInfo && (
+                                    <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                                        <strong>Plan:</strong> {planInfo.planName}
+                                    </Typography>
+                                )}
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
+                                    Por favor contacta a tu administrador para obtener acceso a los módulos del sistema.
+                                </Typography>
+                                <Button variant="contained" color="primary" size="large">
+                                    Contactar Administrador
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                </Grid>
             </Box>
         )
     }
@@ -89,6 +164,38 @@ const HomeDashboard = () => {
                     <WelcomeBanner />
                 </Grid>
             </Grid>
+
+            {/* Subscription/Modules Info */}
+            {!permissionsLoading && modules.length > 0 && (
+                <Grid container spacing={6} sx={{ mb: 4 }}>
+                    <Grid item xs={12}>
+                        <Alert
+                            severity="success"
+                            icon={<CheckCircleIcon />}
+                            sx={{
+                                '& .MuiAlert-message': { width: '100%' }
+                            }}
+                        >
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                                <Box>
+                                    <Typography variant="subtitle1" fontWeight="bold">
+                                        {planInfo?.planName || 'Plan Activo'}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                        {modules.length} módulo{modules.length !== 1 ? 's' : ''} disponible{modules.length !== 1 ? 's' : ''}
+                                        {modules.length > 0 && modules.length <= 5 && `: ${modules.join(', ')}`}
+                                    </Typography>
+                                </Box>
+                                {planInfo?.endDate && (
+                                    <Typography variant="caption" color="text.secondary">
+                                        Activo hasta: {new Date(planInfo.endDate).toLocaleDateString()}
+                                    </Typography>
+                                )}
+                            </Box>
+                        </Alert>
+                    </Grid>
+                </Grid>
+            )}
 
             {/* Loading State */}
             {loading && (
@@ -256,23 +363,6 @@ const HomeDashboard = () => {
                             </Grid>
                         )}
                     </Grid>
-
-                    {/* No Modules Message */}
-                    {modules.length === 0 && (
-                        <Grid container spacing={6} sx={{ mt: 2 }}>
-                            <Grid item xs={12}>
-                                <Alert severity="info">
-                                    <Typography variant="h6" gutterBottom>
-                                        Bienvenido a CloudFly
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        No tienes módulos asignados actualmente. Por favor contacta a tu administrador para
-                                        obtener acceso a los módulos del sistema.
-                                    </Typography>
-                                </Alert>
-                            </Grid>
-                        </Grid>
-                    )}
                 </>
             )}
         </Box>

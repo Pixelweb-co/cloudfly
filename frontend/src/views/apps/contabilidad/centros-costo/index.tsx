@@ -11,7 +11,7 @@ import {
     Add, Edit, Delete, Search, AccountTree, FolderOpen, Folder
 } from '@mui/icons-material'
 import toast from 'react-hot-toast'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 interface CostCenter {
     id?: number

@@ -1,6 +1,6 @@
 // services/accounting/reportService.ts
 
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import type {
     LibroDiarioDTO,
     LibroMayorDTO,

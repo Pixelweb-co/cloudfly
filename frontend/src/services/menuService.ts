@@ -1,4 +1,6 @@
-import axiosInstance from '@/utils/axiosInterceptor'
+'use client'
+
+import { axiosInstance } from '@/utils/axiosInstance'
 
 export interface MenuSuffix {
     label: string
@@ -16,10 +18,10 @@ export interface MenuItem {
 
 export const menuService = {
     /**
-     * Obtiene el menú completo del sistema
+     * Obtiene el menú completo del sistema desde /api/rbac/menu
      */
     async getMenu(): Promise<MenuItem[]> {
-        const response = await axiosInstance.get('/api/menu')
+        const response = await axiosInstance.get('/api/rbac/menu')
         return response.data
     }
 }

@@ -1,5 +1,5 @@
 // Service for payroll cost reports
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import type { PayrollCostByCostCenter, CostCenter } from '@/types/hr'
 
 const BASE_URL = '/api/hr/reports'

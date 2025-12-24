@@ -35,7 +35,7 @@ import { toast, ToastContainer } from 'react-toastify'
 import TabList from '@mui/lab/TabList'
 
 import CustomTextField from '@/@core/components/mui/TextField'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 const schema = yup.object().shape({
   productType: yup.string().notRequired(),

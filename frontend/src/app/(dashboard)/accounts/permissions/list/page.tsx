@@ -1,31 +1,16 @@
-'use client' // Esto indica que este archivo es un Componente del Cliente
-// Component Imports
+'use client'
+
+// React Imports
 import { useEffect, useState } from 'react'
 
-
-
-import axios from 'axios'
-import dotenv from "dotenv";
-
+// Component Imports
 import UserList from '@views/apps/user/list'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 const getUserData = async () => {
-  console.log('userList ', process.env.NEXT_PUBLIC_API_URL)
-
   try {
-    // Recupera el token desde localStorage
-    const token = localStorage.getItem('AuthToken')
-
-    console.log('token ', token)
-
-    // Realiza la petición con el token en el encabezado Authorization
-    const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
-      headers: {
-        'Content-Type': 'application/json', // Asegúrate de que el contenido sea JSON
-        Authorization: `Bearer ${token}` // Añade el token en el encabezado
-      }
-    })
-
+    // axiosInstance ya incluye el token automáticamente
+    const res = await axiosInstance.get('/users')
     return res.data
   } catch (error) {
     console.error('Error fetching user data:', error)
@@ -42,7 +27,6 @@ const UserListApp = () => {
     const fetchData = async () => {
       try {
         const data = await getUserData()
-
         console.log('Datos', data)
         setUserData(data)
       } catch (err: any) {
