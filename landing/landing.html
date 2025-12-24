@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="CloudFly ERP - Plataforma empresarial completa con IA, gestión de ventas, contabilidad, nómina, POS y chatbot inteligente">
+    <title>CloudFly ERP - Plataforma Integral de Gestión Empresarial con IA</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- Header/Navigation -->
+    <header class="header">
+        <div class="container">
+            <nav class="nav">
+                <div class="logo">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" style="color: #8B5CF6;">
+                        <path d="M12 8V4H8"></path>
+                        <rect width="16" height="12" x="4" y="8" rx="2"></rect>
+                        <path d="M2 14h2"></path>
+                        <path d="M20 14h2"></path>
+                        <path d="M15 13v2"></path>
+                        <path d="M9 13v2"></path>
+                    </svg>
+                    <span class="logo-text">CloudFly Marketing AI Pro</span>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="#caracteristicas">Características</a></li>
+                    <li><a href="#modulos">Módulos</a></li>
+                </ul>
+                <div class="nav-actions">
+                    <a href="https://dashboard.cloudfly.com.co/login" class="btn-secondary">Acceso Clientes</a>
+                    <a href="https://dashboard.cloudfly.com.co/register" class="btn-primary">Prueba Gratis</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <div class="badge">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M8 2L9.5 6H13.5L10.25 8.5L11.5 12.5L8 10L4.5 12.5L5.75 8.5L2.5 6H6.5L8 2Z"
+                                fill="currentColor" />
+                        </svg>
+                        <span>Nueva Versión 2.0 - Con Módulo de Nómina Colombiana</span>
+                    </div>
+                    <h1 class="hero-title">
+                        La Plataforma ERP <span class="gradient-text">Todo-en-Uno</span> para Impulsar tu Negocio
+                    </h1>
+                    <p class="hero-subtitle">
+                        Gestión completa de ventas, contabilidad, nómina, inventario y atención al cliente con IA
+                        integrada.
+                        Todo en una sola plataforma diseñada para crecer con tu empresa.
+                    </p>
+                    <div class="hero-stats">
+                        <div class="stat">
+                            <div class="stat-number">500+</div>
+                            <div class="stat-label">Empresas Activas</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number">99.9%</div>
+                            <div class="stat-label">Uptime SLA</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number">24/7</div>
+                            <div class="stat-label">Soporte IA</div>
+                        </div>
+                    </div>
+                    <div class="hero-cta">
+                        <a href="https://dashboard.cloudfly.com.co/register" class="btn-primary btn-large">
+                            Probar Gratis 14 Días
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M7 10H13M13 10L10 7M13 10L10 13" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" />
+                            </svg>
+                        </a>
+                        <a href="#caracteristicas" class="btn-outline btn-large">Ver Características</a>
+                    </div>
+                    <p class="hero-note">✓ Sin tarjeta de crédito ✓ Configuración en 5 minutos ✓ Soporte en español</p>
+                </div>
+                <div class="hero-visual">
+                    <div class="dashboard-preview">
+                        <div class="browser-frame">
+                            <div class="browser-header">
+                                <div class="browser-dots">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
+                                <div class="browser-url">dashboard.cloudfly.com.co</div>
+                            </div>
+                            <div class="browser-content">
+                                <div class="dashboard-grid">
+                                    <div class="dashboard-card">
+                                        <div class="card-header">Ventas del Mes</div>
+                                        <div class="card-value">$125,430</div>
+                                        <div class="card-trend positive">+23.5%</div>
+                                    </div>
+                                    <div class="dashboard-card">
+                                        <div class="card-header">Nómina Procesada</div>
+                                        <div class="card-value">148</div>
+                                        <div class="card-trend positive">100%</div>
+                                    </div>
+                                    <div class="dashboard-card chart">
+                                        <div class="mini-chart"></div>
+                                    </div>
+                                    <div class="dashboard-card">
+                                        <div class="card-header">Mensajes IA</div>
+                                        <div class="card-value">1,234</div>
+                                        <div class="card-trend positive">+45%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Características Principales -->
+    <section id="caracteristicas" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Todo lo que Necesitas en un Solo Sistema</h2>
+                <p class="section-subtitle">Optimiza cada área de tu negocio con nuestras herramientas integradas</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #8B5CF6 0%, #3B82F6 100%)">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M3 3v18h18" stroke-width="2" />
+                            <path d="M7 16l4-4 3 3 5-5" stroke-width="2" stroke-linecap="round" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Gestión de Ventas Completa</h3>
+                    <p class="feature-description">
+                        Cotizaciones, pedidos y facturación electrónica. Conversión automática entre estados con
+                        integración contable inmediata.
+                    </p>
+                    <ul class="feature-list">
+                        <li>✓ Cotizaciones con múltiples ítems</li>
+                        <li>✓ Tracking de pedidos en tiempo real</li>
+                        <li>✓ Facturación automática con PDF</li>
+                        <li>✓ Integración contable directa</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%)">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect x="3" y="4" width="18" height="16" rx="2" stroke-width="2" />
+                            <path d="M7 8h10M7 12h10M7 16h6" stroke-width="2" stroke-linecap="round" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Contabilidad NIIF Completa</h3>
+                    <p class="feature-description">
+                        Sistema contable profesional con PUC Colombia, centros de costo y reportes financieros en tiempo
+                        real.
+                    </p>
+                    <ul class="feature-list">
+                        <li>✓ Plan de cuentas jerárquico (5 niveles)</li>
+                        <li>✓ Libro Diario y Mayor automáticos</li>
+                        <li>✓ Balance General y Estado Resultados</li>
+                        <li>✓ Centros de costo multinivel</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card featured">
+                    <div class="feature-badge">Nuevo</div>
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%)">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" stroke-width="2" />
+                            <path d="M4 20c0-3.31 2.69-6 6-6h4c3.31 0 6 2.69 6 6" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Nómina Colombiana Completa</h3>
+                    <p class="feature-description">
+                        Sistema de nómina con todas las prestaciones sociales colombianas, liquidación automática e
+                        integración contable.
+                    </p>
+                    <ul class="feature-list">
+                        <li>✓ Cálculo automático de prestaciones</li>
+                        <li>✓ Cesantías, prima, vacaciones</li>
+                        <li>✓ Colillas de pago en PDF</li>
+                        <li>✓ Reportes por centro de costo</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #EC4899 0%, #BE185D 100%)">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect x="3" y="3" width="7" height="7" rx="1" stroke-width="2" />
+                            <rect x="14" y="3" width="7" height="7" rx="1" stroke-width="2" />
+                            <rect x="3" y="14" width="7" height="7" rx="1" stroke-width="2" />
+                            <rect x="14" y="14" width="7" height="7" rx="1" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Punto de Venta (POS)</h3>
+                    <p class="feature-description">
+                        POS moderno con gestión de inventario, códigos de barras y control de stock en tiempo real.
+                    </p>
+                    <ul class="feature-list">
+                        <li>✓ Catálogo completo de productos</li>
+                        <li>✓ Control de inventario en tiempo real</li>
+                        <li>✓ Códigos de barras y SKU</li>
+                        <li>✓ Alertas de stock mínimo</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z" stroke-width="2" stroke-linejoin="round" />
+                            <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke-width="2" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">CRM Multi-tenant</h3>
+                    <p class="feature-description">
+                        Gestión completa de clientes, proveedores y empleados con pipeline Kanban e historial de
+                        interacciones.
+                    </p>
+                    <ul class="feature-list">
+                        <li>✓ Pipeline visual (Lead → Cliente)</li>
+                        <li>✓ Información fiscal completa</li>
+                        <li>✓ Historial de interacciones</li>
+                        <li>✓ Integración contable automática</li>
+                    </ul>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%)">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path
+                                d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+                                stroke-width="2" />
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Chatbot IA 24/7</h3>
+                    <p class="feature-description">
+                        Asistente inteligente con WhatsApp, RAG y automatización N8N para atención al cliente sin
+                        límites.
+                    </p>
+                    <ul class="feature-list">
+                        <li>✓ Chatbot especializado por negocio</li>
+                        <li>✓ Integración WhatsApp Business</li>
+                        <li>✓ RAG con búsqueda semántica</li>
+                        <li>✓ Automatización con N8N</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Módulos del Sistema -->
+    <section id="modulos" class="modules">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Módulos Integrados del Sistema</h2>
+                <p class="section-subtitle">Cada módulo trabaja en conjunto para optimizar tu operación</p>
+            </div>
+            <div class="modules-showcase">
+                <div class="module-item">
+                    <div class="module-number">01</div>
+                    <div class="module-content">
+                        <h3>Ventas & Facturación</h3>
+                        <p>Gestión completa del ciclo de ventas desde la cotización hasta el pago</p>
+                    </div>
+                </div>
+                <div class="module-item">
+                    <div class="module-number">02</div>
+                    <div class="module-content">
+                        <h3>Contabilidad NIIF</h3>
+                        <p>Contabilidad profesional con reportes financieros en tiempo real</p>
+                    </div>
+                </div>
+                <div class="module-item highlight">
+                    <div class="module-number">03</div>
+                    <div class="module-content">
+                        <h3>Nómina Colombiana</h3>
+                        <p>Sistema completo de nómina con prestaciones sociales automáticas</p>
+                    </div>
+                </div>
+                <div class="module-item">
+                    <div class="module-number">04</div>
+                    <div class="module-content">
+                        <h3>POS & Inventario</h3>
+                        <p>Punto de venta con control de stock y códigos de barras</p>
+                    </div>
+                </div>
+                <div class="module-item">
+                    <div class="module-number">05</div>
+                    <div class="module-content">
+                        <h3>CRM & Contactos</h3>
+                        <p>Gestión de relaciones con clientes y proveedores</p>
+                    </div>
+                </div>
+                <div class="module-item">
+                    <div class="module-number">06</div>
+                    <div class="module-content">
+                        <h3>Chatbot Inteligente</h3>
+                        <p>Asistente con IA y comunicación omnicanal</p>
+                    </div>
+                </div>
+                <div class="module-item">
+                    <div class="module-number">07</div>
+                    <div class="module-content">
+                        <h3>RBAC & Seguridad</h3>
+                        <p>Control de acceso basado en roles granulares</p>
+                    </div>
+                </div>
+                <div class="module-item">
+                    <div class="module-number">08</div>
+                    <div class="module-content">
+                        <h3>Dashboard & Analytics</h3>
+                        <p>KPIs y reportes ejecutivos en tiempo real</p>
+                    </div>
+                </div>
+                <div class="module-item highlight">
+                    <div class="module-number">09</div>
+                    <div class="module-content">
+                        <h3>Inteligencia de Negocio con IA</h3>
+                        <p>Análisis predictivo, insights automáticos y recomendaciones inteligentes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonios Carousel -->
+    <section class="testimonials">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Lo que Dicen Nuestros Clientes</h2>
+                <p class="section-subtitle">Resultados reales de empresas que transformaron su negocio con CloudFly</p>
+            </div>
+            <div class="testimonials-carousel">
+                <div class="carousel-container">
+                    <div class="carousel-track">
+                        <!-- Testimonio 1 -->
+                        <div class="testimonial-card active">
+                            <div class="quote-icon">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                                    <path
+                                        d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"
+                                        fill="currentColor" opacity="0.1" />
+                                    <path
+                                        d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"
+                                        fill="currentColor" opacity="0.1" />
+                                </svg>
+                            </div>
+                            <p class="testimonial-text">
+                                "CloudFly transformó completamente nuestra operación. El chatbot atiende clientes 24/7 y
+                                la nómina se procesa automáticamente. Aumentamos ventas 250% y redujimos costos
+                                operativos en 40%."
+                            </p>
+                            <div class="testimonial-author">
+                                <div class="author-avatar">MC</div>
+                                <div class="author-info">
+                                    <div class="author-name">María Carmen López</div>
+                                    <div class="author-role">CEO, TechStart Solutions</div>
+                                </div>
+                            </div>
+                            <div class="testimonial-rating">
+                                <span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span>
+                            </div>
+                        </div>
+
+                        <!-- Testimonio 2 -->
+                        <div class="testimonial-card">
+                            <div class="quote-icon">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                                    <path
+                                        d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"
+                                        fill="currentColor" opacity="0.1" />
+                                    <path
+                                        d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"
+                                        fill="currentColor" opacity="0.1" />
+                                </svg>
+                            </div>
+                            <p class="testimonial-text">
+                                "El módulo de Inteligencia de Negocio nos da insights que antes tomaban semanas de
+                                análisis. Ahora tomamos decisiones basadas en datos en tiempo real. ROI del 400% en el
+                                primer año."
+                            </p>
+                            <div class="testimonial-author">
+                                <div class="author-avatar">JR</div>
+                                <div class="author-info">
+                                    <div class="author-name">Javier Rodríguez</div>
+                                    <div class="author-role">Director Marketing, RetailMax</div>
+                                </div>
+                            </div>
+                            <div class="testimonial-rating">
+                                <span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span>
+                            </div>
+                        </div>
+
+                        <!-- Testimonio 3 -->
+                        <div class="testimonial-card">
+                            <div class="quote-icon">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                                    <path
+                                        d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"
+                                        fill="currentColor" opacity="0.1" />
+                                    <path
+                                        d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"
+                                        fill="currentColor" opacity="0.1" />
+                                </svg>
+                            </div>
+                            <p class="testimonial-text">
+                                "La integración contable es perfecta. Cada venta genera automáticamente el asiento
+                                contable correspondiente. El cierre mensual ahora toma 2 horas en lugar de 2 días."
+                            </p>
+                            <div class="testimonial-author">
+                                <div class="author-avatar">AS</div>
+                                <div class="author-info">
+                                    <div class="author-name">Ana Sánchez</div>
+                                    <div class="author-role">CFO, Digital Ventures</div>
+                                </div>
+                            </div>
+                            <div class="testimonial-rating">
+                                <span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span>
+                            </div>
+                        </div>
+
+                        <!-- Testimonio 4 -->
+                        <div class="testimonial-card">
+                            <div class="quote-icon">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                                    <path
+                                        d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"
+                                        fill="currentColor" opacity="0.1" />
+                                    <path
+                                        d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"
+                                        fill="currentColor" opacity="0.1" />
+                                </svg>
+                            </div>
+                            <p class="testimonial-text">
+                                "El módulo de nómina colombiana es impresionante. Calcula automáticamente todas las
+                                prestaciones sociales y genera los comprobantes en PDF. Ahorramos 90% del tiempo en
+                                procesos de RRHH."
+                            </p>
+                            <div class="testimonial-author">
+                                <div class="author-avatar">LM</div>
+                                <div class="author-info">
+                                    <div class="author-name">Luis Martínez</div>
+                                    <div class="author-role">Gerente RRHH, Grupo Empresarial</div>
+                                </div>
+                            </div>
+                            <div class="testimonial-rating">
+                                <span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span><span>⭐</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controles del Carousel -->
+                <button class="carousel-btn carousel-btn-prev" aria-label="Anterior">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 18l-6-6 6-6" />
+                    </svg>
+                </button>
+                <button class="carousel-btn carousel-btn-next" aria-label="Siguiente">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 18l6-6-6-6" />
+                    </svg>
+                </button>
+
+                <!-- Indicadores -->
+                <div class="carousel-indicators">
+                    <button class="indicator active" data-slide="0" aria-label="Ir a testimonio 1"></button>
+                    <button class="indicator" data-slide="1" aria-label="Ir a testimonio 2"></button>
+                    <button class="indicator" data-slide="2" aria-label="Ir a testimonio 3"></button>
+                    <button class="indicator" data-slide="3" aria-label="Ir a testimonio 4"></button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <!-- CTA Final -->
+    <section id="prueba" class="cta-section">
+        <div class="container">
+            <div class="cta-content">
+                <h2 class="cta-title">¿Listo para Transformar tu Negocio?</h2>
+                <p class="cta-subtitle">
+                    Únete a más de 500 empresas que ya confían en CloudFly para gestionar sus operaciones
+                </p>
+                <div class="cta-buttons">
+                    <a href="https://dashboard.cloudfly.com.co/register" class="btn-primary btn-xl">
+                        Comenzar Prueba Gratuita
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M7 10H13M13 10L10 7M13 10L10 13" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" />
+                        </svg>
+                    </a>
+                </div>
+                <p class="cta-features">
+                    <span>✓ 14 días gratis</span>
+                    <span>✓ Sin tarjeta de crédito</span>
+                    <span>✓ Soporte completo</span>
+                    <span>✓ Configuración incluida</span>
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-column">
+                    <div class="footer-logo">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #8B5CF6;">
+                            <path d="M12 8V4H8"></path>
+                            <rect width="16" height="12" x="4" y="8" rx="2"></rect>
+                            <path d="M2 14h2"></path>
+                            <path d="M20 14h2"></path>
+                            <path d="M15 13v2"></path>
+                            <path d="M9 13v2"></path>
+                        </svg>
+                        <span>CloudFly Marketing AI Pro</span>
+                    </div>
+                    <p class="footer-description">
+                        Plataforma ERP completa para empresas modernas. Gestión integral con inteligencia artificial.
+                    </p>
+                    <div class="footer-social">
+                        <a href="#" aria-label="Twitter">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path
+                                    d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" />
+                            </svg>
+                        </a>
+                        <a href="#" aria-label="LinkedIn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path
+                                    d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
+                                <circle cx="4" cy="4" r="2" />
+                            </svg>
+                        </a>
+                        <a href="#" aria-label="GitHub">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path
+                                    d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="footer-column">
+                    <h4 class="footer-title">Producto</h4>
+                    <ul class="footer-links">
+                        <li><a href="#caracteristicas">Características</a></li>
+                        <li><a href="#modulos">Módulos</a></li>
+                        <li><a href="https://docs.cloudfly.com.co">Documentación</a></li>
+                        <li><a href="#api">API</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-column">
+                    <h4 class="footer-title">Empresa</h4>
+                    <ul class="footer-links">
+                        <li><a href="#nosotros">Nosotros</a></li>
+                        <li><a href="#blog">Blog</a></li>
+                        <li><a href="#casos">Casos de Éxito</a></li>
+                        <li><a href="#contacto">Contacto</a></li>
+                        <li><a href="#careers">Carreras</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-column">
+                    <h4 class="footer-title">Soporte</h4>
+                    <ul class="footer-links">
+                        <li><a href="#ayuda">Centro de Ayuda</a></li>
+                        <li><a href="#status">Estado del Sistema</a></li>
+                        <li><a href="#seguridad">Seguridad</a></li>
+                        <li><a href="#privacidad">Privacidad</a></li>
+                        <li><a href="#terminos">Términos</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p class="copyright">
+                    © 2024-2025 CloudFly. Todos los derechos reservados. Hecho con ❤️ en Colombia 🇨🇴
+                </p>
+                <div class="footer-badges">
+                    <span class="badge-security">🔒 SSL Seguro</span>
+                    <span class="badge-security">✓ ISO 27001</span>
+                    <span class="badge-security">🇨🇴 Datos en Colombia</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scroll para los enlaces de navegación
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Animación del header al hacer scroll
+        let lastScroll = 0;
+        const header = document.querySelector('.header');
+
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.pageYOffset;
+
+            if (currentScroll > 100) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+
+            lastScroll = currentScroll;
+        });
+
+        // Animación de aparición para las tarjetas
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.feature-card, .module-item').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(el);
+        });
+
+        // ===== Carousel de Testimonios =====
+        class TestimonialsCarousel {
+            constructor() {
+                this.currentSlide = 0;
+                this.slides = document.querySelectorAll('.testimonial-card');
+                this.track = document.querySelector('.carousel-track');
+                this.prevBtn = document.querySelector('.carousel-btn-prev');
+                this.nextBtn = document.querySelector('.carousel-btn-next');
+                this.indicators = document.querySelectorAll('.indicator');
+                this.autoPlayInterval = null;
+
+                if (!this.slides.length) return;
+
+                this.init();
+            }
+
+            init() {
+                // Event listeners para botones
+                this.prevBtn.addEventListener('click', () => this.prevSlide());
+                this.nextBtn.addEventListener('click', () => this.nextSlide());
+
+                // Event listeners para indicadores
+                this.indicators.forEach((indicator, index) => {
+                    indicator.addEventListener('click', () => this.goToSlide(index));
+                });
+
+                // Auto-play
+                this.startAutoPlay();
+
+                // Pausar auto-play al hover
+                const carousel = document.querySelector('.testimonials-carousel');
+                carousel.addEventListener('mouseenter', () => this.stopAutoPlay());
+                carousel.addEventListener('mouseleave', () => this.startAutoPlay());
+
+                // Soporte para gestos táctiles
+                this.addTouchSupport();
+            }
+
+            goToSlide(index) {
+                // Remover clase active de todas las slides
+                this.slides.forEach(slide => slide.classList.remove('active'));
+                this.indicators.forEach(ind => ind.classList.remove('active'));
+
+                // Actualizar índice
+                this.currentSlide = index;
+
+                // Mover el track
+                const offset = -100 * this.currentSlide;
+                this.track.style.transform = `translateX(${offset}%)`;
+
+                // Agregar clase active a la slide actual
+                this.slides[this.currentSlide].classList.add('active');
+                this.indicators[this.currentSlide].classList.add('active');
+            }
+
+            nextSlide() {
+                const next = (this.currentSlide + 1) % this.slides.length;
+                this.goToSlide(next);
+            }
+
+            prevSlide() {
+                const prev = (this.currentSlide - 1 + this.slides.length) % this.slides.length;
+                this.goToSlide(prev);
+            }
+
+            startAutoPlay() {
+                this.autoPlayInterval = setInterval(() => this.nextSlide(), 5000);
+            }
+
+            stopAutoPlay() {
+                if (this.autoPlayInterval) {
+                    clearInterval(this.autoPlayInterval);
+                }
+            }
+
+            addTouchSupport() {
+                let startX = 0;
+                let currentX = 0;
+                let isDragging = false;
+
+                this.track.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                    isDragging = true;
+                    this.stopAutoPlay();
+                });
+
+                this.track.addEventListener('touchmove', (e) => {
+                    if (!isDragging) return;
+                    currentX = e.touches[0].clientX;
+                });
+
+                this.track.addEventListener('touchend', () => {
+                    if (!isDragging) return;
+                    isDragging = false;
+
+                    const diff = startX - currentX;
+                    if (Math.abs(diff) > 50) {
+                        if (diff > 0) {
+                            this.nextSlide();
+                        } else {
+                            this.prevSlide();
+                        }
+                    }
+
+                    this.startAutoPlay();
+                });
+            }
+        }
+
+        // Inicializar el carousel cuando el DOM esté listo
+        if (document.querySelector('.testimonials-carousel')) {
+            new TestimonialsCarousel();
+        }
+    </script>
+</body>
+
+</html>
