@@ -48,7 +48,7 @@ import type { TypeDeviceType } from '../type/typeDeviceType'
 import TypeDeviceForm from '../form'
 import CheckListForm from '@/components/dialogs/form-checklist'
 import { FormControl, InputLabel, Select } from '@mui/material'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 declare module '@tanstack/table-core' {
   interface FilterFns {

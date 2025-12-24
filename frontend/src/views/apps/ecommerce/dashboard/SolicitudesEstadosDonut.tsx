@@ -16,7 +16,7 @@ import { useTheme } from '@mui/material/styles'
 import type { ApexOptions } from 'apexcharts'
 
 // Utils
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 // Styled Component Imports
 const AppReactApexCharts = dynamic(() => import('@/libs/styles/AppReactApexCharts'))

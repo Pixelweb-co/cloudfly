@@ -32,7 +32,7 @@ import { Controller, useForm } from 'react-hook-form'
 import axios from 'axios'
 import dotenv from 'dotenv'
 
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 const ReporteForm = ({ openForm, RecordData, closeForm }: { openForm: boolean; RecordData: any; closeForm: any }) => {
   // States

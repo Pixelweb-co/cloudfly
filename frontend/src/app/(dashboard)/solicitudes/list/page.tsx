@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 
 import SolicitudList from '@views/apps/solicitudes/list'
 import { userMethods } from '@/utils/userMethods'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import { LinearProgress } from '@mui/material'
 
 const getSolicitudData = async () => {

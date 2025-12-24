@@ -13,7 +13,7 @@ import Typography from '@mui/material/Typography'
 import { useDropzone } from 'react-dropzone'
 
 // Axios (ajusta si usas otro)
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 type FileProp = File & {
   name: string

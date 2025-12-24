@@ -1,3 +1,5 @@
+'use client'
+
 import axios from 'axios'
 
 // Crear instancia de axios con configuración base
@@ -11,9 +13,14 @@ export const axiosInstance = axios.create({
 // Interceptor para agregar el token a cada request
 axiosInstance.interceptors.request.use(
     config => {
-        const token = localStorage.getItem('token')
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`
+        // Solo acceder a localStorage en el cliente (no en SSR)
+        if (typeof window !== 'undefined') {
+            // ESTANDARIZADO: usar "jwt" que es el nombre que devuelve la API
+            const token = localStorage.getItem('jwt')
+
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`
+            }
         }
         return config
     },
@@ -28,10 +35,17 @@ axiosInstance.interceptors.response.use(
     error => {
         // Redirigir al login si el token expiró o no es válido
         if (error.response?.status === 401) {
-            localStorage.removeItem('token')
-            // Solo redirigir si no estamos ya en login
-            if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-                window.location.href = '/login'
+            // Solo en el cliente
+            if (typeof window !== 'undefined') {
+                // ESTANDARIZADO: limpiar "jwt"
+                localStorage.removeItem('jwt')
+                localStorage.removeItem('userData')
+
+                // COMENTADO PARA DEBUG - Solo redirigir si no estamos ya en login
+                // if (!window.location.pathname.includes('/login')) {
+                //     window.location.href = '/login'
+                // }
+                console.error('401 Unauthorized - Token inválido o expirado')
             }
         }
         return Promise.reject(error)

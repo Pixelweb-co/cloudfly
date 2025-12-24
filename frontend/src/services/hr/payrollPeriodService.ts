@@ -1,4 +1,4 @@
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import { PayrollPeriod, PageResponse } from '@/types/hr'
 
 export const payrollPeriodService = {

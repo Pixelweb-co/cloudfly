@@ -17,7 +17,7 @@ import {
     Box
 } from '@mui/material'
 import { ChatbotConfig, ChatbotType, ChatbotTypeConfig } from '@/types/apps/chatbotTypes'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import { userMethods } from '@/utils/userMethods'
 
 interface ChatbotSetupFormProps {

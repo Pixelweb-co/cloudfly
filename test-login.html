@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudFly - Login Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            display: block;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            display: block;
+        }
+
+        .token-display {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-secondary {
+            flex: 1;
+            padding: 10px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .info-box strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔐 CloudFly Login Test</h1>
+        <p class="subtitle">Prueba de autenticación para obtener token JWT</p>
+
+        <div class="info-box">
+            <strong>ℹ️ Credenciales de prueba:</strong><br>
+            Usuario: <code>juanpepe</code><br>
+            Password: <code>Elian2020*</code>
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Usuario</label>
+                <input type="text" id="username" name="username" value="juanpepe" required autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" name="password" value="Elian2020*" required
+                    autocomplete="current-password">
+            </div>
+
+            <button type="submit" id="submitBtn">
+                Iniciar Sesión
+            </button>
+        </form>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8080';
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const resultDiv = document.getElementById('result');
+
+            // Disable button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Autenticando...';
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.token) {
+                    // Save token to localStorage
+                    localStorage.setItem('token', data.token);
+
+                    // Show success
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <strong>✅ Login exitoso!</strong><br>
+                        Usuario: ${data.username}<br>
+                        Token guardado en localStorage<br>
+                        <div class="token-display">
+                            <strong>Token JWT:</strong><br>
+                            ${data.token}
+                        </div>
+                        <div class="actions">
+                            <button class="btn-secondary" onclick="testDashboard()">
+                                📊 Test Dashboard API
+                            </button>
+                            <button class="btn-secondary" onclick="testRbacMenu()">
+                                🔐 Test RBAC Menu
+                            </button>
+                            <button class="btn-secondary" onclick="window.location.href='http://localhost:3000/home'">
+                                🏠 Ir al Dashboard
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(data.message || 'Error en login');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <strong>❌ Error:</strong><br>
+                    ${error.message}<br>
+                    <br>
+                    <small>Verifica que el backend esté corriendo en ${API_URL}</small>
+                `;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Iniciar Sesión';
+            }
+        });
+
+        async function testDashboard() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('No hay token. Por favor inicia sesión primero.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/dashboard/stats`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                console.log('Dashboard Stats:', data);
+                alert('✅ Dashboard API funcionando!\nRevisa la consola para ver los datos.');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Error al llamar Dashboard API\n' + error.message);
+            }
+        }
+
+        async function testRbacMenu() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('No hay token. Por favor inicia sesión primero.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/rbac/menu`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                console.log('RBAC Menu:', data);
+                alert('✅ RBAC Menu funcionando!\nRevisa la consola para ver el menú.');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Error al llamar RBAC Menu\n' + error.message);
+            }
+        }
+
+        // Check if already logged in
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                const resultDiv = document.getElementById('result');
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `
+                    <strong>ℹ️ Ya tienes un token guardado</strong><br>
+                    <div class="actions">
+                        <button class="btn-secondary" onclick="testDashboard()">
+                            📊 Test Dashboard API
+                        </button>
+                        <button class="btn-secondary" onclick="testRbacMenu()">
+                            🔐 Test RBAC Menu
+                        </button>
+                        <button class="btn-secondary" onclick="localStorage.removeItem('token'); location.reload()">
+                            🚪 Cerrar Sesión
+                        </button>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+
+</html>

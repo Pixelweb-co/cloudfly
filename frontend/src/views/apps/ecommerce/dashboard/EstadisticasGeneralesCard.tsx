@@ -13,7 +13,7 @@ import type { ThemeColor } from '@core/types'
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'
 import { useEffect, useState } from 'react'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 // Icons mapping
 const ICONS: Record<string, string> = {

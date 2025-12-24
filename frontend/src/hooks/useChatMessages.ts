@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import { useSocket } from '@/contexts/SocketContext'
 import type { Message } from '@/types/apps/chatTypes'
 

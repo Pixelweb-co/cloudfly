@@ -58,7 +58,7 @@ import tableStyles from '@core/styles/table.module.css'
 import CheckListForm from '@/components/dialogs/form-checklist'
 import { userMethods } from '@/utils/userMethods'
 import { Badge, Switch, Tooltip } from '@mui/material'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import ErrorDialog from '@/components/dialogs/ErrorDialog'
 import ProgramacionMantenimiento from '@/components/dialogs/form-shedule/index'
 

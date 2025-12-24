@@ -4,7 +4,8 @@ export const userMethods = {
   isRole: (roleName: string) => {
     if (typeof window === 'undefined') return false
 
-    const userLoginString = localStorage.getItem('UserLogin')
+    // ESTANDARIZADO: usar 'userData' que es lo que guarda Login.tsx
+    const userLoginString = localStorage.getItem('userData')
 
     if (!userLoginString) {
       return false
@@ -28,7 +29,8 @@ export const userMethods = {
   getUserLogin: () => {
     if (typeof window === 'undefined') return null
 
-    const userLoginString = localStorage.getItem('UserLogin')
+    // ESTANDARIZADO: usar 'userData' que es lo que guarda Login.tsx
+    const userLoginString = localStorage.getItem('userData')
 
     if (!userLoginString) {
       return null

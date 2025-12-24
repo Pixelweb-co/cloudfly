@@ -42,7 +42,7 @@ import { toast, ToastContainer } from 'react-toastify'
 import TabList from '@mui/lab/TabList'
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 import CustomTextField from '@/@core/components/mui/TextField'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import JsonTreeBuilder from './treeBuilder'
 import Equipment from './equipment'
 

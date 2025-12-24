@@ -9,7 +9,7 @@
   type CalendarFiltersType = 'Equipos';
 
   // Data Imports
-  import axiosInstance from '@/utils/axiosInterceptor'
+  import { axiosInstance } from '@/utils/axiosInstance'
 
   // Async Thunk para cargar eventos desde la API
   export const fetchEvents = createAsyncThunk<EventInput[]>('calendar/fetchEvents', async () => {
