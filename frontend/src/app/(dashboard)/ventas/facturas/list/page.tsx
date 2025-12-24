@@ -22,7 +22,7 @@ const InvoicesListApp = () => {
             const user = userMethods.getUserLogin()
             let invoices_url = `${API_BASE_URL}/invoices`
 
-            if (user.roles[0].roleEnum === 'ADMIN' || user.roles[0].roleEnum === 'USER' || user.roles[0].roleEnum === 'SUPERADMIN') {
+            if (user.roles[0].role === 'ADMIN' || user.roles[0].role === 'USER' || user.roles[0].role === 'SUPERADMIN') {
                 const id_customer = user.customer.id
                 invoices_url = `${API_BASE_URL}/invoices/tenant/${id_customer}`
             }

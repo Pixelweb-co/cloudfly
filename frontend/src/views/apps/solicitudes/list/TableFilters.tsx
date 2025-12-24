@@ -77,8 +77,8 @@ const TableFilters = ({
   useEffect(() => {
     const user = userMethods.getUserLogin()
 
-    if (user?.roles?.[0]?.roleEnum) {
-      setUserLoginRole(user.roles[0].roleEnum)
+    if (user?.roles?.[0]?.role) {
+      setUserLoginRole(user.roles[0].role)
     }
 
     fetchCustomers()

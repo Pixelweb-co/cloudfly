@@ -298,7 +298,8 @@ const BalanceGeneralView = () => {
                                 </Grid>
                             </Grid>
 
-                            {data.isBalanced ? (
+
+                            {(Math.abs(data.totalActivos - (data.totalPasivos + data.totalPatrimonio)) < 0.01) ? (
                                 <Alert severity='success' sx={{ mt: 3 }}>✅ Balance verificado: Activo = Pasivo + Patrimonio</Alert>
                             ) : (
                                 <Alert severity='error' sx={{ mt: 3 }}>⚠️ Balance desbalanceado</Alert>

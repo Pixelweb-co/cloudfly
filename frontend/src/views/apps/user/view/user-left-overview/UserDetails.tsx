@@ -30,7 +30,7 @@ const UserDetails = () => {
   const userName = sessionUser?.username || sessionUser?.email || ''
   const billingEmail = sessionUser?.email || ''
   const status = sessionUser?.enabled ? 'Activo' : 'Inactivo'
-  const role = sessionUser?.roles?.[0]?.roleEnum || 'USER'
+  const role = sessionUser?.roles?.[0]?.role || 'USER'
   const taxId = sessionUser?.taxId || '-'
   const contact = sessionUser?.phone || '-'
   const language = [sessionUser?.language || 'Español']

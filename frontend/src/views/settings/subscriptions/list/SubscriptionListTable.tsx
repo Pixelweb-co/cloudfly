@@ -19,8 +19,16 @@ import {
     getFilteredRowModel,
     getPaginationRowModel,
     getSortedRowModel,
-    type ColumnDef
+    type ColumnDef,
+    type FilterFn
 } from '@tanstack/react-table'
+import { rankItem } from '@tanstack/match-sorter-utils'
+
+const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
+    const itemRank = rankItem(row.getValue(columnId), value)
+    addMeta({ itemRank })
+    return itemRank.passed
+}
 
 import tableStyles from '@core/styles/table.module.css'
 import CustomTextField from '@core/components/mui/TextField'
@@ -252,7 +260,9 @@ const SubscriptionListTable = () => {
     const table = useReactTable({
         data,
         columns,
-        filterFns: {},
+        filterFns: {
+            fuzzy: fuzzyFilter
+        },
         state: {
             globalFilter
         },
@@ -261,6 +271,7 @@ const SubscriptionListTable = () => {
         getSortedRowModel: getSortedRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
         onGlobalFilterChange: setGlobalFilter,
+        globalFilterFn: fuzzyFilter,
         initialState: {
             pagination: {
                 pageSize: 10

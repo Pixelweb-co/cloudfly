@@ -124,7 +124,7 @@ const UserDropdown = () => {
                         {user.username}
                       </Typography>
                       <Typography variant='caption'>{user.email}</Typography>
-                      <Typography variant='caption'>{user.roles[0].roleEnum}</Typography>
+                      <Typography variant='caption'>{user.roles[0].role}</Typography>
                     </div>
                   </div>
                   <Divider className='mlb-1' />
