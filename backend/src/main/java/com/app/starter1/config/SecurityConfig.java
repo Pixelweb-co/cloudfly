@@ -366,6 +366,26 @@ public class SecurityConfig {
                                                         "SUPERADMIN", "BIOMEDICAL",
                                                         "ADMIN");
 
+                                        // categories (alias en inglés para categorias)
+                                        http.requestMatchers(HttpMethod.GET, "/categories/**").hasAnyRole("SUPERADMIN",
+                                                        "MANAGER",
+                                                        "ADMIN",
+                                                        "BIOMEDICAL", "USER");
+                                        http.requestMatchers(HttpMethod.PUT, "/categories/**").hasAnyRole("SUPERADMIN",
+                                                        "MANAGER",
+                                                        "BIOMEDICAL",
+                                                        "ADMIN");
+                                        http.requestMatchers(HttpMethod.POST, "/categories/**").hasAnyRole("SUPERADMIN",
+                                                        "MANAGER",
+                                                        "BIOMEDICAL",
+                                                        "ADMIN");
+                                        http.requestMatchers(HttpMethod.DELETE, "/categories/**").hasAnyRole(
+                                                        "SUPERADMIN", "BIOMEDICAL",
+                                                        "ADMIN");
+                                        http.requestMatchers(HttpMethod.PATCH, "/categories/**").hasAnyRole(
+                                                        "SUPERADMIN", "BIOMEDICAL",
+                                                        "ADMIN");
+
                                         // chatbot types
                                         http.requestMatchers(HttpMethod.GET, "/chatbot-types/**").hasAnyRole(
                                                         "SUPERADMIN", "MANAGER",
