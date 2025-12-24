@@ -112,6 +112,15 @@ public class SubscriptionController {
     /**
      * Renew a subscription
      */
+    @PatchMapping("/{id}/toggle-auto-renew")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
+    public ResponseEntity<SubscriptionResponse> toggleAutoRenew(@PathVariable Long id) {
+        return ResponseEntity.ok(subscriptionService.toggleAutoRenew(id));
+    }
+
+    /**
+     * Renew a subscription
+     */
     @PostMapping("/{id}/renew")
     @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'MANAGER')")
     public ResponseEntity<SubscriptionResponse> renewSubscription(@PathVariable Long id) {

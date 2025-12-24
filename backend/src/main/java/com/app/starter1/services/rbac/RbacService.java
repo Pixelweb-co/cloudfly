@@ -152,15 +152,15 @@ public class RbacService {
 
         try {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.core.type.TypeReference<List<java.util.Map<String, String>>> typeRef = new com.fasterxml.jackson.core.type.TypeReference<List<java.util.Map<String, String>>>() {
+            com.fasterxml.jackson.core.type.TypeReference<List<java.util.Map<String, Object>>> typeRef = new com.fasterxml.jackson.core.type.TypeReference<List<java.util.Map<String, Object>>>() {
             };
 
-            List<java.util.Map<String, String>> items = mapper.readValue(menuItemsJson, typeRef);
+            List<java.util.Map<String, Object>> items = mapper.readValue(menuItemsJson, typeRef);
 
             return items.stream()
                     .filter(item -> {
                         // If no action specified, show the item
-                        String requiredAction = item.get("action");
+                        String requiredAction = (String) item.get("action");
                         if (requiredAction == null || requiredAction.isEmpty()) {
                             return true;
                         }
@@ -174,9 +174,9 @@ public class RbacService {
                         return userPermissions.contains(requiredAction.toUpperCase());
                     })
                     .map(item -> MenuItemDTO.builder()
-                            .label(item.get("label"))
-                            .href(item.get("href"))
-                            .icon(item.getOrDefault("icon", null))
+                            .label((String) item.get("label"))
+                            .href((String) item.get("href"))
+                            .icon((String) item.getOrDefault("icon", null))
                             .build())
                     .collect(Collectors.toList());
         } catch (Exception e) {
