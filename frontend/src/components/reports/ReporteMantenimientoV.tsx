@@ -12,7 +12,7 @@ import html2canvas from 'html2canvas';
 
 import { userMethods } from '@/utils/userMethods';
 import SignatureDialog from '../dialogs/SignatureDialog';
-import axiosInstance from '@/utils/axiosInterceptor';
+import { axiosInstance } from '@/utils/axiosInstance';
 
 
 

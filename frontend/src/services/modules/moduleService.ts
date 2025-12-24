@@ -1,4 +1,4 @@
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import { ModuleDTO, ModuleCreateRequest } from '@/types/modules'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'

@@ -1,4 +1,4 @@
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import type { Customer } from '@/types/customers'
 
 const API_BASE = '/customers'

@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 import { Box, Button, Card, CardContent, CardHeader, Tooltip } from '@mui/material';
 import { userMethods } from '@/utils/userMethods';
 import ReportViewver from './ReportViewver';
-import axiosInstance from '@/utils/axiosInterceptor';
+import { axiosInstance } from '@/utils/axiosInstance';
 import ConfirmationDialog from '@components/dialogs/ConfirmationDialog';
 
 function DeviceReports({product_id}:{product_id:any}) {

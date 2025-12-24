@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { Box, Typography, TextField, Button, Alert, CircularProgress } from '@mui/material'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 interface ProductCreationStepProps {
     onProductCreated: () => void

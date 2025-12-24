@@ -1,4 +1,4 @@
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import { ProductType } from '@/types/apps/productType'
 import { OrderRequest, OrderResponse, Contact } from '../types'
 import { userMethods } from '@/utils/userMethods'

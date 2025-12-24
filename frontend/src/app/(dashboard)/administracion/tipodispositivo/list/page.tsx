@@ -8,7 +8,7 @@ import dotenv from "dotenv";
 import TypeDeviceListTable from '../../../../../views/apps/typeDevice/list/TypeDeviceListTable'
 
 // eslint-disable-next-line import/no-unresolved
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 const getTypeDeviceData = async () => {
 

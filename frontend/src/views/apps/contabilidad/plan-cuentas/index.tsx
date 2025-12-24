@@ -12,7 +12,7 @@ import {
     AccountBalance, TrendingUp, TrendingDown, Remove
 } from '@mui/icons-material'
 import toast from 'react-hot-toast'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import { userMethods } from '@/utils/userMethods'
 
 interface ChartOfAccount {

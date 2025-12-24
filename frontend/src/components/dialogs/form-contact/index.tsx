@@ -16,7 +16,7 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
 import { toast, ToastContainer } from 'react-toastify'
 import CustomTextField from '@/@core/components/mui/TextField'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import { userMethods } from '@/utils/userMethods'
 
 const schema = yup.object().shape({

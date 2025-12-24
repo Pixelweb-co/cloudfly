@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { LinearProgress } from '@mui/material'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import { userMethods } from '@/utils/userMethods'
 import OrdersList from '@views/apps/ventas/pedidos/list'
 import type { OrderResponse } from '@/views/apps/pos/types'

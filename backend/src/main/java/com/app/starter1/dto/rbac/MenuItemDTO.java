@@ -24,6 +24,7 @@ public class MenuItemDTO {
     private List<MenuItemDTO> children;
     private Boolean isSection;
     private String sectionTitle;
+    private String moduleCode; // Código del módulo para identificación en frontend
 
     // Static factory methods for common menu items
     public static MenuItemDTO section(String title) {

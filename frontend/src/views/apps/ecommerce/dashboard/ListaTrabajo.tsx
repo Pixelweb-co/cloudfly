@@ -29,7 +29,7 @@ import LinearProgress from '@mui/material/LinearProgress'
 import OptionMenu from '@core/components/option-menu'
 
 // Utils
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 import { userMethods } from '@/utils/userMethods'
 
 // Types mínimos del backend

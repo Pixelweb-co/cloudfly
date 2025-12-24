@@ -11,7 +11,7 @@ import { userMethods } from '@/utils/userMethods'
 
 import { LinearProgress } from '@mui/material'
 
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
  
 
 const ProductListApp = () => {

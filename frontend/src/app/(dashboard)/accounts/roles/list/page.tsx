@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import RoleList from '@/views/apps/roles/list'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 const RoleListApp = () => {
   const [roleData, setRoleData] = useState<any[]>([])

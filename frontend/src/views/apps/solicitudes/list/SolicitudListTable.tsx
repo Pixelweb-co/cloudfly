@@ -56,7 +56,7 @@ import { userMethods } from '@/utils/userMethods'
 import { AuthManager } from '@/utils/authManager'
 import ReporteForm from '../components/page'
 import ConfirmationDialog from '@/components/dialogs/ConfirmationDialog'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 
 declare module '@tanstack/table-core' {

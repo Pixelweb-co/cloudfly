@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import axiosInstance from '@/utils/axiosInterceptor'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 interface Plan {
   id: number
@@ -123,6 +123,29 @@ export const useSubscription = () => {
     }
   }, [])
 
+  // Obtener suscripción activa del tenant (con módulos)
+  const getTenantActiveSubscription = useCallback(async (tenantId: number) => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await axiosInstance.get(`/api/v1/subscriptions/tenant/${tenantId}/active`)
+      console.log('Tenant subscription:', response.data)
+      return response.data
+    } catch (err: any) {
+      // 404 es esperado si no tiene suscripción
+      if (err.response?.status === 404) {
+        console.warn('No active subscription found for tenant:', tenantId)
+        return null
+      }
+      const errorMsg = err.response?.data?.message || 'Error al obtener suscripción del tenant'
+      setError(errorMsg)
+      console.error('Error fetching tenant subscription:', err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   // Cambiar plan
   const changePlan = useCallback(async (subscriptionId: number, newPlanId: number) => {
     try {
@@ -149,6 +172,7 @@ export const useSubscription = () => {
     fetchActivePlans,
     subscribeToPlan,
     getActiveSubscription,
+    getTenantActiveSubscription,
     cancelSubscription,
     renewSubscription,
     changePlan
