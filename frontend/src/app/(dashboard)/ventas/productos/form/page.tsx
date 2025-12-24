@@ -10,7 +10,6 @@ import type { Editor } from '@tiptap/react'
 import CustomIconButton from '@core/components/mui/IconButton'
 
 import Image from 'next/image'
-import axios from 'axios'
 
 import {
   Grid,
@@ -221,7 +220,6 @@ const initialProduct: any = {
 /* -------------------------------------------------------------------------- */
 
 const ProductViewLayout = () => {
-  const [formTemplate, setFormTemplate] = useState<any[]>([])
   const [value, setValue] = useState<string>('1')
   const [seletedImage, setSeletedImage] = useState<any>(null)
   const [checked, setChecked] = useState<number[]>([0])
@@ -237,34 +235,20 @@ const ProductViewLayout = () => {
   // 🔴 errores de validación
   const [formErrors, setFormErrors] = useState<{ name?: string; price?: string }>({})
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-
   /* ------------------------------ Guardar categoría ------------------------------ */
 
   const saveCategory = async () => {
     try {
-      const token = localStorage.getItem('AuthToken')
-
-      if (!token) {
-        throw new Error('Token no disponible. Por favor, inicia sesión nuevamente.')
-      }
       const user = userMethods.getUserLogin()
       const id_customer = user.customer.id
       const newCategory = {
         nombreCategoria: categoryNewName,
         tenantId: id_customer,
-        status: 'true',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        parentCategory: '0',
+        status: true,
+        parentCategory: 0,
         description: ''
       }
-      const response = await axios.post(`${API_BASE_URL}/categorias`, newCategory, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        }
-      })
+      const response = await axiosInstance.post('/categorias', newCategory)
       console.log('Categoría guardada:', response.data)
       setCategoriesList([...categoriesList, response.data])
       setSelectedCategories([...selectedCategories, response.data.id])
@@ -279,11 +263,6 @@ const ProductViewLayout = () => {
 
   const saveProduct = async () => {
     try {
-      const token = localStorage.getItem('AuthToken')
-      if (!token) {
-        throw new Error('Token no disponible. Por favor, inicia sesión nuevamente.')
-      }
-
       if (!product) return
 
       // 🔴 VALIDACIÓN local
@@ -336,12 +315,7 @@ const ProductViewLayout = () => {
 
       console.log('Payload a enviar:', payload)
 
-      const response = await axiosInstance.post('/productos', payload, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        }
-      })
+      const response = await axiosInstance.post('/productos', payload)
       console.log('Producto guardado:', response.data)
       // aquí puedes redirigir o mostrar un toast
     } catch (error) {
@@ -353,23 +327,10 @@ const ProductViewLayout = () => {
 
   const fetchOptions = async () => {
     try {
-      const token = localStorage.getItem('AuthToken')
-
-      if (!token) {
-        throw new Error('Token no disponible. Por favor, inicia sesión nuevamente.')
-      }
-
       const user = userMethods.getUserLogin()
       const id_customer = user.customer.id
 
-      const [categoriesRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/categorias/customer/${id_customer}`, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          }
-        })
-      ])
+      const categoriesRes = await axiosInstance.get(`/categorias/customer/${id_customer}`)
 
       console.log('categoriesRes:', categoriesRes.data)
       setCategoriesList(categoriesRes.data)
@@ -390,10 +351,6 @@ const ProductViewLayout = () => {
     setSeletedImage(productImages.length > 0 ? productImages[0] : null)
   }, [productImages])
 
-  useEffect(() => {
-    console.log('form templates', formTemplate)
-  }, [formTemplate])
-
   /* ------------------------------ Cargar product de localStorage ------------------------------ */
 
   useEffect(() => {
@@ -409,26 +366,6 @@ const ProductViewLayout = () => {
       }
       setProduct(merged)
     }
-
-    const getTemplates = async (item: any) => {
-      if (!item) return
-
-      try {
-        const response = await axiosInstance.get(
-          `/plantillas?marca=${item.brand}&modelo=${item.model}&tipoElement=${item.productType}`
-        )
-
-        const templates = response.data.map((t: any) => ({ nom: t.nom, tipo: '1' }))
-
-        console.log('plantillas v :', templates)
-
-        setFormTemplate(templates)
-      } catch (error) {
-        console.error('Error al obtener los datos:', error)
-      }
-    }
-
-    getTemplates(productData)
   }, [])
 
   if (!product) {
