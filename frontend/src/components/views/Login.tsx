@@ -270,6 +270,7 @@ const Login = ({ mode }: { mode: SystemMode }) => {
                 Create an account
               </Typography>
             </div>
+            {/* Google Sign-In not implemented yet
             <Divider className='gap-2'>or</Divider>
             <Button
               color='secondary'
@@ -280,6 +281,7 @@ const Login = ({ mode }: { mode: SystemMode }) => {
             >
               Sign in with Google
             </Button>
+            */}
           </form>
         </div>
       </div>

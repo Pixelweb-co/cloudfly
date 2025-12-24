@@ -269,6 +269,8 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
                 baseSalary: parseFloat(formData.baseSalary),
                 monthlyWorkedDays: parseInt(formData.monthlyWorkedDays),
                 hireDate: formData.hireDate,
+                paymentFrequency: formData.paymentFrequency as 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY',
+                paymentMethod: formData.paymentMethod as 'BANK_TRANSFER' | 'CASH' | 'CHECK' | undefined,
                 existingUserId: formData.existingUserId ? parseInt(formData.existingUserId) : undefined
             }
 

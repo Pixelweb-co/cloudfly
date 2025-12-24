@@ -35,6 +35,7 @@ type ConceptFormData = {
     isTaxable: boolean
     isImssSubject: boolean
     calculationFormula: string
+    isSystemConcept: boolean
     isActive: boolean
 }
 
@@ -48,6 +49,7 @@ export default function ConceptFormDialog({ open, onClose, onSuccess, concept }:
         isTaxable: true,
         isImssSubject: false,
         calculationFormula: '',
+        isSystemConcept: false,
         isActive: true
     })
     const [saving, setSaving] = useState(false)
@@ -65,6 +67,7 @@ export default function ConceptFormDialog({ open, onClose, onSuccess, concept }:
                 isTaxable: concept.isTaxable ?? true,
                 isImssSubject: concept.isImssSubject ?? false,
                 calculationFormula: concept.calculationFormula || '',
+                isSystemConcept: concept.isSystemConcept ?? false,
                 isActive: concept.isActive ?? true
             })
         } else {
@@ -78,6 +81,7 @@ export default function ConceptFormDialog({ open, onClose, onSuccess, concept }:
                 isTaxable: true,
                 isImssSubject: false,
                 calculationFormula: '',
+                isSystemConcept: false,
                 isActive: true
             })
         }

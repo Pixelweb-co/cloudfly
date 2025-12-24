@@ -33,13 +33,14 @@ import { es } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 import { AccountingReportService } from '@/services/accounting/reportService'
 import { userMethods } from '@/utils/userMethods'
-import type { LibroDiarioDTO, VoucherType } from '@/types/apps/contabilidadTypes'
+import type { LibroDiarioDTO } from '@/types/apps/contabilidadTypes'
+import { VoucherType } from '@/types/apps/contabilidadTypes'
 
 const voucherTypeOptions: { value: VoucherType | ''; label: string }[] = [
     { value: '', label: 'Todos' },
-    { value: 'INGRESO', label: 'Ingreso' },
-    { value: 'EGRESO', label: 'Egreso' },
-    { value: 'NOTA_CONTABLE', label: 'Nota Contable' }
+    { value: VoucherType.INGRESO, label: 'Ingreso' },
+    { value: VoucherType.EGRESO, label: 'Egreso' },
+    { value: VoucherType.NOTA_CONTABLE, label: 'Nota Contable' }
 ]
 
 const LibroDiarioView = () => {

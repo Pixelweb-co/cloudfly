@@ -126,7 +126,7 @@ const RolesListTable = ({ tableData }: { tableData?: any[] }) => {
           <div className='flex items-center gap-4'>
             <div className='flex flex-col'>
               <Typography color='text.primary' className='font-medium'>
-                {row.original.name || row.original.roleEnum}
+                {row.original.name || row.original.role}
               </Typography>
               <Typography variant='caption' color='text.secondary'>
                 {row.original.code}

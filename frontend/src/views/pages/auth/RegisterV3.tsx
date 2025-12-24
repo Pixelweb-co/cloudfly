@@ -292,11 +292,11 @@ const RegisterV3 = ({ id }: { id: string }) => {
                       if (
                         userMethods.isRole('SUPERADMIN') ||
                         userMethods.isRole('MANAGER') ||
-                        (userMethods.isRole('ADMIN') && item.roleEnum != 'SUPERADMIN' && item.roleEnum != 'BIOMEDICAL' && item.roleEnum != 'MANAGER')
+                        (userMethods.isRole('ADMIN') && item.role != 'SUPERADMIN' && item.role != 'BIOMEDICAL' && item.role != 'MANAGER')
                       ) {
                         return (
                           <MenuItem key={item.id} value={item.id}>
-                            {item.roleEnum}
+                            {item.role}
                           </MenuItem>
                         )
                       }

@@ -120,6 +120,7 @@ const InvoiceForm = () => {
 
             setFormData({
                 customerId: invoice.customerId || '',
+                orderId: invoice.orderId || '',
                 dueDate: invoice.dueDate ? invoice.dueDate.split('T')[0] : '',
                 status: invoice.status,
                 notes: invoice.notes || ''
