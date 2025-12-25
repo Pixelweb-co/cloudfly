@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -19,7 +20,14 @@ import { userMethods } from '@/utils/userMethods'
 
 const VerifyEmailV1 = () => {
 
-  const userLogin = userMethods.getUserLogin();
+  const [userLogin, setUserLogin] = useState({ nombres: '', email: '' })
+
+  useEffect(() => {
+    const data = userMethods.getUserLogin()
+    if (data) {
+      setUserLogin(data)
+    }
+  }, [])
 
   return (
     <AuthIllustrationWrapper>
@@ -31,7 +39,7 @@ const VerifyEmailV1 = () => {
           <div className='flex flex-col gap-1 mbe-6'>
             <Typography variant='h4'>Verifica tu cuenta ✉️</Typography>
             <Typography>
-            {userLogin.nombres} un enlace de activacion se ha enviado a el correo electronico:{' '}
+              {userLogin.nombres} un enlace de activacion se ha enviado a el correo electronico:{' '}
               <span className='font-medium text-textPrimary'>{userLogin.email}</span> Por favor haz click en el enlace
               para activar tu cuenta.
             </Typography>

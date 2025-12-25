@@ -80,7 +80,12 @@ const EditModulePage = () => {
                 let parsedMenuItems: MenuItemType[] = []
                 if (moduleData.menuItems) {
                     try {
-                        parsedMenuItems = JSON.parse(moduleData.menuItems)
+                        const rawItems = JSON.parse(moduleData.menuItems)
+                        // Map DB format (label, href) to Frontend format (name, path)
+                        parsedMenuItems = rawItems.map((item: any) => ({
+                            name: item.label || item.name || '',
+                            path: item.href || item.path || ''
+                        }))
                     } catch (e) {
                         console.error('Error parsing menuItems:', e)
                     }
@@ -111,9 +116,15 @@ const EditModulePage = () => {
         try {
             setIsSubmitting(true)
 
-            // Serialize menuItems to JSON
+            // Serialize menuItems to JSON (converting name->label, path->href)
             const filteredMenuItems = menuItems.filter(item => item.name.trim() !== '' && item.path.trim() !== '')
-            const menuItemsJson = filteredMenuItems.length > 0 ? JSON.stringify(filteredMenuItems) : undefined
+
+            const dbMenuItems = filteredMenuItems.map(item => ({
+                label: item.name,
+                href: item.path
+            }))
+
+            const menuItemsJson = dbMenuItems.length > 0 ? JSON.stringify(dbMenuItems) : undefined
 
             const payload: ModuleCreateRequest = {
                 ...formData,
