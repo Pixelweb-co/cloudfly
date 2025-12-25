@@ -131,9 +131,16 @@ public class AuthController {
 
     @GetMapping("/session")
     public ResponseEntity<com.app.starter1.dto.UserSessionDTO> getSession() {
-        String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
-                .getAuthentication()
-                .getName();
+        org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+
+        // Check if user is authenticated
+        if (authentication == null || !authentication.isAuthenticated() ||
+                authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String username = authentication.getName();
         com.app.starter1.persistence.entity.UserEntity user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
