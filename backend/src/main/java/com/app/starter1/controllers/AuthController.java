@@ -129,4 +129,31 @@ public class AuthController {
         return ResponseEntity.ok("Correo de restablecimiento enviado.");
     }
 
+    @GetMapping("/session")
+    public ResponseEntity<com.app.starter1.dto.UserSessionDTO> getSession() {
+        String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
+        com.app.starter1.persistence.entity.UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        java.util.List<String> roles = user.getRoles().stream()
+                .map(role -> role.getRole())
+                .collect(java.util.stream.Collectors.toList());
+
+        Long customerId = user.getCustomer() != null ? user.getCustomer().getId() : null;
+        Integer tenantId = user.getCustomer() != null ? user.getCustomer().getTenantId() : null;
+
+        com.app.starter1.dto.UserSessionDTO session = new com.app.starter1.dto.UserSessionDTO(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getNombres(),
+                user.getApellidos(),
+                roles,
+                customerId,
+                tenantId != null ? Long.valueOf(tenantId) : null);
+
+        return ResponseEntity.ok(session);
+    }
 }
