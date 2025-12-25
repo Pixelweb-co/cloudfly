@@ -39,7 +39,7 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
 
     const fetchPermissions = useCallback(async () => {
         // Check if user is logged in - SOLO cargar permisos si hay token
-        const token = typeof window !== 'undefined' ? localStorage.getItem('AuthToken') : null
+        const token = typeof window !== 'undefined' ? localStorage.getItem('jwt') : null
 
         if (!token) {
             setIsLoading(false)

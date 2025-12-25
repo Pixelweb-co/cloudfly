@@ -8,7 +8,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 
 // Helper to get auth headers
 const getAuthHeaders = (token?: string | null): HeadersInit => {
-    const finalToken = token || (typeof window !== 'undefined' ? localStorage.getItem('AuthToken') : null)
+    const finalToken = token || (typeof window !== 'undefined' ? localStorage.getItem('jwt') : null)
 
     return {
         'Content-Type': 'application/json',
