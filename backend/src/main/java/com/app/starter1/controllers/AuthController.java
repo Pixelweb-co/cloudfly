@@ -142,7 +142,6 @@ public class AuthController {
                 .collect(java.util.stream.Collectors.toList());
 
         Long customerId = user.getCustomer() != null ? user.getCustomer().getId() : null;
-        Integer tenantId = user.getCustomer() != null ? user.getCustomer().getTenantId() : null;
 
         com.app.starter1.dto.UserSessionDTO session = new com.app.starter1.dto.UserSessionDTO(
                 user.getId(),
@@ -152,7 +151,7 @@ public class AuthController {
                 user.getApellidos(),
                 roles,
                 customerId,
-                tenantId != null ? Long.valueOf(tenantId) : null);
+                null); // tenantId - Customer entity doesn't have this field
 
         return ResponseEntity.ok(session);
     }
