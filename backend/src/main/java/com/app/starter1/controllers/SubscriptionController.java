@@ -40,9 +40,10 @@ public class SubscriptionController {
 
     /**
      * Get active subscription for a tenant
+     * Any authenticated user can view their tenant's active subscription
      */
     @GetMapping("/tenant/{tenantId}/active")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'ADMIN', 'USER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<SubscriptionResponse> getActiveTenantSubscription(@PathVariable Long tenantId) {
         return ResponseEntity.ok(subscriptionService.getActiveTenantSubscription(tenantId));
     }

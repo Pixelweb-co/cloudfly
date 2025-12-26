@@ -12,6 +12,29 @@ const PlanName = () => {
     useEffect(() => {
         const fetchPlanName = async () => {
             try {
+                // Verificar si es rol de sistema (SUPERADMIN/MANAGER)
+                const token = localStorage.getItem('jwt')
+                if (token) {
+                    try {
+                        const payload = JSON.parse(atob(token.split('.')[1]))
+                        if (payload.authorities) {
+                            const roles = payload.authorities.split(',')
+                            const isSystemRole = roles.some((role: string) =>
+                                role === 'ROLE_SUPERADMIN' || role === 'ROLE_MANAGER'
+                            )
+
+                            // SUPERADMIN y MANAGER no necesitan mostrar plan
+                            if (isSystemRole) {
+                                console.log('System role detected - no plan display needed')
+                                setLoading(false)
+                                return
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error parsing token:', err)
+                    }
+                }
+
                 // Obtener userData del localStorage
                 const userData = userMethods.getUserLogin()
 

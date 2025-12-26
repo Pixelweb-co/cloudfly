@@ -116,7 +116,7 @@ public class RbacController {
      * Create a new role
      */
     @PostMapping("/roles")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'MANAGER')")
     public ResponseEntity<RoleDTO> createRole(@RequestBody RoleRequestDTO request) {
         log.info("POST /api/rbac/roles - Creating role: {}", request.getCode());
         return ResponseEntity.ok(rbacService.createRole(request));
@@ -126,7 +126,7 @@ public class RbacController {
      * Update a role
      */
     @PutMapping("/roles/{id}")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'MANAGER')")
     public ResponseEntity<RoleDTO> updateRole(
             @PathVariable Long id,
             @RequestBody RoleRequestDTO request) {
@@ -138,7 +138,7 @@ public class RbacController {
      * Delete a role
      */
     @DeleteMapping("/roles/{id}")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'MANAGER')")
     public ResponseEntity<Void> deleteRole(@PathVariable Long id) {
         log.info("DELETE /api/rbac/roles/{} - Deleting role", id);
         rbacService.deleteRole(id);
@@ -173,7 +173,7 @@ public class RbacController {
      * Create module
      */
     @PostMapping("/modules")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'MANAGER')")
     public ResponseEntity<ModuleDTO> createModule(@RequestBody @jakarta.validation.Valid ModuleCreateDTO request) {
         log.info("POST /api/rbac/modules - Creating module {}", request.code());
         return ResponseEntity.ok(rbacService.createModule(request));
@@ -183,7 +183,7 @@ public class RbacController {
      * Update module
      */
     @PutMapping("/modules/{id}")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'MANAGER')")
     public ResponseEntity<ModuleDTO> updateModule(@PathVariable Long id,
             @RequestBody @jakarta.validation.Valid ModuleCreateDTO request) {
         log.info("PUT /api/rbac/modules/{} - Updating module", id);
@@ -194,7 +194,7 @@ public class RbacController {
      * Delete module
      */
     @DeleteMapping("/modules/{id}")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'MANAGER')")
     public ResponseEntity<Void> deleteModule(@PathVariable Long id) {
         log.info("DELETE /api/rbac/modules/{} - Deleting module", id);
         rbacService.deleteModule(id);
