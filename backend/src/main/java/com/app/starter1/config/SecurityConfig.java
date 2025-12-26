@@ -537,6 +537,18 @@ public class SecurityConfig {
                                         http.requestMatchers(HttpMethod.DELETE, "/api/v1/subscriptions/**")
                                                         .hasAnyRole("SUPERADMIN", "MANAGER", "ADMIN");
 
+                                        // Channels (Canales de Comunicación)
+                                        http.requestMatchers(HttpMethod.GET, "/api/channels/**")
+                                                        .authenticated(); // Cualquier usuario puede ver canales
+                                        http.requestMatchers(HttpMethod.POST, "/api/channels/**")
+                                                        .hasAnyRole("SUPERADMIN", "MANAGER", "ADMIN");
+                                        http.requestMatchers(HttpMethod.PUT, "/api/channels/**")
+                                                        .hasAnyRole("SUPERADMIN", "MANAGER", "ADMIN");
+                                        http.requestMatchers(HttpMethod.PATCH, "/api/channels/**")
+                                                        .hasAnyRole("SUPERADMIN", "MANAGER", "ADMIN");
+                                        http.requestMatchers(HttpMethod.DELETE, "/api/channels/**")
+                                                        .hasAnyRole("SUPERADMIN", "MANAGER");
+
                                         // Configurar el resto de los endpoints (no especificados)
                                         http.anyRequest().denyAll();
                                 }).addFilterBefore(new JwtTokenValidator(jwtUtils), BasicAuthenticationFilter.class)

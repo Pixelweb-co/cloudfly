@@ -1,32 +1,34 @@
-// Next Imports
 'use client'
 
+// Next Imports
 import { useEffect } from 'react'
-
 import { useRouter } from 'next/navigation'
 
+// Component Imports
 import LoginV2 from '@/views/pages/auth/LoginV2'
-import { AuthManager } from '@/utils/authManager'
 
 const LoginPage = () => {
   const router = useRouter()
 
+  // Verificar si el usuario ya está autenticado y redirigir a /home
   useEffect(() => {
-    try {
-      const userStr = localStorage.getItem('UserLogin')
-      if (!userStr) return
-      const user = JSON.parse(userStr)
-      const roles = user?.roles || []
-      const hasRole = (role: string) => roles.some((r: any) => r.role === role)
+    // Solo ejecutar en el cliente
+    if (typeof window === 'undefined') return
 
-      if (hasRole('SUPERADMIN') || hasRole('ADMIN')) {
-        router.replace('/home')
-      } else if (hasRole('USER') || hasRole('BIOMEDICAL') || hasRole('BIOEDICAL')) {
-        router.replace('/accounts/user/view')
-      } else {
+    try {
+      // Verificar si existe un token JWT válido
+      const jwt = localStorage.getItem('jwt')
+      const userData = localStorage.getItem('userData')
+
+      // Si tiene token y datos de usuario, redirigir a home
+      if (jwt && userData) {
+        console.log('Usuario ya autenticado, redirigiendo a /home')
         router.replace('/home')
       }
-    } catch {}
+    } catch (error) {
+      console.error('Error checking authentication:', error)
+      // Si hay error, continuar mostrando el login
+    }
   }, [router])
 
   return <LoginV2 mode='light' />
