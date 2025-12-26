@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect } from 'react'
 import { axiosInstance } from '@/utils/axiosInstance'
 
@@ -68,6 +70,11 @@ export function usePermissions(): UsePermissionsReturn {
 
     // Extraer roles del JWT del localStorage
     const getRolesFromToken = (): string[] => {
+        // Verificar que estamos en el cliente, no en SSR
+        if (typeof window === 'undefined') {
+            return []
+        }
+
         try {
             const token = localStorage.getItem('jwt')
             if (!token) return []

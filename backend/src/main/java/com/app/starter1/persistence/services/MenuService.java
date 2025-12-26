@@ -38,8 +38,9 @@ public class MenuService {
      * (Rol)
      * 
      * Flujo:
-     * - MANAGER: Ve TODOS los módulos sin restricciones (no requiere suscripción)
-     * - Otros roles (SUPERADMIN, ADMIN, etc.):
+     * - SUPERADMIN y MANAGER: Ven TODOS los módulos sin restricciones (no requieren
+     * suscripción)
+     * - Otros roles (ADMIN, USER, etc.):
      * 1. Obtener la suscripción del customer al que pertenece el usuario
      * 2. Obtener los módulos asociados a la suscripción
      * 3. Filtrar los módulos de la suscripción si el rol tiene acceso a ellos
@@ -90,10 +91,11 @@ public class MenuService {
         }
 
         // ============================================================
-        // Otros Roles (SUPERADMIN, ADMIN, etc.): Filtro de suscripción
+        // Otros Roles (ADMIN, USER, etc.): Filtro de suscripción
         // ============================================================
 
-        // 3. PASO 1: Obtener suscripción del customer (OBLIGATORIO para no-MANAGER)
+        // 3. PASO 1: Obtener suscripción del customer (OBLIGATORIO para roles
+        // no-sistema)
         if (user.getCustomer() == null) {
             log.warn("Usuario {} no tiene customer asociado. No se puede generar menú.", username);
             return new ArrayList<>();
