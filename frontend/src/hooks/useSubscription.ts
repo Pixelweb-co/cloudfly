@@ -123,8 +123,36 @@ export const useSubscription = () => {
     }
   }, [])
 
+  // Helper: Verificar si el usuario es SUPERADMIN o MANAGER
+  const isSystemRole = (): boolean => {
+    if (typeof window === 'undefined') return false
+
+    try {
+      const token = localStorage.getItem('jwt')
+      if (!token) return false
+
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      if (!payload.authorities) return false
+
+      const roles = payload.authorities.split(',')
+      return roles.some((role: string) =>
+        role === 'ROLE_SUPERADMIN' || role === 'ROLE_MANAGER'
+      )
+    } catch (error) {
+      console.error('Error checking system role:', error)
+      return false
+    }
+  }
+
   // Obtener suscripción activa del tenant (con módulos)
+  // SUPERADMIN y MANAGER no necesitan validar suscripción
   const getTenantActiveSubscription = useCallback(async (tenantId: number) => {
+    // Si es rol de sistema, no hacer la llamada
+    if (isSystemRole()) {
+      console.log('SUPERADMIN/MANAGER detected - skipping subscription check')
+      return null
+    }
+
     try {
       setLoading(true)
       setError(null)
