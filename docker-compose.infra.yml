@@ -1,0 +1,213 @@
+# Docker Compose - Infraestructura
+# Servicios base que las aplicaciones necesitan
+
+services:
+  # ====================
+  # BASES DE DATOS
+  # ====================
+  
+  db:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: cloud_master
+      MYSQL_PASSWORD: widowmaker
+      MYSQL_ROOT_PASSWORD: widowmaker
+    volumes:
+      - persistent_master:/var/lib/mysql
+    networks:
+      - default
+      - kafka-net
+      - app-net
+
+  postgresql:
+    image: pgvector/pgvector:pg15
+    container_name: postgres_server
+    restart: always
+    environment:
+      POSTGRES_DB: chatbotdb
+      POSTGRES_USER: chatbot_user
+      POSTGRES_PASSWORD: chatbot_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
+  # ====================
+  # CACHÉ Y MENSAJERÍA
+  # ====================
+
+  redis:
+    image: redis:latest
+    container_name: redis_server
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - app-net
+    environment:
+      REDIS_PASSWORD: Elian2020#
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: zookeeper
+    restart: always
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - kafka-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
+    restart: always
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT_INTERNAL://0.0.0.0:9092,PLAINTEXT_EXTERNAL://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_INTERNAL://kafka:9092,PLAINTEXT_EXTERNAL://127.0.0.1:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT_INTERNAL:PLAINTEXT,PLAINTEXT_EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    networks:
+      - kafka-net
+
+  # ====================
+  # VECTOR DATABASE
+  # ====================
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: always
+    ports:
+      - "8075:6333"
+      - "8076:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__API_KEY: Elian2020#
+      QDRANT__SERVICE__READ_ONLY_API_KEY: Elian2020#
+    networks:
+      - app-net
+
+  # ====================
+  # HERRAMIENTAS DE GESTIÓN
+  # ====================
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    links:
+      - db:db
+    ports:
+      - "8000:80"
+    environment:
+      MYSQL_USER: root
+      MYSQL_PASSWORD: widowmaker
+      MYSQL_ROOT_PASSWORD: widowmaker
+    networks:
+      - app-net
+
+  redis-insight:
+    build:
+      context: .
+      dockerfile: Dockerfile.redisinsight
+    image: redisinsight-custom
+    container_name: redis_insight
+    restart: always
+    ports:
+      - "8001:5540"
+    depends_on:
+      - redis
+    networks:
+      - app-net
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop:3.30.0
+    ports:
+      - "9100:9000"
+    environment:
+      KAFKA_BROKER_CONNECT: kafka:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - kafka
+      - zookeeper
+    networks:
+      - kafka-net
+      - app-net
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: always
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    environment:
+      TZ: America/Bogota
+    networks:
+      - app-net
+
+  # ====================
+  # REVERSE PROXY
+  # ====================
+
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    command:
+      - "--log.level=DEBUG"
+      - "--api.dashboard=true"
+
+      # EntryPoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+
+      # Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=cloudfly_app-net"
+
+      # ACME / Let's Encrypt (resolver 'le')
+      - "--certificatesresolvers.le.acme.email=web@cloudfly.com.co"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.le.acme.httpchallenge=true"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sellerbot/traefik:/letsencrypt
+    networks:
+      - app-net
+
+volumes:
+  persistent_master:
+  postgres_data:
+  qdrant_data:
+  portainer_data:
+
+networks:
+  app-net:
+    driver: bridge
+  kafka-net:
+    driver: bridge

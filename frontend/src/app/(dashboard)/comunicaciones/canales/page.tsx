@@ -20,6 +20,7 @@ import {
     Tooltip
 } from '@mui/material'
 import { axiosInstance } from '@/utils/axiosInstance'
+import type { Channel, ChannelDTO, AvailableChannel } from '@/types/channels'
 import {
     Add as AddIcon,
     CheckCircle as CheckCircleIcon,
@@ -30,23 +31,7 @@ import {
     Delete as DeleteIcon
 } from '@mui/icons-material'
 
-// Tipos de canales disponibles
-interface Channel {
-    id: string
-    type: 'whatsapp' | 'facebook' | 'instagram' | 'tiktok'
-    name: string
-    isActive: boolean
-    isConnected: boolean
-    phoneNumber?: string
-    pageId?: string
-    username?: string
-    lastSync?: string
-    icon: string
-    color: string
-    description: string
-}
-
-const AVAILABLE_CHANNELS = [
+const AVAILABLE_CHANNELS: AvailableChannel[] = [
     {
         type: 'whatsapp' as const,
         name: 'WhatsApp Business',
@@ -90,14 +75,14 @@ const ChannelsPage = () => {
         loadChannels()
     }, [])
 
-    const loadChannels = async () => {
+    const loadChannels = async (): Promise<void> => {
         try {
             setLoading(true)
-            const response = await axiosInstance.get<any[]>('/api/channels')
+            const response = await axiosInstance.get<ChannelDTO[]>('/api/channels')
 
-            const mappedChannels: Channel[] = response.data.map((ch: any) => ({
+            const mappedChannels: Channel[] = response.data.map((ch: ChannelDTO) => ({
                 id: ch.id.toString(),
-                type: ch.type.toLowerCase(),
+                type: ch.type.toLowerCase() as Channel['type'],
                 name: ch.name,
                 isActive: ch.isActive,
                 isConnected: ch.isConnected,
@@ -118,7 +103,7 @@ const ChannelsPage = () => {
         }
     }
 
-    const handleToggleActive = async (channelId: string) => {
+    const handleToggleActive = async (channelId: string): Promise<void> => {
         try {
             await axiosInstance.patch(`/api/channels/${channelId}/toggle`)
 
@@ -132,12 +117,12 @@ const ChannelsPage = () => {
         }
     }
 
-    const handleDeleteClick = (channel: Channel) => {
+    const handleDeleteClick = (channel: Channel): void => {
         setChannelToDelete(channel)
         setDeleteDialogOpen(true)
     }
 
-    const handleDeleteConfirm = async () => {
+    const handleDeleteConfirm = async (): Promise<void> => {
         if (!channelToDelete) return
 
         try {
@@ -168,12 +153,12 @@ const ChannelsPage = () => {
         }
     }
 
-    const handleAddChannel = (type: string) => {
+    const handleAddChannel = (type: string): void => {
         router.push(`/comunicaciones/canales/configurar/${type}`)
         setOpenAddDialog(false)
     }
 
-    const getAvailableChannelsToAdd = () => {
+    const getAvailableChannelsToAdd = (): AvailableChannel[] => {
         const existingTypes = channels.map(ch => ch.type)
         return AVAILABLE_CHANNELS.filter(ch => !existingTypes.includes(ch.type))
     }
