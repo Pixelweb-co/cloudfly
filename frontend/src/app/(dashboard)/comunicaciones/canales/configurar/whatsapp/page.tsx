@@ -22,6 +22,7 @@ import {
     Divider
 } from '@mui/material'
 import { axiosInstance } from '@/utils/axiosInstance'
+import type { ChatbotConfig } from '@/types/channels'
 import {
     WhatsApp,
     ArrowBack,
@@ -29,6 +30,11 @@ import {
     CheckCircle,
     QrCode2
 } from '@mui/icons-material'
+
+interface MessageState {
+    type: 'success' | 'error' | 'info'
+    text: string
+}
 
 const SPANISH_COUNTRIES = [
     { code: '+57', name: 'Colombia', flag: '🇨🇴' },
@@ -43,20 +49,20 @@ const STEPS = ['Información Básica', 'Conexión WhatsApp', 'Finalizar']
 const ConfigureWhatsAppPage = () => {
     const router = useRouter()
 
-    const [activeStep, setActiveStep] = useState(0)
-    const [loading, setLoading] = useState(false)
-    const [saving, setSaving] = useState(false)
-    const [activating, setActivating] = useState(false)
-    const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
+    const [activeStep, setActiveStep] = useState<number>(0)
+    const [loading, setLoading] = useState<boolean>(false)
+    const [saving, setSaving] = useState<boolean>(false)
+    const [activating, setActivating] = useState<boolean>(false)
+    const [message, setMessage] = useState<MessageState | null>(null)
     const [qrCode, setQrCode] = useState<string | null>(null)
 
     // Estados del formulario
-    const [countryCode, setCountryCode] = useState('+57')
-    const [localNumber, setLocalNumber] = useState('')
-    const [channelName, setChannelName] = useState('WhatsApp Business')
-    const [agentName, setAgentName] = useState('')
-    const [context, setContext] = useState('')
-    const [isConnected, setIsConnected] = useState(false)
+    const [countryCode, setCountryCode] = useState<string>('+57')
+    const [localNumber, setLocalNumber] = useState<string>('')
+    const [channelName, setChannelName] = useState<string>('WhatsApp Business')
+    const [agentName, setAgentName] = useState<string>('')
+    const [context, setContext] = useState<string>('')
+    const [isConnected, setIsConnected] = useState<boolean>(false)
     const [channelId, setChannelId] = useState<number | null>(null)
 
     // Auto-verificar QR cada 5 segundos
@@ -92,7 +98,7 @@ const ConfigureWhatsAppPage = () => {
         }
     }, [qrCode, isConnected])
 
-    const handleNext = () => {
+    const handleNext = (): void => {
         if (activeStep === STEPS.length - 1) {
             handleSubmit()
         } else {
@@ -100,11 +106,11 @@ const ConfigureWhatsAppPage = () => {
         }
     }
 
-    const handleBack = () => {
+    const handleBack = (): void => {
         setActiveStep(prev => prev - 1)
     }
 
-    const handleActivateEvolution = async () => {
+    const handleActivateEvolution = async (): Promise<void> => {
         try {
             setActivating(true)
             setMessage(null)
@@ -135,7 +141,7 @@ const ConfigureWhatsAppPage = () => {
         }
     }
 
-    const handleCheckQr = async () => {
+    const handleCheckQr = async (): Promise<void> => {
         try {
             setLoading(true)
             const response = await axiosInstance.get('/api/chatbot/qr')
@@ -163,7 +169,7 @@ const ConfigureWhatsAppPage = () => {
         }
     }
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (): Promise<void> => {
         try {
             setSaving(true)
             setMessage(null)
