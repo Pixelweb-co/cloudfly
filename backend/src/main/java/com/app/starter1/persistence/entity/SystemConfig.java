@@ -72,6 +72,9 @@ public class SystemConfig {
     @Column(nullable = false)
     private Boolean facebookEnabled = false;
 
+    @Column(length = 500)
+    private String frontendUrl;
+
     // ==========================================
     // INTEGRACIÓN EVOLUTION API (WhatsApp)
     // ==========================================
