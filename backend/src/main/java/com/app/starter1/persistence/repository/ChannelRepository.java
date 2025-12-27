@@ -18,4 +18,10 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
     Optional<Channel> findByCustomerIdAndType(Long customerId, ChannelType type);
 
     boolean existsByCustomerIdAndType(Long customerId, ChannelType type);
+
+    // Para Facebook - buscar canal por Customer, tipo y pageId
+    Optional<Channel> findByCustomerAndTypeAndPageId(
+            com.app.starter1.persistence.entity.Customer customer,
+            ChannelType type,
+            String pageId);
 }
