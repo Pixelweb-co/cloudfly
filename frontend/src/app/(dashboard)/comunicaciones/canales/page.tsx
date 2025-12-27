@@ -20,33 +20,17 @@ import {
     Tooltip
 } from '@mui/material'
 import { axiosInstance } from '@/utils/axiosInstance'
+import type { Channel, ChannelDTO, AvailableChannel } from '@/types/channels'
 import {
     Add as AddIcon,
     CheckCircle as CheckCircleIcon,
     Cancel as CancelIcon,
     Settings as SettingsIcon,
-    PowerSettingsNew as PowerIcon,
     Refresh as RefreshIcon,
     Delete as DeleteIcon
 } from '@mui/icons-material'
 
-// Tipos de canales disponibles
-interface Channel {
-    id: string
-    type: 'whatsapp' | 'facebook' | 'instagram' | 'tiktok'
-    name: string
-    isActive: boolean
-    isConnected: boolean
-    phoneNumber?: string
-    pageId?: string
-    username?: string
-    lastSync?: string
-    icon: string
-    color: string
-    description: string
-}
-
-const AVAILABLE_CHANNELS = [
+const AVAILABLE_CHANNELS: AvailableChannel[] = [
     {
         type: 'whatsapp' as const,
         name: 'WhatsApp Business',
@@ -85,19 +69,42 @@ const ChannelsPage = () => {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [channelToDelete, setChannelToDelete] = useState<Channel | null>(null)
     const [deleting, setDeleting] = useState(false)
+    const [successMessage, setSuccessMessage] = useState<string | null>(null)
+    const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
     useEffect(() => {
         loadChannels()
+
+        // Detectar si viene de callback de Facebook
+        const params = new URLSearchParams(window.location.search)
+        const success = params.get('success')
+        const error = params.get('error')
+
+        if (success === 'facebook_connected') {
+            setSuccessMessage('✅ Facebook Messenger conectado exitosamente')
+            // Limpiar URL
+            window.history.replaceState({}, '', window.location.pathname)
+        } else if (error) {
+            const errorMessages: Record<string, string> = {
+                'invalid_state': 'Error de seguridad. Por favor intenta de nuevo.',
+                'no_pages': 'No tienes páginas de Facebook. Crea una página primero.',
+                'connection_failed': 'Error al conectar con Facebook. Intenta nuevamente.',
+                'access_denied': 'Cancelaste la autorización de Facebook.'
+            }
+            setErrorMessage(errorMessages[error] || 'Error desconocido al conectar Facebook')
+            // Limpiar URL
+            window.history.replaceState({}, '', window.location.pathname)
+        }
     }, [])
 
-    const loadChannels = async () => {
+    const loadChannels = async (): Promise<void> => {
         try {
             setLoading(true)
-            const response = await axiosInstance.get<any[]>('/api/channels')
+            const response = await axiosInstance.get<ChannelDTO[]>('/api/channels')
 
-            const mappedChannels: Channel[] = response.data.map((ch: any) => ({
+            const mappedChannels: Channel[] = response.data.map((ch: ChannelDTO) => ({
                 id: ch.id.toString(),
-                type: ch.type.toLowerCase(),
+                type: ch.type.toLowerCase() as Channel['type'],
                 name: ch.name,
                 isActive: ch.isActive,
                 isConnected: ch.isConnected,
@@ -118,26 +125,14 @@ const ChannelsPage = () => {
         }
     }
 
-    const handleToggleActive = async (channelId: string) => {
-        try {
-            await axiosInstance.patch(`/api/channels/${channelId}/toggle`)
 
-            setChannels(prev =>
-                prev.map(ch =>
-                    ch.id === channelId ? { ...ch, isActive: !ch.isActive } : ch
-                )
-            )
-        } catch (error) {
-            console.error('Error toggling channel:', error)
-        }
-    }
 
-    const handleDeleteClick = (channel: Channel) => {
+    const handleDeleteClick = (channel: Channel): void => {
         setChannelToDelete(channel)
         setDeleteDialogOpen(true)
     }
 
-    const handleDeleteConfirm = async () => {
+    const handleDeleteConfirm = async (): Promise<void> => {
         if (!channelToDelete) return
 
         try {
@@ -168,12 +163,28 @@ const ChannelsPage = () => {
         }
     }
 
-    const handleAddChannel = (type: string) => {
-        router.push(`/comunicaciones/canales/configurar/${type}`)
+    const handleAddChannel = async (type: string): Promise<void> => {
         setOpenAddDialog(false)
+
+        // Si es Facebook, iniciar flujo OAuth
+        if (type === 'facebook') {
+            try {
+                const response = await axiosInstance.get<{ authUrl: string, state: string }>('/api/channels/facebook/auth-url')
+
+                // Redirigir a Facebook para autorización
+                window.location.href = response.data.authUrl
+            } catch (error) {
+                console.error('Error getting Facebook auth URL:', error)
+                alert('Error al iniciar conexión con Facebook. Verifica la configuración del sistema.')
+            }
+            return
+        }
+
+        // Para otros canales, ir a la página de configuración
+        router.push(`/comunicaciones/canales/configurar/${type}`)
     }
 
-    const getAvailableChannelsToAdd = () => {
+    const getAvailableChannelsToAdd = (): AvailableChannel[] => {
         const existingTypes = channels.map(ch => ch.type)
         return AVAILABLE_CHANNELS.filter(ch => !existingTypes.includes(ch.type))
     }
@@ -210,6 +221,27 @@ const ChannelsPage = () => {
                         Actualizar
                     </Button>
                 </Box>
+
+                {/* Success/Error Messages from Facebook OAuth */}
+                {successMessage && (
+                    <Alert
+                        severity="success"
+                        sx={{ mb: 3 }}
+                        onClose={() => setSuccessMessage(null)}
+                    >
+                        {successMessage}
+                    </Alert>
+                )}
+
+                {errorMessage && (
+                    <Alert
+                        severity="error"
+                        sx={{ mb: 3 }}
+                        onClose={() => setErrorMessage(null)}
+                    >
+                        {errorMessage}
+                    </Alert>
+                )}
 
                 {channels.length === 0 && (
                     <Alert severity="info" icon="🚀" sx={{ mb: 3 }}>
@@ -297,29 +329,18 @@ const ChannelsPage = () => {
 
                                 {/* Actions */}
                                 <Box display="flex" flexDirection="column" gap={1} mt={2}>
-                                    <Box display="flex" gap={1}>
-                                        <Tooltip title={channel.isActive ? 'Desactivar canal' : 'Activar canal'}>
-                                            <Button
-                                                variant={channel.isActive ? 'outlined' : 'contained'}
-                                                color={channel.isActive ? 'error' : 'success'}
-                                                startIcon={<PowerIcon />}
-                                                onClick={() => handleToggleActive(channel.id)}
-                                                fullWidth
-                                                size="small"
-                                            >
-                                                {channel.isActive ? 'Desactivar' : 'Activar'}
-                                            </Button>
-                                        </Tooltip>
-                                        <Tooltip title="Configurar canal">
-                                            <IconButton
-                                                color="primary"
-                                                sx={{ border: 1, borderColor: 'divider' }}
-                                                onClick={() => router.push(`/comunicaciones/canales/configurar/${channel.type}`)}
-                                            >
-                                                <SettingsIcon />
-                                            </IconButton>
-                                        </Tooltip>
-                                    </Box>
+                                    <Tooltip title="Configurar canal">
+                                        <Button
+                                            variant="outlined"
+                                            color="primary"
+                                            startIcon={<SettingsIcon />}
+                                            onClick={() => router.push(`/comunicaciones/canales/configurar/${channel.type}`)}
+                                            fullWidth
+                                            size="small"
+                                        >
+                                            Configurar
+                                        </Button>
+                                    </Tooltip>
                                     <Tooltip title="Eliminar canal">
                                         <Button
                                             variant="outlined"
