@@ -65,38 +65,85 @@ const ConfigureWhatsAppPage = () => {
     const [isConnected, setIsConnected] = useState<boolean>(false)
     const [channelId, setChannelId] = useState<number | null>(null)
 
-    // Auto-verificar QR cada 5 segundos
+    // Auto-verificar QR cada 5 segundos solo si hay QR visible y no está conectado
     useEffect(() => {
         let intervalId: NodeJS.Timeout | null = null
 
         if (qrCode && !isConnected) {
+            console.log('⏱️ Iniciando polling para verificar estado de QR...')
+
             intervalId = setInterval(async () => {
                 try {
-                    const response = await axiosInstance.get('/api/chatbot/qr')
+                    const response = await axiosInstance.get('/api/chatbot/status')
+
                     if (response.data) {
-                        if (!response.data.qrCode || response.data.isActive) {
+                        const { isConnected: connected, qrCode: newQr } = response.data
+
+                        if (connected) {
+                            // QR escaneado y conectado
+                            console.log('✅ WhatsApp conectado - deteniendo polling')
                             setQrCode(null)
                             setIsConnected(true)
                             setMessage({
                                 type: 'success',
-                                text: '✅ WhatsApp conectado correctamente'
+                                text: '✅ WhatsApp conectado exitosamente'
                             })
-                        } else if (response.data.qrCode) {
-                            setQrCode(response.data.qrCode)
+                        } else if (newQr && newQr !== qrCode) {
+                            // QR renovado (expiró el anterior)
+                            console.log('🔄 QR renovado')
+                            setQrCode(newQr)
                         }
+                        // Si sigue sin conectar y el QR es el mismo, no hacer nada
                     }
                 } catch (error) {
                     console.error('Error en auto-verificación:', error)
+                    // No mostrar error al usuario, solo log
                 }
-            }, 5000)
+            }, 5000) // Verificar cada 5 segundos
         }
 
         return () => {
             if (intervalId) {
+                console.log('🛑 Deteniendo polling de QR')
                 clearInterval(intervalId)
             }
         }
     }, [qrCode, isConnected])
+
+    // Verificar estado inicial al cargar la página
+    useEffect(() => {
+        const checkInitialStatus = async () => {
+            try {
+                const response = await axiosInstance.get('/api/chatbot/status')
+
+                if (response.data) {
+                    const { exists, isConnected: connected, qrCode: existingQr, phoneNumber } = response.data
+
+                    if (exists && connected) {
+                        setIsConnected(true)
+                        setQrCode(null)
+                        if (phoneNumber) {
+                            // Extraer el número local del número completo
+                            const match = phoneNumber.match(/(\+\d+)(.+)/)
+                            if (match) {
+                                setCountryCode(match[1])
+                                setLocalNumber(match[2])
+                            }
+                        }
+                        console.log('✅ WhatsApp ya estaba conectado')
+                    } else if (exists && existingQr) {
+                        setQrCode(existingQr)
+                        console.log('📱 Hay un QR pendiente de escanear')
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking initial status:', error)
+                // No mostrar error, solo seguir con flujo normal
+            }
+        }
+
+        checkInitialStatus()
+    }, [])
 
     const handleNext = (): void => {
         if (activeStep === STEPS.length - 1) {
@@ -115,26 +162,65 @@ const ConfigureWhatsAppPage = () => {
             setActivating(true)
             setMessage(null)
 
-            const response = await axiosInstance.post('/api/chatbot/activate')
+            // Primero verificar si ya existe una instancia
+            const checkResponse = await axiosInstance.get('/api/chatbot/status')
 
-            if (response.data.qrCode) {
-                setQrCode(response.data.qrCode)
-                setMessage({
-                    type: 'info',
-                    text: '📱 Escanea el código QR con WhatsApp para conectar'
-                })
-            } else {
-                setIsConnected(true)
-                setMessage({
-                    type: 'success',
-                    text: '✅ Instancia de Evolution API creada correctamente'
-                })
+            if (checkResponse.data) {
+                const { exists, isConnected: connected, qrCode: existingQr } = checkResponse.data
+
+                if (exists) {
+                    if (connected) {
+                        // Ya está conectado
+                        setIsConnected(true)
+                        setQrCode(null)
+                        setMessage({
+                            type: 'success',
+                            text: '✅ WhatsApp ya está conectado'
+                        })
+                    } else if (existingQr) {
+                        // Existe pero no conectado, mostrar QR existente
+                        setQrCode(existingQr)
+                        setMessage({
+                            type: 'info',
+                            text: '📱 Escanea el código QR con WhatsApp para conectar'
+                        })
+                    } else {
+                        // Existe pero sin QR, solicitar nuevo QR
+                        const qrResponse = await axiosInstance.get('/api/chatbot/qr')
+                        if (qrResponse.data?.qrCode) {
+                            setQrCode(qrResponse.data.qrCode)
+                            setMessage({
+                                type: 'info',
+                                text: '📱 Escanea el código QR con WhatsApp para conectar'
+                            })
+                        }
+                    }
+                } else {
+                    // No existe instancia, crear una nueva
+                    const response = await axiosInstance.post('/api/chatbot/activate')
+
+                    if (response.data?.qrCode) {
+                        setQrCode(response.data.qrCode)
+                        setMessage({
+                            type: 'info',
+                            text: '📱 Escanea el código QR con WhatsApp para conectar'
+                        })
+                    } else if (response.data?.isActive || response.data?.isConnected) {
+                        // Se creó y ya está conectado (caso raro)
+                        setIsConnected(true)
+                        setQrCode(null)
+                        setMessage({
+                            type: 'success',
+                            text: '✅ WhatsApp conectado correctamente'
+                        })
+                    }
+                }
             }
-        } catch (error) {
-            console.error('Error activating Evolution API:', error)
+        } catch (error: any) {
+            console.error('Error activating WhatsApp:', error)
             setMessage({
                 type: 'error',
-                text: 'Error al activar Evolution API'
+                text: error.response?.data?.message || 'Error al activar WhatsApp. Intenta nuevamente.'
             })
         } finally {
             setActivating(false)
@@ -189,6 +275,8 @@ const ConfigureWhatsAppPage = () => {
                 type: 'WHATSAPP',
                 name: channelName,
                 phoneNumber: `${countryCode}${localNumber}`,
+                isActive: isConnected, // Estado de activación
+                isConnected: isConnected, // Estado de conexión con WhatsApp
                 // instanceName se genera automáticamente como cloudfly_{customerId}
             }
 
@@ -344,9 +432,22 @@ const ConfigureWhatsAppPage = () => {
 
                         {qrCode && !isConnected && (
                             <Grid item xs={12} display='flex' justifyContent='center' flexDirection='column' alignItems='center'>
-                                <Typography variant='h6' sx={{ mb: 2 }}>
+                                <Alert severity="warning" sx={{ mb: 3, width: '100%' }}>
+                                    <Typography variant="body2" fontWeight="600" gutterBottom>
+                                        ⏳ Esperando escaneo del código QR
+                                    </Typography>
+                                    <Typography variant="caption">
+                                        1. Abre WhatsApp en tu teléfono<br />
+                                        2. Toca Menú (⋮) o Configuración<br />
+                                        3. Toca "Dispositivos vinculados"<br />
+                                        4. Escanea este código
+                                    </Typography>
+                                </Alert>
+
+                                <Typography variant='h6' sx={{ mb: 2, fontWeight: 600 }}>
                                     📱 Escanea con WhatsApp
                                 </Typography>
+
                                 <Box
                                     component='img'
                                     src={qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}`}
@@ -355,18 +456,34 @@ const ConfigureWhatsAppPage = () => {
                                         width: 280,
                                         height: 280,
                                         mb: 2,
-                                        border: '2px solid',
-                                        borderColor: 'primary.main',
+                                        border: '3px solid',
+                                        borderColor: '#25D366',
                                         borderRadius: 2,
-                                        padding: 2
+                                        padding: 2,
+                                        bgcolor: 'white',
+                                        boxShadow: 3
                                     }}
                                 />
-                                <Button variant='outlined' onClick={handleCheckQr} sx={{ mt: 2 }}>
-                                    Verificar Conexión
-                                </Button>
-                                <Typography variant="caption" color="text.secondary" sx={{ mt: 2 }}>
-                                    ⏱️ Verificación automática cada 5 segundos
-                                </Typography>
+
+                                <Box display="flex" gap={2} mt={2}>
+                                    <Button
+                                        variant='outlined'
+                                        onClick={handleCheckQr}
+                                        disabled={loading}
+                                        startIcon={loading ? <CircularProgress size={16} /> : null}
+                                    >
+                                        {loading ? 'Verificando...' : 'Verificar Ahora'}
+                                    </Button>
+                                </Box>
+
+                                <Box sx={{ mt: 3, textAlign: 'center', px: 2 }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">
+                                        ⏱️ Verificación automática cada 5 segundos
+                                    </Typography>
+                                    <Typography variant="caption" color="warning.main" display="block" sx={{ mt: 1 }}>
+                                        ⚠️ No podrás continuar hasta que escanees el código
+                                    </Typography>
+                                </Box>
                             </Grid>
                         )}
 
@@ -374,10 +491,10 @@ const ConfigureWhatsAppPage = () => {
                             <Grid item xs={12}>
                                 <Alert severity="success" icon={<CheckCircle />}>
                                     <Typography variant="body1" fontWeight="600">
-                                        ✅ WhatsApp conectado correctamente
+                                        ✅ WhatsApp conectado exitosamente
                                     </Typography>
                                     <Typography variant="body2">
-                                        Tu instancia de Evolution API está lista. Puedes continuar al siguiente paso.
+                                        Tu número está vinculado correctamente. Haz clic en "Siguiente" para continuar.
                                     </Typography>
                                 </Alert>
                             </Grid>

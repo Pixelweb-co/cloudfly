@@ -3,7 +3,9 @@ package com.app.starter1.persistence.services;
 import com.app.starter1.dto.ChatbotConfigDTO;
 import com.app.starter1.persistence.entity.ChatbotConfig;
 import com.app.starter1.persistence.entity.ChatbotType;
+import com.app.starter1.persistence.entity.Customer;
 import com.app.starter1.persistence.repository.ChatbotConfigRepository;
+import com.app.starter1.persistence.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ public class ChatbotService {
 
     private final ChatbotConfigRepository chatbotConfigRepository;
     private final EvolutionApiService evolutionApiService;
+    private final CustomerRepository customerRepository;
 
     @Transactional(readOnly = true)
     public ChatbotConfigDTO getConfigByTenant(Long tenantId) {
@@ -48,8 +51,23 @@ public class ChatbotService {
             config.setApiKey(UUID.randomUUID().toString()); // Generate API Key on creation
         }
 
-        config.setInstanceName(dto.getInstanceName());
-        config.setChatbotType(dto.getChatbotType());
+        // Auto-generar instanceName si no se proporciona
+        String instanceName = dto.getInstanceName();
+        if (instanceName == null || instanceName.trim().isEmpty()) {
+            instanceName = "cloudfly_" + tenantId;
+            log.info("📝 [CHATBOT-SERVICE] Auto-generated instanceName: {}", instanceName);
+        }
+        config.setInstanceName(instanceName);
+
+        // Si no se proporciona chatbotType, obtenerlo del businessType del Customer
+        if (dto.getChatbotType() == null) {
+            ChatbotType chatbotType = getChatbotTypeFromCustomer(tenantId);
+            config.setChatbotType(chatbotType);
+            log.info("📋 [CHATBOT-SERVICE] ChatbotType auto-asignado desde Customer businessType: {}", chatbotType);
+        } else {
+            config.setChatbotType(dto.getChatbotType());
+        }
+
         config.setIsActive(dto.getIsActive());
         config.setN8nWebhookUrl(dto.getN8nWebhookUrl());
         config.setContext(dto.getContext());
@@ -57,6 +75,34 @@ public class ChatbotService {
 
         ChatbotConfig saved = chatbotConfigRepository.save(config);
         return mapToDTO(saved);
+    }
+
+    /**
+     * Obtiene el ChatbotType basado en el businessType del Customer
+     */
+    private ChatbotType getChatbotTypeFromCustomer(Long tenantId) {
+        return customerRepository.findById(tenantId)
+                .map(customer -> {
+                    Customer.BusinessType businessType = customer.getBusinessType();
+                    return mapBusinessTypeToChatbotType(businessType);
+                })
+                .orElse(ChatbotType.SALES); // Por defecto SALES si no se encuentra
+    }
+
+    /**
+     * Mapea el BusinessType del Customer (enum) al ChatbotType correspondiente
+     */
+    private ChatbotType mapBusinessTypeToChatbotType(Customer.BusinessType businessType) {
+        if (businessType == null) {
+            return ChatbotType.SALES;
+        }
+
+        return switch (businessType) {
+            case VENTAS -> ChatbotType.SALES;
+            case AGENDAMIENTO -> ChatbotType.SCHEDULING;
+            case SUSCRIPCION -> ChatbotType.SUPPORT; // Usar SUPPORT para suscripciones
+            case MIXTO -> ChatbotType.SALES; // Por defecto SALES para mixto
+        };
     }
 
     @Transactional
@@ -154,6 +200,71 @@ public class ChatbotService {
             return dto;
         } catch (Exception e) {
             throw new RuntimeException("Failed to fetch QR code: " + e.getMessage());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public ChatbotConfigDTO getStatus(Long tenantId) {
+        log.info("📊 [CHATBOT-SERVICE] Getting status for tenantId: {}", tenantId);
+
+        // Buscar config en DB
+        ChatbotConfig config = chatbotConfigRepository.findByTenantId(tenantId).orElse(null);
+
+        if (config == null) {
+            log.info("ℹ️ [CHATBOT-SERVICE] No config found for tenantId: {}", tenantId);
+            // No existe configuración
+            ChatbotConfigDTO dto = new ChatbotConfigDTO();
+            dto.setExists(false);
+            dto.setIsConnected(false);
+            return dto;
+        }
+
+        // Hay config en DB, verificar si existe instancia en Evolution API
+        try {
+            java.util.Map<String, Object> statusResponse = evolutionApiService
+                    .checkInstanceStatus(config.getInstanceName());
+
+            ChatbotConfigDTO dto = mapToDTO(config);
+
+            if (statusResponse != null) {
+                // La instancia SÍ existe en Evolution API
+                dto.setExists(true);
+
+                // Verificar si está conectado
+                Object stateObj = statusResponse.get("state");
+                boolean connected = "open".equals(stateObj);
+                dto.setIsConnected(connected);
+
+                // Si no está conectado, obtener QR
+                if (!connected) {
+                    try {
+                        java.util.Map<String, Object> qrResponse = evolutionApiService
+                                .fetchQrCode(config.getInstanceName());
+                        if (qrResponse != null && qrResponse.containsKey("base64")) {
+                            dto.setQrCode((String) qrResponse.get("base64"));
+                        }
+                    } catch (Exception qrEx) {
+                        log.warn("⚠️ [CHATBOT-SERVICE] Could not fetch QR: {}", qrEx.getMessage());
+                    }
+                }
+
+                log.info("✅ [CHATBOT-SERVICE] Status retrieved - exists: true, connected: {}", connected);
+            } else {
+                // La instancia NO existe en Evolution API
+                log.info("ℹ️ [CHATBOT-SERVICE] Instance does not exist in Evolution API");
+                dto.setExists(false);
+                dto.setIsConnected(false);
+            }
+
+            return dto;
+
+        } catch (Exception e) {
+            log.info("ℹ️ [CHATBOT-SERVICE] Instance does not exist in Evolution API: {}", e.getMessage());
+            // La instancia no existe en Evolution API (404 o error)
+            ChatbotConfigDTO dto = mapToDTO(config);
+            dto.setExists(false);
+            dto.setIsConnected(false);
+            return dto;
         }
     }
 
