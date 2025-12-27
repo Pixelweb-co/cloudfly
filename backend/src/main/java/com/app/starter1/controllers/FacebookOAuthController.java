@@ -46,6 +46,10 @@ public class FacebookOAuthController {
      * GET /api/channels/facebook/auth-url
      * Generar URL de autorización para iniciar el flujo OAuth
      */
+    /**
+     * GET /api/channels/facebook/auth-url
+     * Generar URL de autorización para iniciar el flujo OAuth
+     */
     @GetMapping("/auth-url")
     public ResponseEntity<?> getAuthorizationUrl() {
         try {
@@ -53,44 +57,50 @@ public class FacebookOAuthController {
 
             SystemConfigDTO config = systemConfigService.getSystemConfig();
 
-            // Validar que la integración de Facebook esté habilitada
+            // Validar integración
             if (config.getFacebookEnabled() == null || !config.getFacebookEnabled()) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "Facebook integration is not enabled"));
             }
 
-            // Validar que existan las credenciales
-            if (config.getFacebookAppId() == null || config.getFacebookRedirectUri() == null) {
+            if (config.getFacebookAppId() == null) {
                 return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Facebook App ID or Redirect URI not configured"));
+                        .body(Map.of("error", "Facebook App ID not configured"));
             }
 
-            Long tenantId = userMethods.getTenantId();
+            // Validar frontendUrl
+            String frontendUrl = config.getFrontendUrl();
+            if (frontendUrl == null || frontendUrl.isEmpty()) {
+                // Fallback por defecto si no está configurado (pero debería estarlo)
+                frontendUrl = "http://localhost:3000";
+            }
 
-            // Generar state token para CSRF protection
+            // La redirect_uri debe ser la URL del frontend donde Facebook retornará el
+            // código
+            // Debe coincidir EXACTAMENTE con lo configurado en Facebook Developers
+            String redirectUri = frontendUrl + "/comunicaciones/canales";
+
+            Long tenantId = userMethods.getTenantId();
             String state = generateStateToken(tenantId);
 
-            // Permisos necesarios para Messenger
             String scopes = String.join(",", List.of(
-                    "pages_show_list", // Ver lista de páginas
-                    "pages_messaging", // Enviar/recibir mensajes
-                    "pages_manage_metadata", // Suscribir webhooks
-                    "pages_read_engagement", // Leer interacciones
-                    "email" // Email del usuario (opcional)
-            ));
+                    "pages_show_list",
+                    "pages_messaging",
+                    "pages_manage_metadata",
+                    "pages_read_engagement",
+                    "email"));
 
-            // Construir URL de autorización
             String authUrl = UriComponentsBuilder
                     .fromHttpUrl("https://www.facebook.com/" + config.getFacebookApiVersion() + "/dialog/oauth")
                     .queryParam("client_id", config.getFacebookAppId())
-                    .queryParam("redirect_uri", config.getFacebookRedirectUri())
+                    .queryParam("redirect_uri", redirectUri)
                     .queryParam("state", state)
                     .queryParam("scope", scopes)
                     .queryParam("response_type", "code")
                     .build()
                     .toUriString();
 
-            log.info("✅ [FB-OAUTH] Authorization URL generated for tenant: {}", tenantId);
+            log.info("✅ [FB-OAUTH] Authorization URL generated. Redirect URI: {}", redirectUri);
 
             return ResponseEntity.ok(Map.of(
                     "authUrl", authUrl,
@@ -104,102 +114,82 @@ public class FacebookOAuthController {
     }
 
     /**
-     * GET /api/channels/facebook/callback
-     * Callback de Facebook después de autorización
-     * 
-     * @param code  Código de autorización de Facebook
-     * @param state Token CSRF para validar la solicitud
+     * POST /api/channels/facebook/connect
+     * Conectar canal usando el código recibido en el frontend
      */
-    @GetMapping("/callback")
-    public ResponseEntity<?> handleOAuthCallback(
-            @RequestParam("code") String code,
-            @RequestParam(value = "state", required = false) String state,
-            @RequestParam(value = "error", required = false) String error,
-            @RequestParam(value = "error_description", required = false) String errorDescription) {
+    @PostMapping("/connect")
+    public ResponseEntity<?> connectFacebookChannel(@RequestBody Map<String, String> request) {
+        String code = request.get("code");
+        String state = request.get("state");
+        String error = request.get("error");
 
-        log.info("📥 [FB-OAUTH] Received callback with code: {}", code != null ? "present" : "missing");
+        log.info("📥 [FB-OAUTH] Received connect request with code: {}", code != null ? "present" : "missing");
 
-        // Manejar error de autorización
         if (error != null) {
-            log.error("❌ [FB-OAUTH] Authorization error: {} - {}", error, errorDescription);
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create("/comunicaciones/canales?error=" + error))
-                    .build();
+            log.error("❌ [FB-OAUTH] Authorization error from frontend: {}", error);
+            return ResponseEntity.badRequest().body(Map.of("error", error));
         }
 
         try {
-            // Validar state token
             Long tenantId = validateStateToken(state);
             if (tenantId == null) {
-                log.error("❌ [FB-OAUTH] Invalid state token");
-                return ResponseEntity.status(HttpStatus.FOUND)
-                        .location(URI.create("/comunicaciones/canales?error=invalid_state"))
-                        .build();
+                return ResponseEntity.badRequest().body(Map.of("error", "invalid_state"));
             }
 
-            SystemConfigDTO config = systemConfigService.getSystemConfig();
+            // Usar configuración interna para obtener secretos
+            SystemConfigDTO config = systemConfigService.getSystemConfigInternal();
 
-            // 1. Intercambiar código por access token de corta duración
+            String frontendUrl = config.getFrontendUrl();
+            if (frontendUrl == null || frontendUrl.isEmpty()) {
+                frontendUrl = "http://localhost:3000";
+            }
+
+            // La redirect_uri DEBE ser la misma que se usó para generar el authUrl
+            String redirectUri = frontendUrl + "/comunicaciones/canales";
+
+            // 1. Intercambiar código por access token
             String shortLivedToken = exchangeCodeForToken(
                     code,
                     config.getFacebookAppId(),
                     config.getFacebookAppSecret(),
-                    config.getFacebookRedirectUri());
+                    redirectUri);
 
-            log.info("✅ [FB-OAUTH] Short-lived token obtained");
-
-            // 2. Intercambiar por token de larga duración
+            // 2. Token de larga duración
             String longLivedToken = exchangeForLongLivedToken(
                     shortLivedToken,
                     config.getFacebookAppId(),
                     config.getFacebookAppSecret());
 
-            log.info("✅ [FB-OAUTH] Long-lived token obtained");
-
-            // 3. Obtener las páginas del usuario
+            // 3. Obtener páginas
             List<Map<String, Object>> pages = getUserPages(longLivedToken);
 
-            log.info("✅ [FB-OAUTH] Found {} pages", pages.size());
-
-            // 4. Por ahora, conectamos la primera página automáticamente
-            // TODO: En el futuro, mostrar selector de páginas en el frontend
             if (pages.isEmpty()) {
-                log.warn("⚠️ [FB-OAUTH] User has no pages");
-                return ResponseEntity.status(HttpStatus.FOUND)
-                        .location(URI.create("/comunicaciones/canales?error=no_pages"))
-                        .build();
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "no_pages_found"));
             }
 
+            // 4. Conectar primera página (TODO: selector)
             Map<String, Object> selectedPage = pages.get(0);
             String pageId = (String) selectedPage.get("id");
             String pageName = (String) selectedPage.get("name");
             String pageAccessToken = (String) selectedPage.get("access_token");
 
-            // 5. Suscribir webhooks a la página
-            boolean webhookSubscribed = subscribePageToWebhooks(pageId, pageAccessToken);
+            // 5. Suscribir webhooks
+            subscribePageToWebhooks(pageId, pageAccessToken);
 
-            if (!webhookSubscribed) {
-                log.error("❌ [FB-OAUTH] Failed to subscribe webhooks for page: {}", pageId);
-            }
-
-            // 6. Guardar el canal en la base de datos
+            // 6. Guardar canal
             Customer customer = customerRepository.findById(tenantId)
                     .orElseThrow(() -> new RuntimeException("Customer not found"));
 
-            // Verificar si ya existe un canal para esta página
             Optional<Channel> existingChannel = channelRepository
                     .findByCustomerAndTypeAndPageId(customer, Channel.ChannelType.FACEBOOK, pageId);
 
-            Channel channel;
-            if (existingChannel.isPresent()) {
-                channel = existingChannel.get();
-                log.info("🔄 [FB-OAUTH] Updating existing channel for page: {}", pageId);
-            } else {
-                channel = new Channel();
-                channel.setCustomer(customer);
-                channel.setType(Channel.ChannelType.FACEBOOK);
-                log.info("🆕 [FB-OAUTH] Creating new channel for page: {}", pageId);
-            }
+            Channel channel = existingChannel.orElseGet(() -> {
+                Channel c = new Channel();
+                c.setCustomer(customer);
+                c.setType(Channel.ChannelType.FACEBOOK);
+                return c;
+            });
 
             channel.setName("Facebook - " + pageName);
             channel.setPageId(pageId);
@@ -209,18 +199,16 @@ public class FacebookOAuthController {
 
             channelRepository.save(channel);
 
-            log.info("✅ [FB-OAUTH] Channel saved successfully. Page: {} - {}", pageId, pageName);
+            log.info("✅ [FB-OAUTH] Channel connected successfully: {}", pageName);
 
-            // Redirigir al frontend con éxito
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create("/comunicaciones/canales?success=facebook_connected"))
-                    .build();
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "channelName", pageName));
 
         } catch (Exception e) {
-            log.error("❌ [FB-OAUTH] Error processing callback: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create("/comunicaciones/canales?error=connection_failed"))
-                    .build();
+            log.error("❌ [FB-OAUTH] Error connecting channel: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "connection_failed", "details", e.getMessage()));
         }
     }
 
