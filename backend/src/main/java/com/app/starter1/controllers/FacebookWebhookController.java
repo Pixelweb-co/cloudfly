@@ -29,8 +29,7 @@ public class FacebookWebhookController {
         log.info("🔍 [FB-WEBHOOK] Verifying webhook subscription...");
         log.info("Hub Mode: {}", mode);
 
-        // Usar método interno para obtener tokens reales (sin máscara)
-        SystemConfigDTO config = systemConfigService.getSystemConfigInternal();
+        SystemConfigDTO config = systemConfigService.getSystemConfig();
         String expectedToken = config.getFacebookWebhookVerifyToken();
 
         if (expectedToken == null || expectedToken.isEmpty()) {

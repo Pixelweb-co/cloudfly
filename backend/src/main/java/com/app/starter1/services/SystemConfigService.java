@@ -32,37 +32,6 @@ public class SystemConfigService {
     }
 
     /**
-     * Obtener configuración para uso interno (SIN ENMASCARAR secretos)
-     * Usado por Webhooks y servicios internos
-     */
-    @Transactional(readOnly = true)
-    public SystemConfigDTO getSystemConfigInternal() {
-        SystemConfig config = systemConfigRepository.findFirstByOrderByIdAsc()
-                .orElseGet(this::createDefaultConfig);
-
-        return SystemConfigDTO.builder()
-                .id(config.getId())
-                .systemName(config.getSystemName())
-                .systemDescription(config.getSystemDescription())
-                .logoUrl(config.getLogoUrl())
-                .supportEmail(config.getSupportEmail())
-                .supportPhone(config.getSupportPhone())
-                .termsOfService(config.getTermsOfService())
-                .privacyPolicy(config.getPrivacyPolicy())
-                .facebookAppId(config.getFacebookAppId())
-                .facebookAppSecret(config.getFacebookAppSecret()) // SIN MÁSCARA
-                .facebookRedirectUri(config.getFacebookRedirectUri())
-                .facebookWebhookVerifyToken(config.getFacebookWebhookVerifyToken()) // SIN MÁSCARA
-                .facebookApiVersion(config.getFacebookApiVersion())
-                .facebookEnabled(config.getFacebookEnabled())
-                .evolutionApiUrl(config.getEvolutionApiUrl())
-                .evolutionApiKey(config.getEvolutionApiKey()) // SIN MÁSCARA
-                .whatsappEnabled(config.getWhatsappEnabled())
-                .lastUpdatedBy(config.getLastUpdatedBy())
-                .build();
-    }
-
-    /**
      * Actualizar configuración del sistema
      * Solo SUPERADMIN puede hacerlo
      */

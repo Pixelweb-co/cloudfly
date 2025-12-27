@@ -67,6 +67,9 @@ public class SecurityConfig {
                                         http.requestMatchers(HttpMethod.GET, "/sendnotification/**").permitAll();
                                         http.requestMatchers(HttpMethod.GET, "/api/public/chatbot/**").permitAll();
 
+                                        // Webhooks Públicos (Facebook, etc.)
+                                        http.requestMatchers("/webhooks/**").permitAll();
+
                                         // Swagger UI y OpenAPI
                                         http.requestMatchers("/v3/api-docs/**").permitAll();
                                         http.requestMatchers("/swagger-ui/**").permitAll();
@@ -537,6 +540,12 @@ public class SecurityConfig {
                                         http.requestMatchers(HttpMethod.DELETE, "/api/v1/subscriptions/**")
                                                         .hasAnyRole("SUPERADMIN", "MANAGER", "ADMIN");
 
+                                        // Facebook OAuth (antes de las reglas genéricas de channels)
+                                        http.requestMatchers(HttpMethod.GET, "/api/channels/facebook/auth-url")
+                                                        .authenticated(); // Cualquier usuario autenticado
+                                        http.requestMatchers(HttpMethod.GET, "/api/channels/facebook/callback")
+                                                        .permitAll(); // Facebook redirige aquí sin token
+
                                         // Channels (Canales de Comunicación)
                                         http.requestMatchers(HttpMethod.GET, "/api/channels/**")
                                                         .authenticated(); // Cualquier usuario puede ver canales
@@ -547,6 +556,12 @@ public class SecurityConfig {
                                         http.requestMatchers(HttpMethod.PATCH, "/api/channels/**")
                                                         .hasAnyRole("SUPERADMIN", "MANAGER", "ADMIN");
                                         http.requestMatchers(HttpMethod.DELETE, "/api/channels/**")
+                                                        .hasAnyRole("SUPERADMIN", "MANAGER");
+
+                                        // System Configuration (Configuración del Sistema)
+                                        http.requestMatchers(HttpMethod.GET, "/api/system/**")
+                                                        .hasAnyRole("SUPERADMIN", "MANAGER");
+                                        http.requestMatchers(HttpMethod.PUT, "/api/system/**")
                                                         .hasAnyRole("SUPERADMIN", "MANAGER");
 
                                         // Configurar el resto de los endpoints (no especificados)
