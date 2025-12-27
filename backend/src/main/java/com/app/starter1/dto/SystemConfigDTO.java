@@ -36,6 +36,7 @@ public class SystemConfigDTO {
     private String facebookWebhookVerifyToken;
     private String facebookApiVersion;
     private Boolean facebookEnabled;
+    private String frontendUrl;
 
     // ==========================================
     // INTEGRACIÓN EVOLUTION API
