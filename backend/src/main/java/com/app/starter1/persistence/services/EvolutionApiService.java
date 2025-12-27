@@ -36,7 +36,7 @@ public class EvolutionApiService {
         // Request body con campos requeridos
         Map<String, Object> body = new HashMap<>();
         body.put("instanceName", instanceName);
-        // NO enviamos token - Evolution API lo genera automáticamente
+        body.put("token", apiKey); // Token de la instancia
         body.put("integration", "WHATSAPP-BAILEYS");
         body.put("qrcode", true);
 
@@ -46,19 +46,11 @@ public class EvolutionApiService {
 
         try {
             ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
-            Map<String, Object> responseBody = response.getBody();
             log.info("✅ [EVOLUTION-API] Success! Status: {}", response.getStatusCode());
-            log.info("📦 [EVOLUTION-API] Full response: {}", responseBody);
-
-            // Log detallado de la respuesta para ver qué devuelve
-            if (responseBody != null) {
-                log.info("🔑 [EVOLUTION-API] Response keys: {}", responseBody.keySet());
-                responseBody.forEach((key, value) -> log.info("   {} = {}", key, value));
-            }
-
-            return responseBody;
+            log.info("📦 [EVOLUTION-API] Response: {}", response.getBody());
+            return response.getBody();
         } catch (Exception e) {
-            log.error("❌ [EVOLUTION-API] Failed: {}", e.getMessage(), e);
+            log.error("❌ [EVOLUTION-API] Failed: {}", e.getMessage());
             throw new RuntimeException("Failed to create Evolution API instance: " + e.getMessage(), e);
         }
     }
@@ -84,8 +76,6 @@ public class EvolutionApiService {
 
     public Map<String, Object> checkInstanceStatus(String instanceName) {
         String url = apiUrl + "/instance/connectionState/" + instanceName;
-        log.info("🔍 [EVOLUTION-API] Checking instance status. URL: {}", url);
-        log.info("🔍 [EVOLUTION-API] Instance name: {}", instanceName);
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("apikey", apiKey);
@@ -94,20 +84,8 @@ public class EvolutionApiService {
 
         try {
             ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, request, Map.class);
-            Map<String, Object> body = response.getBody();
-            log.info("✅ [EVOLUTION-API] Status check successful!");
-            log.info("📦 [EVOLUTION-API] Full response body: {}", body);
-
-            if (body != null) {
-                log.info("🔑 [EVOLUTION-API] Response keys: {}", body.keySet());
-                body.forEach((key, value) -> log.info("   {} = {} (type: {})", key, value,
-                        value != null ? value.getClass().getSimpleName() : "null"));
-            }
-
-            return body;
+            return response.getBody();
         } catch (Exception e) {
-            log.error("❌ [EVOLUTION-API] Failed to check instance status: {}", e.getMessage());
-            log.error("❌ [EVOLUTION-API] Exception type: {}", e.getClass().getSimpleName());
             return null;
         }
     }
