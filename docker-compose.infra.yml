@@ -211,4 +211,5 @@ networks:
     name: cloudfly_app-net
     driver: bridge
   kafka-net:
+    name: cloudfly_kafka-net
     driver: bridge
