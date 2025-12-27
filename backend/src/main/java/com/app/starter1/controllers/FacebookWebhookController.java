@@ -29,7 +29,7 @@ public class FacebookWebhookController {
         log.info("🔍 [FB-WEBHOOK] Verifying webhook subscription...");
         log.info("Hub Mode: {}", mode);
 
-        // Usar método interno para obtener tokens reales (sin máscara)
+        // Usar método interno para obtener el token sin enmascarar
         SystemConfigDTO config = systemConfigService.getSystemConfigInternal();
         String expectedToken = config.getFacebookWebhookVerifyToken();
 
@@ -37,6 +37,9 @@ public class FacebookWebhookController {
             log.error("❌ [FB-WEBHOOK] Verify token not configured in System Config");
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Verification token not configured");
         }
+
+        log.info("🔑 [FB-WEBHOOK] Expected token: {}", expectedToken);
+        log.info("🔑 [FB-WEBHOOK] Received token: {}", token);
 
         if ("subscribe".equals(mode) && expectedToken.equals(token)) {
             log.info("✅ [FB-WEBHOOK] Webhook verified successfully!");

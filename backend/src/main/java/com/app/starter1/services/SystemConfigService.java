@@ -32,14 +32,17 @@ public class SystemConfigService {
     }
 
     /**
-     * Obtener configuración para uso interno (SIN ENMASCARAR secretos)
-     * Usado por Webhooks y servicios internos
+     * Obtener la configuración del sistema SIN enmascarar secretos
+     * Para uso INTERNO del backend (webhooks, OAuth, etc.)
      */
     @Transactional(readOnly = true)
     public SystemConfigDTO getSystemConfigInternal() {
+        log.info("🔓 [SYSTEM-CONFIG] Fetching system configuration (unmasked)");
+
         SystemConfig config = systemConfigRepository.findFirstByOrderByIdAsc()
                 .orElseGet(this::createDefaultConfig);
 
+        // Retornar DTO sin enmascarar secretos
         return SystemConfigDTO.builder()
                 .id(config.getId())
                 .systemName(config.getSystemName())

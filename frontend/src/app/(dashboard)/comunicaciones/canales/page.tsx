@@ -125,8 +125,6 @@ const ChannelsPage = () => {
         }
     }
 
-
-
     const handleDeleteClick = (channel: Channel): void => {
         setChannelToDelete(channel)
         setDeleteDialogOpen(true)
@@ -175,7 +173,7 @@ const ChannelsPage = () => {
                 window.location.href = response.data.authUrl
             } catch (error) {
                 console.error('Error getting Facebook auth URL:', error)
-                alert('Error al iniciar conexión con Facebook. Verifica la configuración del sistema.')
+                setErrorMessage('Error al iniciar conexión con Facebook. Verifica la configuración del sistema.')
             }
             return
         }
@@ -242,7 +240,6 @@ const ChannelsPage = () => {
                         {errorMessage}
                     </Alert>
                 )}
-
                 {channels.length === 0 && (
                     <Alert severity="info" icon="🚀" sx={{ mb: 3 }}>
                         <Typography variant="body1" fontWeight="600">
@@ -328,7 +325,7 @@ const ChannelsPage = () => {
                                 )}
 
                                 {/* Actions */}
-                                <Box display="flex" flexDirection="column" gap={1} mt={2}>
+                                <Box display="flex" gap={1} mt={2}>
                                     <Tooltip title="Configurar canal">
                                         <Button
                                             variant="outlined"
