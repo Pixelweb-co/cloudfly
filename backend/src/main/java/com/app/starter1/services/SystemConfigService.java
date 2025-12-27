@@ -57,7 +57,9 @@ public class SystemConfigService {
                 .facebookRedirectUri(config.getFacebookRedirectUri())
                 .facebookWebhookVerifyToken(config.getFacebookWebhookVerifyToken()) // SIN MÁSCARA
                 .facebookApiVersion(config.getFacebookApiVersion())
+                .facebookApiVersion(config.getFacebookApiVersion())
                 .facebookEnabled(config.getFacebookEnabled())
+                .frontendUrl(config.getFrontendUrl())
                 .evolutionApiUrl(config.getEvolutionApiUrl())
                 .evolutionApiKey(config.getEvolutionApiKey()) // SIN MÁSCARA
                 .whatsappEnabled(config.getWhatsappEnabled())
@@ -119,6 +121,9 @@ public class SystemConfigService {
         if (dto.getFacebookEnabled() != null) {
             config.setFacebookEnabled(dto.getFacebookEnabled());
         }
+        if (dto.getFrontendUrl() != null) {
+            config.setFrontendUrl(dto.getFrontendUrl());
+        }
 
         // Actualizar integración Evolution API
         if (dto.getEvolutionApiUrl() != null) {
@@ -175,7 +180,9 @@ public class SystemConfigService {
                 .facebookRedirectUri(entity.getFacebookRedirectUri())
                 .facebookWebhookVerifyToken(maskSecret(entity.getFacebookWebhookVerifyToken()))
                 .facebookApiVersion(entity.getFacebookApiVersion())
+                .facebookApiVersion(entity.getFacebookApiVersion())
                 .facebookEnabled(entity.getFacebookEnabled())
+                .frontendUrl(entity.getFrontendUrl())
                 .evolutionApiUrl(entity.getEvolutionApiUrl())
                 .evolutionApiKey(maskSecret(entity.getEvolutionApiKey()))
                 .whatsappEnabled(entity.getWhatsappEnabled())
