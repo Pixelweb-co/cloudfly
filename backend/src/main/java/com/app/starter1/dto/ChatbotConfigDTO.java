@@ -15,4 +15,7 @@ public class ChatbotConfigDTO {
     private String agentName;
     private String apiKey;
     private String qrCode; // Base64 QR Code for activation
+    private String phoneNumber; // Número asociado
+    private Boolean exists; // Si existe la instancia
+    private Boolean isConnected; // Si está conectada actualmente
 }

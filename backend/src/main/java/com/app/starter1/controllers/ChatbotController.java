@@ -58,6 +58,15 @@ public class ChatbotController {
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping("/status")
+    public ResponseEntity<ChatbotConfigDTO> getStatus() {
+        Long tenantId = userMethods.getTenantId();
+        log.info("📊 [CHATBOT] Getting status for tenantId: {}", tenantId);
+        ChatbotConfigDTO result = chatbotService.getStatus(tenantId);
+        log.info("✅ [CHATBOT] Status retrieved for tenantId: {}", tenantId);
+        return ResponseEntity.ok(result);
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<ChatbotConfigDTO> logoutChatbot() {
         Long tenantId = userMethods.getTenantId();

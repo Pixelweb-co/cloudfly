@@ -5,7 +5,9 @@ import com.app.starter1.dto.ChannelDTO;
 import com.app.starter1.persistence.entity.Channel;
 import com.app.starter1.persistence.entity.Customer;
 import com.app.starter1.persistence.repository.ChannelRepository;
+import com.app.starter1.persistence.repository.ChatbotConfigRepository;
 import com.app.starter1.persistence.repository.CustomerRepository;
+import com.app.starter1.persistence.services.EvolutionApiService;
 import com.app.starter1.utils.UserMethods;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,19 +26,124 @@ public class ChannelService {
 
     private final ChannelRepository channelRepository;
     private final CustomerRepository customerRepository;
+    private final ChatbotConfigRepository chatbotConfigRepository;
+    private final EvolutionApiService evolutionApiService;
     private final UserMethods userMethods;
 
     /**
      * Obtener todos los canales del tenant actual
+     * Sincroniza el estado real desde Evolution API para WhatsApp
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ChannelDTO> getAllChannels() {
         Long tenantId = userMethods.getTenantId();
         log.info("Fetching channels for tenant: {}", tenantId);
 
-        return channelRepository.findByCustomerId(tenantId).stream()
+        List<Channel> channels = channelRepository.findByCustomerId(tenantId);
+
+        // Sincronizar estado de canales WhatsApp
+        for (Channel channel : channels) {
+            if (channel.getType() == Channel.ChannelType.WHATSAPP && channel.getInstanceName() != null) {
+                syncWhatsAppChannelStatus(channel);
+            }
+        }
+
+        return channels.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Sincroniza el estado de un canal WhatsApp con Evolution API
+     */
+    private void syncWhatsAppChannelStatus(Channel channel) {
+        try {
+            log.info("🔄 [SYNC] Syncing status for channel {} (instance: {})",
+                    channel.getId(), channel.getInstanceName());
+
+            Map<String, Object> status = evolutionApiService.checkInstanceStatus(channel.getInstanceName());
+
+            if (status != null) {
+                log.info("📊 [SYNC] Evolution API returned status for instance {}", channel.getInstanceName());
+
+                // La instancia existe en Evolution API
+                // Intentar obtener el estado de diferentes formas según la estructura de la
+                // respuesta
+                Object stateObj = status.get("state");
+
+                // Si no hay "state" directo, buscar en "instance.state" o similar
+                if (stateObj == null && status.containsKey("instance")) {
+                    Object instance = status.get("instance");
+                    if (instance instanceof Map) {
+                        stateObj = ((Map<?, ?>) instance).get("state");
+                    }
+                }
+
+                log.info("🔍 [SYNC] State value for {}: {}", channel.getInstanceName(), stateObj);
+
+                // Verificar si está conectado (puede ser "open", "connected", etc.)
+                boolean connected = false;
+                if (stateObj != null) {
+                    String stateStr = stateObj.toString().toLowerCase();
+                    connected = stateStr.equals("open") ||
+                            stateStr.equals("connected") ||
+                            stateStr.contains("connect");
+                }
+
+                log.info("🎯 [SYNC] Determined connection status for {}: {}",
+                        channel.getInstanceName(), connected);
+
+                if (channel.getIsConnected() != connected) {
+                    log.info("📊 [SYNC] Updating channel {} connection status: {} -> {}",
+                            channel.getId(), channel.getIsConnected(), connected);
+                    channel.setIsConnected(connected);
+                    if (connected) {
+                        channel.setLastSync(LocalDateTime.now());
+                        channel.setLastError(null);
+                    } else {
+                        channel.setLastError("Instance state: " + stateObj);
+                    }
+                    channelRepository.save(channel);
+                } else {
+                    log.info("✓ [SYNC] Channel {} status unchanged: {}",
+                            channel.getId(), connected);
+                }
+            } else {
+                // La instancia NO existe en Evolution API
+                log.warn("⚠️ [SYNC] No status returned for instance {}", channel.getInstanceName());
+                handleMissingInstance(channel);
+            }
+        } catch (Exception e) {
+            // La instancia NO existe (404 u otro error)
+            log.error("❌ [SYNC] Error checking instance {}: {}",
+                    channel.getInstanceName(), e.getMessage(), e);
+            handleMissingInstance(channel);
+        }
+    }
+
+    /**
+     * Maneja el caso cuando la instancia no existe en Evolution API
+     */
+    private void handleMissingInstance(Channel channel) {
+        log.warn("🗑️ [SYNC] Instance {} does not exist, cleaning up configuration", channel.getInstanceName());
+
+        // Eliminar configuración de chatbot_config si existe
+        chatbotConfigRepository.findByTenantId(channel.getCustomer().getId())
+                .ifPresent(config -> {
+                    if (channel.getInstanceName().equals(config.getInstanceName())) {
+                        log.info("🗑️ [SYNC] Deleting orphaned chatbot config for instance: {}",
+                                config.getInstanceName());
+                        chatbotConfigRepository.delete(config);
+                    }
+                });
+
+        // Marcar canal como desconectado
+        if (channel.getIsConnected()) {
+            log.info("📊 [SYNC] Marking channel {} as disconnected", channel.getId());
+            channel.setIsConnected(false);
+            channel.setLastError("Instance not found in Evolution API");
+            channelRepository.save(channel);
+        }
     }
 
     /**

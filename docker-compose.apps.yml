@@ -1,0 +1,223 @@
+# Docker Compose - Aplicaciones
+# Servicios de aplicación que dependen de la infraestructura
+
+services:
+  # ====================
+  # BACKEND API (Spring Boot)
+  # ====================
+
+  backend-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend-api
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=cloudfly_main
+      - DB_USERNAME=root
+      - DB_PASSWORD=widowmaker
+    networks:
+      - app-net
+      - kafka-net
+    labels:
+      - "traefik.enable=true"
+      # router HTTPS para el API
+      - "traefik.http.routers.api.rule=Host(`api.cloudfly.com.co`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=le"
+      # puerto interno del backend
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+
+  # ====================
+  # FRONTEND (Next.js)
+  # ====================
+
+  frontend-react:
+    container_name: frontend_app
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co   # Traefik termina SSL
+    restart: unless-stopped
+    networks:
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`dashboard.cloudfly.com.co`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=le"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+
+  # ====================
+  # NOTIFICATION SERVICE (Spring Boot)
+  # ====================
+
+  notification-service:
+    build:
+      context: ./notifications
+      dockerfile: Dockerfile
+    container_name: notification-service
+    restart: always
+    ports:
+      - "8081:8080"
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    networks:
+      - kafka-net
+
+  # ====================
+  # EVOLUTION API (WhatsApp)
+  # ====================
+
+  evolution-api:
+    image: evoapicloud/evolution-api:latest
+    container_name: evolution_api
+    restart: always
+    ports:
+      - "8082:8080"  # Puerto para acceso local/desarrollo
+    env_file:
+      - .env
+    volumes:
+      - evolution_instances:/evolution/instances
+    networks:
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.eapi.rule=Host(`eapi.cloudfly.com.co`)"
+      - "traefik.http.routers.eapi.entrypoints=websecure"
+      - "traefik.http.routers.eapi.tls.certresolver=le"
+      - "traefik.http.services.eapi.loadbalancer.server.port=8080"
+
+  # ====================
+  # N8N (Automatización)
+  # ====================
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8nserver.com
+    restart: always
+    environment:
+      - N8N_HOST=autobot.cloudfly.com.co
+      - N8N_PROTOCOL=https
+      - N8N_PORT=5678
+      - WEBHOOK_URL=https://autobot.cloudfly.com.co/
+      - N8N_EDITOR_BASE_URL=https://autobot.cloudfly.com.co
+      - NODE_ENV=production
+      - N8N_SECURE_COOKIE=true
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`autobot.cloudfly.com.co`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls.certresolver=le"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+
+  # ====================
+  # CHAT SOCKET SERVICE (WebSocket)
+  # ====================
+
+  chat-socket-service:
+    build:
+      context: ./chat-socket-service
+      dockerfile: Dockerfile
+    container_name: chat_socket
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3001
+      - FRONTEND_URL=${FRONTEND_URL:-https://dashboard.cloudfly.com.co}
+      - JAVA_API_URL=${JAVA_API_URL:-https://api.cloudfly.com.co}
+      - JWT_SECRET=${JWT_SECRET}
+      - N8N_SECRET_KEY=${N8N_SECRET_KEY}
+    networks:
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chatsocket.rule=Host(`chat.cloudfly.com.co`)"
+      - "traefik.http.routers.chatsocket.entrypoints=websecure"
+      - "traefik.http.routers.chatsocket.tls.certresolver=le"
+      - "traefik.http.services.chatsocket.loadbalancer.server.port=3001"
+
+  # ====================
+  # CHATWOOT (Chat Center)
+  # ====================
+
+  chatwoot:
+    image: chatwoot/chatwoot:latest
+    container_name: chatwoot
+    restart: always
+    command: /bin/sh -lc "bundle exec rails db:chatwoot_prepare && mkdir -p tmp/pids && bundle exec puma -C config/puma.rb"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chatwoot.rule=Host(`chatcenter.cloudfly.com.co`)"
+      - "traefik.http.routers.chatwoot.entrypoints=websecure"
+      - "traefik.http.routers.chatwoot.tls.certresolver=le"
+      - "traefik.http.services.chatwoot.loadbalancer.server.port=3000"
+    env_file:
+      - .env.chatwoot
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - app-net
+
+  chatwoot-worker:
+    image: chatwoot/chatwoot:latest
+    container_name: chatwoot_worker
+    restart: always
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    environment:
+      RAILS_ENV: production
+      SECRET_KEY_BASE: "44d4f95c1b13aa70fd34dd6453a121fd962d9c1b748b28f21ac36cd1f481714a"
+      FRONTEND_URL: "https://chatcenter.cloudfly.com.co"
+      ACTIVE_STORAGE_SERVICE: "local"
+      DATABASE_URL: "postgres://chatbot_user:chatbot_pass@postgresql:5432/chatwoot_production"
+      REDIS_URL: "redis://redis:6379/1"
+      DEFAULT_LOCALE: "es"
+    volumes:
+      - chatwoot_storage:/app/storage
+    networks:
+      - app-net
+
+  # ====================
+  # TTS SERVICE (Opcional - Comentado)
+  # ====================
+
+  # xtts:
+  #   image: local-xtts
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.TTS
+  #   environment:
+  #     - API_KEY=sellerbot2025
+  #     - DEFAULT_LANG=es
+  #     - TTS_MODEL=tts_models/multilingual/multi-dataset/xtts_v2
+  #     - SAMPLE_RATE=24000
+  #     - OUTPUT_DIR=/data/outputs
+  #   volumes:
+  #     - ./data:/data/outputs
+  #   ports:
+  #     - "8030:8000"
+  #   networks:
+  #     - app-net
+
+volumes:
+  n8n_data:
+  evolution_instances:
+  chatwoot_storage:
+
+networks:
+  app-net:
+    external: true
+    name: cloudfly_app-net
+  kafka-net:
+    external: true
+    name: cloudfly_kafka-net
