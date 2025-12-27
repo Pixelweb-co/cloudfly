@@ -208,6 +208,7 @@ volumes:
 
 networks:
   app-net:
+    name: cloudfly_app-net
     driver: bridge
   kafka-net:
     driver: bridge
