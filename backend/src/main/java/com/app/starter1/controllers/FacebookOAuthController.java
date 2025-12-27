@@ -51,7 +51,8 @@ public class FacebookOAuthController {
         try {
             log.info("🔑 [FB-OAUTH] Generating authorization URL");
 
-            SystemConfigDTO config = systemConfigService.getSystemConfig();
+            // Usar configuración interna con secretos reales
+            SystemConfigDTO config = systemConfigService.getSystemConfigInternal();
 
             // Validar que la integración de Facebook esté habilitada
             if (config.getFacebookEnabled() == null || !config.getFacebookEnabled()) {
@@ -137,7 +138,8 @@ public class FacebookOAuthController {
                         .build();
             }
 
-            SystemConfigDTO config = systemConfigService.getSystemConfig();
+            // Usar configuración interna con secretos reales
+            SystemConfigDTO config = systemConfigService.getSystemConfigInternal();
 
             // 1. Intercambiar código por access token de corta duración
             String shortLivedToken = exchangeCodeForToken(
