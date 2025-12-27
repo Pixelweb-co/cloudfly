@@ -72,30 +72,54 @@ const ChannelsPage = () => {
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+    const [connecting, setConnecting] = useState(false)
+
     useEffect(() => {
-        loadChannels()
+        const init = async () => {
+            await loadChannels()
+            await handleOAuthCallback()
+        }
+        init()
+    }, [])
 
-        // Detectar si viene de callback de Facebook
+    const handleOAuthCallback = async () => {
         const params = new URLSearchParams(window.location.search)
-        const success = params.get('success')
+        const code = params.get('code')
+        const state = params.get('state')
         const error = params.get('error')
+        const errorDesc = params.get('error_description')
 
-        if (success === 'facebook_connected') {
-            setSuccessMessage('✅ Facebook Messenger conectado exitosamente')
-            // Limpiar URL
+        // Si hay código, intentar conectar
+        if (code && state) {
+            // Limpiar URL para evitar reenvíos
             window.history.replaceState({}, '', window.location.pathname)
-        } else if (error) {
-            const errorMessages: Record<string, string> = {
-                'invalid_state': 'Error de seguridad. Por favor intenta de nuevo.',
-                'no_pages': 'No tienes páginas de Facebook. Crea una página primero.',
-                'connection_failed': 'Error al conectar con Facebook. Intenta nuevamente.',
-                'access_denied': 'Cancelaste la autorización de Facebook.'
+
+            setConnecting(true)
+            try {
+                await axiosInstance.post('/api/channels/facebook/connect', {
+                    code,
+                    state
+                })
+                setSuccessMessage('✅ Facebook Messenger conectado y configurado exitosamente')
+                await loadChannels() // Recargar lista para mostrar el nuevo canal
+            } catch (err: any) {
+                console.error('Error connecting Facebook:', err)
+                const errorMsg = err.response?.data?.error || 'Error desconocido al conectar'
+                setErrorMessage(`Error de conexión: ${errorMsg}`)
+            } finally {
+                setConnecting(false)
             }
-            setErrorMessage(errorMessages[error] || 'Error desconocido al conectar Facebook')
-            // Limpiar URL
+        } else if (error) {
+            // Manejar errores de Facebook
+            console.error('Facebook OAuth Error:', error, errorDesc)
+            const errorMessages: Record<string, string> = {
+                'access_denied': 'Cancelaste la autorización de Facebook.',
+                'invalid_scope': 'Permisos insuficientes otorgados.',
+            }
+            setErrorMessage(errorMessages[error] || `Error de Facebook: ${errorDesc || error}`)
             window.history.replaceState({}, '', window.location.pathname)
         }
-    }, [])
+    }
 
     const loadChannels = async (): Promise<void> => {
         try {
@@ -199,6 +223,30 @@ const ChannelsPage = () => {
 
     return (
         <Box sx={{ p: 3 }}>
+            {/* Loading Overlay */}
+            {connecting && (
+                <Box
+                    sx={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        bgcolor: 'rgba(255, 255, 255, 0.8)',
+                        zIndex: 9999,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}
+                >
+                    <CircularProgress size={60} />
+                    <Typography variant="h6" sx={{ mt: 2 }}>
+                        Conectando con Facebook...
+                    </Typography>
+                </Box>
+            )}
+
             {/* Header */}
             <Box sx={{ mb: 4 }}>
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
