@@ -133,6 +133,8 @@ public class InstagramOAuthController {
 
             String redirectUri = frontendUrl + "/comunicaciones/canales";
 
+            log.info("🔄 [IG-OAUTH] Starting token exchange with redirect URI: {}", redirectUri);
+
             // 1. Intercambiar código por access token
             String shortLivedToken = exchangeCodeForToken(
                     code,
@@ -140,16 +142,23 @@ public class InstagramOAuthController {
                     config.getFacebookAppSecret(),
                     redirectUri);
 
+            log.info("✅ [IG-OAUTH] Short-lived token obtained");
+
             // 2. Token de larga duración
             String longLivedToken = exchangeForLongLivedToken(
                     shortLivedToken,
                     config.getFacebookAppId(),
                     config.getFacebookAppSecret());
 
+            log.info("✅ [IG-OAUTH] Long-lived token obtained");
+
             // 3. Obtener páginas de Facebook vinculadas
             List<Map<String, Object>> pages = getUserPages(longLivedToken);
 
+            log.info("📄 [IG-OAUTH] Found {} Facebook pages", pages.size());
+
             if (pages.isEmpty()) {
+                log.warn("⚠️ [IG-OAUTH] No Facebook pages found for user");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Map.of("error", "no_pages_found"));
             }
@@ -157,7 +166,10 @@ public class InstagramOAuthController {
             // 4. Para cada página, verificar si tiene Instagram conectado
             for (Map<String, Object> page : pages) {
                 String pageId = (String) page.get("id");
+                String pageName = (String) page.get("name");
                 String pageAccessToken = (String) page.get("access_token");
+
+                log.info("🔍 [IG-OAUTH] Checking page: {} ({})", pageName, pageId);
 
                 // Obtener cuenta de Instagram conectada a la página
                 Map<String, Object> igAccountData = getInstagramAccount(pageId, pageAccessToken);
@@ -165,6 +177,8 @@ public class InstagramOAuthController {
                 if (igAccountData != null) {
                     String igAccountId = (String) igAccountData.get("id");
                     String igUsername = (String) igAccountData.get("username");
+
+                    log.info("📸 [IG-OAUTH] Instagram account found: @{} ({})", igUsername, igAccountId);
 
                     // Guardar canal de Instagram
                     Customer customer = customerRepository.findById(tenantId)
@@ -194,15 +208,20 @@ public class InstagramOAuthController {
                     return ResponseEntity.ok(Map.of(
                             "success", true,
                             "channelName", "@" + igUsername));
+                } else {
+                    log.debug("ℹ️ [IG-OAUTH] No Instagram account linked to page: {}", pageName);
                 }
             }
+
+            log.warn("⚠️ [IG-OAUTH] No Instagram Business account found in any Facebook page");
 
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "no_instagram_account_found",
                             "message", "No Instagram Business account connected to your Facebook pages"));
 
         } catch (Exception e) {
-            log.error("❌ [IG-OAUTH] Error connecting Instagram: {}", e.getMessage(), e);
+            log.error("❌ [IG-OAUTH] Error connecting Instagram: {} - {}", e.getClass().getSimpleName(), e.getMessage(),
+                    e);
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", "connection_failed", "details", e.getMessage()));
         }
