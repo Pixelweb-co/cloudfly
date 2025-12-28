@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -94,8 +95,9 @@ public class FacebookWebhookController {
     }
 
     private void processMessageEvent(String pageId, JsonNode event) {
+        log.info("🔍 [FB-WEBHOOK] Processing event for Page ID: {}", pageId);
+
         // Buscar canal activo por Page ID
-        // Usamos el metodo que acabamos de agregar al repositorio
         Optional<Channel> channelOpt = channelRepository.findByPageIdAndIsActiveTrue(pageId);
 
         if (channelOpt.isEmpty()) {
@@ -105,20 +107,28 @@ public class FacebookWebhookController {
 
         Channel channel = channelOpt.get();
         Long tenantId = channel.getCustomer().getId();
+        String pageAccessToken = channel.getAccessToken();
 
-        String senderId = event.path("sender").path("id").asText();
-        JsonNode messageNode = event.path("message");
+        log.info("✅ [FB-WEBHOOK] Channel found: {} (tenant: {})", channel.getName(), tenantId);
 
-        // Ignorar mensajes enviados por la propia pagina (eco) si es necesario
-        // Pero a veces queremos ver nuestros propios mensajes
+        // Ignorar eventos de entrega/lectura (no son mensajes)
         if (event.has("delivery") || event.has("read")) {
+            log.debug("Skipping delivery/read receipt event");
             return;
         }
 
+        // Validar que es un mensaje real
+        if (!event.has("message")) {
+            log.debug("Event doesn't have 'message' field, skipping");
+            return;
+        }
+
+        String senderId = event.path("sender").path("id").asText();
+        JsonNode messageNode = event.path("message");
         String text = messageNode.path("text").asText();
         String mediaUrl = null;
 
-        // Manejo básico de adjuntos (imágenes)
+        // Manejo de adjuntos (imágenes)
         if (messageNode.has("attachments")) {
             JsonNode attachments = messageNode.path("attachments");
             if (attachments.isArray() && attachments.size() > 0) {
@@ -129,37 +139,61 @@ public class FacebookWebhookController {
             }
         }
 
+        // Si no hay texto ni media, ignorar
         if ((text == null || text.isEmpty()) && mediaUrl == null) {
-            log.debug("Skipping message with no content");
+            log.debug("Skipping message with no text or media");
             return;
         }
 
-        log.info("📨 [FB-WEBHOOK] Processing message from: {} for tenant: {}", senderId, tenantId);
+        log.info("📨 [FB-WEBHOOK] Message from PSID: {} | Text: '{}' | Tenant: {}", senderId, text, tenantId);
 
         try {
+            // Obtener nombre del usuario de Facebook
+            String senderName = getSenderName(senderId, pageAccessToken);
+
             // Crear request para ChatService
             MessageCreateRequest request = new MessageCreateRequest();
             request.setTenantId(tenantId);
-
-            // ID conversacion único: prefijo fb_ + PSID del usuario
-            String conversationId = "fb_" + senderId;
-            request.setConversationId(conversationId);
-
-            // request.setFromUserId(senderId); // Omitido: es para usuario interno
+            request.setConversationId("fb_" + senderId);
             request.setDirection("INCOMING");
             request.setMessageType(mediaUrl != null ? "IMAGE" : "TEXT");
             request.setBody(text != null ? text : "");
             request.setMediaUrl(mediaUrl);
             request.setPlatform("FACEBOOK");
-            request.setTitle("Facebook User");
+            request.setTitle(senderName); // usar nombre real
 
-            // Guardar usando el servicio existente
+            // Guardar mensaje
             chatService.saveMessage(request);
 
-            log.info("✅ [FB-WEBHOOK] Message saved successfully");
+            log.info("✅ [FB-WEBHOOK] Message saved successfully from {}", senderName);
 
         } catch (Exception e) {
             log.error("❌ [FB-WEBHOOK] Error saving message: {}", e.getMessage(), e);
         }
+    }
+
+    /**
+     * Obtener nombre del remitente usando Graph API
+     */
+    private String getSenderName(String senderId, String pageAccessToken) {
+        try {
+            String url = "https://graph.facebook.com/v18.0/" + senderId +
+                    "?fields=name&access_token=" + pageAccessToken;
+
+            RestTemplate restTemplate = new RestTemplate();
+            String response = restTemplate.getForObject(url, String.class);
+
+            JsonNode profileNode = objectMapper.readTree(response);
+            String name = profileNode.path("name").asText();
+
+            if (name != null && !name.isEmpty()) {
+                log.debug("Retrieved sender name: {}", name);
+                return name;
+            }
+        } catch (Exception e) {
+            log.warn("Could not retrieve sender name: {}", e.getMessage());
+        }
+
+        return "Facebook User"; // fallback
     }
 }
