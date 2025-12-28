@@ -24,4 +24,7 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
             com.app.starter1.persistence.entity.Customer customer,
             ChannelType type,
             String pageId);
+
+    // Para Webhooks in entrantes de Facebook (donde solo conocemos el Page ID)
+    Optional<Channel> findByPageIdAndIsActiveTrue(String pageId);
 }

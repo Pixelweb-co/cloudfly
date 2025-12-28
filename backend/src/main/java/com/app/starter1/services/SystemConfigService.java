@@ -80,61 +80,54 @@ public class SystemConfigService {
                 .orElseGet(() -> SystemConfig.builder().build());
 
         // Actualizar configuración general
-        if (dto.getSystemName() != null) {
+        if (dto.getSystemName() != null)
             config.setSystemName(dto.getSystemName());
-        }
-        if (dto.getSystemDescription() != null) {
+        if (dto.getSystemDescription() != null)
             config.setSystemDescription(dto.getSystemDescription());
-        }
-        if (dto.getLogoUrl() != null) {
+        if (dto.getLogoUrl() != null)
             config.setLogoUrl(dto.getLogoUrl());
-        }
-        if (dto.getSupportEmail() != null) {
+        if (dto.getSupportEmail() != null)
             config.setSupportEmail(dto.getSupportEmail());
-        }
-        if (dto.getSupportPhone() != null) {
+        if (dto.getSupportPhone() != null)
             config.setSupportPhone(dto.getSupportPhone());
-        }
-        if (dto.getTermsOfService() != null) {
+        if (dto.getTermsOfService() != null)
             config.setTermsOfService(dto.getTermsOfService());
-        }
-        if (dto.getPrivacyPolicy() != null) {
+        if (dto.getPrivacyPolicy() != null)
             config.setPrivacyPolicy(dto.getPrivacyPolicy());
-        }
 
         // Actualizar integración Facebook
-        if (dto.getFacebookAppId() != null) {
+        if (dto.getFacebookAppId() != null)
             config.setFacebookAppId(dto.getFacebookAppId());
-        }
-        if (dto.getFacebookAppSecret() != null) {
+
+        // Solo actualizar secretos si NO son valores enmascarados
+        if (dto.getFacebookAppSecret() != null && !isMaskedValue(dto.getFacebookAppSecret())) {
             config.setFacebookAppSecret(dto.getFacebookAppSecret());
         }
-        if (dto.getFacebookRedirectUri() != null) {
+
+        if (dto.getFacebookRedirectUri() != null)
             config.setFacebookRedirectUri(dto.getFacebookRedirectUri());
-        }
-        if (dto.getFacebookWebhookVerifyToken() != null) {
+
+        if (dto.getFacebookWebhookVerifyToken() != null && !isMaskedValue(dto.getFacebookWebhookVerifyToken())) {
             config.setFacebookWebhookVerifyToken(dto.getFacebookWebhookVerifyToken());
         }
-        if (dto.getFacebookApiVersion() != null) {
+
+        if (dto.getFacebookApiVersion() != null)
             config.setFacebookApiVersion(dto.getFacebookApiVersion());
-        }
-        if (dto.getFacebookEnabled() != null) {
+        if (dto.getFacebookEnabled() != null)
             config.setFacebookEnabled(dto.getFacebookEnabled());
-        }
-        if (dto.getFrontendUrl() != null) {
+        if (dto.getFrontendUrl() != null)
             config.setFrontendUrl(dto.getFrontendUrl());
-        }
 
         // Actualizar integración Evolution API
-        if (dto.getEvolutionApiUrl() != null) {
+        if (dto.getEvolutionApiUrl() != null)
             config.setEvolutionApiUrl(dto.getEvolutionApiUrl());
-        }
-        if (dto.getEvolutionApiKey() != null) {
+
+        if (dto.getEvolutionApiKey() != null && !isMaskedValue(dto.getEvolutionApiKey())) {
             config.setEvolutionApiKey(dto.getEvolutionApiKey());
         }
-        if (dto.getWhatsappEnabled() != null) {
+
+        if (dto.getWhatsappEnabled() != null)
             config.setWhatsappEnabled(dto.getWhatsappEnabled());
-        }
 
         config.setLastUpdatedBy(userEmail);
 
@@ -143,6 +136,13 @@ public class SystemConfigService {
         log.info("✅ [SYSTEM-CONFIG] Configuration updated successfully");
 
         return mapToDTO(saved);
+    }
+
+    /**
+     * Verifica si un valor parece estar enmascarado
+     */
+    private boolean isMaskedValue(String value) {
+        return value.contains("********") || value.contains("...");
     }
 
     /**
