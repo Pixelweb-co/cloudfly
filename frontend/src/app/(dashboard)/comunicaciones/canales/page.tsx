@@ -96,38 +96,28 @@ const ChannelsPage = () => {
 
             setConnecting(true)
             try {
-                // Intentar primero con Instagram, luego con Facebook
-                let connected = false
-                let channelType = ''
+                // Determinar qué canal se está conectando basándose en el localStorage
+                const pendingChannel = localStorage.getItem('pendingChannelType')
+                localStorage.removeItem('pendingChannelType') // Limpiar
 
-                try {
-                    await axiosInstance.post('/api/channels/instagram/connect', { code, state })
-                    channelType = 'Instagram'
-                    connected = true
-                } catch (igError: any) {
-                    // Si falla Instagram, intentar con Facebook
-                    if (igError.response?.data?.error === 'no_instagram_account_found') {
-                        await axiosInstance.post('/api/channels/facebook/connect', { code, state })
-                        channelType = 'Facebook Messenger'
-                        connected = true
-                    } else if (igError.response?.data?.error !== 'invalid_state') {
-                        // Si el error no es de state inválido, podría ser que era para Facebook
-                        await axiosInstance.post('/api/channels/facebook/connect', { code, state })
-                        channelType = 'Facebook Messenger'
-                        connected = true
-                    } else {
-                        throw igError
-                    }
+                let endpoint = '/api/channels/facebook/connect'
+                let channelName = 'Facebook Messenger'
+
+                if (pendingChannel === 'instagram') {
+                    endpoint = '/api/channels/instagram/connect'
+                    channelName = 'Instagram'
                 }
 
-                if (connected) {
-                    setSuccessMessage(`✅ ${channelType} conectado y configurado exitosamente`)
-                    await loadChannels()
-                }
+                // Llamar al endpoint correcto
+                await axiosInstance.post(endpoint, { code, state })
+
+                setSuccessMessage(`✅ ${channelName} conectado y configurado exitosamente`)
+                await loadChannels()
             } catch (err: any) {
                 console.error('Error connecting channel:', err)
                 const errorMsg = err.response?.data?.error || 'Error desconocido al conectar'
-                setErrorMessage(`Error de conexión: ${errorMsg}`)
+                const details = err.response?.data?.message || ''
+                setErrorMessage(`Error de conexión: ${errorMsg}${details ? ' - ' + details : ''}`)
             } finally {
                 setConnecting(false)
             }
@@ -218,6 +208,9 @@ const ChannelsPage = () => {
                     : '/api/channels/instagram/auth-url'
 
                 const response = await axiosInstance.get<{ authUrl: string, state: string }>(endpoint)
+
+                // Guardar el tipo de canal que se está conectando
+                localStorage.setItem('pendingChannelType', type)
 
                 // Redirigir a Facebook/Instagram para autorización
                 window.location.href = response.data.authUrl
