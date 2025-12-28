@@ -96,27 +96,49 @@ const ChannelsPage = () => {
 
             setConnecting(true)
             try {
-                await axiosInstance.post('/api/channels/facebook/connect', {
-                    code,
-                    state
-                })
-                setSuccessMessage('✅ Facebook Messenger conectado y configurado exitosamente')
-                await loadChannels() // Recargar lista para mostrar el nuevo canal
+                // Intentar primero con Instagram, luego con Facebook
+                let connected = false
+                let channelType = ''
+
+                try {
+                    await axiosInstance.post('/api/channels/instagram/connect', { code, state })
+                    channelType = 'Instagram'
+                    connected = true
+                } catch (igError: any) {
+                    // Si falla Instagram, intentar con Facebook
+                    if (igError.response?.data?.error === 'no_instagram_account_found') {
+                        await axiosInstance.post('/api/channels/facebook/connect', { code, state })
+                        channelType = 'Facebook Messenger'
+                        connected = true
+                    } else if (igError.response?.data?.error !== 'invalid_state') {
+                        // Si el error no es de state inválido, podría ser que era para Facebook
+                        await axiosInstance.post('/api/channels/facebook/connect', { code, state })
+                        channelType = 'Facebook Messenger'
+                        connected = true
+                    } else {
+                        throw igError
+                    }
+                }
+
+                if (connected) {
+                    setSuccessMessage(`✅ ${channelType} conectado y configurado exitosamente`)
+                    await loadChannels()
+                }
             } catch (err: any) {
-                console.error('Error connecting Facebook:', err)
+                console.error('Error connecting channel:', err)
                 const errorMsg = err.response?.data?.error || 'Error desconocido al conectar'
                 setErrorMessage(`Error de conexión: ${errorMsg}`)
             } finally {
                 setConnecting(false)
             }
         } else if (error) {
-            // Manejar errores de Facebook
-            console.error('Facebook OAuth Error:', error, errorDesc)
+            // Manejar errores de OAuth
+            console.error('OAuth Error:', error, errorDesc)
             const errorMessages: Record<string, string> = {
-                'access_denied': 'Cancelaste la autorización de Facebook.',
+                'access_denied': 'Cancelaste la autorización.',
                 'invalid_scope': 'Permisos insuficientes otorgados.',
             }
-            setErrorMessage(errorMessages[error] || `Error de Facebook: ${errorDesc || error}`)
+            setErrorMessage(errorMessages[error] || `Error: ${errorDesc || error}`)
             window.history.replaceState({}, '', window.location.pathname)
         }
     }
@@ -188,16 +210,20 @@ const ChannelsPage = () => {
     const handleAddChannel = async (type: string): Promise<void> => {
         setOpenAddDialog(false)
 
-        // Si es Facebook, iniciar flujo OAuth
-        if (type === 'facebook') {
+        // Si es Facebook o Instagram, iniciar flujo OAuth
+        if (type === 'facebook' || type === 'instagram') {
             try {
-                const response = await axiosInstance.get<{ authUrl: string, state: string }>('/api/channels/facebook/auth-url')
+                const endpoint = type === 'facebook'
+                    ? '/api/channels/facebook/auth-url'
+                    : '/api/channels/instagram/auth-url'
 
-                // Redirigir a Facebook para autorización
+                const response = await axiosInstance.get<{ authUrl: string, state: string }>(endpoint)
+
+                // Redirigir a Facebook/Instagram para autorización
                 window.location.href = response.data.authUrl
             } catch (error) {
-                console.error('Error getting Facebook auth URL:', error)
-                setErrorMessage('Error al iniciar conexión con Facebook. Verifica la configuración del sistema.')
+                console.error(`Error getting ${type} auth URL:`, error)
+                setErrorMessage(`Error al iniciar conexión con ${type === 'facebook' ? 'Facebook' : 'Instagram'}. Verifica la configuración del sistema.`)
             }
             return
         }
