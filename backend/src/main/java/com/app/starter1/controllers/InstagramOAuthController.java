@@ -67,12 +67,15 @@ public class InstagramOAuthController {
             Long tenantId = userMethods.getTenantId();
             String state = generateStateToken(tenantId);
 
-            // Instagram usa los mismos scopes que Facebook Messenger
+            // Usar los mismos permisos de Facebook (que ya funcionan) + permisos de
+            // Instagram
             String scopes = String.join(",", List.of(
-                    "instagram_basic",
-                    "instagram_manage_messages",
                     "pages_show_list",
-                    "pages_manage_metadata"));
+                    "pages_messaging",
+                    "pages_manage_metadata",
+                    "pages_read_engagement",
+                    "instagram_basic",
+                    "instagram_manage_messages"));
 
             String authUrl = UriComponentsBuilder
                     .fromHttpUrl("https://www.facebook.com/" + config.getFacebookApiVersion() + "/dialog/oauth")
