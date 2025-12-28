@@ -7,6 +7,7 @@ import com.app.starter1.persistence.repository.ChannelRepository;
 import com.app.starter1.persistence.repository.CustomerRepository;
 import com.app.starter1.services.SystemConfigService;
 import com.app.starter1.utils.UserMethods;
+import com.app.starter1.utils.OAuthStateManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
@@ -40,6 +41,7 @@ public class FacebookOAuthController {
     private final CustomerRepository customerRepository;
     private final ChannelRepository channelRepository;
     private final UserMethods userMethods;
+    private final OAuthStateManager stateManager;
     private final RestTemplate restTemplate = new RestTemplate();
 
     /**
@@ -306,39 +308,26 @@ public class FacebookOAuthController {
      * Generar token de estado para CSRF protection
      */
     private String generateStateToken(Long tenantId) {
-        // En producción, usar un token firmado o almacenar en Redis
-        // Por ahora, usamos base64(tenantId + timestamp + random)
-        String payload = tenantId + ":" + System.currentTimeMillis() + ":" + UUID.randomUUID();
-        return Base64.getEncoder().encodeToString(payload.getBytes());
+        String state = stateManager.generateStateToken(tenantId, "facebook");
+        log.debug("🔑 [FB-OAUTH] Generated state token for tenant: {}", tenantId);
+        return state;
     }
 
     /**
      * Validar token de estado y extraer tenantId
      */
     private Long validateStateToken(String state) {
-        try {
-            String decoded = new String(Base64.getDecoder().decode(state));
-            String[] parts = decoded.split(":");
+        log.debug("🔍 [FB-OAUTH] Validating state token: {}", state);
 
-            if (parts.length < 3) {
-                return null;
-            }
+        OAuthStateManager.StateData data = stateManager.validateAndRemove(state);
 
-            Long tenantId = Long.parseLong(parts[0]);
-            long timestamp = Long.parseLong(parts[1]);
-
-            // Validar que no haya expirado (30 minutos)
-            long now = System.currentTimeMillis();
-            if (now - timestamp > 30 * 60 * 1000) {
-                log.warn("⚠️ [FB-OAUTH] State token expired");
-                return null;
-            }
-
-            return tenantId;
-
-        } catch (Exception e) {
-            log.error("❌ [FB-OAUTH] Invalid state token: {}", e.getMessage());
+        if (data == null) {
+            log.warn("⚠️ [FB-OAUTH] Invalid or expired state token");
             return null;
         }
+
+        log.debug("✅ [FB-OAUTH] State token valid for tenant: {} (platform: {})",
+                data.getTenantId(), data.getPlatform());
+        return data.getTenantId();
     }
 }

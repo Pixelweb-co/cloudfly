@@ -7,6 +7,7 @@ import com.app.starter1.persistence.repository.ChannelRepository;
 import com.app.starter1.persistence.repository.CustomerRepository;
 import com.app.starter1.services.SystemConfigService;
 import com.app.starter1.utils.UserMethods;
+import com.app.starter1.utils.OAuthStateManager;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -31,11 +32,9 @@ public class InstagramOAuthController {
     private final ChannelRepository channelRepository;
     private final CustomerRepository customerRepository;
     private final UserMethods userMethods;
+    private final OAuthStateManager stateManager;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    // Almacén temporal de tokens state (en producción usar Redis)
-    private final Map<String, Long> stateTokens = new ConcurrentHashMap<>();
 
     /**
      * GET /api/channels/instagram/auth-url
@@ -108,7 +107,8 @@ public class InstagramOAuthController {
         String state = request.get("state");
         String error = request.get("error");
 
-        log.info("📥 [IG-OAUTH] Received connect request");
+        log.info("📥 [IG-OAUTH] Received connect request with code: {}", code != null ? "present" : "missing");
+        log.debug("🔍 [IG-OAUTH] State token received: {}", state);
 
         if (error != null) {
             log.error("❌ [IG-OAUTH] Authorization error: {}", error);
@@ -118,8 +118,11 @@ public class InstagramOAuthController {
         try {
             Long tenantId = validateStateToken(state);
             if (tenantId == null) {
+                log.error("❌ [IG-OAUTH] Invalid state token - returning error");
                 return ResponseEntity.badRequest().body(Map.of("error", "invalid_state"));
             }
+
+            log.info("✅ [IG-OAUTH] State validated successfully for tenant: {}", tenantId);
 
             SystemConfigDTO config = systemConfigService.getSystemConfigInternal();
 
@@ -206,13 +209,24 @@ public class InstagramOAuthController {
     }
 
     private String generateStateToken(Long tenantId) {
-        String state = UUID.randomUUID().toString();
-        stateTokens.put(state, tenantId);
+        String state = stateManager.generateStateToken(tenantId, "instagram");
+        log.debug("🔑 [IG-OAUTH] Generated state token for tenant: {}", tenantId);
         return state;
     }
 
     private Long validateStateToken(String state) {
-        return stateTokens.remove(state);
+        log.debug("🔍 [IG-OAUTH] Validating state token: {}", state);
+
+        OAuthStateManager.StateData data = stateManager.validateAndRemove(state);
+
+        if (data == null) {
+            log.warn("⚠️ [IG-OAUTH] Invalid or expired state token");
+            return null;
+        }
+
+        log.debug("✅ [IG-OAUTH] State token valid for tenant: {} (platform: {})",
+                data.getTenantId(), data.getPlatform());
+        return data.getTenantId();
     }
 
     private String exchangeCodeForToken(String code, String appId, String appSecret, String redirectUri) {
