@@ -281,6 +281,8 @@ public class InstagramOAuthController {
 
         ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
 
+        log.info("📊 [IG-OAUTH] Facebook Graph API /me/accounts response: {}", response.getBody());
+
         try {
             JsonNode node = objectMapper.readTree(response.getBody());
             JsonNode data = node.path("data");
