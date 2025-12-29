@@ -83,6 +83,7 @@ public class InstagramOAuthController {
                     .queryParam("redirect_uri", redirectUri)
                     .queryParam("state", state)
                     .queryParam("scope", scopes)
+                    .queryParam("auth_type", "rerequest")
                     .queryParam("response_type", "code")
                     .build()
                     .toUriString();
