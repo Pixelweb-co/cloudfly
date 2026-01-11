@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { Card, CardHeader, CardContent, Grid, Button, Typography, MenuItem, Table, TableHead, TableRow, TableCell, TableBody, IconButton } from '@mui/material'
+import { Card, CardHeader, CardContent, Grid, Button, Typography, MenuItem, Table, TableHead, TableRow, TableCell, TableBody, IconButton, Chip } from '@mui/material'
 import CustomTextField from '@core/components/mui/TextField'
 import { toast } from 'react-hot-toast'
 import { ArrowLeft, Save, Send, Trash, Plus } from 'lucide-react'
@@ -323,18 +323,15 @@ const SupportDocumentForm = () => {
                     </CardContent>
                 </Card>
             </Grid>
-        </Grid>
-            </Grid >
-        </Grid >
 
-    { docData?.accountingVoucherId && (
-        <AccountingVoucherModal
-            open={accountingModalOpen}
-            onOpenChange={setAccountingModalOpen}
-            voucherId={docData.accountingVoucherId}
-        />
-    )}
-        </>
+            {docData?.accountingVoucherId && (
+                <AccountingVoucherModal
+                    open={accountingModalOpen}
+                    onOpenChange={setAccountingModalOpen}
+                    voucherId={docData.accountingVoucherId}
+                />
+            )}
+        </Grid>
     )
 }
 
