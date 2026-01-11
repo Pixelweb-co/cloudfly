@@ -57,7 +57,7 @@ public class SystemConfigService {
                 .facebookRedirectUri(config.getFacebookRedirectUri())
                 .facebookWebhookVerifyToken(config.getFacebookWebhookVerifyToken()) // SIN MÁSCARA
                 .facebookApiVersion(config.getFacebookApiVersion())
-                .facebookApiVersion(config.getFacebookApiVersion())
+                .facebookLoginConfigId(config.getFacebookLoginConfigId()) // Config ID global
                 .facebookEnabled(config.getFacebookEnabled())
                 .frontendUrl(config.getFrontendUrl())
                 .evolutionApiUrl(config.getEvolutionApiUrl())
@@ -113,6 +113,8 @@ public class SystemConfigService {
 
         if (dto.getFacebookApiVersion() != null)
             config.setFacebookApiVersion(dto.getFacebookApiVersion());
+        if (dto.getFacebookLoginConfigId() != null)
+            config.setFacebookLoginConfigId(dto.getFacebookLoginConfigId());
         if (dto.getFacebookEnabled() != null)
             config.setFacebookEnabled(dto.getFacebookEnabled());
         if (dto.getFrontendUrl() != null)
@@ -180,7 +182,7 @@ public class SystemConfigService {
                 .facebookRedirectUri(entity.getFacebookRedirectUri())
                 .facebookWebhookVerifyToken(maskSecret(entity.getFacebookWebhookVerifyToken()))
                 .facebookApiVersion(entity.getFacebookApiVersion())
-                .facebookApiVersion(entity.getFacebookApiVersion())
+                .facebookLoginConfigId(entity.getFacebookLoginConfigId()) // Config ID global
                 .facebookEnabled(entity.getFacebookEnabled())
                 .frontendUrl(entity.getFrontendUrl())
                 .evolutionApiUrl(entity.getEvolutionApiUrl())

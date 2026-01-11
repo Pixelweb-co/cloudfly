@@ -57,7 +57,7 @@ public class MenuService {
             return new ArrayList<>();
         }
 
-        // 2. Obtener Roles RBAC del usuario (necesarios para filtrado posterior)
+        // Obtener roles RBAC del usuario (necesarios para filtrado posterior)
         List<Long> roleIds = user.getRoles().stream().map(RoleEntity::getId).collect(Collectors.toList());
         List<Role> userRoles = rbacRoleRepository.findAllById(roleIds);
 
@@ -166,9 +166,8 @@ public class MenuService {
             }
         }
 
-        log.info("Usuario {} generó menú con {} items (de {} módulos en suscripción)",
-                username, menuItems.size(), subscriptionModuleIds.size());
-
+        log.info("Usuario {} generó menú con {} items (filtrado por suscripción y roles)",
+                username, menuItems.size());
         return menuItems;
     }
 

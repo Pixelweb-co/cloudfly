@@ -9,9 +9,11 @@ import {
 import {
     Settings as SettingsIcon,
     Facebook as FacebookIcon,
-    Save as SaveIcon
+    Save as SaveIcon,
+    Receipt as ReceiptIcon
 } from '@mui/icons-material'
 import { axiosInstance } from '@/utils/axiosInstance'
+import { userMethods } from '@/utils/userMethods'
 
 interface TabPanelProps {
     children?: React.ReactNode
@@ -57,6 +59,10 @@ export default function SystemConfigPage() {
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
+    // Estado para el switch de DIAN (por Tenant)
+    const [customerId, setCustomerId] = useState<number | null>(null)
+    const [dianEnabled, setDianEnabled] = useState(false)
+
     const [config, setConfig] = useState<SystemConfig>({
         systemName: '',
         systemDescription: '',
@@ -74,19 +80,43 @@ export default function SystemConfigPage() {
     })
 
     useEffect(() => {
-        loadConfig()
+        loadData()
     }, [])
 
-    const loadConfig = async () => {
+    const loadData = async () => {
         try {
             setLoading(true)
-            const response = await axiosInstance.get<SystemConfig>('/api/system/config')
-            setConfig(response.data)
+
+            // 1. Cargar Configuración del Sistema (Global)
+            try {
+                const response = await axiosInstance.get<SystemConfig>('/api/system/config')
+                if (response.data) {
+                    setConfig(response.data)
+                }
+            } catch (err) {
+                console.warn('No se pudo cargar la configuración del sistema (posible falta de permisos o no existe)', err)
+            }
+
+            // 2. Cargar Estado DIAN del Customer (Tenant)
+            const user = userMethods.getUserLogin()
+            if (user && user.customer) {
+                setCustomerId(user.customer.id)
+                // Obtenemos los datos frescos del cliente para asegurar el estado de esEmisorFE
+                try {
+                    const customerRes = await axiosInstance.get(`/customers/${user.customer.id}`)
+                    if (customerRes.data) {
+                        setDianEnabled(!!customerRes.data.esEmisorFE)
+                    }
+                } catch (e) {
+                    console.error('Error cargando datos del cliente:', e)
+                }
+            }
+
         } catch (error: any) {
-            console.error('Error loading config:', error)
+            console.error('Error loading data:', error)
             setMessage({
                 type: 'error',
-                text: error.response?.data?.message || 'Error al cargar configuración'
+                text: error.response?.data?.message || 'Error al cargar datos'
             })
         } finally {
             setLoading(false)
@@ -98,7 +128,27 @@ export default function SystemConfigPage() {
             setSaving(true)
             setMessage(null)
 
-            await axiosInstance.put('/api/system/config', config)
+            const promises = []
+
+            // Guardar Configuración Global
+            // Solo intentamos guardar si tenemos algún dato cargado, aunque el endpoint debería manejar updates parciales si fuera necesario
+            promises.push(axiosInstance.put('/api/system/config', config))
+
+            // Guardar Configuración DIAN del Customer
+            if (customerId) {
+                // Primero obtenemos el cliente actual para no perder otros datos al hacer PUT
+                const currentCustRes = await axiosInstance.get(`/customers/${customerId}`)
+                const currentCust = currentCustRes.data
+
+                const updatedCust = {
+                    ...currentCust,
+                    esEmisorFE: dianEnabled
+                }
+
+                promises.push(axiosInstance.put(`/customers/${customerId}`, updatedCust))
+            }
+
+            await Promise.all(promises)
 
             setMessage({
                 type: 'success',
@@ -106,7 +156,7 @@ export default function SystemConfigPage() {
             })
 
             // Recargar para obtener valores actualizados
-            await loadConfig()
+            await loadData()
         } catch (error: any) {
             console.error('Error saving config:', error)
             setMessage({
@@ -147,7 +197,7 @@ export default function SystemConfigPage() {
                     ⚙️ Configuración del Sistema
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                    Gestiona la configuración global y las integraciones de CloudFly
+                    Gestiona la configuración global, facturación electrónica e integraciones
                 </Typography>
             </Box>
 
@@ -186,6 +236,49 @@ export default function SystemConfigPage() {
                 {/* Tab 1: Configuración General */}
                 <TabPanel value={activeTab} index={0}>
                     <CardContent>
+                        {/* Sección Facturación Electrónica */}
+                        {customerId && (
+                            <>
+                                <Box display="flex" alignItems="center" mb={3}>
+                                    <ReceiptIcon sx={{ fontSize: 40, color: '#2e7d32', mr: 2 }} />
+                                    <Box>
+                                        <Typography variant="h6" fontWeight="600">
+                                            Facturación Electrónica DIAN
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Habilita o deshabilita la emisión de facturas electrónicas para tu organización
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                <Grid container spacing={3}>
+                                    <Grid item xs={12}>
+                                        <FormControlLabel
+                                            control={
+                                                <Switch
+                                                    checked={dianEnabled}
+                                                    onChange={(e) => setDianEnabled(e.target.checked)}
+                                                    color="success"
+                                                />
+                                            }
+                                            label={
+                                                <Typography fontWeight="500">
+                                                    {dianEnabled ? 'Habilitado (Emisor de Facturación Electrónica)' : 'Deshabilitado'}
+                                                </Typography>
+                                            }
+                                        />
+                                        {dianEnabled && (
+                                            <Alert severity="info" sx={{ mt: 2 }}>
+                                                Al habilitar esta opción, se mostrarán los campos DIAN en la creación de clientes y facturas.
+                                                Asegúrate de configurar tus resoluciones y certificados en la sección de Configuración DIAN.
+                                            </Alert>
+                                        )}
+                                    </Grid>
+                                </Grid>
+                                <Divider sx={{ my: 4 }} />
+                            </>
+                        )}
+
                         <Typography variant="h6" gutterBottom fontWeight="600">
                             Información del Sistema
                         </Typography>

@@ -558,6 +558,12 @@ public class SecurityConfig {
                                         http.requestMatchers(HttpMethod.DELETE, "/api/channels/**")
                                                         .hasAnyRole("SUPERADMIN", "MANAGER");
 
+                                        // Customer Configuration (Configuración de Integraciones por Tenant)
+                                        http.requestMatchers(HttpMethod.GET, "/api/customer-config")
+                                                        .hasAnyRole("SUPERADMIN", "MANAGER", "ADMIN");
+                                        http.requestMatchers(HttpMethod.PUT, "/api/customer-config")
+                                                        .hasAnyRole("SUPERADMIN", "MANAGER", "ADMIN");
+
                                         // System Configuration (Configuración del Sistema)
                                         http.requestMatchers(HttpMethod.GET, "/api/system/**")
                                                         .hasAnyRole("SUPERADMIN", "MANAGER");

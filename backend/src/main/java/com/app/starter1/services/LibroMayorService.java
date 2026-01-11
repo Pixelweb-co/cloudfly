@@ -56,7 +56,8 @@ public class LibroMayorService {
                                                 "Cuenta no encontrada: " + accountCode));
 
                 // Calcular saldo inicial (movimientos antes de fromDate)
-                BigDecimal initialBalance = calculateInitialBalance(accountCode, fromDate, account.getNature(),
+                BigDecimal initialBalance = calculateInitialBalance(accountCode, fromDate,
+                                account.getNature() != null ? account.getNature().name() : "DEBITO",
                                 tenantId);
 
                 // Obtener movimientos del período
@@ -79,7 +80,7 @@ public class LibroMayorService {
                                         runningBalance,
                                         entry.getDebitAmount(),
                                         entry.getCreditAmount(),
-                                        account.getNature());
+                                        account.getNature() != null ? account.getNature().name() : "DEBITO");
 
                         LibroMayorRow row = mapToLibroMayorRow(entry, runningBalance);
                         rows.add(row);
@@ -94,7 +95,7 @@ public class LibroMayorService {
                 return LibroMayorDTO.builder()
                                 .accountCode(account.getCode())
                                 .accountName(account.getName())
-                                .nature(account.getNature())
+                                .nature(account.getNature() != null ? account.getNature().name() : null)
                                 .fromDate(fromDate)
                                 .toDate(toDate)
                                 .initialBalance(initialBalance)

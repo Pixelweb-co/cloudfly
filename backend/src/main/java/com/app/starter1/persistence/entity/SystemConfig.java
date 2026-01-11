@@ -72,6 +72,14 @@ public class SystemConfig {
     @Column(nullable = false)
     private Boolean facebookEnabled = false;
 
+    /**
+     * Configuration ID de "Facebook Login for Business" (Global/Fallback)
+     * Los tenants pueden sobrescribir esto con su propio config_id en
+     * CustomerConfig
+     */
+    @Column(length = 100)
+    private String facebookLoginConfigId;
+
     @Column(length = 500)
     private String frontendUrl;
 

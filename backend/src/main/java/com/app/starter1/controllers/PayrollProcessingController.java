@@ -209,7 +209,10 @@ public class PayrollProcessingController {
                                 .totalProvisions(receipt.getTotalProvisions())
                                 .status(receipt.getStatus().name())
                                 .isPaid(receipt.isPaid())
+                                .isPaid(receipt.isPaid())
                                 .pdfPath(receipt.getPdfPath())
+                                .accountingGenerated(receipt.getAccountingGenerated())
+                                .accountingVoucherId(receipt.getAccountingVoucherId())
                                 .build();
         }
 }

@@ -1,0 +1,91 @@
+spring:
+  application:
+    name: cloudfly-dian-service
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/dian_service?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+    username: root
+    password: your_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: cloudfly-dian-service
+      auto-offset-reset: earliest
+      enable-auto-commit: true
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.type.mapping: electronicDocumentEvent:co.cloudfly.dian.common.event.ElectronicDocumentEvent
+
+# Configuración personalizada
+kafka:
+  topic:
+    electronic-documents: dian.electronic-documents
+
+erp:
+  api:
+    base-url: http://localhost:8080
+    timeout: 30000
+
+dian:
+  api:
+    test-url: https://vpfe-hab.dian.gov.co
+    production-url: https://vpfe.dian.gov.co
+    timeout: 60000
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Server
+server:
+  port: 8081
+  compression:
+    enabled: true
+  http2:
+    enabled: true
+
+# Logging
+logging:
+  level:
+    root: INFO
+    co.cloudfly.dian: DEBUG
+    org.springframework.kafka: WARN
+    org.hibernate: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/dian-service.log
+    max-size: 10MB
+    max-history: 30

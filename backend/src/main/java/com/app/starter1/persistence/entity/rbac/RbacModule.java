@@ -11,8 +11,7 @@ import java.util.Set;
  */
 @Entity
 @Table(name = "modules")
-@Getter
-@Setter
+@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
