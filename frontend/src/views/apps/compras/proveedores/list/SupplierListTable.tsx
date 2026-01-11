@@ -10,7 +10,16 @@ import IconButton from '@mui/material/IconButton'
 import TablePagination from '@mui/material/TablePagination'
 import Chip from '@mui/material/Chip'
 import Tooltip from '@mui/material/Tooltip'
-import { createColumnHelper, useReactTable, getCoreRowModel, flexRender, getPaginationRowModel, getFilteredRowModel } from '@tanstack/react-table'
+import { rankItem } from '@tanstack/match-sorter-utils'
+import {
+    createColumnHelper,
+    useReactTable,
+    getCoreRowModel,
+    flexRender,
+    getPaginationRowModel,
+    getFilteredRowModel
+} from '@tanstack/react-table'
+import type { FilterFn } from '@tanstack/react-table'
 
 import TablePaginationComponent from '@components/TablePaginationComponent'
 import CustomTextField from '@core/components/mui/TextField'
@@ -19,6 +28,12 @@ import { userMethods } from '@/utils/userMethods'
 import { axiosInstance } from '@/utils/axiosInstance'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+
+const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
+    const itemRank = rankItem(row.getValue(columnId), value)
+    addMeta({ itemRank })
+    return itemRank.passed
+}
 
 const SupplierListTable = () => {
     const [data, setData] = useState([])
@@ -89,8 +104,12 @@ const SupplierListTable = () => {
     const table = useReactTable({
         data,
         columns,
+        filterFns: {
+            fuzzy: fuzzyFilter
+        },
         state: { globalFilter },
         onGlobalFilterChange: setGlobalFilter,
+        globalFilterFn: fuzzyFilter,
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getPaginationRowModel: getPaginationRowModel()
