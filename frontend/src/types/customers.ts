@@ -42,3 +42,6 @@ export interface DaneCode {
     codigo: string
     nombre: string
 }
+
+// Alias para compatibilidad con otros componentes
+export type Customer = CustomersType
