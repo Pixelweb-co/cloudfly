@@ -27,6 +27,14 @@ export const customerService = {
     getCustomerById: async (id: number): Promise<Customer> => {
         const response = await axiosInstance.get<Customer>(`${API_BASE}/${id}`)
         return response.data
+    },
+
+    /**
+     * Update customer
+     */
+    updateCustomer: async (id: number, data: Partial<Customer>): Promise<Customer> => {
+        const response = await axiosInstance.put<Customer>(`${API_BASE}/${id}`, data)
+        return response.data
     }
 }
 

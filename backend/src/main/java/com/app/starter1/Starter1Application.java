@@ -33,11 +33,13 @@ public class Starter1Application {
 
 			// Create Roles
 			RoleEntity roleSuperAdmin = RoleEntity.builder().role("SUPERADMIN")
-					.permissionList(Set.of(createPermission, readPermission, updatePermission, deletePermission))
+					.permissionList(Set.of(createPermission, readPermission, updatePermission,
+							deletePermission))
 					.build();
 
 			RoleEntity roleAdmin = RoleEntity.builder().role("ADMIN")
-					.permissionList(Set.of(createPermission, readPermission, updatePermission, deletePermission))
+					.permissionList(Set.of(createPermission, readPermission, updatePermission,
+							deletePermission))
 					.build();
 
 			// create super admin user

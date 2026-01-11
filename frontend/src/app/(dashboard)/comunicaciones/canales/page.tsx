@@ -175,7 +175,7 @@ const ChannelsPage = () => {
             // Si es WhatsApp, primero eliminar la instancia de Evolution API
             if (channelToDelete.type === 'whatsapp') {
                 try {
-                    await axiosInstance.delete('/api/chatbot/instance')
+                    await axiosInstance.delete('/api/chatbot')
                     console.log('Evolution API instance deleted')
                 } catch (error) {
                     console.error('Error deleting Evolution API instance:', error)

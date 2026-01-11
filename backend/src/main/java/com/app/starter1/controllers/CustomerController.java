@@ -1,6 +1,5 @@
 package com.app.starter1.controllers;
 
-
 import com.app.starter1.dto.*;
 import com.app.starter1.persistence.entity.Customer;
 import com.app.starter1.persistence.entity.UserEntity;
@@ -23,8 +22,6 @@ public class CustomerController {
     @Autowired
     private CustomerService customerService;
 
-
-
     @Autowired
     CustomerRepository customerRepository;
 
@@ -35,7 +32,6 @@ public class CustomerController {
     public ResponseEntity<?> createClienteYContrato(@RequestBody ClienteContratoRequest request) {
         // Crear el cliente
         Customer cliente = customerService.createCustomer(request);
-
 
         return ResponseEntity.ok(Map.of(
                 "cliente", cliente
@@ -78,11 +74,8 @@ public class CustomerController {
         user.setCustomer(customer);
         UserEntity userSaved = userRepository.save(user);
 
-
         return ResponseEntity.ok(userSaved);
     }
-
-
 
     @GetMapping
     @Transactional
@@ -114,10 +107,38 @@ public class CustomerController {
         updatedCustomer.setPosition((String) payload.get("position"));
         updatedCustomer.setType((String) payload.get("type"));
         updatedCustomer.setStatus(Boolean.valueOf((String) payload.get("status")));
+        updatedCustomer.setLogoUrl((String) payload.get("logoUrl"));
+        updatedCustomer.setBusinessType(
+                payload.get("businessType") != null ? com.app.starter1.persistence.entity.Customer.BusinessType
+                        .valueOf((String) payload.get("businessType")) : null);
+        updatedCustomer.setBusinessDescription((String) payload.get("businessDescription"));
 
-
-
-        // Actualizar cliente y contrato
+        // DIAN Fields Extraction
+        updatedCustomer.setTipoDocumentoDian((String) payload.get("tipoDocumentoDian"));
+        updatedCustomer.setDigitoVerificacion((String) payload.get("digitoVerificacion"));
+        updatedCustomer.setRazonSocial((String) payload.get("razonSocial"));
+        updatedCustomer.setNombreComercial((String) payload.get("nombreComercial"));
+        updatedCustomer.setResponsabilidadesFiscales((String) payload.get("responsabilidadesFiscales"));
+        updatedCustomer.setRegimenFiscal((String) payload.get("regimenFiscal"));
+        updatedCustomer.setObligacionesDian((String) payload.get("obligacionesDian"));
+        updatedCustomer.setCodigoDaneCiudad((String) payload.get("codigoDaneCiudad"));
+        updatedCustomer.setCiudadDian((String) payload.get("ciudadDian"));
+        updatedCustomer.setCodigoDaneDepartamento((String) payload.get("codigoDaneDepartamento"));
+        updatedCustomer.setDepartamentoDian((String) payload.get("departamentoDian"));
+        updatedCustomer.setPaisCodigo((String) payload.get("paisCodigo"));
+        updatedCustomer.setPaisNombre((String) payload.get("paisNombre"));
+        updatedCustomer.setCodigoPostal((String) payload.get("codigoPostal"));
+        updatedCustomer.setActividadEconomicaCiiu((String) payload.get("actividadEconomicaCiiu"));
+        updatedCustomer.setActividadEconomicaDescripcion((String) payload.get("actividadEconomicaDescripcion"));
+        updatedCustomer.setEmailFacturacionDian((String) payload.get("emailFacturacionDian"));
+        updatedCustomer.setSitioWeb((String) payload.get("sitioWeb"));
+        updatedCustomer.setRepresentanteLegalNombre((String) payload.get("representanteLegalNombre"));
+        updatedCustomer.setRepresentanteLegalTipoDoc((String) payload.get("representanteLegalTipoDoc"));
+        updatedCustomer.setRepresentanteLegalNumeroDoc((String) payload.get("representanteLegalNumeroDoc"));
+        updatedCustomer.setEsEmisorFE(payload.get("esEmisorFE") != null ? (Boolean) payload.get("esEmisorFE") : false);
+        updatedCustomer.setEsEmisorPrincipal(
+                payload.get("esEmisorPrincipal") != null ? (Boolean) payload.get("esEmisorPrincipal") : false);
+        updatedCustomer.setNotasDian((String) payload.get("notasDian"));
         Customer savedCustomer = customerService.updateCustomerAndContract(customerId, updatedCustomer);
 
         return ResponseEntity.ok(savedCustomer);
@@ -130,5 +151,4 @@ public class CustomerController {
         return ResponseEntity.noContent().build();
     }
 
-
-    }
+}

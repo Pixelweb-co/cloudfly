@@ -6,12 +6,17 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
+/**
+ * DTO para Customer con campos DIAN completos
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class CustomerDTO {
+    // ========== CAMPOS BÁSICOS ==========
     private Long id;
     private String name;
     private String nit;
@@ -22,7 +27,55 @@ public class CustomerDTO {
     private String position;
     private String type;
     private Boolean status;
+    private String logoUrl;
     private LocalDate dateRegister;
-    private Long contratoId; // Solo referencia al contrato, evita inicialización perezosa
-}
+    private String businessType;
+    private String businessDescription;
+    private Long contratoId;
 
+    // ========== CAMPOS DIAN PARA FACTURACIÓN ELECTRÓNICA ==========
+
+    // Identificación Tributaria
+    private String tipoDocumentoDian;
+    private String digitoVerificacion;
+
+    // Nombres Legales
+    private String razonSocial;
+    private String nombreComercial;
+
+    // Responsabilidades Fiscales
+    private String responsabilidadesFiscales;
+    private String regimenFiscal;
+    private String obligacionesDian;
+
+    // Ubicación Geográfica DIAN
+    private String codigoDaneCiudad;
+    private String ciudadDian;
+    private String codigoDaneDepartamento;
+    private String departamentoDian;
+    private String paisCodigo;
+    private String paisNombre;
+    private String codigoPostal;
+
+    // Información Económica
+    private String actividadEconomicaCiiu;
+    private String actividadEconomicaDescripcion;
+
+    // Contacto Facturación Electrónica
+    private String emailFacturacionDian;
+    private String sitioWeb;
+
+    // Representante Legal
+    private String representanteLegalNombre;
+    private String representanteLegalTipoDoc;
+    private String representanteLegalNumeroDoc;
+
+    // Configuración Facturación Electrónica
+    private Boolean esEmisorFE;
+    private Boolean esEmisorPrincipal;
+    private String notasDian;
+
+    // Auditoría
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}

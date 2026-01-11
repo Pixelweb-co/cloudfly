@@ -7,7 +7,7 @@ import { userMethods } from '@/utils/userMethods'
 import InvoicesList from '@views/apps/ventas/facturas/list'
 import type { InvoiceType } from '@/types/apps/invoiceType'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+
 
 const InvoicesListApp = () => {
     const [invoicesData, setInvoicesData] = useState<InvoiceType[]>([])
@@ -20,11 +20,24 @@ const InvoicesListApp = () => {
 
         try {
             const user = userMethods.getUserLogin()
-            let invoices_url = `${API_BASE_URL}/invoices`
 
-            if (user.roles[0].role === 'ADMIN' || user.roles[0].role === 'USER' || user.roles[0].role === 'SUPERADMIN') {
-                const id_customer = user.customer.id
-                invoices_url = `${API_BASE_URL}/invoices/tenant/${id_customer}`
+            if (!user) {
+                // If no user, maybe redirect or just stop
+                console.error("No user data found")
+                // window.location.href = '/login' // Optional: let the auth guard handle this
+                setLoading(false)
+                return
+            }
+
+            let invoices_url = '/invoices'
+
+            // Safely check roles
+            const userRole = user.roles?.[0]?.role
+            if (userRole === 'ADMIN' || userRole === 'USER' || userRole === 'SUPERADMIN') {
+                const id_customer = user.customer?.id
+                if (id_customer) {
+                    invoices_url = `/invoices/tenant/${id_customer}`
+                }
             }
 
             const res = await axiosInstance.get(invoices_url)
@@ -36,7 +49,8 @@ const InvoicesListApp = () => {
         } catch (error) {
             console.error('Error fetching invoices data:', error)
             setLoading(false)
-            throw error
+            // Rethrow or handle
+            // throw error 
         }
     }
 

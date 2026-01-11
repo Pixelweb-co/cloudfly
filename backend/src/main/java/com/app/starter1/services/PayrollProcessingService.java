@@ -26,6 +26,7 @@ public class PayrollProcessingService {
     private final PayrollReceiptRepository receiptRepository;
     private final PayrollReceiptDetailRepository receiptDetailRepository;
     private final CustomerRepository customerRepository;
+    private final AccountingIntegrationService accountingIntegrationService;
 
     /**
      * Procesa la nómina completa de un periodo
@@ -200,6 +201,13 @@ public class PayrollProcessingService {
         for (PayrollReceipt receipt : receipts) {
             receipt.setStatus(PayrollReceipt.ReceiptStatus.PAID);
             receiptRepository.save(receipt);
+
+            // Generar Contabilidad
+            try {
+                accountingIntegrationService.generateVoucherForPayroll(receipt.getId());
+            } catch (Exception e) {
+                log.error("Error generating accounting for Payroll Receipt {}", receipt.getId(), e);
+            }
         }
 
         period.setStatus(PayrollPeriod.PeriodStatus.PAID);

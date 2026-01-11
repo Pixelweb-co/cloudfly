@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { PayrollReceipt } from '@/types/hr'
+import { AccountingVoucherModal } from '@/components/accounting/AccountingVoucherModal'
 import {
     Card,
     CardContent,
@@ -42,6 +43,7 @@ export default function ReceiptDetailView({ receipt, onDownloadPdf, onPay }: Rec
     const deducciones = receipt.deducciones || {
         salud: 0, pension: 0, otras: 0, total: 0
     }
+    const [accountingModalOpen, setAccountingModalOpen] = useState(false)
 
     return (
         <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
@@ -93,6 +95,18 @@ export default function ReceiptDetailView({ receipt, onDownloadPdf, onPay }: Rec
                             icon={<CheckCircle />}
                             sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
                         />
+                    )}
+                    {receipt.accountingGenerated && (
+                        <Button
+                            variant="outlined"
+                            color="inherit"
+                            size="small"
+                            startIcon={<AccountBalanceWallet />}
+                            onClick={() => setAccountingModalOpen(true)}
+                            sx={{ borderColor: 'rgba(255,255,255,0.5)', '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' } }}
+                        >
+                            Contabilidad
+                        </Button>
                     )}
                 </Stack>
             </Box>
@@ -195,6 +209,14 @@ export default function ReceiptDetailView({ receipt, onDownloadPdf, onPay }: Rec
                     </Typography>
                 </Box>
             </Box>
+
+            {receipt.accountingVoucherId && (
+                <AccountingVoucherModal
+                    open={accountingModalOpen}
+                    onOpenChange={setAccountingModalOpen}
+                    voucherId={receipt.accountingVoucherId}
+                />
+            )}
         </Card>
     )
 }

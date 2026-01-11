@@ -16,6 +16,11 @@ public class InvoiceRequestDTO {
     private String notes;
     private BigDecimal discount;
     private BigDecimal tax;
+
+    // Campos DIAN requeridos en creación
+    private String paymentMeans;
+    private String paymentMethod;
+
     private List<InvoiceItemRequestDTO> items;
 
     @Data
@@ -25,5 +30,12 @@ public class InvoiceRequestDTO {
         private Integer quantity;
         private BigDecimal unitPrice;
         private BigDecimal discount;
+
+        // DIAN Item Fields
+        private String descriptionDian;
+        private String unitMeasure; // UNECE code e.g. NIU, KGM
+        private BigDecimal taxRate; // 19.00
+        private String standardCode; // e.g. UNSPSC or internal
+        private Boolean isFree;
     }
 }

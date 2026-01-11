@@ -35,6 +35,7 @@ public class SystemConfigDTO {
     private String facebookRedirectUri;
     private String facebookWebhookVerifyToken;
     private String facebookApiVersion;
+    private String facebookLoginConfigId; // Config ID global para Facebook Login for Business
     private Boolean facebookEnabled;
     private String frontendUrl;
 

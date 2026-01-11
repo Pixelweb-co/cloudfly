@@ -58,6 +58,10 @@ public class PayrollReceiptDTO {
     private String paymentMethod;
     private String notes;
 
+    // Contabilidad
+    private Boolean accountingGenerated;
+    private Long accountingVoucherId;
+
     // Archivos
     private String pdfPath;
     private Boolean emailSent;
