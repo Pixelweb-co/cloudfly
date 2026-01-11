@@ -80,7 +80,9 @@ const SupportDocumentListTable = () => {
     ], [])
 
     const table = useReactTable({
-        data, columns,
+        data,
+        columns,
+        filterFns: {},
         state: { globalFilter },
         onGlobalFilterChange: setGlobalFilter,
         getCoreRowModel: getCoreRowModel(),
