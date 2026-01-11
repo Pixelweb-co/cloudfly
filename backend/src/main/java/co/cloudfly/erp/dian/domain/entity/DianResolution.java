@@ -143,4 +143,219 @@ public class DianResolution {
         }
         return numberRangeTo - currentNumber + 1;
     }
+
+    public Long getNumberRangeFrom() {
+        return numberRangeFrom;
+    }
+
+    public void setNumberRangeFrom(Long numberRangeFrom) {
+        this.numberRangeFrom = numberRangeFrom;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Long getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(Long tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    public Long getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(Long companyId) {
+        this.companyId = companyId;
+    }
+
+    public DianDocumentType getDocumentType() {
+        return documentType;
+    }
+
+    public void setDocumentType(DianDocumentType documentType) {
+        this.documentType = documentType;
+    }
+
+    public String getPrefix() {
+        return prefix;
+    }
+
+    public void setPrefix(String prefix) {
+        this.prefix = prefix;
+    }
+
+    public Long getNumberRangeTo() {
+        return numberRangeTo;
+    }
+
+    public void setNumberRangeTo(Long numberRangeTo) {
+        this.numberRangeTo = numberRangeTo;
+    }
+
+    public Long getCurrentNumber() {
+        return currentNumber;
+    }
+
+    public void setCurrentNumber(Long currentNumber) {
+        this.currentNumber = currentNumber;
+    }
+
+    public String getTechnicalKey() {
+        return technicalKey;
+    }
+
+    public void setTechnicalKey(String technicalKey) {
+        this.technicalKey = technicalKey;
+    }
+
+    public String getResolutionNumber() {
+        return resolutionNumber;
+    }
+
+    public void setResolutionNumber(String resolutionNumber) {
+        this.resolutionNumber = resolutionNumber;
+    }
+
+    public LocalDate getValidFrom() {
+        return validFrom;
+    }
+
+    public void setValidFrom(LocalDate validFrom) {
+        this.validFrom = validFrom;
+    }
+
+    public LocalDate getValidTo() {
+        return validTo;
+    }
+
+    public void setValidTo(LocalDate validTo) {
+        this.validTo = validTo;
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public static DianResolutionBuilder builder() {
+        return new DianResolutionBuilder();
+    }
+
+    public static class DianResolutionBuilder {
+        private Long id;
+        private Long tenantId;
+        private Long companyId;
+        private DianDocumentType documentType;
+        private String prefix;
+        private Long numberRangeFrom;
+        private Long numberRangeTo;
+        private Long currentNumber;
+        private String technicalKey;
+        private String resolutionNumber;
+        private LocalDate validFrom;
+        private LocalDate validTo;
+        private Boolean active = true;
+
+        public DianResolutionBuilder id(Long id) {
+            this.id = id;
+            return this;
+        }
+
+        public DianResolutionBuilder tenantId(Long tenantId) {
+            this.tenantId = tenantId;
+            return this;
+        }
+
+        public DianResolutionBuilder companyId(Long companyId) {
+            this.companyId = companyId;
+            return this;
+        }
+
+        public DianResolutionBuilder documentType(DianDocumentType documentType) {
+            this.documentType = documentType;
+            return this;
+        }
+
+        public DianResolutionBuilder prefix(String prefix) {
+            this.prefix = prefix;
+            return this;
+        }
+
+        public DianResolutionBuilder numberRangeFrom(Long numberRangeFrom) {
+            this.numberRangeFrom = numberRangeFrom;
+            return this;
+        }
+
+        public DianResolutionBuilder numberRangeTo(Long numberRangeTo) {
+            this.numberRangeTo = numberRangeTo;
+            return this;
+        }
+
+        public DianResolutionBuilder currentNumber(Long currentNumber) {
+            this.currentNumber = currentNumber;
+            return this;
+        }
+
+        public DianResolutionBuilder technicalKey(String technicalKey) {
+            this.technicalKey = technicalKey;
+            return this;
+        }
+
+        public DianResolutionBuilder resolutionNumber(String resolutionNumber) {
+            this.resolutionNumber = resolutionNumber;
+            return this;
+        }
+
+        public DianResolutionBuilder validFrom(LocalDate validFrom) {
+            this.validFrom = validFrom;
+            return this;
+        }
+
+        public DianResolutionBuilder validTo(LocalDate validTo) {
+            this.validTo = validTo;
+            return this;
+        }
+
+        public DianResolutionBuilder active(Boolean active) {
+            this.active = active;
+            return this;
+        }
+
+        public DianResolution build() {
+            DianResolution resolution = new DianResolution();
+            resolution.id = this.id;
+            resolution.tenantId = this.tenantId;
+            resolution.companyId = this.companyId;
+            resolution.documentType = this.documentType;
+            resolution.prefix = this.prefix;
+            resolution.numberRangeFrom = this.numberRangeFrom;
+            resolution.numberRangeTo = this.numberRangeTo;
+            resolution.currentNumber = this.currentNumber;
+            resolution.technicalKey = this.technicalKey;
+            resolution.resolutionNumber = this.resolutionNumber;
+            resolution.validFrom = this.validFrom;
+            resolution.validTo = this.validTo;
+            resolution.active = this.active;
+            return resolution;
+        }
+    }
 }

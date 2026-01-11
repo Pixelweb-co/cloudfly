@@ -11,12 +11,12 @@ import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
 import Checkbox from '@mui/material/Checkbox'
 import IconButton from '@mui/material/IconButton'
-
+import Box from '@mui/material/Box'
 import TablePagination from '@mui/material/TablePagination'
 import type { TextFieldProps } from '@mui/material/TextField'
 import MenuItem from '@mui/material/MenuItem'
 
-// Third-party Importss
+// Third-party Imports
 import classnames from 'classnames'
 import { rankItem } from '@tanstack/match-sorter-utils'
 import {
@@ -37,14 +37,10 @@ import type { RankingInfo } from '@tanstack/match-sorter-utils'
 // Type Imports
 import TablePaginationComponent from '@components/TablePaginationComponent'
 import type { CustomersType } from '@/types/apps/customerType'
-
 import ClienteForm from '@/components/dialogs/form-customer'
 
 // Component Imports
 import TableFilters from './TableFilters'
-
-//import AddCustomerDrawer from './AddCustomerDrawer'
-
 import CustomTextField from '@core/components/mui/TextField'
 
 // Style Imports
@@ -64,15 +60,8 @@ type CustomersTypeWithAction = CustomersType & {
 }
 
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
-  // Rank the item
   const itemRank = rankItem(row.getValue(columnId), value)
-
-  // Store the itemRank info
-  addMeta({
-    itemRank
-  })
-
-  // Return if the item should be filtered in/out
+  addMeta({ itemRank })
   return itemRank.passed
 }
 
@@ -86,7 +75,6 @@ const DebouncedInput = ({
   onChange: (value: string | number) => void
   debounce?: number
 } & Omit<TextFieldProps, 'onChange'>) => {
-  // States
   const [value, setValue] = useState(initialValue)
 
   useEffect(() => {
@@ -97,23 +85,16 @@ const DebouncedInput = ({
     const timeout = setTimeout(() => {
       onChange(value)
     }, debounce)
-
     return () => clearTimeout(timeout)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value])
 
   return <CustomTextField {...props} value={value} onChange={e => setValue(e.target.value)} />
 }
 
-// Column Definitions
 const columnHelper = createColumnHelper<CustomersTypeWithAction>()
 
 const CustomersListTable = ({ reload, tableData }: any) => {
-  // States
-  // const [addCustomerOpen, setAddCustomerOpen] = useState(false)
-
   const [loadForm, setOpenForm] = useState(false)
-
   const [rowSelection, setRowSelection] = useState<any>({
     name: '',
     nit: '',
@@ -123,8 +104,19 @@ const CustomersListTable = ({ reload, tableData }: any) => {
     contact: '',
     position: '',
     type: '',
-    dateRegister: '',
     status: '1',
+    esEmisorFE: false,
+    esEmisorPrincipal: false,
+    tipoDocumentoDian: '',
+    digitoVerificacion: '',
+    razonSocial: '',
+    nombreComercial: '',
+    responsabilidadesFiscales: '',
+    regimenFiscal: '',
+    codigoDaneCiudad: '',
+    ciudadDian: '',
+    codigoDaneDepartamento: '',
+    departamentoDian: '',
     contrato: {
       fechaInicio: '',
       fechaFinal: '',
@@ -139,148 +131,113 @@ const CustomersListTable = ({ reload, tableData }: any) => {
 
   const columns = useMemo<ColumnDef<CustomersTypeWithAction, any>[]>(
     () => [
-      {
-        id: 'select',
-        header: ({ table }) => (
-          <Checkbox
-            {...{
-              checked: table.getIsAllRowsSelected(),
-              indeterminate: table.getIsSomeRowsSelected(),
-              onChange: table.getToggleAllRowsSelectedHandler()
-            }}
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            {...{
-              checked: row.getIsSelected(),
-              disabled: !row.getCanSelect(),
-              indeterminate: row.getIsSomeSelected(),
-              onChange: row.getToggleSelectedHandler()
-            }}
-          />
-        )
-      },
+      // 1. CLIENTE
       columnHelper.accessor('name', {
-        header: 'Nombre',
+        header: 'Cliente',
         cell: ({ row }) => (
-          <div className='flex items-center gap-4'>
-            <div className='flex flex-col'>
-              <Typography color='text.primary' className='font-medium'>
-                {row.original.name}
-              </Typography>
-              <Typography variant='body2'>Nit: {row.original.nit}</Typography>
-            </div>
+          <div className='flex flex-col'>
+            <Typography color='text.primary' className='font-medium' sx={{ fontWeight: 600 }}>
+              {row.original.name}
+            </Typography>
+            <Typography variant='caption' color='text.secondary'>
+              {row.original.contact}
+            </Typography>
           </div>
         )
       }),
-      columnHelper.accessor('phone', {
-        header: 'Telefono',
 
+      // 2. IDENTIFICACIÓN / DIAN
+      columnHelper.accessor('nit', {
+        header: 'Identificación DIAN',
         cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.phone}
-          </Typography>
+          <div className='flex flex-col'>
+            <Typography variant='body2' className='font-medium'>
+              {row.original.nit}
+              {row.original.digitoVerificacion ? `-${row.original.digitoVerificacion}` : ''}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mt: 0.5 }}>
+              {row.original.tipoDocumentoDian && (
+                <Typography variant='caption' sx={{ bgcolor: 'action.hover', px: 0.5, borderRadius: 0.5 }}>
+                  {row.original.tipoDocumentoDian === '31' ? 'NIT' : 'CC'}
+                </Typography>
+              )}
+              {row.original.esEmisorFE && (
+                <Chip label="Emisor FE" color="primary" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.65rem' }} />
+              )}
+            </Box>
+          </div>
         )
       }),
+
+      // 3. CONTACTO
       columnHelper.accessor('email', {
-        header: 'Email',
-
+        header: 'Contacto',
         cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.email}
-          </Typography>
+          <div className='flex flex-col'>
+            <Typography variant='body2' noWrap>{row.original.email}</Typography>
+            <Typography variant='caption'>{row.original.phone}</Typography>
+          </div>
         )
       }),
 
-      columnHelper.accessor('address', {
-        header: 'Dirección',
+      // 4. UBICACIÓN
+      columnHelper.accessor('ciudadDian', {
+        header: 'Ubicación',
         cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.address}
-          </Typography>
+          <div className='flex flex-col'>
+            <Typography variant='body2'>{row.original.ciudadDian || row.original.address}</Typography>
+            <Typography variant='caption'>{row.original.departamentoDian}</Typography>
+          </div>
         )
       }),
 
-      columnHelper.accessor('dateRegister', {
-        header: 'Agregado',
-        cell: ({ row }) => (
-          <Typography className='font-medium' color='text.primary'>
-            {row.original.dateRegister}
-          </Typography>
-        )
-      }),
+      // 5. ESTADO
       columnHelper.accessor('status', {
         header: 'Estado',
         cell: ({ row }) => (
-          <div className='flex items-center gap-3'>
-            <Chip
-              variant='tonal'
-              label={row.original.status ? 'Activo' : 'Inactivo'}
-              size='small'
-              color={row.original.status ? 'success' : 'error'} // Cambiar color dinámicamente
-              className='capitalize'
-            />
-          </div>
+          <Chip
+            size='small'
+            label={row.original.status ? 'Activo' : 'Inactivo'}
+            color={row.original.status ? 'success' : 'secondary'}
+            variant='tonal'
+          />
         )
       }),
+
+      // ACCIONES
       columnHelper.accessor('action', {
-        header: 'Action',
+        header: 'Acción',
         cell: ({ row }) => (
-          <div className='flex items-center'>
+          <div className='flex items-center gap-2'>
             <IconButton
-              onClick={() =>
-                setData(
-                  data?.filter((product: any) => {
-                    return product.id !== row.original.id
-                  })
-                )
-              }
-            >
-              <i className='tabler-trash text-textSecondary' />
-            </IconButton>
-            <IconButton
+              size="small"
               onClick={() => {
                 setRowSelection(row.original)
                 setOpenForm(true)
               }}
             >
-              <i className='tabler-edit text-textSecondary' />
+              <i className='tabler-edit text-[22px] text-textSecondary' />
+            </IconButton>
+            <IconButton size="small">
+              <i className='tabler-trash text-[22px] text-textSecondary' />
             </IconButton>
           </div>
         ),
         enableSorting: false
       })
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data, filteredData]
+    []
   )
 
-  useEffect(() => {
-    setData(tableData)
-  }, [tableData])
-
   const table = useReactTable({
-    data: filteredData as CustomersType[],
+    data: filteredData as CustomersTypeWithAction[],
     columns,
-    filterFns: {
-      fuzzy: fuzzyFilter
-    },
-    state: {
-      rowSelection,
-      globalFilter
-    },
-    initialState: {
-      pagination: {
-        pageSize: 10
-      }
-    },
-    enableRowSelection: true, //enable row selection for all rows
-    // enableRowSelection: row => row.original.age > 18, // or enable row selection conditionally per row
+    filterFns: { fuzzy: fuzzyFilter },
+    state: { globalFilter },
+    initialState: { pagination: { pageSize: 10 } },
     globalFilterFn: fuzzyFilter,
-    onRowSelectionChange: setRowSelection,
-    getCoreRowModel: getCoreRowModel(),
     onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -289,77 +246,51 @@ const CustomersListTable = ({ reload, tableData }: any) => {
     getFacetedMinMaxValues: getFacetedMinMaxValues()
   })
 
+  useEffect(() => {
+    setData(tableData)
+    setFilteredData(tableData)
+  }, [tableData])
+
   return (
     <>
+      <ClienteForm
+        open={loadForm}
+        setOpen={() => setOpenForm(true)}
+        onClose={() => {
+          setOpenForm(false)
+          if (reload) reload(true)
+          setRowSelection({
+            name: '', nit: '', phone: '', email: '', address: '', contact: '', position: '', type: '', status: '1',
+            esEmisorFE: false, esEmisorPrincipal: false, tipoDocumentoDian: '', digitoVerificacion: '', razonSocial: '',
+            nombreComercial: '', responsabilidadesFiscales: '', regimenFiscal: '', codigoDaneCiudad: '', ciudadDian: '',
+            codigoDaneDepartamento: '', departamentoDian: '',
+            contrato: { fechaInicio: '', fechaFinal: '', descripcionContrato: '', estado: 1 }
+          })
+        }}
+        rowSelect={rowSelection}
+      />
+
       <Card>
-        <CardHeader title='Filters' className='pbe-4' />
-        <TableFilters setData={setFilteredData} tableData={data} />
-        <div className='flex justify-between flex-col items-start md:flex-row md:items-center p-6 border-bs gap-4'>
-          <CustomTextField
-            select
-            value={table.getState().pagination.pageSize}
-            onChange={e => table.setPageSize(Number(e.target.value))}
-            className='max-sm:is-full sm:is-[70px]'
+        <CardHeader title='Gestión de Clientes (DIAN)' className='flex flex-wrap gap-4' />
+        <div className='flex items-center justify-between p-6 gap-4 border-bs'>
+          <DebouncedInput
+            value={globalFilter ?? ''}
+            onChange={value => setGlobalFilter(String(value))}
+            placeholder='Buscar Cliente, NIT, Email...'
+            className='sm:is-auto'
+          />
+          <Button
+            variant='contained'
+            startIcon={<i className='tabler-plus' />}
+            onClick={() => {
+              setRowSelection({})
+              setOpenForm(true)
+            }}
           >
-            <MenuItem value='10'>10</MenuItem>
-            <MenuItem value='25'>25</MenuItem>
-            <MenuItem value='50'>50</MenuItem>
-          </CustomTextField>
-          <div className='flex flex-col sm:flex-row max-sm:is-full items-start sm:items-center gap-4'>
-            <DebouncedInput
-              value={globalFilter ?? ''}
-              onChange={value => setGlobalFilter(String(value))}
-              placeholder='Buscar'
-              className='max-sm:is-full'
-            />
-            {/* <Button
-              color='secondary'
-              variant='tonal'
-              startIcon={<i className='tabler-upload' />}
-              className='max-sm:is-full'
-            >
-              Exportar
-            </Button>
-
-            <Button
-              color='secondary'
-              variant='tonal'
-              startIcon={<i className='tabler-download' />}
-              className='max-sm:is-full'
-            >
-              Importar
-            </Button> */}
-
-            <Button
-              onClick={() => {
-                setOpenForm(true)
-                setRowSelection({
-                  name: '',
-                  nit: '',
-                  phone: '',
-                  email: '',
-                  address: '',
-                  contact: '',
-                  position: '',
-                  type: '',
-                  dateRegister: '',
-                  status: '1',
-                  contrato: {
-                    estado: 1,
-                    fechaInicio: '',
-                    fechaFinal: '',
-                    descripcionContrato: ''
-                  }
-                })
-              }}
-              variant='contained'
-              startIcon={<i className='tabler-plus' />}
-              className='max-sm:is-full'
-            >
-              Agregar cliente
-            </Button>
-          </div>
+            Nuevo Cliente
+          </Button>
         </div>
+
         <div className='overflow-x-auto'>
           <table className={tableStyles.table}>
             <thead>
@@ -368,98 +299,53 @@ const CustomersListTable = ({ reload, tableData }: any) => {
                   {headerGroup.headers.map(header => (
                     <th key={header.id}>
                       {header.isPlaceholder ? null : (
-                        <>
-                          <div
-                            className={classnames({
-                              'flex items-center': header.column.getIsSorted(),
-                              'cursor-pointer select-none': header.column.getCanSort()
-                            })}
-                            onClick={header.column.getToggleSortingHandler()}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {{
-                              asc: <i className='tabler-chevron-up text-xl' />,
-                              desc: <i className='tabler-chevron-down text-xl' />
-                            }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
-                          </div>
-                        </>
+                        <div
+                          className={classnames({
+                            'flex items-center': header.column.getIsSorted(),
+                            'cursor-pointer select-none': header.column.getCanSort()
+                          })}
+                          onClick={header.column.getToggleSortingHandler()}
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {{
+                            asc: <i className='tabler-chevron-up text-xl' />,
+                            desc: <i className='tabler-chevron-down text-xl' />
+                          }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
+                        </div>
                       )}
                     </th>
                   ))}
                 </tr>
               ))}
             </thead>
-            {table.getFilteredRowModel().rows.length === 0 ? (
-              <tbody>
+            <tbody>
+              {table.getRowModel().rows.length === 0 ? (
                 <tr>
                   <td colSpan={table.getVisibleFlatColumns().length} className='text-center'>
-                    No data available
+                    No hay clientes registrados
                   </td>
                 </tr>
-              </tbody>
-            ) : (
-              <tbody>
-                {table
-                  .getRowModel()
-                  .rows.slice(0, table.getState().pagination.pageSize)
-                  .map(row => {
-                    return (
-                      <tr key={row.id} className={classnames({ selected: row.getIsSelected() })}>
-                        {row.getVisibleCells().map(cell => (
-                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                        ))}
-                      </tr>
-                    )
-                  })}
-              </tbody>
-            )}
+              ) : (
+                table.getRowModel().rows.map(row => (
+                  <tr key={row.id}>
+                    {row.getVisibleCells().map(cell => (
+                      <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
           </table>
         </div>
+
         <TablePagination
           component={() => <TablePaginationComponent table={table} />}
           count={table.getFilteredRowModel().rows.length}
           rowsPerPage={table.getState().pagination.pageSize}
           page={table.getState().pagination.pageIndex}
-          onPageChange={(_, page) => {
-            table.setPageIndex(page)
-          }}
+          onPageChange={(_, page) => table.setPageIndex(page)}
         />
       </Card>
-      {/* <AddCustomerDrawer
-        open={addCustomerOpen}
-        handleClose={() => setAddCustomerOpen(!addCustomerOpen)}
-        customerData={data}
-        setData={setData}
-      /> */}
-
-      <ClienteForm
-        open={loadForm}
-        onClose={() => {
-          setOpenForm(false)
-          reload(true)
-          setRowSelection({
-            id: null,
-            name: '',
-            nit: '',
-            phone: '',
-            email: '',
-            address: '',
-            contact: '',
-            position: '',
-            type: '',
-            dateRegister: '',
-            status: '1',
-            contrato: {
-              fechaInicio: '',
-              fechaFinal: '',
-              descripcionContrato: '',
-              estado: 1
-            }
-          })
-        }}
-        setOpen={() => setOpenForm(true)}
-        rowSelect={rowSelection}
-      />
     </>
   )
 }

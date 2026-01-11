@@ -12,6 +12,8 @@ import TablePagination from '@mui/material/TablePagination'
 import type { TextFieldProps } from '@mui/material/TextField'
 import MenuItem from '@mui/material/MenuItem'
 import Tooltip from '@mui/material/Tooltip'
+import Chip from '@mui/material/Chip'
+import CircularProgress from '@mui/material/CircularProgress'
 import classnames from 'classnames'
 import { rankItem } from '@tanstack/match-sorter-utils'
 import {
@@ -94,7 +96,27 @@ const InvoicesListTable = ({ reload, tableData }: any) => {
     const [filteredData, setFilteredData] = useState(data)
     const [globalFilter, setGlobalFilter] = useState('')
     const [errorDeleteItem, setErrorDeleteItem] = useState<any | null>(null)
+    const [isDianEnabled, setIsDianEnabled] = useState(false)
+    const [sendingDian, setSendingDian] = useState<number | null>(null)
+
     const router = useRouter()
+
+    useEffect(() => {
+        const checkDianStatus = async () => {
+            const user = userMethods.getUserLogin()
+            if (user && user.customer && user.customer.id) {
+                try {
+                    const res = await axiosInstance.get(`${API_BASE_URL}/customers/${user.customer.id}`)
+                    if (res.data && res.data.esEmisorFE) {
+                        setIsDianEnabled(true)
+                    }
+                } catch (e) {
+                    console.error('Error checking DIAN status', e)
+                }
+            }
+        }
+        checkDianStatus()
+    }, [])
 
     const deleteItem = async (id: any) => {
         try {
@@ -104,6 +126,20 @@ const InvoicesListTable = ({ reload, tableData }: any) => {
         } catch (error: any) {
             console.log('Error al eliminar factura:', error)
             setErrorDeleteItem('No se puede eliminar esta factura')
+        }
+    }
+
+    const sendToDian = async (id: number) => {
+        try {
+            setSendingDian(id)
+            // Endpoint provisional, backend debe implementar esto
+            await axiosInstance.post(`${API_BASE_URL}/dian/invoices/${id}/send`)
+            reload(true)
+        } catch (error: any) {
+            console.error('Error enviando a DIAN', error)
+            setErrorDeleteItem('Error al enviar a la DIAN: ' + (error.response?.data?.message || 'Error desconocido'))
+        } finally {
+            setSendingDian(null)
         }
     }
 
@@ -127,90 +163,149 @@ const InvoicesListTable = ({ reload, tableData }: any) => {
         return labels[status] || status
     }
 
+    const getDianStatusColor = (status: string | undefined) => {
+        if (!status) return 'default'
+        const colors: Record<string, "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning"> = {
+            PENDING: 'warning',
+            SENT: 'info',
+            ACCEPTED: 'success',
+            REJECTED: 'error'
+        }
+        return colors[status] || 'default'
+    }
+
     const columns = useMemo<ColumnDef<InvoiceTypeWithAction, any>[]>(
-        () => [
-            {
-                id: 'select',
-                header: ({ table }) => (
-                    <Checkbox
-                        {...{
-                            checked: table.getIsAllRowsSelected(),
-                            indeterminate: table.getIsSomeRowsSelected(),
-                            onChange: table.getToggleAllRowsSelectedHandler()
-                        }}
-                    />
-                ),
-                cell: ({ row }) => (
-                    <Checkbox
-                        {...{
-                            checked: row.getIsSelected(),
-                            disabled: !row.getCanSelect(),
-                            indeterminate: row.getIsSomeSelected(),
-                            onChange: row.getToggleSelectedHandler()
-                        }}
-                    />
+        () => {
+            const cols: ColumnDef<InvoiceTypeWithAction, any>[] = [
+                {
+                    id: 'select',
+                    header: ({ table }) => (
+                        <Checkbox
+                            {...{
+                                checked: table.getIsAllRowsSelected(),
+                                indeterminate: table.getIsSomeRowsSelected(),
+                                onChange: table.getToggleAllRowsSelectedHandler()
+                            }}
+                        />
+                    ),
+                    cell: ({ row }) => (
+                        <Checkbox
+                            {...{
+                                checked: row.getIsSelected(),
+                                disabled: !row.getCanSelect(),
+                                indeterminate: row.getIsSomeSelected(),
+                                onChange: row.getToggleSelectedHandler()
+                            }}
+                        />
+                    )
+                },
+                columnHelper.accessor('invoiceNumber', {
+                    header: 'Número',
+                    cell: ({ row }) => (
+                        <Typography color='text.primary' className='font-medium'>
+                            {row.original.invoiceNumber}
+                        </Typography>
+                    )
+                }),
+                columnHelper.accessor('customerName', {
+                    header: 'Cliente',
+                    cell: ({ row }) => (
+                        <Typography className='font-medium' color='text.primary'>
+                            {row.original.customerName || '-'}
+                        </Typography>
+                    )
+                }),
+                columnHelper.accessor('issueDate', {
+                    header: 'Emisión',
+                    cell: ({ row }) => (
+                        <Typography className='font-medium' color='text.primary'>
+                            {new Date(row.original.issueDate).toLocaleDateString()}
+                        </Typography>
+                    )
+                }),
+                columnHelper.accessor('status', {
+                    header: 'Estado',
+                    cell: ({ row }) => (
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${getStatusColor(row.original.status)}`}>
+                            {getStatusLabel(row.original.status)}
+                        </span>
+                    )
+                }),
+                columnHelper.accessor('total', {
+                    header: 'Total',
+                    cell: ({ row }) => (
+                        <Typography className='font-medium' color='text.primary'>
+                            ${row.original.total.toFixed(2)}
+                        </Typography>
+                    )
+                })
+            ] as ColumnDef<InvoiceTypeWithAction, any>[]
+
+            if (isDianEnabled) {
+                cols.push(
+                    columnHelper.accessor('dianStatus', {
+                        header: 'Estado DIAN',
+                        cell: ({ row }) => (
+                            row.original.dianStatus ? (
+                                <Chip
+                                    label={row.original.dianStatus}
+                                    color={getDianStatusColor(row.original.dianStatus)}
+                                    size="small"
+                                    variant="outlined"
+                                />
+                            ) : <span className="text-gray-400">-</span>
+                        )
+                    }) as any,
+                    columnHelper.accessor('cufe', {
+                        header: 'CUFE',
+                        cell: ({ row }) => (
+                            row.original.cufe ? (
+                                <Tooltip title={row.original.cufe}>
+                                    <Typography variant="caption" className="cursor-pointer">
+                                        {row.original.cufe.substring(0, 10)}...
+                                    </Typography>
+                                </Tooltip>
+                            ) : <span className="text-gray-400">-</span>
+                        )
+                    }) as any
                 )
-            },
-            columnHelper.accessor('invoiceNumber', {
-                header: 'Número',
-                cell: ({ row }) => (
-                    <Typography color='text.primary' className='font-medium'>
-                        {row.original.invoiceNumber}
-                    </Typography>
-                )
-            }),
-            columnHelper.accessor('customerName', {
-                header: 'Cliente',
-                cell: ({ row }) => (
-                    <Typography className='font-medium' color='text.primary'>
-                        {row.original.customerName || '-'}
-                    </Typography>
-                )
-            }),
-            columnHelper.accessor('issueDate', {
-                header: 'Emisión',
-                cell: ({ row }) => (
-                    <Typography className='font-medium' color='text.primary'>
-                        {new Date(row.original.issueDate).toLocaleDateString()}
-                    </Typography>
-                )
-            }),
-            columnHelper.accessor('status', {
-                header: 'Estado',
-                cell: ({ row }) => (
-                    <span className={`px-2 py-1 rounded text-xs font-semibold ${getStatusColor(row.original.status)}`}>
-                        {getStatusLabel(row.original.status)}
-                    </span>
-                )
-            }),
-            columnHelper.accessor('total', {
-                header: 'Total',
-                cell: ({ row }) => (
-                    <Typography className='font-medium' color='text.primary'>
-                        ${row.original.total.toFixed(2)}
-                    </Typography>
-                )
-            }),
-            columnHelper.accessor('action', {
-                header: 'Acciones',
-                cell: ({ row }) => (
-                    <div className='flex items-center'>
-                        <Tooltip title='Ver/Editar'>
-                            <IconButton onClick={() => router.push(`/ventas/facturas/form/${row.original.id}`)}>
-                                <i className='tabler-edit text-textSecondary' />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title='Eliminar'>
-                            <IconButton onClick={() => deleteItem(row.original.id)}>
-                                <i className='tabler-trash text-textSecondary' />
-                            </IconButton>
-                        </Tooltip>
-                    </div>
-                ),
-                enableSorting: false
-            })
-        ],
-        [data, filteredData]
+            }
+
+            cols.push(
+                columnHelper.accessor('action', {
+                    header: 'Acciones',
+                    cell: ({ row }) => (
+                        <div className='flex items-center'>
+                            {isDianEnabled && row.original.status === 'ISSUED' && row.original.dianStatus !== 'ACCEPTED' && (
+                                <Tooltip title='Enviar a DIAN'>
+                                    <IconButton
+                                        onClick={() => sendToDian(row.original.id)}
+                                        disabled={sendingDian === row.original.id}
+                                        color="primary"
+                                    >
+                                        {sendingDian === row.original.id ? <CircularProgress size={20} /> : <i className='tabler-cloud-upload' />}
+                                    </IconButton>
+                                </Tooltip>
+                            )}
+                            <Tooltip title='Ver/Editar'>
+                                <IconButton onClick={() => router.push(`/ventas/facturas/form/${row.original.id}`)}>
+                                    <i className='tabler-edit text-textSecondary' />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title='Eliminar'>
+                                <IconButton onClick={() => deleteItem(row.original.id)}>
+                                    <i className='tabler-trash text-textSecondary' />
+                                </IconButton>
+                            </Tooltip>
+                        </div>
+                    ),
+                    enableSorting: false
+                }) as any
+            )
+
+            return cols
+        },
+        [data, filteredData, isDianEnabled, sendingDian]
     )
 
     useEffect(() => {

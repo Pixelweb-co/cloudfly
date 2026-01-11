@@ -222,7 +222,7 @@ public class PayrollAccountingService {
             newAccount.setCode(code);
             newAccount.setName(name);
             newAccount.setAccountType(type);
-            newAccount.setNature(nature);
+            newAccount.setNature(ChartOfAccount.AccountNature.valueOf(nature));
             newAccount.setIsActive(true);
             newAccount.setLevel(code.length());
 

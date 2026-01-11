@@ -186,21 +186,65 @@ public class PayrollLiquidationService {
         receipt.setReceiptNumber(generateReceiptNumber(period, employee));
         receipt.setCalculationDate(LocalDateTime.now());
         receipt.setStatus(PayrollReceipt.ReceiptStatus.PENDING);
+        receipt.setDianStatus(PayrollReceipt.DianStatus.PENDING); // Estado inicial DIAN
 
         // Información base
         receipt.setBaseSalary(result.getBaseSalary());
         receipt.setDailySalary(result.getDailySalary());
         receipt.setRegularDays(BigDecimal.valueOf(result.getWorkingDays()));
 
-        // Devengos
+        // --- 1. Mapear DEVENGADOS (Detalle DIAN) ---
+        if (result.getPerceptions() != null) {
+            for (PayrollCalculationService.Perception p : result.getPerceptions()) {
+                PayrollDevengado dev = PayrollDevengado.builder()
+                        .dianCode(p.getDianCode() != null ? p.getDianCode() : PayrollConcept.DIANCodes.OTROS_CONCEPTOS)
+                        .description(p.getName())
+                        .amount(p.getAmount())
+                        .quantity(p.getQuantity())
+                        .percentage(p.getPercentage())
+                        .isSalary(p.getIsSalary() != null ? p.getIsSalary() : true) // Por defecto salarial
+                        .build();
+                receipt.addDevengado(dev);
+            }
+        }
+
+        // --- 2. Mapear DEDUCCIONES (Detalle DIAN) ---
+        if (result.getDeductions() != null) {
+            for (PayrollCalculationService.Deduction d : result.getDeductions()) {
+                PayrollDeduccion ded = PayrollDeduccion.builder()
+                        .dianCode(
+                                d.getDianCode() != null ? d.getDianCode() : PayrollConcept.DIANCodes.OTRAS_DEDUCCIONES)
+                        .description(d.getName())
+                        .amount(d.getAmount())
+                        .percentage(d.getPercentage())
+                        .build();
+                receipt.addDeduccion(ded);
+            }
+        }
+
+        // --- 3. Crear TOTALES (Entidad separada) ---
+        PayrollTotales totales = PayrollTotales.builder()
+                .devengadoTotal(result.getTotalPerceptions())
+                .deduccionTotal(result.getTotalDeductions())
+                .comprobanteTotal(result.getNetPay())
+                .sueldoTrabajado(result.getSalaryAmount()) // Auxiliar
+                .auxilioTransporte(result.getTransportAllowanceAmount())
+                .saludTotal(result.getHealthDeduction())
+                .pensionTotal(result.getPensionDeduction())
+                .fondoSPTotal(result.getOtherDeductions()) // Asumiendo que other son FSP
+                .totalProvisiones(result.getTotalProvisions())
+                .totalCostoEmpleador(result.getTotalEmployerCosts())
+                .build();
+
+        receipt.setTotales(totales);
+
+        // Campos planos legacy (por compatibilidad UI, se mantendrán sincronizados)
         receipt.setSalaryAmount(result.getSalaryAmount());
         receipt.setOvertimeAmount(result.getOvertimeAmount());
         receipt.setCommissionsAmount(result.getCommissionsAmount());
         receipt.setTransportAllowanceAmount(result.getTransportAllowanceAmount());
         receipt.setBonusesAmount(result.getBonusesAmount());
         receipt.setOtherEarnings(result.getOtherEarnings());
-
-        // Deducciones
         receipt.setHealthDeduction(result.getHealthDeduction());
         receipt.setPensionDeduction(result.getPensionDeduction());
         receipt.setOtherDeductions(result.getOtherDeductions());
@@ -219,7 +263,7 @@ public class PayrollLiquidationService {
         receipt.setInteresesCesantiasProvision(result.getInteresesCesantiasProvision());
         receipt.setVacacionesProvision(result.getVacacionesProvision());
 
-        // Totales Totales
+        // Totales Legacy
         receipt.setTotalPerceptions(result.getTotalPerceptions());
         receipt.setTotalDeductions(result.getTotalDeductions());
         receipt.setNetPay(result.getNetPay());

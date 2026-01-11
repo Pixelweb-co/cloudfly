@@ -35,6 +35,8 @@ public class AccountingVoucherService {
     private final ChartOfAccountRepository accountRepository;
     private final CostCenterRepository costCenterRepository;
     private final ContactRepository contactRepository;
+    private final com.app.starter1.persistence.repository.AccountingLedgerRepository ledgerRepository;
+    private final com.app.starter1.persistence.repository.AccountingFiscalPeriodRepository fiscalPeriodRepository;
 
     @Transactional(readOnly = true)
     public List<VoucherResponseDTO> getAllVouchers(Integer tenantId) {
@@ -231,6 +233,9 @@ public class AccountingVoucherService {
             throw new IllegalArgumentException("El comprobante no está balanceado");
         }
 
+        // === ACTUALIZAR LIBRO MAYOR (LEDGER) ===
+        updateLedger(voucher);
+
         voucher.setStatus(AccountingVoucher.VoucherStatus.POSTED);
         voucher.setPostedAt(LocalDateTime.now());
         voucherRepository.save(voucher);
@@ -249,11 +254,125 @@ public class AccountingVoucherService {
             throw new IllegalArgumentException("Solo se pueden anular comprobantes contabilizados");
         }
 
+        // Revertir movimientos del Ledger
+        reverseLedger(voucher);
+
         voucher.setStatus(AccountingVoucher.VoucherStatus.VOID);
         voucherRepository.save(voucher);
 
         log.info("Voucher voided: {}", id);
         return getVoucherById(id);
+    }
+
+    private void reverseLedger(AccountingVoucher voucher) {
+        // 1. Obtener Período Fiscal
+        com.app.starter1.persistence.entity.AccountingFiscalPeriod period = fiscalPeriodRepository
+                .findByTenantIdAndYearAndMonth(voucher.getTenantId(), voucher.getDate().getYear(),
+                        voucher.getDate().getMonthValue())
+                .orElseThrow(() -> new IllegalArgumentException("Periodo fiscal no encontrado para revertir"));
+
+        if (period.getStatus() == com.app.starter1.persistence.entity.AccountingFiscalPeriod.PeriodStatus.LOCKED) {
+            throw new IllegalArgumentException("El período fiscal está cerrado o bloqueado");
+        }
+
+        // 2. Procesar Entradas para revertir
+        List<AccountingEntry> entries = entryRepository.findByVoucherIdOrderByLineNumber(voucher.getId());
+
+        for (AccountingEntry entry : entries) {
+            com.app.starter1.persistence.entity.AccountingLedger ledger = ledgerRepository
+                    .findByTenantIdAndFiscalPeriodIdAndAccountCode(voucher.getTenantId(), period.getId(),
+                            entry.getAccount().getCode())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Ledger no encontrado para la cuenta: " + entry.getAccount().getCode()));
+
+            // Revertir saldos del mes (Restar en lugar de sumar)
+            ledger.setDebitAmount(ledger.getDebitAmount().subtract(entry.getDebitAmount()));
+            ledger.setCreditAmount(ledger.getCreditAmount().subtract(entry.getCreditAmount()));
+
+            // === RECALCULO DE SALDO FINAL ===
+            ChartOfAccount.AccountNature nature = entry.getAccount().getNature();
+            BigDecimal netMovement;
+
+            if (nature == ChartOfAccount.AccountNature.DEBITO) {
+                // Activos/Gastos: Saldo = Inicial + Débitos - Créditos
+                netMovement = ledger.getDebitAmount().subtract(ledger.getCreditAmount());
+                ledger.setFinalBalance(ledger.getInitialBalance().add(netMovement));
+            } else {
+                // Pasivos/Ingresos: Saldo = Inicial + Créditos - Débitos
+                netMovement = ledger.getCreditAmount().subtract(ledger.getDebitAmount());
+                ledger.setFinalBalance(ledger.getInitialBalance().add(netMovement));
+            }
+
+            ledgerRepository.save(ledger);
+        }
+    }
+
+    private void updateLedger(AccountingVoucher voucher) {
+        // 1. Obtener o Crear Período Fiscal
+        com.app.starter1.persistence.entity.AccountingFiscalPeriod period = fiscalPeriodRepository
+                .findByTenantIdAndYearAndMonth(voucher.getTenantId(), voucher.getDate().getYear(),
+                        voucher.getDate().getMonthValue())
+                .orElseGet(() -> {
+                    com.app.starter1.persistence.entity.AccountingFiscalPeriod newPeriod = com.app.starter1.persistence.entity.AccountingFiscalPeriod
+                            .builder()
+                            .tenantId(voucher.getTenantId())
+                            .year(voucher.getDate().getYear())
+                            .month(voucher.getDate().getMonthValue())
+                            .status(com.app.starter1.persistence.entity.AccountingFiscalPeriod.PeriodStatus.OPEN)
+                            .build();
+                    return fiscalPeriodRepository.save(newPeriod);
+                });
+
+        if (period.getStatus() == com.app.starter1.persistence.entity.AccountingFiscalPeriod.PeriodStatus.LOCKED) {
+            throw new IllegalArgumentException("El período fiscal está cerrado o bloqueado");
+        }
+
+        // 2. Procesar Entradas
+        List<AccountingEntry> entries = entryRepository.findByVoucherIdOrderByLineNumber(voucher.getId());
+
+        for (AccountingEntry entry : entries) {
+            com.app.starter1.persistence.entity.AccountingLedger ledger = ledgerRepository
+                    .findByTenantIdAndFiscalPeriodIdAndAccountCode(voucher.getTenantId(), period.getId(),
+                            entry.getAccount().getCode())
+                    .orElseGet(() -> {
+                        // Buscar saldo anterior (mes pasado)
+                        // Simplificación: Iniciar en 0 si no existe
+                        return com.app.starter1.persistence.entity.AccountingLedger.builder()
+                                .tenantId(voucher.getTenantId())
+                                .fiscalPeriod(period)
+                                .account(entry.getAccount()) // Reusa objeto Account
+                                .costCenter(entry.getCostCenter()) // Opcional
+                                .initialBalance(BigDecimal.ZERO)
+                                .debitAmount(BigDecimal.ZERO)
+                                .creditAmount(BigDecimal.ZERO)
+                                .finalBalance(BigDecimal.ZERO)
+                                .build();
+                    });
+
+            // Actualizar saldos del mes
+            ledger.setDebitAmount(ledger.getDebitAmount().add(entry.getDebitAmount()));
+            ledger.setCreditAmount(ledger.getCreditAmount().add(entry.getCreditAmount()));
+
+            // === CALCULO DE SALDO FINAL SEGUN NATURALEZA ===
+            // Cuentas de naturaleza DEBITO (Activos, Gastos, Costos): aumentan con débitos
+            // Cuentas de naturaleza CREDITO (Pasivos, Patrimonio, Ingresos): aumentan con
+            // créditos
+
+            ChartOfAccount.AccountNature nature = entry.getAccount().getNature();
+            BigDecimal netMovement;
+
+            if (nature == ChartOfAccount.AccountNature.DEBITO) {
+                // Para cuentas DEBITO: Saldo = Inicial + Débitos - Créditos
+                netMovement = ledger.getDebitAmount().subtract(ledger.getCreditAmount());
+                ledger.setFinalBalance(ledger.getInitialBalance().add(netMovement));
+            } else {
+                // Para cuentas CREDITO: Saldo = Inicial + Créditos - Débitos
+                netMovement = ledger.getCreditAmount().subtract(ledger.getDebitAmount());
+                ledger.setFinalBalance(ledger.getInitialBalance().add(netMovement));
+            }
+
+            ledgerRepository.save(ledger);
+        }
     }
 
     private String generateVoucherNumber(AccountingVoucher.VoucherType type, Integer tenantId) {

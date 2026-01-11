@@ -1,13 +1,17 @@
 package com.app.starter1.controllers;
 
 import com.app.starter1.dto.SystemConfigDTO;
+import com.app.starter1.dto.CustomerConfigDTO;
 import com.app.starter1.persistence.entity.Channel;
 import com.app.starter1.persistence.entity.Customer;
 import com.app.starter1.persistence.repository.ChannelRepository;
 import com.app.starter1.persistence.repository.CustomerRepository;
 import com.app.starter1.services.SystemConfigService;
+import com.app.starter1.services.CustomerConfigService;
 import com.app.starter1.utils.UserMethods;
 import com.app.starter1.utils.OAuthStateManager;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
@@ -15,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URI;
 import java.util.*;
 
 /**
@@ -38,72 +41,79 @@ import java.util.*;
 public class FacebookOAuthController {
 
     private final SystemConfigService systemConfigService;
+    private final CustomerConfigService customerConfigService;
     private final CustomerRepository customerRepository;
     private final ChannelRepository channelRepository;
     private final UserMethods userMethods;
     private final OAuthStateManager stateManager;
     private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * GET /api/channels/facebook/auth-url
      * Generar URL de autorización para iniciar el flujo OAuth
-     */
-    /**
-     * GET /api/channels/facebook/auth-url
-     * Generar URL de autorización para iniciar el flujo OAuth
+     * ACTUALIZADO: Usa "Facebook Login for Business" con config_id
      */
     @GetMapping("/auth-url")
     public ResponseEntity<?> getAuthorizationUrl() {
         try {
-            log.info("🔑 [FB-OAUTH] Generating authorization URL");
+            log.info("🔑 [FB-OAUTH] Generating authorization URL (Login for Business)");
 
-            SystemConfigDTO config = systemConfigService.getSystemConfig();
+            Long tenantId = userMethods.getTenantId();
 
-            // Validar integración
-            if (config.getFacebookEnabled() == null || !config.getFacebookEnabled()) {
+            // Obtener configuración del tenant
+            CustomerConfigDTO customerConfig = customerConfigService.getCustomerConfigInternal(tenantId);
+
+            // Verificar que Facebook esté habilitado y configurado
+            if (!customerConfig.getFacebookEnabled()) {
                 return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Facebook integration is not enabled"));
+                        .body(Map.of("error", "Facebook integration is not enabled for this tenant"));
             }
 
-            if (config.getFacebookAppId() == null) {
+            if (customerConfig.getFacebookLoginConfigId() == null ||
+                    customerConfig.getFacebookLoginConfigId().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of(
+                                "error", "facebook_not_configured",
+                                "message",
+                                "Facebook Login for Business no está configurado. Configure el 'config_id' en la configuración del tenant."));
+            }
+
+            // Obtener configuración global del sistema
+            SystemConfigDTO systemConfig = systemConfigService.getSystemConfig();
+
+            // Determinar qué App ID usar (tenant o global)
+            String appId = customerConfig.getFacebookAppId() != null
+                    ? customerConfig.getFacebookAppId()
+                    : systemConfig.getFacebookAppId();
+
+            if (appId == null) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "Facebook App ID not configured"));
             }
 
             // Validar frontendUrl
-            String frontendUrl = config.getFrontendUrl();
+            String frontendUrl = systemConfig.getFrontendUrl();
             if (frontendUrl == null || frontendUrl.isEmpty()) {
-                // Fallback por defecto si no está configurado (pero debería estarlo)
                 frontendUrl = "http://localhost:3000";
             }
 
-            // La redirect_uri debe ser la URL del frontend donde Facebook retornará el
-            // código
-            // Debe coincidir EXACTAMENTE con lo configurado en Facebook Developers
             String redirectUri = frontendUrl + "/comunicaciones/canales";
-
-            Long tenantId = userMethods.getTenantId();
             String state = generateStateToken(tenantId);
 
-            String scopes = String.join(",", List.of(
-                    "pages_show_list",
-                    "pages_messaging",
-                    "pages_manage_metadata",
-                    "pages_read_engagement",
-                    "email"));
-
+            // Usar Facebook Login for Business con config_id
             String authUrl = UriComponentsBuilder
-                    .fromHttpUrl("https://www.facebook.com/" + config.getFacebookApiVersion() + "/dialog/oauth")
-                    .queryParam("client_id", config.getFacebookAppId())
+                    .fromHttpUrl("https://www.facebook.com/" + systemConfig.getFacebookApiVersion() + "/dialog/oauth")
+                    .queryParam("client_id", appId)
                     .queryParam("redirect_uri", redirectUri)
                     .queryParam("state", state)
-                    .queryParam("scope", scopes)
-                    .queryParam("auth_type", "rerequest")
+                    .queryParam("config_id", customerConfig.getFacebookLoginConfigId()) // ⬅️ CAMBIO CLAVE
                     .queryParam("response_type", "code")
                     .build()
                     .toUriString();
 
-            log.info("✅ [FB-OAUTH] Authorization URL generated. Redirect URI: {}", redirectUri);
+            log.info("✅ [FB-OAUTH] Authorization URL generated with config_id: {}",
+                    customerConfig.getFacebookLoginConfigId());
 
             return ResponseEntity.ok(Map.of(
                     "authUrl", authUrl,
@@ -139,36 +149,48 @@ public class FacebookOAuthController {
                 return ResponseEntity.badRequest().body(Map.of("error", "invalid_state"));
             }
 
-            // Usar configuración interna para obtener secretos
-            SystemConfigDTO config = systemConfigService.getSystemConfigInternal();
+            // Obtener configuración del tenant y del sistema
+            CustomerConfigDTO customerConfig = customerConfigService.getCustomerConfigInternal(tenantId);
+            SystemConfigDTO systemConfig = systemConfigService.getSystemConfigInternal();
 
-            String frontendUrl = config.getFrontendUrl();
+            // Determinar qué credenciales usar (tenant o global)
+            String appId = customerConfig.getFacebookAppId() != null
+                    ? customerConfig.getFacebookAppId()
+                    : systemConfig.getFacebookAppId();
+
+            String appSecret = customerConfig.getFacebookAppSecret() != null
+                    ? customerConfig.getFacebookAppSecret()
+                    : systemConfig.getFacebookAppSecret();
+
+            if (appId == null || appSecret == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Facebook App credentials not configured"));
+            }
+
+            String frontendUrl = systemConfig.getFrontendUrl();
             if (frontendUrl == null || frontendUrl.isEmpty()) {
                 frontendUrl = "http://localhost:3000";
             }
 
-            // La redirect_uri DEBE ser la misma que se usó para generar el authUrl
             String redirectUri = frontendUrl + "/comunicaciones/canales";
 
             // 1. Intercambiar código por access token
-            String shortLivedToken = exchangeCodeForToken(
-                    code,
-                    config.getFacebookAppId(),
-                    config.getFacebookAppSecret(),
-                    redirectUri);
+            String shortLivedToken = exchangeCodeForToken(code, appId, appSecret, redirectUri);
 
             // 2. Token de larga duración
-            String longLivedToken = exchangeForLongLivedToken(
-                    shortLivedToken,
-                    config.getFacebookAppId(),
-                    config.getFacebookAppSecret());
+            String longLivedToken = exchangeForLongLivedToken(shortLivedToken, appId, appSecret);
 
             // 3. Obtener páginas
             List<Map<String, Object>> pages = getUserPages(longLivedToken);
 
             if (pages.isEmpty()) {
+                log.warn(
+                        "⚠️ [FB-OAUTH] No pages found for this user. Permissions might be missing or user has no pages.");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "no_pages_found"));
+                        .body(Map.of(
+                                "error", "no_pages_found",
+                                "message",
+                                "No se encontraron páginas de Facebook. Asegúrate de haber otorgado permisos a la aplicación para administrar tus páginas."));
             }
 
             // 4. Conectar primera página (TODO: selector)
@@ -177,8 +199,13 @@ public class FacebookOAuthController {
             String pageName = (String) selectedPage.get("name");
             String pageAccessToken = (String) selectedPage.get("access_token");
 
+            log.info("📄 [FB-OAUTH] Selecting first page: {} ({})", pageName, pageId);
+
             // 5. Suscribir webhooks
-            subscribePageToWebhooks(pageId, pageAccessToken);
+            boolean subscribed = subscribePageToWebhooks(pageId, pageAccessToken);
+            if (!subscribed) {
+                log.warn("⚠️ [FB-OAUTH] Failed to subscribe webhooks for page: {}", pageName);
+            }
 
             // 6. Guardar canal
             Customer customer = customerRepository.findById(tenantId)
@@ -199,6 +226,8 @@ public class FacebookOAuthController {
             channel.setAccessToken(pageAccessToken);
             channel.setIsActive(true);
             channel.setIsConnected(true);
+            channel.setLastSync(java.time.LocalDateTime.now());
+            channel.setLastError(null);
 
             channelRepository.save(channel);
 
@@ -228,14 +257,19 @@ public class FacebookOAuthController {
                 .build()
                 .toUriString();
 
-        ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-        Map<String, Object> body = response.getBody();
+        try {
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            JsonNode root = objectMapper.readTree(response.getBody());
 
-        if (body == null || !body.containsKey("access_token")) {
-            throw new RuntimeException("Failed to exchange code for token");
+            if (root.has("access_token")) {
+                return root.get("access_token").asText();
+            } else {
+                log.error("❌ [FB-OAUTH] Failed to get access token. Response: {}", response.getBody());
+                throw new RuntimeException("No access token in response");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to exchange code for token", e);
         }
-
-        return (String) body.get("access_token");
     }
 
     /**
@@ -251,14 +285,19 @@ public class FacebookOAuthController {
                 .build()
                 .toUriString();
 
-        ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-        Map<String, Object> body = response.getBody();
+        try {
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            JsonNode root = objectMapper.readTree(response.getBody());
 
-        if (body == null || !body.containsKey("access_token")) {
-            throw new RuntimeException("Failed to exchange for long-lived token");
+            if (root.has("access_token")) {
+                return root.get("access_token").asText();
+            } else {
+                return shortLivedToken; // Fallback to short lived if fails
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ [FB-OAUTH] Failed to get long-lived token, using short-lived one: {}", e.getMessage());
+            return shortLivedToken;
         }
-
-        return (String) body.get("access_token");
     }
 
     /**
@@ -271,14 +310,33 @@ public class FacebookOAuthController {
                 .build()
                 .toUriString();
 
-        ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
-        Map<String, Object> body = response.getBody();
+        try {
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            String body = response.getBody();
 
-        if (body == null || !body.containsKey("data")) {
+            log.info("📊 [FB-OAUTH] Pages API Response: {}", body);
+
+            JsonNode root = objectMapper.readTree(body);
+            JsonNode data = root.path("data");
+
+            if (data.isMissingNode() || !data.isArray()) {
+                return Collections.emptyList();
+            }
+
+            List<Map<String, Object>> pages = new ArrayList<>();
+            for (JsonNode node : data) {
+                Map<String, Object> page = new HashMap<>();
+                page.put("id", node.path("id").asText());
+                page.put("name", node.path("name").asText());
+                page.put("access_token", node.path("access_token").asText());
+                pages.add(page);
+            }
+
+            return pages;
+        } catch (Exception e) {
+            log.error("❌ [FB-OAUTH] Error fetching user pages", e);
             return Collections.emptyList();
         }
-
-        return (List<Map<String, Object>>) body.get("data");
     }
 
     /**
@@ -294,10 +352,13 @@ public class FacebookOAuthController {
                     .build()
                     .toUriString();
 
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, null, Map.class);
-            Map<String, Object> body = response.getBody();
+            ResponseEntity<String> response = restTemplate.postForEntity(url, null, String.class);
+            JsonNode root = objectMapper.readTree(response.getBody());
 
-            return body != null && Boolean.TRUE.equals(body.get("success"));
+            boolean success = root.path("success").asBoolean(false);
+            log.info("📡 [FB-OAUTH] Webhook subscription for page {}: {}", pageId, success ? "SUCCESS" : "FAILED");
+
+            return success;
 
         } catch (Exception e) {
             log.error("❌ [FB-OAUTH] Error subscribing webhooks: {}", e.getMessage());

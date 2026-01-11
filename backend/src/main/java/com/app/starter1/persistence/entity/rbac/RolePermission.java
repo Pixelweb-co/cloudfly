@@ -11,8 +11,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "role_module_permissions", uniqueConstraints = @UniqueConstraint(columnNames = { "role_id",
         "module_action_id" }))
-@Getter
-@Setter
+@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
