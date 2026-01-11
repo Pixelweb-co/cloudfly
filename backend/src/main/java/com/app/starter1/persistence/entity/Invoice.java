@@ -57,6 +57,32 @@ public class Invoice {
     @Column(length = 1000)
     private String notes;
 
+    // Accounting Integration
+    @Column(name = "contabilidad_generada")
+    private Boolean accountingGenerated = false;
+
+    @Column(name = "asiento_contable_id")
+    private Long accountingVoucherId;
+
+    // fields for DIAN
+    @Column(name = "cufe")
+    private String cufe;
+
+    @Column(name = "qr_code", length = 1000)
+    private String qrCode;
+
+    @Column(name = "dian_status")
+    private String dianStatus; // PENDING, SENT, ACCEPTED, REJECTED
+
+    @Column(name = "dian_response", columnDefinition = "TEXT")
+    private String dianResponse;
+
+    @Column(name = "payment_means")
+    private String paymentMeans; // 10=Efectivo, 41=Check, 42=Consignación...
+
+    @Column(name = "payment_method")
+    private String paymentMethod; // 1=Contado, 2=Crédito
+
     private Long createdBy;
 
     @Column(updatable = false)

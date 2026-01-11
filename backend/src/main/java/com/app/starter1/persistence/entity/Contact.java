@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -117,8 +118,8 @@ public class Contact {
     private Boolean applyIcaWithholding = false;
 
     // Porcentaje de retención personalizado (si aplica)
-    @Column(name = "custom_withholding_rate")
-    private Double customWithholdingRate;
+    @Column(name = "custom_withholding_rate", precision = 5, scale = 2)
+    private BigDecimal customWithholdingRate;
 
     // Cuenta contable por defecto (para movimientos automáticos)
     @Column(name = "default_account_code", length = 10)
@@ -129,12 +130,12 @@ public class Contact {
     private Integer paymentTermsDays = 0;
 
     // Límite de crédito
-    @Column(name = "credit_limit")
-    private Double creditLimit = 0.0;
+    @Column(name = "credit_limit", precision = 15, scale = 2)
+    private BigDecimal creditLimit = BigDecimal.ZERO;
 
     // Saldo actual (deuda)
-    @Column(name = "current_balance")
-    private Double currentBalance = 0.0;
+    @Column(name = "current_balance", precision = 15, scale = 2)
+    private BigDecimal currentBalance = BigDecimal.ZERO;
 
     // Es activo/inactivo
     @Column(name = "is_active")

@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, SyntheticEvent } from 'react'
 
 import {
   Dialog,
@@ -15,7 +15,14 @@ import {
   Select,
   FormControl,
   Typography,
-  Divider
+  Divider,
+  Tab,
+  Tabs,
+  FormHelperText,
+  Checkbox,
+  FormControlLabel,
+  InputAdornment,
+  Chip
 } from '@mui/material'
 import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
@@ -23,7 +30,8 @@ import * as yup from 'yup'
 import axios from 'axios'
 import dotenv from "dotenv";
 
-import type { CustomersType } from '@/types/apps/customerType'
+import type { CustomersType, DaneCode } from '@/types/customers'
+import { daneService } from '@/services/daneService'
 
 // Opciones de tipo de negocio
 const BUSINESS_TYPE_OPTIONS = [
@@ -33,22 +41,127 @@ const BUSINESS_TYPE_OPTIONS = [
   { value: 'MIXTO', label: '🎯 Mixto', description: 'Combinación de varios tipos' }
 ]
 
+// Opciones DIAN
+const TIPO_DOCUMENTO_DIAN_OPTIONS = [
+  { value: '13', label: 'Cédula de ciudadanía' },
+  { value: '31', label: 'NIT' },
+  { value: '22', label: 'Cédula dejería' },
+  { value: '41', label: 'Pasaporte' },
+  { value: '42', label: 'Documento de identificación extranjero' },
+  { value: '50', label: 'NIT de otro país' },
+  { value: '91', label: 'NUIP' }
+]
+
+const REGIMEN_FISCAL_OPTIONS = [
+  { value: '48', label: 'Responsable del impuesto sobre las ventas - IVA' },
+  { value: '49', label: 'No responsable de IVA' },
+  { value: '04', label: 'Régimen Simple de Tributación' },
+  { value: '05', label: 'Régimen Ordinario' }
+]
+
+const RESPONSABILIDADES_FISCALES_OPTIONS = [
+  { value: 'R-99-PN', label: 'R-99-PN (No responsable)' },
+  { value: 'O-13', label: 'O-13 (Gran contribuyente)' },
+  { value: 'O-15', label: 'O-15 (Autorretenedor)' },
+  { value: 'O-23', label: 'O-23 (Agente de retención IVA)' },
+  { value: 'O-47', label: 'O-47 (Régimen Simple)' }
+]
+
+// Esquema de validación
 const schema = yup.object().shape({
+  // --- BÁSICOS ---
   name: yup.string().required('El nombre es obligatorio'),
   nit: yup.string().required('El NIT es obligatorio'),
-  phone: yup.string().required('telefono es obligatorio'),
-  email: yup.string().email('Email inválido').required('email es obligatorio'),
-  address: yup.string().required('direccion es obligatorio'),
+  phone: yup.string().required('El teléfono es obligatorio'),
+  email: yup.string().email('Email inválido').required('Email es obligatorio'),
+  address: yup.string().required('Dirección es obligatoria'),
   contact: yup.string().required('El contacto es obligatorio'),
   position: yup.string().required('El cargo es obligatorio'),
   type: yup.string().required('El tipo es obligatorio'),
+  status: yup.string().required('El estado es obligatorio'),
   businessType: yup.string().optional(),
   businessDescription: yup.string().optional(),
+
+  // Contrato
   fechaInicio: yup.string().required('La fecha inicial es obligatoria'),
   fechaFinal: yup.string().required('La fecha final es obligatoria'),
   descripcionContrato: yup.string().optional(),
-  status: yup.string().required('El estado es obligatorio')
+
+  // --- DIAN ---
+  esEmisorFE: yup.boolean().optional(),
+  esEmisorPrincipal: yup.boolean().optional(),
+
+  tipoDocumentoDian: yup.string().when('esEmisorFE', {
+    is: true,
+    then: (schema) => schema.required('Tipo doc DIAN es requerido para emisores'),
+    otherwise: (schema) => schema.optional()
+  }),
+  digitoVerificacion: yup.string().when(['esEmisorFE', 'tipoDocumentoDian'], {
+    is: (esEmisor: boolean, tipo: string) => esEmisor && tipo === '31',
+    then: (schema) => schema.required('DV requerido para NIT'),
+    otherwise: (schema) => schema.optional()
+  }),
+  razonSocial: yup.string().when(['esEmisorFE', 'tipoDocumentoDian'], {
+    is: (esEmisor: boolean, tipo: string) => esEmisor && tipo === '31',
+    then: (schema) => schema.required('Razón social requerida para NIT'),
+    otherwise: (schema) => schema.optional()
+  }),
+  nombreComercial: yup.string().optional(),
+
+  regimenFiscal: yup.string().when('esEmisorFE', {
+    is: true,
+    then: (schema) => schema.required('Régimen fiscal requerido'),
+    otherwise: (schema) => schema.optional()
+  }),
+  responsabilidadesFiscales: yup.string().when('esEmisorFE', {
+    is: true,
+    then: (schema) => schema.required('Resp. fiscales requeridas'),
+    otherwise: (schema) => schema.optional()
+  }),
+
+  codigoDaneDepartamento: yup.string().when('esEmisorFE', {
+    is: true,
+    then: (schema) => schema.required('Departamento requerido'),
+    otherwise: (schema) => schema.optional()
+  }),
+  codigoDaneCiudad: yup.string().when('esEmisorFE', {
+    is: true,
+    then: (schema) => schema.required('Ciudad requerida'),
+    otherwise: (schema) => schema.optional()
+  }),
+
+  emailFacturacionDian: yup.string().email('Email inválido').when('esEmisorFE', {
+    is: true,
+    then: (schema) => schema.required('Email facturación requerido'),
+    otherwise: (schema) => schema.optional()
+  })
 })
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function CustomTabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 2 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
 
 const ClienteForm = ({
   open,
@@ -62,15 +175,21 @@ const ClienteForm = ({
   rowSelect: CustomersType
 }) => {
   const [id, setId] = useState<any>(null)
+  const [tabValue, setTabValue] = useState(0)
 
-  const [editData, setEditData] = useState<any>(null)
+  // State para DANE
+  const [departamentos, setDepartamentos] = useState<DaneCode[]>([])
+  const [ciudades, setCiudades] = useState<DaneCode[]>([])
+  const [loadingDane, setLoadingDane] = useState(false)
 
   const {
     control,
     handleSubmit,
     formState: { errors },
     setValue,
-    reset
+    watch,
+    reset,
+    trigger
   } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -87,74 +206,114 @@ const ClienteForm = ({
       fechaInicio: '',
       fechaFinal: '',
       descripcionContrato: '',
-      status: '1'
+      status: '1',
+      // DIAN
+      esEmisorFE: false,
+      esEmisorPrincipal: false,
+      tipoDocumentoDian: '',
+      digitoVerificacion: '',
+      razonSocial: '',
+      nombreComercial: '',
+      responsabilidadesFiscales: '',
+      regimenFiscal: '',
+      codigoDaneDepartamento: '',
+      codigoDaneCiudad: '',
+      emailFacturacionDian: '',
+      sitioWeb: ''
     }
   })
+
+  // Watchers
+  const watchDepartamento = watch('codigoDaneDepartamento')
+  const watchEsEmisorFE = watch('esEmisorFE')
+  const watchNit = watch('nit')
+
+  // Cargar departamentos al inicio
+  useEffect(() => {
+    const loadDepartamentos = async () => {
+      try {
+        const data = await daneService.getDepartamentos()
+        setDepartamentos(data)
+      } catch (error) {
+        console.error('Error cargando departamentos:', error)
+      }
+    }
+    loadDepartamentos()
+  }, [])
+
+  // Cargar ciudades cuando cambia departamento
+  useEffect(() => {
+    const loadCiudades = async () => {
+      if (!watchDepartamento) {
+        setCiudades([])
+        return
+      }
+      setLoadingDane(true)
+      try {
+        const data = await daneService.getCiudadesByDepartamento(watchDepartamento)
+        setCiudades(data)
+      } catch (error) {
+        console.error('Error cargando ciudades:', error)
+      } finally {
+        setLoadingDane(false)
+      }
+    }
+    loadCiudades()
+  }, [watchDepartamento])
+
+  // Calcular Dígito Verificación simple
+  useEffect(() => {
+    if (watchNit && watchEsEmisorFE) {
+      // Algoritmo simple o placeholder. 
+      // Se podría implementar el algoritmo MOD 11 real aquí
+      // Por ahora dejamos que el usuario lo ingrese o lo pre-calculamos dummy
+    }
+  }, [watchNit, watchEsEmisorFE])
 
   const onSubmit = async (data: any) => {
     try {
       const token = localStorage.getItem('AuthToken')
+      if (!token) throw new Error('Token no disponible')
 
-      console.log('token ', token)
+      const method = id ? 'put' : 'post'
+      const apiUrl = id ? `${process.env.NEXT_PUBLIC_API_URL}/customers/${id}` : `${process.env.NEXT_PUBLIC_API_URL}/customers`
 
-      if (!token) {
-        throw new Error('Token no disponible. Por favor, inicia sesión nuevamente.')
+      // Preparar payload, añadir nombres de depto/ciudad si están seleccionados
+      const depto = departamentos.find(d => d.codigo === data.codigoDaneDepartamento)
+      const ciudad = ciudades.find(c => c.codigo === data.codigoDaneCiudad)
+
+      const payload = {
+        ...data,
+        departamentoDian: depto?.nombre,
+        ciudadDian: ciudad?.nombre,
+        paisCodigo: 'CO',
+        paisNombre: 'Colombia'
       }
 
-      // Si tienes un ID, significa que estás actualizando el usuario, de lo contrario, creas uno nuevo
-
-      const method = id ? 'put' : 'post' // Actualización o Creación
-      const apiUrl = id ? `${process.env.NEXT_PUBLIC_API_URL}/customers/${id}` : `${process.env.NEXT_PUBLIC_API_URL}/customers` // Creación
-
       const response = await axios({
-        method: method, // Usa 'put' para actualización o 'post' para creación
+        method: method,
         url: apiUrl,
-        data: data,
+        data: payload,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         }
       })
 
-      // Procesar la respuesta
-      if (response.data.result === 'success') {
-        console.log('Customer guardado con éxito:', response.data)
-
-        // Aquí puedes redirigir o mostrar un mensaje de éxito
-      } else {
-        console.error('Error en la respuesta:', response.data.message)
+      if (response.data || response.status === 200) {
+        onClose()
+        reset()
       }
-
-      setEditData(null)
-      setValue('name', '')
-      setValue('nit', '')
-      setValue('phone', '')
-      setValue('email', '')
-      setValue('address', '')
-      setValue('contact', '')
-      setValue('position', '')
-      setValue('type', '')
-      setValue('businessType', '')
-      setValue('businessDescription', '')
-      setValue('fechaInicio', '')
-      setValue('fechaFinal', '')
-      setValue('descripcionContrato', '')
-      setValue('status', '1')
-      reset()
-      setId(null)
-
-      onClose()
     } catch (error) {
-      console.error('Error al enviar los datos:', error)
+      console.error('Error al enviar:', error)
     }
   }
 
+  // Cargar datos al editar
   useEffect(() => {
-    console.log('rsl ', rowSelect)
-
     if (rowSelect.id) {
-      console.log('rowSelect', rowSelect)
       setId(rowSelect.id)
+      // Mapear campos básicos
       setValue('name', rowSelect.name || '')
       setValue('nit', rowSelect.nit || '')
       setValue('phone', rowSelect.phone || '')
@@ -163,419 +322,376 @@ const ClienteForm = ({
       setValue('contact', rowSelect.contact || '')
       setValue('position', rowSelect.position || '')
       setValue('type', rowSelect.type || '')
+      setValue('status', typeof rowSelect.status === 'boolean' ? (rowSelect.status ? '1' : '0') : rowSelect.status || '1')
       setValue('businessType', rowSelect.businessType || '')
       setValue('businessDescription', rowSelect.businessDescription || '')
+      // Contrato
       setValue('fechaInicio', rowSelect.contrato?.fechaInicio || '')
       setValue('fechaFinal', rowSelect.contrato?.fechaFinal || '')
       setValue('descripcionContrato', rowSelect.contrato?.descripcionContrato || '')
-      setValue('status', typeof rowSelect.status === 'boolean' ? rowSelect.status.toString() : rowSelect.status || '0')
-      setEditData(rowSelect)
+
+      // DIAN Mapping
+      setValue('esEmisorFE', rowSelect.esEmisorFE || false)
+      setValue('esEmisorPrincipal', rowSelect.esEmisorPrincipal || false)
+      setValue('tipoDocumentoDian', rowSelect.tipoDocumentoDian || '')
+      setValue('digitoVerificacion', rowSelect.digitoVerificacion || '')
+      setValue('razonSocial', rowSelect.razonSocial || '')
+      setValue('nombreComercial', rowSelect.nombreComercial || '')
+      setValue('responsabilidadesFiscales', rowSelect.responsabilidadesFiscales || '')
+      setValue('regimenFiscal', rowSelect.regimenFiscal || '')
+      setValue('codigoDaneDepartamento', rowSelect.codigoDaneDepartamento || '')
+      setValue('codigoDaneCiudad', rowSelect.codigoDaneCiudad || '')
+      setValue('emailFacturacionDian', rowSelect.emailFacturacionDian || '')
+      setValue('sitioWeb', rowSelect.sitioWeb || '')
     } else {
-      setValue('name', '')
-      setValue('nit', '')
-      setValue('phone', '')
-      setValue('email', '')
-      setValue('address', '')
-      setValue('contact', '')
-      setValue('position', '')
-      setValue('type', '')
-      setValue('businessType', '')
-      setValue('businessDescription', '')
-      setValue('fechaInicio', '')
-      setValue('fechaFinal', '')
-      setValue('descripcionContrato', '')
-      setValue('status', '1')
-      reset()
       setId(null)
-      setEditData({
-        id: null,
-        name: '',
-        nit: '',
-        phone: '',
-        email: '',
-        address: '',
-        contact: '',
-        position: '',
-        type: '',
-        businessType: '',
-        businessDescription: '',
-        fechaInicio: '',
-        fechaFinal: '',
-        descripcionContrato: '',
-        status: '1'
-      })
+      reset()
+      setTabValue(0)
     }
-  }, [rowSelect])
+  }, [rowSelect, setValue, reset])
+
+  const handleTabChange = (event: SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
 
   return (
-    <Dialog open={!!open} onClose={onClose} fullWidth maxWidth='md'>
-      <DialogTitle>Agregar nuevo cliente</DialogTitle>
+    <Dialog open={!!open} onClose={onClose} fullWidth maxWidth='lg'>
+      <DialogTitle>
+        {id ? 'Editar Cliente' : 'Crear Nuevo Cliente'}
+      </DialogTitle>
       <DialogContent>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={tabValue} onChange={handleTabChange} aria-label="customer tabs">
+            <Tab label="Datos Básicos" />
+            <Tab label="Información DIAN / FE" />
+          </Tabs>
+        </Box>
+
         <Box component='form' onSubmit={handleSubmit(onSubmit)} noValidate sx={{ mt: 2 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='name'
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    value={editData ? editData.name : ''}
-                    onChange={e => {
-                      setEditData({ ...editData, name: e.target.value })
-                      setValue('name', e.target.value)
-                    }}
-                    label='Nombre'
-                    error={!!errors.name}
-                    helperText={errors.name?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='nit'
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    value={editData ? editData.nit : ''}
-                    onChange={e => {
-                      setEditData({ ...editData, nit: e.target.value })
-                      setValue('nit', e.target.value)
-                    }}
-                    fullWidth
-                    label='NIT'
-                    error={!!errors.nit}
-                    helperText={errors.nit?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='phone'
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    value={editData ? editData.phone : ''}
-                    onChange={e => {
-                      setEditData({ ...editData, phone: e.target.value })
-                      setValue('phone', e.target.value)
-                    }}
-                    label='Teléfono'
-                    error={!!errors.phone}
-                    helperText={errors.phone?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='email'
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    value={editData ? editData.email : ''}
-                    onChange={e => {
-                      setEditData({ ...editData, email: e.target.value })
-                      setValue('email', e.target.value)
-                    }}
-                    label='Email'
-                    type='email'
-                    error={!!errors.email}
-                    helperText={errors.email?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Controller
-                name='address'
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    value={editData ? editData.address : ''}
-                    onChange={e => {
-                      setEditData({ ...editData, address: e.target.value })
-                      setValue('address', e.target.value)
-                    }}
-                    label='Dirección'
-                    multiline
-                    maxRows={4}
-                    error={!!errors.address}
-                    helperText={errors.address?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='contact'
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    value={editData ? editData.contact : ''}
-                    onChange={e => {
-                      setEditData({ ...editData, contact: e.target.value })
-                      setValue('contact', e.target.value)
-                    }}
-                    label='Contacto'
-                    error={!!errors.contact}
-                    helperText={errors.contact?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='position'
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Cargo'
-                    value={editData ? editData.position : ''}
-                    onChange={e => {
-                      setEditData({ ...editData, position: e.target.value })
 
-                      setValue('position', e.target.value)
-                    }}
-                    error={!!errors.position}
-                    helperText={errors.position?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='type'
-                control={control}
-                render={({ field }) => (
-                  <FormControl fullWidth error={!!errors.type}>
-                    <InputLabel>Tipo</InputLabel>
-                    <Select
-                      {...field}
-                      value={editData ? editData.type : ''}
-                      onChange={e => {
-                        setEditData({ ...editData, type: e.target.value })
-                        setValue('type', e.target.value)
-                      }}
-                    >
-                      <MenuItem value=''>-- Selecciona tipo --</MenuItem>
-                      <MenuItem value='1'>Externa</MenuItem>
-                      <MenuItem value='0'>Interna</MenuItem>
-                    </Select>
-                  </FormControl>
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='status'
-                control={control}
-                render={({ field }) => (
-                  <FormControl fullWidth error={!!errors.status}>
-                    <InputLabel>Estado</InputLabel>
-                    <Select
-                      {...field}
-                      value={editData ? editData.status : '0'}
-                      onChange={e => {
-                        setEditData({ ...editData, status: e.target.value })
-                        setValue('status', e.target.value)
-                      }}
-                    >
-                      <MenuItem value=''>-- Selecciona estado --</MenuItem>
-                      <MenuItem value='1'>Activo</MenuItem>
-                      <MenuItem value='0'>Inactivo</MenuItem>
-                    </Select>
-                  </FormControl>
-                )}
-              />
-            </Grid>
+          {/* TAB 1: BÁSICOS */}
+          <CustomTabPanel value={tabValue} index={0}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='name'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField {...field} fullWidth label='Nombre' error={!!errors.name} helperText={errors.name?.message} />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='nit'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField {...field} fullWidth label='NIT / Identificación' error={!!errors.nit} helperText={errors.nit?.message} />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='phone'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField {...field} fullWidth label='Teléfono' error={!!errors.phone} helperText={errors.phone?.message} />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='email'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField {...field} fullWidth label='Email' type='email' error={!!errors.email} helperText={errors.email?.message} />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='type'
+                  control={control}
+                  render={({ field }) => (
+                    <FormControl fullWidth error={!!errors.type}>
+                      <InputLabel>Tipo</InputLabel>
+                      <Select {...field} label="Tipo">
+                        <MenuItem value='1'>Externa</MenuItem>
+                        <MenuItem value='0'>Interna</MenuItem>
+                      </Select>
+                      <FormHelperText>{errors.type?.message}</FormHelperText>
+                    </FormControl>
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='status'
+                  control={control}
+                  render={({ field }) => (
+                    <FormControl fullWidth error={!!errors.status}>
+                      <InputLabel>Estado</InputLabel>
+                      <Select {...field} label="Estado">
+                        <MenuItem value='1'>Activo</MenuItem>
+                        <MenuItem value='0'>Inactivo</MenuItem>
+                      </Select>
+                      <FormHelperText>{errors.status?.message}</FormHelperText>
+                    </FormControl>
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Controller
+                  name='address'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField {...field} fullWidth label='Dirección Física' multiline rows={2} error={!!errors.address} helperText={errors.address?.message} />
+                  )}
+                />
+              </Grid>
 
-            {/* === SECCIÓN TIPO DE NEGOCIO === */}
-            <Grid item xs={12} className='mt-4'>
-              <Typography variant="subtitle1" fontWeight="bold" color="primary">
-                🏢 Tipo de Negocio
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-            </Grid>
+              {/* Contrato Section */}
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }}>Contrato</Divider>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='fechaInicio'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField {...field} fullWidth type='date' label='Fecha Inicio' InputLabelProps={{ shrink: true }} error={!!errors.fechaInicio} helperText={errors.fechaInicio?.message} />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='fechaFinal'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField {...field} fullWidth type='date' label='Fecha Final' InputLabelProps={{ shrink: true }} error={!!errors.fechaFinal} helperText={errors.fechaFinal?.message} />
+                  )}
+                />
+              </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='businessType'
-                control={control}
-                render={({ field }) => (
-                  <FormControl fullWidth>
-                    <InputLabel>Tipo de Negocio</InputLabel>
-                    <Select
-                      {...field}
-                      value={editData ? editData.businessType || '' : ''}
-                      onChange={e => {
-                        setEditData({ ...editData, businessType: e.target.value })
-                        setValue('businessType', e.target.value)
-                      }}
-                    >
-                      <MenuItem value=''>-- Selecciona tipo de negocio --</MenuItem>
-                      {BUSINESS_TYPE_OPTIONS.map(option => (
-                        <MenuItem key={option.value} value={option.value}>
-                          {option.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                )}
-              />
-            </Grid>
+              {/* Contacto & Cargo */}
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='contact'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField {...field} fullWidth label='Nombre Contacto' error={!!errors.contact} helperText={errors.contact?.message} />
+                  )}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='position'
+                  control={control}
+                  render={({ field }) => (
+                    <TextField {...field} fullWidth label='Cargo Contacto' error={!!errors.position} helperText={errors.position?.message} />
+                  )}
+                />
+              </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1, height: '100%' }}>
-                {editData?.businessType ? (
-                  <Typography variant="body2" color="text.secondary">
-                    {BUSINESS_TYPE_OPTIONS.find(o => o.value === editData.businessType)?.description || 'Selecciona un tipo de negocio'}
-                  </Typography>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    Selecciona el tipo de negocio para ver la descripción
-                  </Typography>
-                )}
-              </Box>
+              {/* Business Type */}
+              <Grid item xs={12} sm={6}>
+                <Controller
+                  name='businessType'
+                  control={control}
+                  render={({ field }) => (
+                    <FormControl fullWidth>
+                      <InputLabel>Tipo de Negocio</InputLabel>
+                      <Select {...field} label="Tipo de Negocio">
+                        <MenuItem value=''>Ninguno</MenuItem>
+                        {BUSINESS_TYPE_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+                      </Select>
+                    </FormControl>
+                  )}
+                />
+              </Grid>
             </Grid>
+          </CustomTabPanel>
 
-            <Grid item xs={12}>
-              <Controller
-                name='businessDescription'
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    value={editData ? editData.businessDescription || '' : ''}
-                    onChange={e => {
-                      setEditData({ ...editData, businessDescription: e.target.value })
-                      setValue('businessDescription', e.target.value)
-                    }}
-                    label='Descripción del Negocio / Objeto Social'
-                    placeholder='Describe brevemente a qué se dedica tu negocio, productos o servicios que ofreces...'
-                    multiline
-                    rows={3}
-                    helperText='Esta información ayuda a personalizar la experiencia del sistema'
+          {/* TAB 2: DIAN */}
+          <CustomTabPanel value={tabValue} index={1}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Box sx={{ bgcolor: 'primary.lighter', p: 2, borderRadius: 1, mb: 2 }}>
+                  <Controller
+                    name='esEmisorFE'
+                    control={control}
+                    render={({ field }) => (
+                      <FormControlLabel
+                        control={<Checkbox {...field} checked={field.value} />}
+                        label={<Typography fontWeight="bold">Habilitar Facturación Electrónica DIAN</Typography>}
+                      />
+                    )}
                   />
-                )}
-              />
-            </Grid>
+                  <Controller
+                    name='esEmisorPrincipal'
+                    control={control}
+                    render={({ field }) => (
+                      <FormControlLabel
+                        control={<Checkbox {...field} checked={field.value} disabled={!watchEsEmisorFE} />}
+                        label="Es Emisor Principal (Tenant Master)"
+                      />
+                    )}
+                  />
+                </Box>
+              </Grid>
 
-            {/* === SECCIÓN CONTRATO === */}
-            <Grid item xs={12} sm={12} className='my-4'>
-              <Typography>
-                <b>Contrato</b>
-              </Typography>
+              {watchEsEmisorFE && (
+                <>
+                  <Grid item xs={12}><Typography variant="subtitle2" color="primary">Identificación Tributaria</Typography></Grid>
+                  <Grid item xs={12} sm={8}>
+                    <Controller
+                      name='tipoDocumentoDian'
+                      control={control}
+                      render={({ field }) => (
+                        <FormControl fullWidth error={!!errors.tipoDocumentoDian}>
+                          <InputLabel>Tipo Documento DIAN</InputLabel>
+                          <Select {...field} label="Tipo Documento DIAN">
+                            {TIPO_DOCUMENTO_DIAN_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+                          </Select>
+                          <FormHelperText>{errors.tipoDocumentoDian?.message}</FormHelperText>
+                        </FormControl>
+                      )}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <Controller
+                      name='digitoVerificacion'
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          fullWidth
+                          label='DV'
+                          error={!!errors.digitoVerificacion}
+                          helperText={errors.digitoVerificacion?.message}
+                          inputProps={{ maxLength: 1 }}
+                        />
+                      )}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}><Typography variant="subtitle2" color="primary">Razón Social y Nombres</Typography></Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Controller
+                      name='razonSocial'
+                      control={control}
+                      render={({ field }) => (
+                        <TextField {...field} fullWidth label='Razón Social (Legal)' error={!!errors.razonSocial} helperText={errors.razonSocial?.message} />
+                      )}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Controller
+                      name='nombreComercial'
+                      control={control}
+                      render={({ field }) => (
+                        <TextField {...field} fullWidth label='Nombre Comercial' />
+                      )}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}><Typography variant="subtitle2" color="primary">Ubicación Geográfica (DANE)</Typography></Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Controller
+                      name='codigoDaneDepartamento'
+                      control={control}
+                      render={({ field }) => (
+                        <FormControl fullWidth error={!!errors.codigoDaneDepartamento}>
+                          <InputLabel>Departamento</InputLabel>
+                          <Select {...field} label="Departamento">
+                            {departamentos.map(d => <MenuItem key={d.codigo} value={d.codigo}>{d.nombre}</MenuItem>)}
+                          </Select>
+                          <FormHelperText>{errors.codigoDaneDepartamento?.message}</FormHelperText>
+                        </FormControl>
+                      )}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Controller
+                      name='codigoDaneCiudad'
+                      control={control}
+                      render={({ field }) => (
+                        <FormControl fullWidth error={!!errors.codigoDaneCiudad} disabled={!watchDepartamento || loadingDane}>
+                          <InputLabel>Ciudad</InputLabel>
+                          <Select {...field} label="Ciudad">
+                            {ciudades.map(c => <MenuItem key={c.codigo} value={c.codigo}>{c.nombre}</MenuItem>)}
+                          </Select>
+                          <FormHelperText>{errors.codigoDaneCiudad?.message}</FormHelperText>
+                        </FormControl>
+                      )}
+                    />
+                  </Grid>
+                  <Grid item xs={12}><Controller name='address' control={control} render={({ field }) => <TextField {...field} disabled fullWidth label="Dirección Confirmada" value={watch('address')} />} /></Grid>
+
+                  <Grid item xs={12}><Typography variant="subtitle2" color="primary">Responsabilidades Fiscales</Typography></Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Controller
+                      name='regimenFiscal'
+                      control={control}
+                      render={({ field }) => (
+                        <FormControl fullWidth error={!!errors.regimenFiscal}>
+                          <InputLabel>Régimen Fiscal</InputLabel>
+                          <Select {...field} label="Régimen Fiscal">
+                            {REGIMEN_FISCAL_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+                          </Select>
+                          <FormHelperText>{errors.regimenFiscal?.message}</FormHelperText>
+                        </FormControl>
+                      )}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Controller
+                      name='responsabilidadesFiscales'
+                      control={control}
+                      render={({ field }) => (
+                        <FormControl fullWidth error={!!errors.responsabilidadesFiscales}>
+                          <InputLabel>Responsabilidades</InputLabel>
+                          <Select {...field} label="Responsabilidades">
+                            {RESPONSABILIDADES_FISCALES_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+                          </Select>
+                          <FormHelperText>{errors.responsabilidadesFiscales?.message}</FormHelperText>
+                        </FormControl>
+                      )}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}><Typography variant="subtitle2" color="primary">Datos Facturación</Typography></Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Controller
+                      name='emailFacturacionDian'
+                      control={control}
+                      render={({ field }) => (
+                        <TextField {...field} fullWidth label='Email Facturación Electrónica' error={!!errors.emailFacturacionDian} helperText={errors.emailFacturacionDian?.message} />
+                      )}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Controller
+                      name='sitioWeb'
+                      control={control}
+                      render={({ field }) => (
+                        <TextField {...field} fullWidth label='Sitio Web' />
+                      )}
+                    />
+                  </Grid>
+                </>
+              )}
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='fechaInicio'
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    label='Fecha inicial'
-                    value={editData?.contrato?.fechaInicio ? editData.contrato?.fechaInicio : ''}
-                    onChange={e => {
-                      setEditData({
-                        ...editData,
-                        contrato: {
-                          ...editData.contrato,
-                          fechaInicio: e.target.value
-                        }
-                      })
-                      setValue('fechaInicio', e.target.value)
-                    }}
-                    type='date'
-                    InputLabelProps={{ shrink: true }}
-                    error={!!errors.fechaInicio}
-                    helperText={errors.fechaInicio?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <Controller
-                name='fechaFinal'
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    value={editData?.contrato?.fechaFinal ? editData.contrato?.fechaFinal : ''}
-                    onChange={e => {
-                      setEditData({
-                        ...editData,
-                        contrato: {
-                          ...editData.contrato,
-                          fechaFinal: e.target.value
-                        }
-                      })
-                      setValue('fechaFinal', e.target.value)
-                    }}
-                    label='Fecha final'
-                    type='date'
-                    InputLabelProps={{ shrink: true }}
-                    error={!!errors.fechaFinal}
-                    helperText={errors.fechaFinal?.message}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Divider className='my-4' />
-              <Controller
-                name='descripcionContrato'
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    value={editData?.contrato?.descripcionContrato ? editData.contrato.descripcionContrato : ''}
-                    onChange={e => {
-                      setEditData({
-                        ...editData,
-                        contrato: {
-                          ...editData.contrato,
-                          descripcionContrato: e.target.value
-                        }
-                      })
-                      setValue('descripcionContrato', e.target.value)
-                    }}
-                    label='Descripción'
-                    multiline
-                    maxRows={4}
-                    error={!!errors.descripcionContrato}
-                    helperText={errors.descripcionContrato?.message}
-                  />
-                )}
-              />
-            </Grid>
-          </Grid>
+          </CustomTabPanel>
+
         </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} color='secondary'>
-          Cerrar
+          Cancelar
         </Button>
-        <Button type='submit' variant='contained' color='primary' onClick={handleSubmit(onSubmit)}>
-          Guardar datos
+        <Button variant='contained' color='primary' onClick={handleSubmit(onSubmit)}>
+          Guardar Cliente
         </Button>
       </DialogActions>
     </Dialog>

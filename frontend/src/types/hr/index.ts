@@ -220,6 +220,10 @@ export interface PayrollReceipt {
 
     // Auxiliares
     isPaid: boolean
+
+    // Contabilidad
+    accountingGenerated?: boolean
+    accountingVoucherId?: number
 }
 
 // ... (PageResponse existing content)

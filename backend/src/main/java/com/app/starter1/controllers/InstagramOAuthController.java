@@ -1,11 +1,13 @@
 package com.app.starter1.controllers;
 
 import com.app.starter1.dto.SystemConfigDTO;
+import com.app.starter1.dto.CustomerConfigDTO;
 import com.app.starter1.persistence.entity.Channel;
 import com.app.starter1.persistence.entity.Customer;
 import com.app.starter1.persistence.repository.ChannelRepository;
 import com.app.starter1.persistence.repository.CustomerRepository;
 import com.app.starter1.services.SystemConfigService;
+import com.app.starter1.services.CustomerConfigService;
 import com.app.starter1.utils.UserMethods;
 import com.app.starter1.utils.OAuthStateManager;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -29,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class InstagramOAuthController {
 
     private final SystemConfigService systemConfigService;
+    private final CustomerConfigService customerConfigService;
     private final ChannelRepository channelRepository;
     private final CustomerRepository customerRepository;
     private final UserMethods userMethods;
@@ -39,56 +42,69 @@ public class InstagramOAuthController {
     /**
      * GET /api/channels/instagram/auth-url
      * Generar URL de autorización para Instagram
+     * ACTUALIZADO: Usa Facebook Login for Business con config_id
      */
     @GetMapping("/auth-url")
     public ResponseEntity<?> getAuthorizationUrl() {
         try {
-            log.info("🔑 [IG-OAUTH] Generating Instagram authorization URL");
+            log.info("🔑 [IG-OAUTH] Generating authorization URL (Login for Business)");
 
-            SystemConfigDTO config = systemConfigService.getSystemConfig();
+            Long tenantId = userMethods.getTenantId();
 
-            if (config.getFacebookEnabled() == null || !config.getFacebookEnabled()) {
+            // Obtener configuración del tenant
+            CustomerConfigDTO customerConfig = customerConfigService.getCustomerConfigInternal(tenantId);
+
+            // Verificar que Instagram esté habilitado y configurado
+            if (!customerConfig.getInstagramEnabled()) {
                 return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Facebook/Instagram integration not enabled"));
+                        .body(Map.of("error", "Instagram integration is not enabled for this tenant"));
             }
 
-            if (config.getFacebookAppId() == null) {
+            if (customerConfig.getInstagramLoginConfigId() == null ||
+                    customerConfig.getInstagramLoginConfigId().isEmpty()) {
                 return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Facebook App ID not configured"));
+                        .body(Map.of(
+                                "error", "instagram_not_configured",
+                                "message",
+                                "Instagram Login for Business no está configurado. Configure el 'config_id' en la configuración del tenant."));
             }
 
-            String frontendUrl = config.getFrontendUrl();
+            // Obtener configuración global del sistema
+            SystemConfigDTO systemConfig = systemConfigService.getSystemConfig();
+
+            // Determinar qué App ID usar
+            String appId = customerConfig.getInstagramAppId() != null
+                    ? customerConfig.getInstagramAppId()
+                    : (customerConfig.getFacebookAppId() != null
+                            ? customerConfig.getFacebookAppId()
+                            : systemConfig.getFacebookAppId());
+
+            if (appId == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Instagram/Facebook App ID not configured"));
+            }
+
+            String frontendUrl = systemConfig.getFrontendUrl();
             if (frontendUrl == null || frontendUrl.isEmpty()) {
                 frontendUrl = "http://localhost:3000";
             }
 
             String redirectUri = frontendUrl + "/comunicaciones/canales";
-
-            Long tenantId = userMethods.getTenantId();
             String state = generateStateToken(tenantId);
 
-            // Usar los mismos permisos de Facebook (que ya funcionan) + permisos de
-            // Instagram
-            String scopes = String.join(",", List.of(
-                    "pages_show_list",
-                    "pages_messaging",
-                    "pages_manage_metadata",
-                    "pages_read_engagement",
-                    "instagram_basic",
-                    "instagram_manage_messages"));
-
+            // Usar Facebook Login for Business con config_id para Instagram
             String authUrl = UriComponentsBuilder
-                    .fromHttpUrl("https://www.facebook.com/" + config.getFacebookApiVersion() + "/dialog/oauth")
-                    .queryParam("client_id", config.getFacebookAppId())
+                    .fromHttpUrl("https://www.facebook.com/" + systemConfig.getFacebookApiVersion() + "/dialog/oauth")
+                    .queryParam("client_id", appId)
                     .queryParam("redirect_uri", redirectUri)
                     .queryParam("state", state)
-                    .queryParam("scope", scopes)
-                    .queryParam("auth_type", "rerequest")
+                    .queryParam("config_id", customerConfig.getInstagramLoginConfigId())
                     .queryParam("response_type", "code")
                     .build()
                     .toUriString();
 
-            log.info("✅ [IG-OAUTH] Authorization URL generated for Instagram");
+            log.info("✅ [IG-OAUTH] Authorization URL generated with config_id: {}",
+                    customerConfig.getInstagramLoginConfigId());
 
             return ResponseEntity.ok(Map.of(
                     "authUrl", authUrl,
@@ -128,9 +144,27 @@ public class InstagramOAuthController {
 
             log.info("✅ [IG-OAUTH] State validated successfully for tenant: {}", tenantId);
 
-            SystemConfigDTO config = systemConfigService.getSystemConfigInternal();
+            // Obtener configuración del tenant y del sistema
+            CustomerConfigDTO customerConfig = customerConfigService.getCustomerConfigInternal(tenantId);
+            SystemConfigDTO systemConfig = systemConfigService.getSystemConfigInternal();
 
-            String frontendUrl = config.getFrontendUrl();
+            // Determinar qué credenciales usar
+            String appId = customerConfig.getInstagramAppId() != null
+                    ? customerConfig.getInstagramAppId()
+                    : (customerConfig.getFacebookAppId() != null
+                            ? customerConfig.getFacebookAppId()
+                            : systemConfig.getFacebookAppId());
+
+            String appSecret = customerConfig.getFacebookAppSecret() != null
+                    ? customerConfig.getFacebookAppSecret()
+                    : systemConfig.getFacebookAppSecret();
+
+            if (appId == null || appSecret == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Instagram/Facebook App credentials not configured"));
+            }
+
+            String frontendUrl = systemConfig.getFrontendUrl();
             if (frontendUrl == null || frontendUrl.isEmpty()) {
                 frontendUrl = "http://localhost:3000";
             }
@@ -138,17 +172,10 @@ public class InstagramOAuthController {
             String redirectUri = frontendUrl + "/comunicaciones/canales";
 
             // 1. Intercambiar código por access token
-            String shortLivedToken = exchangeCodeForToken(
-                    code,
-                    config.getFacebookAppId(),
-                    config.getFacebookAppSecret(),
-                    redirectUri);
+            String shortLivedToken = exchangeCodeForToken(code, appId, appSecret, redirectUri);
 
             // 2. Token de larga duración
-            String longLivedToken = exchangeForLongLivedToken(
-                    shortLivedToken,
-                    config.getFacebookAppId(),
-                    config.getFacebookAppSecret());
+            String longLivedToken = exchangeForLongLivedToken(shortLivedToken, appId, appSecret);
 
             // 3. Obtener páginas de Facebook vinculadas
             List<Map<String, Object>> pages = getUserPages(longLivedToken);

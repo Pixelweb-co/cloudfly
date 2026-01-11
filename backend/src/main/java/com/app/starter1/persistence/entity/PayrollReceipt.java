@@ -149,18 +149,42 @@ public class PayrollReceipt {
     @Column(name = "status", length = 20, nullable = false)
     private ReceiptStatus status = ReceiptStatus.PENDING;
 
-    // === TIMBRADO CFDI (México) ===
-    @Column(name = "uuid", length = 36)
-    private String uuid; // UUID del CFDI
+    // === NÓMINA ELECTRÓNICA DIAN ===
+    @Column(name = "cune", length = 500)
+    private String cune; // Código Único de Nómina Electrónica
 
-    @Column(name = "xml_path", length = 255)
-    private String xmlPath;
+    @Column(name = "consecutive", length = 20)
+    private Long consecutive; // Consecutivo DIAN
 
-    @Column(name = "pdf_path", length = 255)
-    private String pdfPath;
+    @Column(name = "payroll_type", length = 20)
+    @Builder.Default
+    private String payrollType = "102"; // 102=Nómina Individual, 103=Nota Ajuste
 
-    @Column(name = "stamped_at")
-    private LocalDateTime stampedAt;
+    @Column(name = "payment_method", length = 2)
+    @Builder.Default
+    private String paymentMethod = "1"; // 1=Efectivo, 10=Cheque, 42=Consignación
+
+    @Column(name = "dian_status", length = 20)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private DianStatus dianStatus = DianStatus.PENDING;
+
+    @Column(name = "dian_message", columnDefinition = "TEXT")
+    private String dianMessage;
+
+    @Lob
+    @Column(name = "xml_dian", columnDefinition = "LONGBLOB")
+    private byte[] xmlDian;
+
+    @Lob
+    @Column(name = "xml_response", columnDefinition = "LONGBLOB")
+    private byte[] xmlResponse;
+
+    @Column(name = "qr_code", columnDefinition = "TEXT")
+    private String qrCode;
+
+    @Column(name = "sent_at")
+    private LocalDateTime sentAt;
 
     // === PAGO ===
     @Column(name = "paid_at")
@@ -169,9 +193,21 @@ public class PayrollReceipt {
     @Column(name = "payment_reference", length = 100)
     private String paymentReference; // Referencia bancaria del pago
 
+    // === PDF STORAGE ===
+    @Column(name = "pdf_path", length = 500)
+    private String pdfPath; // Ruta del PDF generado
+
     // === NOTAS ===
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
+
+    // Accounting Integration
+    @Column(name = "contabilidad_generada")
+    @Builder.Default
+    private Boolean accountingGenerated = false;
+
+    @Column(name = "asiento_contable_id")
+    private Long accountingVoucherId;
 
     // === FECHAS DE CONTROL ===
     @CreationTimestamp
@@ -187,6 +223,42 @@ public class PayrollReceipt {
         PENDING, // Generado, pendiente de pago
         PAID, // Pagado y notificado
         CANCELLED // Cancelado
+    }
+
+    // === DETALLES DE NÓMINA (RELACIONES DIAN) ===
+    @OneToMany(mappedBy = "payrollReceipt", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<PayrollDevengado> devengados = new java.util.ArrayList<>();
+
+    @OneToMany(mappedBy = "payrollReceipt", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<PayrollDeduccion> deducciones = new java.util.ArrayList<>();
+
+    @OneToOne(mappedBy = "payrollReceipt", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private PayrollTotales totales;
+
+    public enum DianStatus {
+        PENDING,
+        SENT,
+        ACCEPTED,
+        REJECTED,
+        ERROR
+    }
+
+    // Métodos helper de colección
+    public void addDevengado(PayrollDevengado devengado) {
+        devengados.add(devengado);
+        devengado.setPayrollReceipt(this);
+    }
+
+    public void addDeduccion(PayrollDeduccion deduccion) {
+        deducciones.add(deduccion);
+        deduccion.setPayrollReceipt(this);
+    }
+
+    public void setTotales(PayrollTotales totales) {
+        this.totales = totales;
+        totales.setPayrollReceipt(this);
     }
 
     // Métodos helper

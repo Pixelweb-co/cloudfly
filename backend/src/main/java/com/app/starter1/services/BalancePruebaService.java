@@ -93,7 +93,7 @@ public class BalancePruebaService {
                         .accountCode(account.getCode())
                         .accountName(account.getName())
                         .accountType(account.getAccountType())
-                        .nature(account.getNature())
+                        .nature(account.getNature() != null ? account.getNature().name() : null)
                         .level(account.getLevel())
                         .debitMovement(debitMovement)
                         .creditMovement(creditMovement)
