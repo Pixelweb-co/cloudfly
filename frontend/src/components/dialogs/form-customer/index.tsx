@@ -134,7 +134,9 @@ const schema = yup.object().shape({
     is: true,
     then: (schema) => schema.required('Email facturación requerido'),
     otherwise: (schema) => schema.optional()
-  })
+  }),
+
+  sitioWeb: yup.string().optional()
 })
 
 interface TabPanelProps {
