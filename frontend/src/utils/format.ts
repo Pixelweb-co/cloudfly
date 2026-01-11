@@ -80,7 +80,7 @@ export const abbreviateNumber = (value: number): string => {
     return value.toString()
 }
 
-export default {
+const formatUtils = {
     formatCurrency,
     formatNumber,
     formatPercent,
@@ -88,3 +88,5 @@ export default {
     formatRelativeTime,
     abbreviateNumber
 }
+
+export default formatUtils
