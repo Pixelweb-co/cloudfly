@@ -64,23 +64,40 @@ public class FacebookOAuthController {
             // Obtener configuración del tenant
             CustomerConfigDTO customerConfig = customerConfigService.getCustomerConfigInternal(tenantId);
 
+            // Obtener configuración global del sistema
+            SystemConfigDTO systemConfig = systemConfigService.getSystemConfig();
+
             // Verificar que Facebook esté habilitado y configurado
-            if (!customerConfig.getFacebookEnabled()) {
+            // Relaxed check: Si el tenant tiene false, pero el sistema tiene true y config
+            // válida, permitimos.
+            boolean isTenantEnabled = customerConfig.getFacebookEnabled() != null
+                    && customerConfig.getFacebookEnabled();
+            boolean isSystemEnabled = systemConfig.getFacebookEnabled() != null && systemConfig.getFacebookEnabled();
+
+            if (!isTenantEnabled && !isSystemEnabled) {
                 return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Facebook integration is not enabled for this tenant"));
+                        .body(Map.of("error", "Facebook integration is not enabled for this tenant or system"));
             }
 
-            if (customerConfig.getFacebookLoginConfigId() == null ||
-                    customerConfig.getFacebookLoginConfigId().isEmpty()) {
+            // 1. Validar config_id (usar tenant o fallback a global)
+            String configId = customerConfig.getFacebookLoginConfigId();
+
+            // Si no hay config a nivel de tenant, buscar a nivel de sistema
+            if (configId == null || configId.isEmpty()) {
+                if (systemConfig.getFacebookLoginConfigId() != null
+                        && !systemConfig.getFacebookLoginConfigId().isEmpty()) {
+                    configId = systemConfig.getFacebookLoginConfigId();
+                    log.info("ℹ️ [FB-OAUTH] Using system global config_id: {}", configId);
+                }
+            }
+
+            if (configId == null || configId.isEmpty()) {
                 return ResponseEntity.badRequest()
                         .body(Map.of(
                                 "error", "facebook_not_configured",
                                 "message",
-                                "Facebook Login for Business no está configurado. Configure el 'config_id' en la configuración del tenant."));
+                                "Facebook Login for Business no está configurado. Configure el 'config_id' en la configuración del tenant o del sistema."));
             }
-
-            // Obtener configuración global del sistema
-            SystemConfigDTO systemConfig = systemConfigService.getSystemConfig();
 
             // Determinar qué App ID usar (tenant o global)
             String appId = customerConfig.getFacebookAppId() != null
@@ -107,7 +124,7 @@ public class FacebookOAuthController {
                     .queryParam("client_id", appId)
                     .queryParam("redirect_uri", redirectUri)
                     .queryParam("state", state)
-                    .queryParam("config_id", customerConfig.getFacebookLoginConfigId()) // ⬅️ CAMBIO CLAVE
+                    .queryParam("config_id", configId) // ⬅️ CAMBIO CLAVE
                     .queryParam("response_type", "code")
                     .build()
                     .toUriString();

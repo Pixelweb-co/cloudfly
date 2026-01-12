@@ -1,8 +1,6 @@
 package com.app.starter1.persistence.repository.rbac;
 
 import com.app.starter1.persistence.entity.rbac.RbacModule;
-import com.app.starter1.persistence.entity.rbac.Role;
-import com.app.starter1.persistence.entity.rbac.RolePermission;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
