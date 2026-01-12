@@ -180,7 +180,8 @@ public class SystemConfigService {
                 .facebookAppId(entity.getFacebookAppId())
                 .facebookAppSecret(maskSecret(entity.getFacebookAppSecret()))
                 .facebookRedirectUri(entity.getFacebookRedirectUri())
-                .facebookWebhookVerifyToken(maskSecret(entity.getFacebookWebhookVerifyToken()))
+                .facebookWebhookVerifyToken(entity.getFacebookWebhookVerifyToken()) // SIN MÁSCARA - debe mostrarse
+                                                                                    // completo
                 .facebookApiVersion(entity.getFacebookApiVersion())
                 .facebookLoginConfigId(entity.getFacebookLoginConfigId()) // Config ID global
                 .facebookEnabled(entity.getFacebookEnabled())
