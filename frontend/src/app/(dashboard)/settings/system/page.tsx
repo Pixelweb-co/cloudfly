@@ -50,6 +50,7 @@ interface SystemConfig {
     facebookRedirectUri?: string
     facebookWebhookVerifyToken?: string
     facebookApiVersion?: string
+    facebookLoginConfigId?: string
     facebookEnabled?: boolean
 }
 
@@ -76,6 +77,7 @@ export default function SystemConfigPage() {
         facebookRedirectUri: '',
         facebookWebhookVerifyToken: '',
         facebookApiVersion: 'v18.0',
+        facebookLoginConfigId: '',
         facebookEnabled: false
     })
 
@@ -403,8 +405,8 @@ export default function SystemConfigPage() {
                             <Typography variant="body2">
                                 1. Ve a <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener">Facebook for Developers</a><br />
                                 2. Selecciona tu app<br />
-                                3. Ve a "Configuración → Básica"<br />
-                                4. Copia el App ID y App Secret<br />
+                                3. Ve a "Configuración → Básica" para obtener App ID y App Secret<br />
+                                4. Ve a "Facebook Login for Business → Settings" para obtener el <b>Configuration ID</b> (Requerido)<br />
                                 5. Configura el Redirect URI y Webhook Verify Token
                             </Typography>
                         </Alert>
@@ -447,7 +449,19 @@ export default function SystemConfigPage() {
                                 />
                             </Grid>
 
-                            <Grid item xs={12}>
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Facebook Login Config ID"
+                                    value={config.facebookLoginConfigId || ''}
+                                    onChange={handleChange('facebookLoginConfigId')}
+                                    placeholder="12345678..."
+                                    helperText="Requerido para Facebook Login for Business (Generado en panel de FB Develop)"
+                                    required
+                                />
+                            </Grid>
+
+                            <Grid item xs={12} md={6}>
                                 <TextField
                                     fullWidth
                                     label="Redirect URI (OAuth Callback)"
