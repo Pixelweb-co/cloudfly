@@ -36,7 +36,7 @@ import type { RankingInfo } from '@tanstack/match-sorter-utils'
 
 // Type Imports
 import TablePaginationComponent from '@components/TablePaginationComponent'
-import type { CustomersType } from '@/types/apps/customerType'
+import type { CustomersType } from '@/types/customers'
 import ClienteForm from '@/components/dialogs/form-customer'
 
 // Component Imports
