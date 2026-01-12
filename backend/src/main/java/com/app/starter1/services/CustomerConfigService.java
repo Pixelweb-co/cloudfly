@@ -41,8 +41,9 @@ public class CustomerConfigService {
     /**
      * Obtener configuración SIN enmascarar secretos
      * Para uso interno del backend (OAuth, webhooks, etc.)
+     * Usa transacción de escritura porque puede crear config si no existe
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public CustomerConfigDTO getCustomerConfigInternal(Long tenantId) {
         log.info("🔓 [CUSTOMER-CONFIG] Fetching config (unmasked) for tenant: {}", tenantId);
 
