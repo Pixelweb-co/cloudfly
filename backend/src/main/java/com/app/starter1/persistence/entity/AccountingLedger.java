@@ -36,7 +36,7 @@ public class AccountingLedger {
     private AccountingFiscalPeriod fiscalPeriod;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "account_code", referencedColumnName = "code", nullable = false)
+    @JoinColumn(name = "account_code", referencedColumnName = "code", nullable = false, columnDefinition = "VARCHAR(10)")
     private ChartOfAccount account;
 
     @ManyToOne(fetch = FetchType.LAZY)
