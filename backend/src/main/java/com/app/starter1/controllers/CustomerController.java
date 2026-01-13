@@ -88,7 +88,7 @@ public class CustomerController {
     // GET CUSTOMER BY ID
     @GetMapping("/{id}")
     public ResponseEntity<Customer> getCustomerById(@PathVariable Long id) {
-        return ResponseEntity.ok(customerRepository.getById(id));
+        return ResponseEntity.ok(customerService.getById(id));
     }
 
     // UPDATE CUSTOMER
