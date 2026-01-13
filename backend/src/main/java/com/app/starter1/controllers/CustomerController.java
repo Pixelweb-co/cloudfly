@@ -106,7 +106,14 @@ public class CustomerController {
         updatedCustomer.setContact((String) payload.get("contact"));
         updatedCustomer.setPosition((String) payload.get("position"));
         updatedCustomer.setType((String) payload.get("type"));
-        updatedCustomer.setStatus(Boolean.valueOf((String) payload.get("status")));
+        Object statusObj = payload.get("status");
+        if (statusObj instanceof Boolean) {
+            updatedCustomer.setStatus((Boolean) statusObj);
+        } else if (statusObj instanceof String) {
+            updatedCustomer.setStatus(Boolean.valueOf((String) statusObj));
+        } else {
+            updatedCustomer.setStatus(false);
+        }
         updatedCustomer.setLogoUrl((String) payload.get("logoUrl"));
         updatedCustomer.setBusinessType(
                 payload.get("businessType") != null ? com.app.starter1.persistence.entity.Customer.BusinessType
