@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.context.ApplicationEventPublisher;
+import com.app.starter1.events.InvoiceCreatedEvent;
 
 @Service
 public class InvoiceService {
@@ -30,6 +32,9 @@ public class InvoiceService {
 
     @Autowired
     private com.app.starter1.services.AccountingIntegrationService accountingIntegrationService;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public InvoiceResponseDTO createInvoice(InvoiceRequestDTO request) {
@@ -127,6 +132,9 @@ public class InvoiceService {
             System.err.println("Error generating accounting voucher: " + e.getMessage());
             e.printStackTrace();
         }
+
+        // Publicar evento para Cartera
+        eventPublisher.publishEvent(new InvoiceCreatedEvent(this, savedInvoice));
 
         return mapToDTO(savedInvoice);
     }

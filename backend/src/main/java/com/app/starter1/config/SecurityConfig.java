@@ -74,6 +74,9 @@ public class SecurityConfig {
                                         http.requestMatchers("/v3/api-docs/**").permitAll();
                                         http.requestMatchers("/swagger-ui/**").permitAll();
                                         http.requestMatchers("/swagger-ui.html").permitAll();
+                                        http.requestMatchers("/swagger-resources/**").permitAll();
+                                        http.requestMatchers("/webjars/**").permitAll();
+                                        http.requestMatchers("/favicon.ico").permitAll();
 
                                         // Chatbot configuración (todos los roles autenticados)
                                         http.requestMatchers(HttpMethod.GET, "/api/chatbot/**").hasAnyRole("SUPERADMIN",

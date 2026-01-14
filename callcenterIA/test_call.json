@@ -1,0 +1,7 @@
+{
+    "number": "1003",
+    "customer_name": "Edwin",
+    "agent_context": "Hola Edwin, te llamamos para recordarte que tienes una factura pendiente numero 2025 por valor de 25,000 pesos. El vencimiento es el 20 de enero. Podrias confirmar si realizaras el pago pronto?",
+    "tenant_id": "cobranzas_2025",
+    "subject": "Recordatorio factura 2025"
+}

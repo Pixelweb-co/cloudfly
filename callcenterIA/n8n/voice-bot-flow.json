@@ -1,0 +1,195 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "telefono-ia",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "c9b89736-3084-479d-9590-aeba88c9b142",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                -200,
+                -100
+            ],
+            "webhookId": "719b8aee-8146-4733-9253-225be8b2c797"
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ {\n  \"call_id\": $('Webhook').item.json.body.call_id,\n  \"response\": $json.output,\n  \"timestamp\": new Date().toISOString()\n} }}",
+                "options": {}
+            },
+            "id": "2b748ae3-a29d-4d6e-ad2f-313ea1836d89",
+            "name": "Response",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                800,
+                -100
+            ]
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "=El usuario dice: {{ $json.body.text }}",
+                "options": {
+                    "systemMessage": "Eres Laura, una asistente de cobranza profesional y amable. Tu objetivo es realizar recordatorios de pago de forma cordial.\n\nInstrucciones:\n1. Al iniciar, saluda al cliente por su nombre (si está disponible) y menciona que llamas de parte de la florería para un recordatorio de pago pendiente.\n2. Mantén un tono respetuoso pero firme. Tu meta es que el cliente confirme cuándo podrá realizar el pago.\n3. Responde de forma muy breve y conversacional (máximo 2 frases).\n4. Usa la herramienta 'Colgar_llamada' cuando la gestión termine o el cliente se despida."
+                }
+            },
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 3.1,
+            "position": [
+                250,
+                -100
+            ],
+            "id": "0c98ad4c-4c81-4192-9795-66ec910aff29",
+            "name": "AI Agent"
+        },
+        {
+            "parameters": {
+                "model": {
+                    "__rl": true,
+                    "value": "gpt-4o-mini",
+                    "mode": "list",
+                    "cachedResultName": "gpt-4o-mini"
+                },
+                "builtInTools": {},
+                "options": {
+                    "maxTokens": -1
+                }
+            },
+            "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+            "typeVersion": 1.3,
+            "position": [
+                50,
+                100
+            ],
+            "id": "721b01d1-4086-4493-b62e-4147bb830f33",
+            "name": "OpenAI Chat Model",
+            "credentials": {
+                "openAiApi": {
+                    "id": "OciBWIWjOBAuFhUg",
+                    "name": "OpenAi account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "sessionIdType": "customKey",
+                "sessionKey": "={{ $json.body.call_id }}"
+            },
+            "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+            "typeVersion": 1.3,
+            "position": [
+                250,
+                100
+            ],
+            "id": "6a2a92c8-618c-4f58-898b-1a75070834a9",
+            "name": "Simple Memory"
+        },
+        {
+            "parameters": {},
+            "type": "@n8n/n8n-nodes-langchain.toolThink",
+            "typeVersion": 1.1,
+            "position": [
+                450,
+                150
+            ],
+            "id": "c9004395-f14e-4db8-a23f-43884644fa28",
+            "name": "Think"
+        },
+        {
+            "parameters": {
+                "toolDescription": "Llama a esta herramienta solo cuando debas terminar la llamada porque el cliente se despidió o la gestión terminó.",
+                "method": "POST",
+                "url": "=http://TU_IP_O_DOMINIO:5000/hangup/{{ $json.body.call_id }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequestTool",
+            "typeVersion": 4.3,
+            "position": [
+                600,
+                100
+            ],
+            "id": "efce52cd-98e8-4d51-884f-0f16fc507c0f",
+            "name": "Colgar_llamada"
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "AI Agent": {
+            "main": [
+                [
+                    {
+                        "node": "Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenAI Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Simple Memory": {
+            "ai_memory": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_memory",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Think": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Colgar_llamada": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "AI Agent",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "3632f15870c3e4f82bb1e33b5629b6fe38f071fc4080eb549201a594a7caa028"
+    }
+}

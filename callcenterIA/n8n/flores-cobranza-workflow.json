@@ -1,0 +1,156 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "hours"
+                        }
+                    ]
+                }
+            },
+            "id": "32638400-10ef-4afa-9224-4306376aafa5",
+            "name": "Cada Hora",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                -1008,
+                144
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://192.168.255.6:5000/call",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "number",
+                            "value": "1001"
+                        },
+                        {
+                            "name": "customer_name",
+                            "value": "Edwin"
+                        },
+                        {
+                            "name": "agent_context",
+                            "value": "cobro de las flores"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "ecd3d960-30f3-4393-a5ac-b11987384d46",
+            "name": "POST Llamada",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                -800,
+                144
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.success }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "a69c0541-f791-420d-a3f4-b56f59e6cd44",
+            "name": "IF Success",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                -576,
+                144
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "jsonOutput"
+            },
+            "id": "c99bd76f-1dd9-49ef-982d-2cb959b257df",
+            "name": "Log Success",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -352,
+                48
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "jsonOutput"
+            },
+            "id": "8c212f7f-fe88-4b7b-abc3-2a40b127bb38",
+            "name": "Log Error",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -352,
+                240
+            ]
+        }
+    ],
+    "connections": {
+        "Cada Hora": {
+            "main": [
+                [
+                    {
+                        "node": "POST Llamada",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "POST Llamada": {
+            "main": [
+                [
+                    {
+                        "node": "IF Success",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IF Success": {
+            "main": [
+                [
+                    {
+                        "node": "Log Success",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Log Error",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "instanceId": "3632f15870c3e4f82bb1e33b5629b6fe38f071fc4080eb549201a594a7caa028"
+    }
+}
