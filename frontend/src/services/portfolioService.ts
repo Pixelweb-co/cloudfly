@@ -1,5 +1,5 @@
 import axios from '@/utils/axiosInstance';
-import { PortfolioDocument, PortfolioPayment, PortfolioSummary } from '@/types/portfolio';
+import { PortfolioDocument, PortfolioPayment } from '@/types/portfolio';
 
 // Placeholder types if not yet created (will be created in next step)
 // We assume axios instance is configured with base URL
