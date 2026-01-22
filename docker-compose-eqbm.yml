@@ -13,9 +13,7 @@ services:
       - DB_DATABASE=cloudfly_main
       - DB_USERNAME=root
       - DB_PASSWORD=widowmaker
-    depends_on:
-      - db
-      - kafka
+   
     networks:
       - mired
       - kafka-net
@@ -64,8 +62,7 @@ services:
       - N8N_SECRET_KEY=${N8N_SECRET_KEY}
     networks:
       - mired
-    depends_on:
-      - db
+   
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.chatsocket.rule=Host(`chat.cloudfly.com.co`)"
@@ -74,23 +71,7 @@ services:
       - "traefik.http.services.chatsocket.loadbalancer.server.port=3001"
 
   
-  telephony-service:
-    build:
-      context: ./telephony-service
-    container_name: telephony-service
-    restart: always
-    environment:
-      - ARI_URL=http://asterisk:8088/ari
-      - ARI_WS_URL=ws://asterisk:8088/ari/events
-      - ARI_USER=ariuser
-      - ARI_PASS=aripass
-      - ARI_AUTH_B64=YXJpdXNlcjphcmlwYXNz
-    depends_on:
-      - db
-    networks:
-      - mired
-    ports:
-      - "8005:8000"
+  
 
 networks:
   kafka-net:
