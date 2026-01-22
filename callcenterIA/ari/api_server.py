@@ -289,8 +289,8 @@ def transfer_channel(channel_id, extension):
 
         # 2. Perform the Continue (Dialplan Transfer) with delay
         def do_delayed_transfer(cid, ext, auth_info):
-            print(f"⏳ Waiting 10s before transferring channel {cid} to {ext}...", flush=True)
-            time.sleep(10)
+            print(f"⏳ Waiting 8s before transferring channel {cid} to {ext}...", flush=True)
+            time.sleep(8)
             continue_url = f"{ARI_URL}/ari/channels/{cid}/continue"
             p = {'context': 'default', 'extension': ext, 'priority': 1}
             try:
@@ -305,8 +305,10 @@ def transfer_channel(channel_id, extension):
             'success': True,
             'channel_id': target_channel_id,
             'extension': extension,
-            'message': f'Transfer to {extension} scheduled in 10 seconds'
+            'message': f'Transfer to {extension} scheduled in 8 seconds'
         }), 200
+
+
             
     except Exception as e:
         print(f"❌ Transfer Error: {e}")
@@ -320,8 +322,8 @@ def hangup_channel_direct(channel_id):
         target_channel_id = channel_id.replace('_', '.')
         
         def do_delayed_hangup(cid):
-            print(f"⏳ Waiting 10s before hanging up channel: {cid}...", flush=True)
-            time.sleep(10) # Give time for the last response to be spoken
+            print(f"⏳ Waiting 8s before hanging up channel: {cid}...", flush=True)
+            time.sleep(8) # Give time for the last response to be spoken
             try:
                 auth = (ARI_USER, ARI_PASS)
                 hangup_url = f"{ARI_URL}/ari/channels/{cid}"
@@ -336,8 +338,10 @@ def hangup_channel_direct(channel_id):
         return jsonify({
             'success': True,
             'channel_id': target_channel_id,
-            'message': 'Hangup scheduled in 6 seconds'
+            'message': 'Hangup scheduled in 8 seconds'
         }), 200
+
+
     except Exception as e:
         print(f"❌ Hangup Scheduling Error: {e}")
         return jsonify({

@@ -2,104 +2,77 @@
     "nodes": [
         {
             "parameters": {
-                "httpMethod": "POST",
-                "path": "telefono-ia",
-                "responseMode": "responseNode",
-                "options": {}
+                "promptType": "define",
+                "text": "=El usuario dice: {{ $json.body.text }}",
+                "options": {
+                    "systemMessage": "# Rol\nEres Laura, la recepcionista virtual de Cloudfly. Tu voz es amable y profesional.\n\n# Protocolo de Comunicación (ESTRICTO)\nDebes seguir este orden en tu primer contacto:\n1. Saludo y Presentación: \"Hola, bienvenido a Cloudfly, te habla Laura de recepción.\"\n2. Empatía: \"¿Cómo se encuentra el día de hoy?\"\n3. Disponibilidad: \"¿En qué puedo ayudarle?\"\n\n# Tu Función Principal (Solo Recepción)\n1. **Identificar Intención**: Determina si el cliente llama por VENTAS, AGENDAMIENTO o SOPORTE.\n2. **Identificación (Documento)**: Solicita cédula o NIT. Es obligatorio para continuar.\n   - **Instrucción Crítica**: Indica claramente al usuario que escriba el número en su teclado y presione la tecla numeral o almohadilla (#) al terminar.\n3. **Validación**: Una vez recibas el número (vía teclado/DTMF), usa la herramienta 'obtener_cliente'.\n4. **Transferencia**: Una vez identificado el departamento y validado el cliente, usa la herramienta de transferencia correspondiente (Transferir_Ventas, Transferir_Soporte o Transferir_Agendamiento).\n5. **Despedida**: Antes de ejecutar la transferencia, despídete: \"Con gusto, ya lo comunico. Que tenga un excelente día.\"\n\n# Reglas de Oro\n- Respuestas breves (máximo 2 frases).\n- NO menciones nombres técnicos de herramientas.\n- Si el usuario usa el teclado, recibirás el número como texto; procésalo como su identificación."
+                }
             },
-            "id": "e0465f02-1fe7-453a-b84a-7343dd2bea5f",
-            "name": "Webhook",
-            "type": "n8n-nodes-base.webhook",
-            "typeVersion": 1,
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 3.1,
             "position": [
-                -48,
-                64
+                260,
+                0
             ],
-            "webhookId": "719b8aee-8146-4733-9253-225be8b2c797"
+            "id": "801a62e3-c180-46d0-9956-2ff5e428a6f1",
+            "name": "Agente recepcionista"
         },
         {
             "parameters": {
-                "respondWith": "json",
-                "responseBody": "={{ {\n  \"call_id\": $('Webhook').item.json.body.call_id,\n  \"response\": $json.output,\n  \"timestamp\": new Date().toISOString()\n} }}",
+                "toolDescription": "Transfiere la llamada al departamento de SOPORTE / SERVICIO AL CLIENTE.",
+                "method": "POST",
+                "url": "=http://ari-bot:5000/transfer/{{ $json.body.call_id }}/4000",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('jsonBody', ``, 'string') }}",
                 "options": {}
             },
-            "id": "33e73977-f091-4c12-aafc-20ad0ea6d5a8",
-            "name": "Response",
-            "type": "n8n-nodes-base.respondToWebhook",
-            "typeVersion": 1,
+            "id": "f5e6a123-c3d4-e5f6-a7b8-990011223344",
+            "name": "Transferir_Soporte",
+            "type": "n8n-nodes-base.httpRequestTool",
+            "typeVersion": 4.3,
             "position": [
-                1200,
-                64
+                560,
+                400
             ]
         },
         {
             "parameters": {
-                "model": {
-                    "__rl": true,
-                    "value": "gpt-4o-mini",
-                    "mode": "list",
-                    "cachedResultName": "gpt-4o-mini"
-                },
-                "builtInTools": {},
-                "options": {
-                    "maxTokens": -1
-                }
-            },
-            "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
-            "typeVersion": 1.3,
-            "position": [
-                -112,
-                272
-            ],
-            "id": "ff0118c1-9e4f-488d-a722-6a63b4677d8b",
-            "name": "OpenAI Chat Model",
-            "credentials": {
-                "openAiApi": {
-                    "id": "OciBWIWjOBAuFhUg",
-                    "name": "OpenAi account"
-                }
-            }
-        },
-        {
-            "parameters": {
-                "sessionIdType": "customKey",
-                "sessionKey": "={{ $json.body.call_id }}"
-            },
-            "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
-            "typeVersion": 1.3,
-            "position": [
-                16,
-                288
-            ],
-            "id": "ad81331d-229e-4832-8fa0-590d2cc8bfa4",
-            "name": "Simple Memory"
-        },
-        {
-            "parameters": {},
-            "type": "@n8n/n8n-nodes-langchain.toolThink",
-            "typeVersion": 1.1,
-            "position": [
-                944,
-                336
-            ],
-            "id": "8e0325a3-638e-47db-ad56-74c7791a0fce",
-            "name": "Think"
-        },
-        {
-            "parameters": {
-                "toolDescription": "Llama a esta herramienta solo cuando debas terminar la llamada porque el cliente se despidió o la gestión terminó.",
+                "toolDescription": "Transfiere la llamada al departamento de AGENDAMIENTO.",
                 "method": "POST",
-                "url": "=http://ari-bot:5000/hangup/{{ $json.body.call_id }}",
+                "url": "=http://ari-bot:5000/transfer/{{ $json.body.call_id }}/5000",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('jsonBody', ``, 'string') }}",
                 "options": {}
             },
+            "id": "f5e6a123-b2c3-d4e5-f6a7-889900112233",
+            "name": "Transferir_Agendamiento",
             "type": "n8n-nodes-base.httpRequestTool",
             "typeVersion": 4.3,
             "position": [
-                1400,
-                320
-            ],
-            "id": "2b326400-c52a-4f2a-9a09-389804311496",
-            "name": "Colgar_llamada"
+                360,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "toolDescription": "Transfiere la llamada al departamento de VENTAS.",
+                "method": "POST",
+                "url": "=http://ari-bot:5000/transfer/{{ $json.body.call_id }}/3000",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('jsonBody', ``, 'string') }}",
+                "options": {}
+            },
+            "id": "f5e6a123-1a2b-4c3d-8e4f-556677889900",
+            "name": "Transferir_Ventas",
+            "type": "n8n-nodes-base.httpRequestTool",
+            "typeVersion": 4.3,
+            "position": [
+                160,
+                400
+            ]
         },
         {
             "parameters": {
@@ -131,8 +104,8 @@
             "type": "n8n-nodes-base.mySqlTool",
             "typeVersion": 2.5,
             "position": [
-                160,
-                304
+                0,
+                240
             ],
             "id": "a011a123-70b0-422c-aa71-647c5e71524e",
             "name": "obtener_cliente",
@@ -145,147 +118,119 @@
         },
         {
             "parameters": {
-                "toolDescription": "Transfiere la llamada al departamento de VENTAS.",
+                "toolDescription": "Llama a esta herramienta solo cuando debas terminar la llamada porque el cliente se despidió o la gestión terminó.",
                 "method": "POST",
-                "url": "=http://ari-bot:5000/transfer/{{ $json.body.call_id }}/3000",
-                "sendBody": true,
-                "specifyBody": "json",
-                "jsonBody": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('jsonBody', ``, 'string') }}",
+                "url": "=http://ari-bot:5000/hangup/{{ $json.body.call_id }}",
                 "options": {}
             },
-            "id": "f5e6a123-1a2b-4c3d-8e4f-556677889900",
-            "name": "Transferir_Ventas",
             "type": "n8n-nodes-base.httpRequestTool",
             "typeVersion": 4.3,
             "position": [
-                300,
-                450
-            ]
+                1200,
+                240
+            ],
+            "id": "2b326400-c52a-4f2a-9a09-389804311496",
+            "name": "Colgar_llamada"
         },
         {
-            "parameters": {
-                "toolDescription": "Transfiere la llamada al departamento de AGENDAMIENTO.",
-                "method": "POST",
-                "url": "=http://ari-bot:5000/transfer/{{ $json.body.call_id }}/5000",
-                "sendBody": true,
-                "specifyBody": "json",
-                "jsonBody": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('jsonBody', ``, 'string') }}",
-                "options": {}
-            },
-            "id": "f5e6a123-b2c3-d4e5-f6a7-889900112233",
-            "name": "Transferir_Agendamiento",
-            "type": "n8n-nodes-base.httpRequestTool",
-            "typeVersion": 4.3,
+            "parameters": {},
+            "type": "@n8n/n8n-nodes-langchain.toolThink",
+            "typeVersion": 1.1,
             "position": [
-                500,
-                450
-            ]
+                800,
+                240
+            ],
+            "id": "8e0325a3-638e-47db-ad56-74c7791a0fce",
+            "name": "Think"
         },
         {
             "parameters": {
-                "toolDescription": "Transfiere la llamada al departamento de SOPORTE / SERVICIO AL CLIENTE.",
-                "method": "POST",
-                "url": "=http://ari-bot:5000/transfer/{{ $json.body.call_id }}/4000",
-                "sendBody": true,
-                "specifyBody": "json",
-                "jsonBody": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('jsonBody', ``, 'string') }}",
-                "options": {}
+                "sessionIdType": "customKey",
+                "sessionKey": "={{ $json.body.call_id }}"
             },
-            "id": "f5e6a123-c3d4-e5f6-a7b8-990011223344",
-            "name": "Transferir_Soporte",
-            "type": "n8n-nodes-base.httpRequestTool",
-            "typeVersion": 4.3,
+            "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+            "typeVersion": 1.3,
             "position": [
-                700,
-                450
-            ]
+                -160,
+                240
+            ],
+            "id": "ad81331d-229e-4832-8fa0-590d2cc8bfa4",
+            "name": "Simple Memory"
         },
         {
             "parameters": {
-                "promptType": "define",
-                "text": "=El usuario dice: {{ $json.body.text }}",
+                "model": {
+                    "__rl": true,
+                    "value": "gpt-4o-mini",
+                    "mode": "list",
+                    "cachedResultName": "gpt-4o-mini"
+                },
+                "builtInTools": {},
                 "options": {
-                    "systemMessage": "#Rol\n\nEres Laura, la recepcionista virtual de Cloudfly. Tu voz es amable y profesional.\n\n#Protocolo de Comunicación (ESTRICTO)\nDebes seguir este orden en tu primer contacto:\n1. **Saludo y Presentación**: \"Hola, bienvenido a Cloudfly, te habla Laura de recepción.\"\n2. **Empatía**: \"¿Cómo se encuentra el día de hoy?\"\n3. **Disponibilidad**: \"¿En qué puedo ayudarle?\"\n\n#Tu Función Principal (Solo Recepción)\n1. **Identificar Intención**: Determinar si el cliente llama por VENTAS, AGENDAMIENTO o SOPORTE.\n2. **Identificación (Documento)**: Solicitar cédula o NIT. Es obligatorio para continuar.\n3. **Validación**: Usar 'obtener_cliente' con el documento.\n4. **Transferencia**: Una vez identificado el departamento y el cliente, usa la herramienta de transferencia correspondiente.\n5. **Despedida**: Antes de transferir, despídete amablemente: \"Con gusto, ya lo comunico. Que tenga un excelente día.\"\n\n#Reglas de Oro\n- Máximo 2 frases breves por respuesta para mantener la fluidez.\n- No transfieras sin antes haber pedido el documento e identificado la intención.\n- Solo tú (recepción) haces transferencias. Otros departamentos atienden directamente.\n- Si el cliente solo quiere saludar o hablar, mantén el protocolo pero enfócate en llevarlo a la transferencia.\n"
+                    "maxTokens": -1
                 }
             },
-            "type": "@n8n/n8n-nodes-langchain.agent",
-            "typeVersion": 3.1,
+            "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+            "typeVersion": 1.3,
             "position": [
-                416,
-                64
+                -320,
+                240
             ],
-            "id": "801a62e3-c180-46d0-9956-2ff5e428a6f1",
-            "name": "Agente recepcionista"
+            "id": "ff0118c1-9e4f-488d-a722-6a63b4677d8b",
+            "name": "OpenAI Chat Model",
+            "credentials": {
+                "openAiApi": {
+                    "id": "OciBWIWjOBAuFhUg",
+                    "name": "OpenAi account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ {\n  \"call_id\": $('Webhook').item.json.body.call_id,\n  \"response\": $json.output,\n  \"timestamp\": new Date().toISOString()\n} }}",
+                "options": {}
+            },
+            "id": "33e73977-f091-4c12-aafc-20ad0ea6d5a8",
+            "name": "Response",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                1040,
+                0
+            ]
+        },
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "telefono-ia",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "e0465f02-1fe7-453a-b84a-7343dd2bea5f",
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                -240,
+                0
+            ],
+            "webhookId": "719b8aee-8146-4733-9253-225be8b2c797"
         }
     ],
     "connections": {
-        "Webhook": {
+        "Agente recepcionista": {
             "main": [
                 [
                     {
-                        "node": "Agente recepcionista",
+                        "node": "Response",
                         "type": "main",
                         "index": 0
                     }
                 ]
             ]
         },
-        "OpenAI Chat Model": {
-            "ai_languageModel": [
-                [
-                    {
-                        "node": "Agente recepcionista",
-                        "type": "ai_languageModel",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Simple Memory": {
-            "ai_memory": [
-                [
-                    {
-                        "node": "Agente recepcionista",
-                        "type": "ai_memory",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Think": {
-            "ai_tool": [
-                [
-                    {
-                        "node": "Agente recepcionista",
-                        "type": "ai_tool",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Colgar_llamada": {
-            "ai_tool": [
-                [
-                    {
-                        "node": "Agente recepcionista",
-                        "type": "ai_tool",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "obtener_cliente": {
-            "ai_tool": [
-                [
-                    {
-                        "node": "Agente recepcionista",
-                        "type": "ai_tool",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Transferir_Ventas": {
+        "Transferir_Soporte": {
             "ai_tool": [
                 [
                     {
@@ -307,7 +252,7 @@
                 ]
             ]
         },
-        "Transferir_Soporte": {
+        "Transferir_Ventas": {
             "ai_tool": [
                 [
                     {
@@ -318,11 +263,66 @@
                 ]
             ]
         },
-        "Agente recepcionista": {
+        "obtener_cliente": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "Agente recepcionista",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Colgar_llamada": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "Agente recepcionista",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Think": {
+            "ai_tool": [
+                [
+                    {
+                        "node": "Agente recepcionista",
+                        "type": "ai_tool",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Simple Memory": {
+            "ai_memory": [
+                [
+                    {
+                        "node": "Agente recepcionista",
+                        "type": "ai_memory",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "OpenAI Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "Agente recepcionista",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Webhook": {
             "main": [
                 [
                     {
-                        "node": "Response",
+                        "node": "Agente recepcionista",
                         "type": "main",
                         "index": 0
                     }
@@ -332,7 +332,6 @@
     },
     "pinData": {},
     "meta": {
-        "templateCredsSetupCompleted": true,
         "instanceId": "3632f15870c3e4f82bb1e33b5629b6fe38f071fc4080eb549201a594a7caa028"
     }
 }

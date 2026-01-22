@@ -25,6 +25,9 @@ services:
       STT_URL: http://stt:8000
       TTS_URL: http://tts:5002
       N8N_WEBHOOK: https://autobot.cloudfly.com.co/webhook/telefono-ia
+      WHISPER_MODEL: tiny
+
+
       RTP_HOST: ari-bot
       API_PORT: 5000
     volumes:
@@ -43,7 +46,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - WHISPER_MODEL=base
+      - WHISPER_MODEL=tiny
+
+
       - WHISPER_LANG=es
     deploy:
       resources:

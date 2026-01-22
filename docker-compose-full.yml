@@ -339,6 +339,24 @@ services:
     networks:
       - app-net
 
+  telephony-service:
+    build:
+      context: ./telephony-service
+    container_name: telephony-service
+    restart: always
+    environment:
+      - ARI_URL=http://asterisk:8088/ari
+      - ARI_WS_URL=ws://asterisk:8088/ari/events
+      - ARI_USER=ariuser
+      - ARI_PASS=aripass
+      - ARI_AUTH_B64=YXJpdXNlcjphcmlwYXNz
+    depends_on:
+      - db
+    networks:
+      - app-net
+    ports:
+      - "8005:8000"
+
   traefik:
     image: traefik:v3.1
     container_name: traefik

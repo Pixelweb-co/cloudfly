@@ -238,7 +238,7 @@ const ChannelsPage = () => {
         )
     }
 
-    const availableToAdd = getAvailableChannelsToAdd()
+    const availableToAdd = getAvailableChannelsToAdd();
 
     return (
         <Box sx={{ p: 3 }}>
@@ -296,307 +296,308 @@ const ChannelsPage = () => {
                         </Button>
                     </Box>
                 </Box>
+            </Box>
 
-                {/* Channels Grid */}
-                <Grid container spacing={3}>
-                    {/* Active Channels */}
-                    {channels.map((channel) => (
-                        <Grid item xs={12} sm={6} md={4} key={channel.id}>
-                            <Card
-                                sx={{
-                                    height: '100%',
-                                    position: 'relative',
-                                    border: 2,
-                                    borderColor: channel.isConnected ? channel.color : 'divider',
-                                    transition: 'all 0.3s ease',
-                                    '&:hover': {
-                                        transform: 'translateY(-4px)',
-                                        boxShadow: 6
-                                    }
-                                }}
-                            >
-                                {/* Status Badge */}
-                                <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1 }}>
-                                    <Chip
-                                        icon={channel.isConnected ? <CheckCircleIcon /> : <CancelIcon />}
-                                        label={channel.isConnected ? 'Conectado' : 'Desconectado'}
-                                        color={channel.isConnected ? 'success' : 'error'}
-                                        size="small"
-                                    />
-                                </Box>
+            {/* Channels Grid */}
+            <Grid container spacing={3}>
+                {/* Active Channels */}
+                {channels.map((channel) => (
+                    <Grid item xs={12} sm={6} md={4} key={channel.id}>
+                        <Card
+                            sx={{
+                                height: '100%',
+                                position: 'relative',
+                                border: 2,
+                                borderColor: channel.isConnected ? channel.color : 'divider',
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                    transform: 'translateY(-4px)',
+                                    boxShadow: 6
+                                }
+                            }}
+                        >
+                            {/* Status Badge */}
+                            <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1 }}>
+                                <Chip
+                                    icon={channel.isConnected ? <CheckCircleIcon /> : <CancelIcon />}
+                                    label={channel.isConnected ? 'Conectado' : 'Desconectado'}
+                                    color={channel.isConnected ? 'success' : 'error'}
+                                    size="small"
+                                />
+                            </Box>
 
-                                <CardContent sx={{ pt: 3 }}>
-                                    {/* Channel Icon */}
-                                    <Box
-                                        sx={{
-                                            width: 80,
-                                            height: 80,
-                                            borderRadius: 3,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            bgcolor: `${channel.color}15`,
-                                            mb: 2,
-                                            fontSize: '2.5rem'
-                                        }}
-                                    >
-                                        {channel.icon}
-                                    </Box>
-
-                                    {/* Channel Info */}
-                                    <Typography variant="h6" fontWeight="700" gutterBottom>
-                                        {channel.name}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>
-                                        {channel.description}
-                                    </Typography>
-
-                                    {/* Connection Details */}
-                                    {channel.phoneNumber && (
-                                        <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mb: 2 }}>
-                                            <Typography variant="caption" color="text.secondary" display="block">
-                                                Número conectado
-                                            </Typography>
-                                            <Typography variant="body2" fontWeight="600">
-                                                {channel.phoneNumber}
-                                            </Typography>
-                                        </Box>
-                                    )}
-
-                                    {channel.lastSync && (
-                                        <Typography variant="caption" color="text.secondary" display="block" mb={2}>
-                                            Última sincronización: {new Date(channel.lastSync).toLocaleString('es-ES')}
-                                        </Typography>
-                                    )}
-
-                                    {/* Actions */}
-                                    <Box display="flex" gap={1} mt={2}>
-                                        <Tooltip title="Configurar canal">
-                                            <Button
-                                                variant="outlined"
-                                                color="primary"
-                                                startIcon={<SettingsIcon />}
-                                                onClick={() => router.push(`/comunicaciones/canales/configurar/${channel.type}`)}
-                                                fullWidth
-                                                size="small"
-                                            >
-                                                Configurar
-                                            </Button>
-                                        </Tooltip>
-                                        <Tooltip title="Eliminar canal">
-                                            <Button
-                                                variant="outlined"
-                                                color="error"
-                                                startIcon={<DeleteIcon />}
-                                                onClick={() => handleDeleteClick(channel)}
-                                                fullWidth
-                                                size="small"
-                                            >
-                                                Eliminar
-                                            </Button>
-                                        </Tooltip>
-                                    </Box>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                    ))}
-
-                    {/* Add Channel Card (Visible if there are channels to add) */}
-                    {availableToAdd.length > 0 && (
-                        <Grid item xs={12} sm={6} md={4}>
-                            <Card
-                                sx={{
-                                    height: '100%',
-                                    border: 2,
-                                    borderColor: 'divider',
-                                    borderStyle: 'dashed',
-                                    bgcolor: 'action.hover',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.3s ease',
-                                    '&:hover': {
-                                        borderColor: 'primary.main',
-                                        bgcolor: 'primary.lighter',
-                                        transform: 'translateY(-4px)',
-                                        boxShadow: 4
-                                    }
-                                }}
-                                onClick={() => setOpenAddDialog(true)}
-                            >
-                                <CardContent
+                            <CardContent sx={{ pt: 3 }}>
+                                {/* Channel Icon */}
+                                <Box
                                     sx={{
-                                        height: '100%',
+                                        width: 80,
+                                        height: 80,
+                                        borderRadius: 3,
                                         display: 'flex',
-                                        flexDirection: 'column',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        textAlign: 'center',
-                                        minHeight: 340
+                                        bgcolor: `${channel.color}15`,
+                                        mb: 2,
+                                        fontSize: '2.5rem'
                                     }}
                                 >
-                                    <Box
-                                        sx={{
-                                            width: 80,
-                                            height: 80,
-                                            borderRadius: '50%',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            bgcolor: 'primary.main',
-                                            color: 'white',
-                                            mb: 2,
-                                            fontSize: '2.5rem'
-                                        }}
-                                    >
-                                        <AddIcon fontSize="large" />
+                                    {channel.icon}
+                                </Box>
+
+                                {/* Channel Info */}
+                                <Typography variant="h6" fontWeight="700" gutterBottom>
+                                    {channel.name}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>
+                                    {channel.description}
+                                </Typography>
+
+                                {/* Connection Details */}
+                                {channel.phoneNumber && (
+                                    <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mb: 2 }}>
+                                        <Typography variant="caption" color="text.secondary" display="block">
+                                            Número conectado
+                                        </Typography>
+                                        <Typography variant="body2" fontWeight="600">
+                                            {channel.phoneNumber}
+                                        </Typography>
                                     </Box>
-                                    <Typography variant="h6" fontWeight="700" gutterBottom>
-                                        Agregar Canal
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Conecta un nuevo canal de comunicación para automatizar tus respuestas
-                                    </Typography>
-                                    <Typography variant="caption" color="primary" sx={{ mt: 2, fontWeight: 600 }}>
-                                        {availableToAdd.length} {availableToAdd.length === 1 ? 'canal disponible' : 'canales disponibles'}
-                                    </Typography>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                    )}
-                </Grid>
+                                )}
 
-                {/* Add Channel Dialog */}
-                <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} maxWidth="sm" fullWidth>
-                    <DialogTitle>
-                        <Typography variant="h5" fontWeight="700">
-                            🚀 Selecciona un Canal
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Elige qué canal de comunicación deseas configurar
-                        </Typography>
-                    </DialogTitle>
-                    <DialogContent>
-                        <Grid container spacing={2} sx={{ mt: 1 }}>
-                            {AVAILABLE_CHANNELS.map((channel) => {
-                                const isConfigured = channels.some(ch => ch.type === channel.type);
-                                return (
-                                    <Grid item xs={12} key={channel.type}>
-                                        <Card
-                                            sx={{
-                                                cursor: 'pointer',
-                                                border: 2,
-                                                borderColor: isConfigured ? 'success.main' : 'divider',
-                                                bgcolor: isConfigured ? 'success.lighter' : 'background.paper',
-                                                transition: 'all 0.2s ease',
-                                                opacity: isConfigured ? 0.9 : 1,
-                                                '&:hover': {
-                                                    borderColor: channel.color,
-                                                    bgcolor: `${channel.color}08`,
-                                                    transform: 'scale(1.02)'
-                                                }
-                                            }}
-                                            onClick={() => {
-                                                if (isConfigured) {
-                                                    router.push(`/comunicaciones/canales/configurar/${channel.type}`);
-                                                } else {
-                                                    handleAddChannel(channel.type);
-                                                }
-                                            }}
-                                        >
-                                            <CardContent>
-                                                <Box display="flex" alignItems="center" gap={2}>
-                                                    <Box
-                                                        sx={{
-                                                            width: 60,
-                                                            height: 60,
-                                                            borderRadius: 2,
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            bgcolor: `${channel.color}15`,
-                                                            fontSize: '2rem'
-                                                        }}
-                                                    >
-                                                        {channel.icon}
-                                                    </Box>
-                                                    <Box flex={1}>
-                                                        <Box display="flex" alignItems="center" gap={1}>
-                                                            <Typography variant="h6" fontWeight="600">
-                                                                {channel.name}
-                                                            </Typography>
-                                                            {isConfigured && (
-                                                                <Chip label="Configurado" color="success" size="small" icon={<CheckCircleIcon />} />
-                                                            )}
-                                                        </Box>
-                                                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                                            {channel.description}
-                                                        </Typography>
-                                                    </Box>
-                                                    {isConfigured ? <SettingsIcon color="action" /> : <AddIcon color="primary" />}
-                                                </Box>
-                                            </CardContent>
-                                        </Card>
-                                    </Grid>
-                                );
-                            })}
-                        </Grid>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setOpenAddDialog(false)}>Cancelar</Button>
-                    </DialogActions>
-                </Dialog>
-
-                {/* Delete Confirmation Dialog */}
-                <Dialog open={deleteDialogOpen} onClose={() => !deleting && setDeleteDialogOpen(false)} maxWidth="sm" fullWidth>
-                    <DialogTitle>
-                        <Typography variant="h5" fontWeight="700" color="error">
-                            ⚠️ Eliminar Canal
-                        </Typography>
-                    </DialogTitle>
-                    <DialogContent>
-                        <Alert severity="warning" sx={{ mb: 2 }}>
-                            <Typography variant="body2" fontWeight="600" gutterBottom>
-                                Esta acción no se puede deshacer
-                            </Typography>
-                            {channelToDelete?.type === 'whatsapp' && (
-                                <Typography variant="body2">
-                                    Al eliminar este canal de WhatsApp también se eliminará la conexión y toda su configuración.
-                                </Typography>
-                            )}
-                        </Alert>
-
-                        {channelToDelete && (
-                            <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                    Canal a eliminar:
-                                </Typography>
-                                <Typography variant="body1" fontWeight="600">
-                                    {channelToDelete.icon} {channelToDelete.name}
-                                </Typography>
-                                {channelToDelete.phoneNumber && (
-                                    <Typography variant="body2" color="text.secondary">
-                                        {channelToDelete.phoneNumber}
+                                {channel.lastSync && (
+                                    <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+                                        Última sincronización: {new Date(channel.lastSync).toLocaleString('es-ES')}
                                     </Typography>
                                 )}
-                            </Box>
-                        )}
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
-                            Cancelar
-                        </Button>
-                        <Button
-                            onClick={handleDeleteConfirm}
-                            color="error"
-                            variant="contained"
-                            disabled={deleting}
-                            startIcon={deleting ? <CircularProgress size={20} /> : <DeleteIcon />}
+
+                                {/* Actions */}
+                                <Box display="flex" gap={1} mt={2}>
+                                    <Tooltip title="Configurar canal">
+                                        <Button
+                                            variant="outlined"
+                                            color="primary"
+                                            startIcon={<SettingsIcon />}
+                                            onClick={() => router.push(`/comunicaciones/canales/configurar/${channel.type}`)}
+                                            fullWidth
+                                            size="small"
+                                        >
+                                            Configurar
+                                        </Button>
+                                    </Tooltip>
+                                    <Tooltip title="Eliminar canal">
+                                        <Button
+                                            variant="outlined"
+                                            color="error"
+                                            startIcon={<DeleteIcon />}
+                                            onClick={() => handleDeleteClick(channel)}
+                                            fullWidth
+                                            size="small"
+                                        >
+                                            Eliminar
+                                        </Button>
+                                    </Tooltip>
+                                </Box>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                ))}
+
+                {/* Add Channel Card (Visible if there are channels to add) */}
+                {availableToAdd.length > 0 && (
+                    <Grid item xs={12} sm={6} md={4}>
+                        <Card
+                            sx={{
+                                height: '100%',
+                                border: 2,
+                                borderColor: 'divider',
+                                borderStyle: 'dashed',
+                                bgcolor: 'action.hover',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                    borderColor: 'primary.main',
+                                    bgcolor: 'primary.lighter',
+                                    transform: 'translateY(-4px)',
+                                    boxShadow: 4
+                                }
+                            }}
+                            onClick={() => setOpenAddDialog(true)}
                         >
-                            {deleting ? 'Eliminando...' : 'Eliminar Canal'}
-                        </Button>
-                    </DialogActions>
-                </Dialog>
-            </Box>
-            )
+                            <CardContent
+                                sx={{
+                                    height: '100%',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    textAlign: 'center',
+                                    minHeight: 340
+                                }}
+                            >
+                                <Box
+                                    sx={{
+                                        width: 80,
+                                        height: 80,
+                                        borderRadius: '50%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        bgcolor: 'primary.main',
+                                        color: 'white',
+                                        mb: 2,
+                                        fontSize: '2.5rem'
+                                    }}
+                                >
+                                    <AddIcon fontSize="large" />
+                                </Box>
+                                <Typography variant="h6" fontWeight="700" gutterBottom>
+                                    Agregar Canal
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Conecta un nuevo canal de comunicación para automatizar tus respuestas
+                                </Typography>
+                                <Typography variant="caption" color="primary" sx={{ mt: 2, fontWeight: 600 }}>
+                                    {availableToAdd.length} {availableToAdd.length === 1 ? 'canal disponible' : 'canales disponibles'}
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                )}
+            </Grid>
+
+            {/* Add Channel Dialog */}
+            <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>
+                    <Typography variant="h5" fontWeight="700">
+                        🚀 Selecciona un Canal
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Elige qué canal de comunicación deseas configurar
+                    </Typography>
+                </DialogTitle>
+                <DialogContent>
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                        {AVAILABLE_CHANNELS.map((channel) => {
+                            const isConfigured = channels.some(ch => ch.type === channel.type);
+                            return (
+                                <Grid item xs={12} key={channel.type}>
+                                    <Card
+                                        sx={{
+                                            cursor: 'pointer',
+                                            border: 2,
+                                            borderColor: isConfigured ? 'success.main' : 'divider',
+                                            bgcolor: isConfigured ? 'success.lighter' : 'background.paper',
+                                            transition: 'all 0.2s ease',
+                                            opacity: isConfigured ? 0.9 : 1,
+                                            '&:hover': {
+                                                borderColor: channel.color,
+                                                bgcolor: `${channel.color}08`,
+                                                transform: 'scale(1.02)'
+                                            }
+                                        }}
+                                        onClick={() => {
+                                            if (isConfigured) {
+                                                router.push(`/comunicaciones/canales/configurar/${channel.type}`);
+                                            } else {
+                                                handleAddChannel(channel.type);
+                                            }
+                                        }}
+                                    >
+                                        <CardContent>
+                                            <Box display="flex" alignItems="center" gap={2}>
+                                                <Box
+                                                    sx={{
+                                                        width: 60,
+                                                        height: 60,
+                                                        borderRadius: 2,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        bgcolor: `${channel.color}15`,
+                                                        fontSize: '2rem'
+                                                    }}
+                                                >
+                                                    {channel.icon}
+                                                </Box>
+                                                <Box flex={1}>
+                                                    <Box display="flex" alignItems="center" gap={1}>
+                                                        <Typography variant="h6" fontWeight="600">
+                                                            {channel.name}
+                                                        </Typography>
+                                                        {isConfigured && (
+                                                            <Chip label="Configurado" color="success" size="small" icon={<CheckCircleIcon />} />
+                                                        )}
+                                                    </Box>
+                                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                                        {channel.description}
+                                                    </Typography>
+                                                </Box>
+                                                {isConfigured ? <SettingsIcon color="action" /> : <AddIcon color="primary" />}
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
+                                </Grid>
+                            );
+                        })}
+                    </Grid>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenAddDialog(false)}>Cancelar</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={deleteDialogOpen} onClose={() => !deleting && setDeleteDialogOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>
+                    <Typography variant="h5" fontWeight="700" color="error">
+                        ⚠️ Eliminar Canal
+                    </Typography>
+                </DialogTitle>
+                <DialogContent>
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                        <Typography variant="body2" fontWeight="600" gutterBottom>
+                            Esta acción no se puede deshacer
+                        </Typography>
+                        {channelToDelete?.type === 'whatsapp' && (
+                            <Typography variant="body2">
+                                Al eliminar este canal de WhatsApp también se eliminará la conexión y toda su configuración.
+                            </Typography>
+                        )}
+                    </Alert>
+
+                    {channelToDelete && (
+                        <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+                            <Typography variant="caption" color="text.secondary">
+                                Canal a eliminar:
+                            </Typography>
+                            <Typography variant="body1" fontWeight="600">
+                                {channelToDelete.icon} {channelToDelete.name}
+                            </Typography>
+                            {channelToDelete.phoneNumber && (
+                                <Typography variant="body2" color="text.secondary">
+                                    {channelToDelete.phoneNumber}
+                                </Typography>
+                            )}
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
+                        Cancelar
+                    </Button>
+                    <Button
+                        onClick={handleDeleteConfirm}
+                        color="error"
+                        variant="contained"
+                        disabled={deleting}
+                        startIcon={deleting ? <CircularProgress size={20} /> : <DeleteIcon />}
+                    >
+                        {deleting ? 'Eliminando...' : 'Eliminar Canal'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </Box>
+    )
 }
 
-            export default ChannelsPage
+export default ChannelsPage;

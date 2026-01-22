@@ -33,8 +33,8 @@ public class RbacService {
      * Check if roles have a specific permission
      */
     public boolean hasPermission(List<String> roleCodes, String moduleCode, String actionCode) {
-        if (roleCodes.contains("SUPERADMIN")) {
-            return true; // SUPERADMIN has all permissions
+        if (roleCodes.contains("SUPERADMIN") || roleCodes.contains("MANAGER")) {
+            return true; // System roles have all permissions
         }
         return rolePermissionRepository.hasPermission(roleCodes, moduleCode, actionCode);
     }
@@ -43,8 +43,8 @@ public class RbacService {
      * Get all permissions for given roles
      */
     public Set<String> getPermissions(List<String> roleCodes) {
-        if (roleCodes.contains("SUPERADMIN")) {
-            // SUPERADMIN gets all permissions
+        if (roleCodes.contains("SUPERADMIN") || roleCodes.contains("MANAGER")) {
+            // System roles get all permissions
             return moduleActionRepository.findAll().stream()
                     .map(ma -> ma.getModule().getCode() + "." + ma.getCode())
                     .collect(Collectors.toSet());
@@ -59,7 +59,7 @@ public class RbacService {
      * Get modules that user has access to
      */
     public List<String> getAccessibleModules(List<String> roleCodes) {
-        if (roleCodes.contains("SUPERADMIN")) {
+        if (roleCodes.contains("SUPERADMIN") || roleCodes.contains("MANAGER")) {
             return moduleRepository.findByIsActiveTrueOrderByDisplayOrderAsc().stream()
                     .map(RbacModule::getCode)
                     .collect(Collectors.toList());
@@ -79,11 +79,11 @@ public class RbacService {
      * Now builds menu dynamically from database menu_items
      */
     public List<MenuItemDTO> generateMenu(List<String> roleCodes) {
-        boolean isSuperAdmin = roleCodes.contains("SUPERADMIN");
+        boolean isSystemRole = roleCodes.contains("SUPERADMIN") || roleCodes.contains("MANAGER");
         List<MenuItemDTO> menu = new ArrayList<>();
 
         // Dashboard - everyone with any permission gets this
-        if (isSuperAdmin || !roleCodes.isEmpty()) {
+        if (isSystemRole || !roleCodes.isEmpty()) {
             menu.add(MenuItemDTO.builder()
                     .label("Dashboard")
                     .href("/home")
@@ -93,8 +93,8 @@ public class RbacService {
 
         // Get all accessible modules based on role permissions
         List<RbacModule> accessibleModules;
-        if (isSuperAdmin) {
-            // SUPERADMIN sees all active modules
+        if (isSystemRole) {
+            // System role sees all active modules
             accessibleModules = moduleRepository.findByIsActiveTrueOrderByDisplayOrderAsc();
         } else {
             // Get only modules where user has at least one permission
@@ -106,7 +106,7 @@ public class RbacService {
             // Get user's granted permissions for this specific module
             Set<String> userModulePermissions = getUserPermissionsForModule(roleCodes, module.getCode());
 
-            List<MenuItemDTO> children = parseMenuItems(module.getMenuItems(), userModulePermissions, isSuperAdmin);
+            List<MenuItemDTO> children = parseMenuItems(module.getMenuItems(), userModulePermissions, isSystemRole);
 
             // Only add parent if it has children (after permission filtering)
             if (!children.isEmpty()) {
@@ -127,8 +127,8 @@ public class RbacService {
      * Get user's specific action permissions for a module
      */
     private Set<String> getUserPermissionsForModule(List<String> roleCodes, String moduleCode) {
-        if (roleCodes.contains("SUPERADMIN")) {
-            // SUPERADMIN has all permissions
+        if (roleCodes.contains("SUPERADMIN") || roleCodes.contains("MANAGER")) {
+            // System roles have all permissions
             return Set.of("*"); // Wildcard for all permissions
         }
 
@@ -145,7 +145,7 @@ public class RbacService {
      * [{"label":"Cotizaciones","href":"/ventas/cotizaciones","icon":"tabler-file","action":"VIEW"}]
      * If "action" is not specified or user is SUPERADMIN, the item is included
      */
-    private List<MenuItemDTO> parseMenuItems(String menuItemsJson, Set<String> userPermissions, boolean isSuperAdmin) {
+    private List<MenuItemDTO> parseMenuItems(String menuItemsJson, Set<String> userPermissions, boolean isSystemRole) {
         if (menuItemsJson == null || menuItemsJson.trim().isEmpty()) {
             return List.of();
         }
@@ -165,8 +165,8 @@ public class RbacService {
                             return true;
                         }
 
-                        // SUPERADMIN sees everything
-                        if (isSuperAdmin || userPermissions.contains("*")) {
+                        // System roles see everything
+                        if (isSystemRole || userPermissions.contains("*")) {
                             return true;
                         }
 
@@ -190,10 +190,10 @@ public class RbacService {
      * This filters the menu by both permissions and active subscription modules
      */
     public List<MenuItemDTO> generateMenu(List<String> roleCodes, Long tenantId) {
-        boolean isSuperAdmin = roleCodes.contains("SUPERADMIN");
+        boolean isSystemRole = roleCodes.contains("SUPERADMIN") || roleCodes.contains("MANAGER");
 
-        // If SUPERADMIN, no subscription filtering - return full menu
-        if (isSuperAdmin) {
+        // If system role, no subscription filtering - return full menu
+        if (isSystemRole) {
             return generateMenu(roleCodes);
         }
 

@@ -1,0 +1,101 @@
+services:
+  
+  backend-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend-api
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=production
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=cloudfly_main
+      - DB_USERNAME=root
+      - DB_PASSWORD=widowmaker
+    depends_on:
+      - db
+      - kafka
+    networks:
+      - mired
+      - kafka-net
+    labels:
+      - "traefik.enable=true"
+      # router HTTPS para el API
+      - "traefik.http.routers.api.rule=Host(`api.cloudfly.com.co`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=le"
+      # puerto interno del backend
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+
+  
+  frontend-react:
+    container_name: frontend_app
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co   # Traefik termina SSL
+    restart: unless-stopped
+    networks:
+      - mired
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`dashboard.cloudfly.com.co`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=le"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+
+  
+  chat-socket-service:
+    build:
+      context: ./chat-socket-service
+      dockerfile: Dockerfile
+    container_name: chat_socket
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3001
+      - FRONTEND_URL=${FRONTEND_URL:-https://dashboard.cloudfly.com.co}
+      - JAVA_API_URL=${JAVA_API_URL:-https://api.cloudfly.com.co}
+      - JWT_SECRET=${JWT_SECRET}
+      - N8N_SECRET_KEY=${N8N_SECRET_KEY}
+    networks:
+      - mired
+    depends_on:
+      - db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chatsocket.rule=Host(`chat.cloudfly.com.co`)"
+      - "traefik.http.routers.chatsocket.entrypoints=websecure"
+      - "traefik.http.routers.chatsocket.tls.certresolver=le"
+      - "traefik.http.services.chatsocket.loadbalancer.server.port=3001"
+
+  
+  telephony-service:
+    build:
+      context: ./telephony-service
+    container_name: telephony-service
+    restart: always
+    environment:
+      - ARI_URL=http://asterisk:8088/ari
+      - ARI_WS_URL=ws://asterisk:8088/ari/events
+      - ARI_USER=ariuser
+      - ARI_PASS=aripass
+      - ARI_AUTH_B64=YXJpdXNlcjphcmlwYXNz
+    depends_on:
+      - db
+    networks:
+      - mired
+    ports:
+      - "8005:8000"
+
+networks:
+  kafka-net:
+    external: true
+    name: gm2_kafka-net
+  mired:
+    external: true
+    name: gm2_mired

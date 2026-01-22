@@ -1,37 +1,38 @@
 services:
-  db_master:
-        image: mysql:8.0
-        container_name: mysql
-        restart: always
-        ports: 
-            - "3306:3306"
-        environment:
-            MYSQL_DATABASE: cloud_master
-            MYSQL_PASSWORD: cloud2020#
-            MYSQL_ROOT_PASSWORD: Elian2020# 
-        volumes:
-            - persistent_db:/var/lib/mysql
-        networks:
-            - default
-            - kafka-net
-            - mired
-  
+  db:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: cloud_master
+      MYSQL_PASSWORD: widowmaker
+      MYSQL_ROOT_PASSWORD: widowmaker
+    volumes:
+      - persistent_master:/var/lib/mysql
+    networks:
+      - app-net
+      - kafka-net
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     restart: always
-    links: 
-      - db_master:db_master
+    links:
+      - db:db
     ports:
-      - 8000:80
+      - "8090:80"
     environment:
       MYSQL_USER: root
-      MYSQL_PASSWORD: cloud2020#
-      MYSQL_HOST: db_master
-      MYSQL_ROOT_PASSWORD: Elian2020#
+      MYSQL_PASSWORD: widowmaker
+      MYSQL_ROOT_PASSWORD: widowmaker
+    networks:
+      - app-net
 
   kafka:
     image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
+    restart: always
     ports:
       - "9092:9092"
     environment:
@@ -42,11 +43,15 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT_INTERNAL:PLAINTEXT,PLAINTEXT_EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
     networks:
       - kafka-net
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
+    container_name: zookeeper
+    restart: always
     ports:
       - "2181:2181"
     environment:
@@ -55,24 +60,32 @@ services:
     networks:
       - kafka-net
 
-  
+  # backend-api: COMENTADO - CORRE EN HOST LOCAL
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: backend-api
+  #   ...
+
   notification-service:
     build:
       context: ./notifications
       dockerfile: Dockerfile
-    depends_on:
-      - kafka
+    container_name: notification-service
+    restart: always
     ports:
       - "8081:8080"
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      - kafka
     networks:
       - kafka-net
 
   kafdrop:
     image: obsidiandynamics/kafdrop:3.30.0
     ports:
-      - "9000:9000"
+      - "9100:9000"
     environment:
       KAFKA_BROKER_CONNECT: kafka:9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -81,49 +94,270 @@ services:
       - zookeeper
     networks:
       - kafka-net
+      - app-net
 
-  
+  # frontend-react: COMENTADO - CORRE EN HOST LOCAL
+  #   container_name: frontend_app
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   ...
+
+  redis-insight:
+    build:
+      context: .
+      dockerfile: Dockerfile.redisinsight
+    image: redisinsight-custom
+    container_name: redis_insight
+    restart: always
+    ports:
+      - "8001:5540"
+    depends_on:
+      - redis
+    networks:
+      - app-net
+
+  redis:
+    image: redis:latest
+    container_name: redis_server
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - app-net
+    environment:
+      REDIS_PASSWORD: Elian2020#
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: always
+    ports:
+      - "8075:6333"
+      - "8076:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__API_KEY: Elian2020#
+      QDRANT__SERVICE__READ_ONLY_API_KEY: Elian2020#
+    networks:
+      - app-net
 
   n8n:
     image: n8nio/n8n:latest
     container_name: n8nserver.com
     restart: always
-    ports:
-      - "5678:5678"
     environment:
       - N8N_HOST=localhost
       - N8N_PROTOCOL=http
       - N8N_PORT=5678
       - WEBHOOK_URL=http://localhost:5678/
       - N8N_EDITOR_BASE_URL=http://localhost:5678
-      - NODE_ENV=production
-      - N8N_SECURE_COOKIE=true
+      - NODE_ENV=development
+      - N8N_SECURE_COOKIE=false
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:
-      - db_master
+      - qdrant
+      - redis
+      - postgresql
+      - evolution-api
     networks:
-      - mired
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      # HTTPS router (para túnel Cloudflare)
+      - "traefik.http.routers.n8n.rule=Host(`autobot.cloudfly.com.co`)"
+      - "traefik.http.routers.n8n.entrypoints=web,websecure"
+      - "traefik.http.routers.n8n.tls=true"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
+  postgresql:
+    image: pgvector/pgvector:pg15
+    container_name: postgres_server
+    restart: always
+    environment:
+      POSTGRES_DB: chatbotdb
+      POSTGRES_USER: chatbot_user
+      POSTGRES_PASSWORD: chatbot_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
     restart: always
     ports:
-      - "11434:11434"
+      - "9000:9000"
     volumes:
-      - ollama_data:/root/.ollama
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    environment:
+      TZ: America/Bogota
     networks:
-      - mired
-    
+      - app-net
+
+  evolution-api:
+    image: evoapicloud/evolution-api:latest
+    container_name: evolution_api
+    restart: always
+    ports:
+      - "8082:8080"
+    env_file:
+      - .env
+    volumes:
+      - evolution_instances:/evolution/instances
+    networks:
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      # HTTPS router (para túnel Cloudflare)
+      - "traefik.http.routers.eapi.rule=Host(`eapi.cloudfly.com.co`)"
+      - "traefik.http.routers.eapi.entrypoints=web,websecure"
+      - "traefik.http.routers.eapi.tls=true"
+      - "traefik.http.services.eapi.loadbalancer.server.port=8080"
+
+  chat-socket-service:
+    build:
+      context: ./chat-socket-service
+      dockerfile: Dockerfile
+    container_name: chat_socket
+    restart: always
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      # Apuntan al Host porque Backend y Frontend corren nativamente
+      - FRONTEND_URL=http://host.docker.internal:3000
+      - JAVA_API_URL=http://host.docker.internal:8080
+      - JWT_SECRET=${JWT_SECRET}
+      - N8N_SECRET_KEY=${N8N_SECRET_KEY}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - app-net
+    depends_on:
+      - db
+    labels:
+      - "traefik.enable=true"
+      # HTTPS router (para túnel Cloudflare)
+      - "traefik.http.routers.chatsocket.rule=Host(`chat.cloudfly.com.co`)"
+      - "traefik.http.routers.chatsocket.entrypoints=web,websecure"
+      - "traefik.http.routers.chatsocket.tls=true"
+      - "traefik.http.services.chatsocket.loadbalancer.server.port=3001"
+
+  chatwoot:
+    image: chatwoot/chatwoot:latest
+    container_name: chatwoot
+    restart: always
+    command: /bin/sh -lc "bundle exec rails db:chatwoot_prepare && mkdir -p tmp/pids && bundle exec puma -C config/puma.rb"
+    env_file:
+      - .env.chatwoot
+    volumes:
+      - chatwoot_storage:/app/storage
+    depends_on:
+      - postgresql
+      - redis
+    networks:
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      # HTTPS router (para túnel Cloudflare)
+      - "traefik.http.routers.chatwoot.rule=Host(`chatcenter.cloudfly.com.co`)"
+      - "traefik.http.routers.chatwoot.entrypoints=web,websecure"
+      - "traefik.http.routers.chatwoot.tls=true"
+      - "traefik.http.services.chatwoot.loadbalancer.server.port=3000"
+
+  chatwoot-worker:
+    image: chatwoot/chatwoot:latest
+    container_name: chatwoot_worker
+    restart: always
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    environment:
+      RAILS_ENV: development
+      SECRET_KEY_BASE: "44d4f95c1b13aa70fd34dd6453a121fd962d9c1b748b28f21ac36cd1f481714a"
+      # Frontend de Chatwoot sigue en Docker, pero si apuntara afuera sería host.docker.internal
+      FRONTEND_URL: "http://localhost" 
+      ACTIVE_STORAGE_SERVICE: "local"
+      DATABASE_URL: "postgres://chatbot_user:chatbot_pass@postgresql:5432/chatwoot_production"
+      REDIS_URL: "redis://redis:6379/1"
+      DEFAULT_LOCALE: "es"
+    volumes:
+      - chatwoot_storage:/app/storage
+    depends_on:
+      - postgresql
+      - redis
+      - chatwoot
+    networks:
+      - app-net
+
+  telephony-service:
+    build:
+      context: ./telephony-service
+    container_name: telephony-service
+    restart: always
+    ports:
+      - "8005:8000"
+    environment:
+      - ARI_URL=http://asterisk:8088/ari
+      - ARI_WS_URL=ws://asterisk:8088/ari/events
+      - ARI_USER=ariuser
+      - ARI_PASS=aripass
+      - ARI_AUTH_B64=YXJpdXNlcjphcmlwYXNz
+    depends_on:
+      - db
+    networks:
+      - app-net
+
+  # Traefik - Reverse Proxy HÍBRIDO
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    restart: always
+    ports:
+      - "80:80"      # HTTP
+      - "443:443"    # HTTPS (para Cloudflare Tunnel)
+      - "8085:8080"  # Dashboard de Traefik (Liberado 8080 para el backend)
+    command:
+      - "--log.level=DEBUG"
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      
+      # EntryPoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      
+      # Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=cloudfly_app-net"
+
+      # File provider (Dynamic Config para Localhost)
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik:/etc/traefik/dynamic # Configuración dinámica creada
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Permite a Traefik ver el host
+    networks:
+      - app-net
 
 volumes:
-  persistent_db:
   n8n_data:
-  ollama_data:
+  qdrant_data:
+  postgres_data:
+  portainer_data:
+  mongo_evolution_data:
+  evolution_instances:
+  chatwoot_storage:
+  persistent_master:
 
 networks:
-  kafka-net:
+  app-net:
     driver: bridge
-  mired:
+  kafka-net:
     driver: bridge

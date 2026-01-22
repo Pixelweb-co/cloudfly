@@ -4,9 +4,12 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Instalar dependencias
+# Instalar dependencias del sistema (ffmpeg vital para audio)
+RUN apt-get update && apt-get install -y ffmpeg curl && rm -rf /var/lib/apt/lists/*
+
+# Instalar dependencias python
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt edge-tts
 
 # Copiar el código del bot
 COPY . .

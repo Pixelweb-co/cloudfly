@@ -14,6 +14,8 @@ import wave
 import io
 import socket
 import audioop
+import edge_tts
+import asyncio
 from typing import Dict, Any
 from datetime import datetime
 
@@ -47,7 +49,9 @@ SILENCE_DURATION = 0.5
 MAX_RECORDING_TIME = 20
 
 # STT Configuration
-WHISPER_MODEL = os.getenv('WHISPER_MODEL', 'base')
+WHISPER_MODEL = os.getenv('WHISPER_MODEL', 'tiny')
+
+
 
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -144,6 +148,23 @@ class CallSession:
         self.dtmf_buffer = ""
         self.lock = threading.Lock()
         
+        # Inactivity Timer (30s)
+        self.inactivity_timer = None
+        self.reset_inactivity_timer()
+
+    def reset_inactivity_timer(self):
+        if self.inactivity_timer: self.inactivity_timer.cancel()
+        self.inactivity_timer = threading.Timer(60.0, self.handle_inactivity_timeout)
+        self.inactivity_timer.start()
+
+    def handle_inactivity_timeout(self):
+        print(f"⏰ Inactivity Timeout for {self.channel_id}")
+        try:
+            self.speak("Parece que no hay actividad. Voy a finalizar la llamada. ¡Hasta luego!")
+            time.sleep(10) # Wait for TTS to start/finish
+            requests.delete(f"{self.bot.base_url}/channels/{self.channel_id}", auth=self.bot.auth)
+        except: pass
+        
     def is_n8n_busy(self):
         if not N8N_API_KEY: return False
         try:
@@ -202,19 +223,31 @@ class CallSession:
         except Exception as e: print(f"🔥 RTP Callback Error: {e}")
 
     def handle_dtmf(self, digit):
-        """Handle keypad input"""
+        """Handle keypad input with auto-submit timeout"""
+        # Cancelar timer existente si hay uno corriendo
+        if hasattr(self, 'dtmf_timer') and self.dtmf_timer:
+            self.dtmf_timer.cancel()
+
         if digit == '#':
-            if self.dtmf_buffer:
-                print(f"🎹 DTMF Submit: {self.dtmf_buffer}")
-                val = self.dtmf_buffer
-                self.dtmf_buffer = ""
-                self.handle_user_input(val)
+            self.submit_dtmf()
         elif digit == '*':
             print("🎹 DTMF Clear")
             self.dtmf_buffer = ""
         else:
             self.dtmf_buffer += digit
             print(f"🎹 DTMF Buffer: {self.dtmf_buffer}")
+            # Iniciar nuevo timer de 3 segundos para auto-envío
+            self.dtmf_timer = threading.Timer(3.0, self.submit_dtmf)
+            self.dtmf_timer.start()
+
+    def submit_dtmf(self):
+        """Envia el buffer DTMF a n8n"""
+        if self.dtmf_buffer:
+            print(f"🎹 DTMF Submit: {self.dtmf_buffer}")
+            val = self.dtmf_buffer
+            self.dtmf_buffer = ""
+            # Ejecutar en thread aparte para no bloquear
+            threading.Thread(target=self.handle_user_input, args=(val,)).start()
 
     def stop_current_playback(self):
         if self.current_playback_id:
@@ -231,7 +264,8 @@ class CallSession:
             wav_buffer.seek(0)
             
             response = requests.post(f"{STT_URL}/v1/audio/transcriptions", files={'file': ('audio.wav', wav_buffer, 'audio/wav')},
-                                    data={'model': WHISPER_MODEL, 'language': 'es', 'temperature': 0.0}, timeout=45)
+                                    data={'model': WHISPER_MODEL, 'language': 'es', 'temperature': 0.0}, timeout=60)
+
             if response.status_code == 200:
                 text = response.json().get('text', '').strip()
                 if text:
@@ -242,19 +276,19 @@ class CallSession:
                     is_hallucination = False
                     
                     # Caso 1: Mucha repetición o frase con muy pocas letras distintas (ej: "no no no", "si si")
-                    # Si tiene 5 o menos letras distintas, es probable que sea ruido o alucinación repetitiva
-                    if distinct_letters <= 5:
+                    if distinct_letters <= 3:
                         is_hallucination = True
                     
                     # Caso 2: Palabras basura comunes de Whisper en silencio
-                    hallucination_phrases = ["gracias por ver", "suscríbete", "subtitles by", "gracias."] 
+                    hallucination_phrases = ["gracias por ver", "suscríbete", "subtitles by", "gracias.", "gracias por ver.", "suscríbete."] 
                     if text.lower() in hallucination_phrases:
                         is_hallucination = True
 
                     if is_hallucination:
                         print(f"🚫 Hallucination suspected ({distinct_letters} letters): {text}")
-                        self.speak("Perdón, no te escucho bien. ¿Podrías repetirme en un lugar con menos ruido, por favor?")
+                        # Don't speak, just ignore or log
                         return
+
 
                     print(f"👤 User: {text}")
                     self.handle_user_input(text)
@@ -263,14 +297,32 @@ class CallSession:
 
     def handle_user_input(self, text, is_initial=False):
         try:
+            self.reset_inactivity_timer()
             self.conversation_context.append({'role': 'user', 'content': text})
             safe_call_id = self.channel_id.replace('.', '_')
+            
+            # Routing de Webhooks por Departamento
+            dept = self.context_data.get('dept', 'recepcion')
+            base_webhook = N8N_WEBHOOK
+            
+            # Si el webhook base termina en 'telefono-ia', asumimos estructura estándar
+            webhook_url = base_webhook
+            if 'telefono-ia' in base_webhook:
+                if dept == 'ventas': webhook_url = base_webhook.replace('telefono-ia', 'ventas-ia')
+                elif dept == 'soporte': webhook_url = base_webhook.replace('telefono-ia', 'soporte-ia')
+                elif dept == 'agendamiento': webhook_url = base_webhook.replace('telefono-ia', 'agendamiento-ia')
+            
+            # Override por variable de entorno si existe
+            if dept == 'ventas' and os.getenv('WEBHOOK_VENTAS'): webhook_url = os.getenv('WEBHOOK_VENTAS')
+
+            print(f"🌍 Routing to n8n [{dept}]: {webhook_url}")
+
             payload = {
                 'call_id': safe_call_id, 'caller': self.caller_number, 'text': text,
-                'context': self.conversation_context[-5:], 'metadata': self.context_data, 'is_initial': is_initial
+                'context': self.conversation_context[-5:], 'metadata': self.context_data, 'is_initial': is_initial,
+                'department': dept
             }
-            dept = self.context_data.get('dept', 'recepcion')
-            webhook_url = DEPT_WEBHOOKS.get(dept, N8N_WEBHOOK)
+            
             response = requests.post(webhook_url, json=payload, timeout=45)
 
             if response.status_code == 200:
@@ -286,33 +338,92 @@ class CallSession:
             print(f"❌ n8n Error: {e}")
             self.speak("Perdón, tuve un problema de conexión. ¿Puedes repetir?")
 
-    def speak(self, text):
+    def _generate_edge_tts(self, text, voice):
+        """Helper to run async edge-tts in sync way"""
+        async def _gen():
+            communicate = edge_tts.Communicate(text, voice)
+            audio_data = b""
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    audio_data += chunk["data"]
+            return audio_data
+        
         try:
-            self.is_playing = True
-            response = requests.get(f"{TTS_URL}/api/tts", params={'text': text}, timeout=30)
-            if response.status_code == 200:
-                audio_data = response.content
-                try:
-                    converted_audio, _ = audioop.ratecv(audio_data, 2, 1, 22050, 8000, None)
-                    audio_data = converted_audio
-                except: pass
-
-                filename = f"tts_{self.channel_id}_{int(time.time())}.wav"
-                filepath = os.path.join(AUDIO_DIR, filename)
-                with wave.open(filepath, 'wb') as wf:
-                    wf.setnchannels(1); wf.setsampwidth(2); wf.setframerate(8000); wf.writeframes(audio_data)
-                
-                self.current_playback_id = self.bot.play_audio(self.channel_id, f"/tmp/audio/{filename[:-4]}")
-            else: self.is_playing = False
+            return asyncio.run(_gen())
         except Exception as e:
-            print(f"❌ TTS/Speak Error: {e}")
-            self.is_playing = False
+            print(f"❌ Edge-TTS Error: {e}")
+            return None
+
+    def generate_audio_file(self, text):
+        try:
+            # Selección de Voz Colombiana
+            dept = self.context_data.get('dept', 'recepcion')
+            if dept == 'ventas':
+                voice = "es-CO-GonzaloNeural" # Hombre Colombiano
+            else:
+                voice = "es-CO-SalomeNeural" # Mujer Colombiana
+            
+            mp3_data = self._generate_edge_tts(text, voice)
+            
+            if mp3_data:
+                mp3_filename = f"/tmp/tts_{self.channel_id}.mp3"
+                timestamp = int(time.time() * 1000) # Más precisión
+                wav_filename = f"/tmp/audio/tts_{self.channel_id}_{timestamp}.wav"
+                
+                with open(mp3_filename, "wb") as f: f.write(mp3_data)
+                
+                # Convertir MP3 a WAV 8000Hz
+                os.system(f"ffmpeg -y -i {mp3_filename} -ar 8000 -ac 1 -c:a pcm_s16le {wav_filename} > /dev/null 2>&1")
+                try: os.remove(mp3_filename)
+                except: pass
+                
+                return wav_filename[:-4] # Sin extensión para Asterisk
+            return None
+        except Exception as e:
+            print(f"❌ Generate Audio Error: {e}")
+            return None
+
+    def play_existing_file(self, path_no_ext):
+        if not path_no_ext: return
+        self.is_playing = True
+        self.current_playback_id = self.bot.play_audio(self.channel_id, path_no_ext)
+
+    def speak(self, text):
+        path = self.generate_audio_file(text)
+        if path: self.play_existing_file(path)
+
+    def get_n8n_init_text(self):
+        """Síncrono: Obtiene texto inicial de n8n"""
+        try:
+            # Reutiliza lógica de routing
+            dept = self.context_data.get('dept', 'recepcion')
+            base_webhook = N8N_WEBHOOK
+            webhook_url = base_webhook
+            if 'telefono-ia' in base_webhook:
+                if dept == 'ventas': webhook_url = base_webhook.replace('telefono-ia', 'ventas-ia')
+                elif dept == 'soporte': webhook_url = base_webhook.replace('telefono-ia', 'soporte-ia')
+            
+            print(f"🌍 Pre-Fetching Init from n8n [{dept}]: {webhook_url}")
+            safe_call_id = self.channel_id.replace('.', '_')
+            payload = {
+                'call_id': safe_call_id, 'caller': self.caller_number, 'text': '__INIT__',
+                'context': [], 'metadata': self.context_data, 'is_initial': True, 'department': dept
+            }
+            response = requests.post(webhook_url, json=payload, timeout=10)
+            if response.status_code == 200:
+                resp_json = response.json()
+                return resp_json.get('response', resp_json.get('text', 'Hola'))
+        except Exception as e: print(f"❌ Init Fetch Error: {e}")
+        return "Hola, bienvenido."
 
     def close(self):
+        if self.inactivity_timer: self.inactivity_timer.cancel()
         if self.rtp_receiver: self.rtp_receiver.stop()
-        if self.external_media_channel_id:
-            try: requests.delete(f"{self.bot.base_url}/channels/{self.external_media_channel_id}", auth=self.bot.auth)
-            except: pass
+        # ⚠️ NO eliminamos manualmente el ExternalMedia channel
+        # Asterisk lo gestiona automáticamente al terminar el canal principal
+        # if self.external_media_channel_id:
+        #     try: requests.delete(f"{self.bot.base_url}/channels/{self.external_media_channel_id}", auth=self.bot.auth)
+        #     except: pass
 
 class ARIBot:
     def __init__(self):
@@ -363,29 +474,55 @@ class ARIBot:
         args = event.get('args', [])
         context_data = {k.strip(): v.strip() for arg in args if '=' in arg for k, v in [arg.split('=', 1)]}
         
-        requests.post(f"{self.base_url}/channels/{cid}/answer", auth=self.auth)
+        # Inicializar sesión localmente (sin contestar aún)
         session = CallSession(cid, caller, self, context_data)
         self.sessions[cid] = session
-        session.setup_media_server()
         
-        time.sleep(1.0)
-        
-        # Greeting Logic (Strictly Receptionist for this version)
-        hour = datetime.now().hour
-        if 5 <= hour < 12: greeting = "Buenos días"
-        elif 12 <= hour < 19: greeting = "Buenas tardes"
-        else: greeting = "Buenas noches"
+        # Iniciar secuencia de llamada en hilo separado (Parallel Setup)
+        threading.Thread(target=self.setup_call_sequence, args=(session, context_data)).start()
 
-        # Special case: triggered outbound call with context
-        if 'agent_context' in context_data:
-            customer = context_data.get('customer_name', 'Cliente')
-            ctx = context_data.get('agent_context', '')
-            prompt = f"[SYSTEM_INIT] Contexto: {ctx}. Cliente: {customer}. Genera el saludo inicial breve (máx 2 frases)."
-            session.handle_user_input(prompt, is_initial=True)
-        else:
-            # Default Receptionist greeting for all inbound Stasis calls
-            msg = f"{greeting}, bienvenido a Cloudfly. Soy Ari Bot, tu recepcionista virtual. ¿En qué puedo ayudarte hoy?"
-            session.speak(msg)
+    def setup_call_sequence(self, session, context_data):
+        """Genera saludo ANTES de contestar, luego contesta y reproduce"""
+        try:
+            print(f"🚀 Starting Pre-Answer Sequence for {session.channel_id}")
+            dept = context_data.get('dept', 'recepcion')
+            
+            # 1. Obtener Texto y Generar Audio (Mientras timbra)
+            greeting_path = None
+            if dept == 'ventas':
+                text = session.get_n8n_init_text()
+                # Guardar en contexto para que no se pierda
+                session.conversation_context.append({'role': 'assistant', 'content': text})
+                greeting_path = session.generate_audio_file(text)
+            else:
+                # Laura Local
+                hour = datetime.now().hour
+                if 5 <= hour < 12: greeting = "Buenos días"
+                elif 12 <= hour < 19: greeting = "Buenas tardes"
+                else: greeting = "Buenas noches"
+                text = f"{greeting}, bienvenido a Cloudfly. Soy Laura, tu recepcionista virtual. ¿En qué puedo ayudarte hoy?"
+                session.conversation_context.append({'role': 'assistant', 'content': text})
+                greeting_path = session.generate_audio_file(text)
+                
+            # 2. Setup Media (Sigue timbrando)
+            session.setup_media_server()
+            
+            # 3. ANSWER Call (Ahora sí cobramos/conectamos)
+            requests.post(f"{self.base_url}/channels/{session.channel_id}/answer", auth=self.auth)
+            
+            # 4. Breve pausa para estabilizar audio
+            time.sleep(0.5) 
+            
+            # 5. Reproducir saludo precargado
+            if greeting_path:
+                print(f"▶️ Playing Pre-Generated Greeting: {greeting_path}")
+                session.play_existing_file(greeting_path)
+                session.reset_inactivity_timer() # REINICIAR TIMER AQUI!
+                
+        except Exception as e:
+            print(f"❌ Setup Sequence Error: {e}")
+            # Fallback: answer anyway
+            requests.post(f"{self.base_url}/channels/{session.channel_id}/answer", auth=self.auth)
 
     def handle_stasis_end(self, event):
         cid = event['channel']['id']

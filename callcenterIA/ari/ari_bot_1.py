@@ -502,13 +502,14 @@ class CallSession:
         """Cleanup"""
         if self.rtp_receiver:
             self.rtp_receiver.stop()
-        # Clean up External Media channel?
-        # When main channel hangs up, the bridge usually destroys or we should hangup external channel.
-        if self.external_media_channel_id:
-            try:
-                requests.delete(f"{self.bot.base_url}/channels/{self.external_media_channel_id}", auth=self.bot.auth)
-            except:
-                pass
+        # ⚠️ NO eliminamos manualmente el ExternalMedia channel
+        # Asterisk lo gestiona automáticamente al terminar el canal principal
+        # Eliminar manualmente causa que se cuelguen las llamadas activas
+        # if self.external_media_channel_id:
+        #     try:
+        #         requests.delete(f"{self.bot.base_url}/channels/{self.external_media_channel_id}", auth=self.bot.auth)
+        #     except:
+        #         pass
 
 
 class ARIBot:

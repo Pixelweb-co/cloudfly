@@ -38,3 +38,15 @@
 # User-specific files
 ./backend/DS_Store
 ./bakend/Thumbs.db
+
+# Exclude Asterisk data, logs, and generated files (causes permission issues on Windows)
+callcenterIA/asterisk/data/
+callcenterIA/asterisk/log/
+callcenterIA/asterisk/etc/
+callcenterIA/db/
+
+# Exclude cloudflared configuration
+.cloudflared/
+
+# Exclude Traefik data
+traefik/

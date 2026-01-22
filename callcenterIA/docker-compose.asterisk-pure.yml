@@ -1,0 +1,76 @@
+services:
+  asterisk:
+    image: andrius/asterisk
+    container_name: asterisk
+    ports:
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "8088:8088"
+      - "10000-10100:10000-10100/udp"
+    volumes:
+      - ./asterisk/conf:/etc/asterisk
+      - ./asterisk/moh:/var/lib/asterisk/moh
+      - audio_tmp:/tmp/audio
+    restart: unless-stopped
+
+  ari-bot:
+    build: ./ari
+    container_name: ari-bot
+    ports:
+      - "5000:5000"  # API Server port
+    environment:
+      ARI_URL: http://asterisk:8088
+      ARI_USER: ariuser
+      ARI_PASS: aripass
+      STT_URL: http://stt:8000
+      TTS_URL: http://tts:5002
+      N8N_WEBHOOK: https://autobot.cloudfly.com.co/webhook/telefono-ia
+      RTP_HOST: ari-bot
+      API_PORT: 5000
+    volumes:
+      - audio_tmp:/tmp/audio
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - asterisk
+      - stt
+      - tts
+
+  stt:
+    image: fedirz/faster-whisper-server:latest-cuda
+    container_name: stt
+    ports:
+      - "8000:8000"
+    environment:
+      - WHISPER_MODEL=base
+      - WHISPER_LANG=es
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  tts:
+    image: ghcr.io/coqui-ai/tts:latest
+    container_name: tts
+    ports:
+      - "5002:5002"
+    environment:
+      - COQUI_TOS_AGREED=1
+    entrypoint: ["python3", "-m", "TTS.server.server"]
+    command: --model_name tts_models/es/mai/tacotron2-DDC --use_cuda true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  audio_tmp:
