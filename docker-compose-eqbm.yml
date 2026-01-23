@@ -1,6 +1,6 @@
 services:
   
-  backend-api:
+  backend-api-cloudfly:
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -10,21 +10,22 @@ services:
       - SPRING_PROFILES_ACTIVE=production
       - DB_HOST=db
       - DB_PORT=3306
-      - DB_DATABASE=cloudfly_main
+      - DB_DATABASE=ingenieriadb
       - DB_USERNAME=root
       - DB_PASSWORD=widowmaker
-   
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     networks:
       - mired
       - kafka-net
     labels:
       - "traefik.enable=true"
       # router HTTPS para el API
-      - "traefik.http.routers.api.rule=Host(`api.cloudfly.com.co`)"
-      - "traefik.http.routers.api.entrypoints=websecure"
-      - "traefik.http.routers.api.tls.certresolver=le"
+      - "traefik.http.routers.api-cloudfly.rule=Host(`api.cloudfly.com.co`)"
+      - "traefik.http.routers.api-cloudfly.entrypoints=websecure"
+      - "traefik.http.routers.api-cloudfly.tls.certresolver=le"
       # puerto interno del backend
-      - "traefik.http.services.api.loadbalancer.server.port=8080"
+      - "traefik.http.services.api-cloudfly.loadbalancer.server.port=8080"
+      - "traefik.docker.network=gm2_mired"
 
   
   frontend-react:
@@ -43,6 +44,7 @@ services:
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls.certresolver=le"
       - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+      - "traefik.docker.network=gm2_mired"
 
   
   chat-socket-service:
@@ -62,13 +64,13 @@ services:
       - N8N_SECRET_KEY=${N8N_SECRET_KEY}
     networks:
       - mired
-   
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.chatsocket.rule=Host(`chat.cloudfly.com.co`)"
       - "traefik.http.routers.chatsocket.entrypoints=websecure"
       - "traefik.http.routers.chatsocket.tls.certresolver=le"
       - "traefik.http.services.chatsocket.loadbalancer.server.port=3001"
+      - "traefik.docker.network=gm2_mired"
 
   
   

@@ -1,5 +1,6 @@
 package com.app.starter1.persistence.entity.rbac;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -22,6 +23,7 @@ public class ModuleAction {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "module_id", nullable = false)
+    @JsonIgnore
     private RbacModule module;
 
     @Column(nullable = false, length = 50)

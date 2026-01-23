@@ -1,5 +1,6 @@
 package com.app.starter1.persistence.entity.rbac;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -60,6 +61,7 @@ public class RbacModule {
 
     @OneToMany(mappedBy = "module", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private Set<ModuleAction> actions = new HashSet<>();
 
     @PrePersist
