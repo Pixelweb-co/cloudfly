@@ -582,7 +582,13 @@ public class SecurityConfig {
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
-                configuration.addAllowedOrigin(allowedOrigin);
+
+                if (allowedOrigin != null && !allowedOrigin.isEmpty()) {
+                        for (String origin : allowedOrigin.split(",")) {
+                                configuration.addAllowedOrigin(origin.trim());
+                        }
+                }
+
                 configuration.addAllowedOrigin("http://localhost:3000");
                 configuration.addAllowedOrigin("http://localhost:3001");
                 configuration.addAllowedOrigin("http://localhost:8080");
