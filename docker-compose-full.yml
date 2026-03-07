@@ -87,7 +87,7 @@ services:
     labels:
       - "traefik.enable=true"
       # router HTTPS para el API
-      - "traefik.http.routers.api.rule=Host(`api.cloudflyy.com.co`)"
+      - "traefik.http.routers.api.rule=Host(`api.cloudfly.com.co`)"
       - "traefik.http.routers.api.entrypoints=websecure"
       - "traefik.http.routers.api.tls.certresolver=le"
       # puerto interno del backend
