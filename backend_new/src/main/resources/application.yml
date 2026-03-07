@@ -1,0 +1,21 @@
+spring:
+  r2dbc:
+    url: r2dbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_DATABASE:cloud_master}
+    username: ${DB_USERNAME:root}
+    password: widowmaker
+  
+  # WebFlux usa Netty
+  main:
+    web-application-type: reactive
+
+server:
+  port: 8080
+
+logging:
+  level:
+    org.springframework.data.r2dbc: DEBUG
+    io.asyncer.r2dbc.mysql: DEBUG
+
+jwt:
+  secret: ${JWT_SECRET:cloudfly-production-secret-998877}
+  expiration: 86400000 # 1 día en ms
