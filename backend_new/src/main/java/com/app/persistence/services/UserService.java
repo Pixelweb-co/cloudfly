@@ -66,14 +66,8 @@ public class UserService {
         }
 
         public Mono<Boolean> verifyEmail(String token) {
-                return userRepository.findByVerificationToken(token)
-                                .flatMap(user -> {
-                                        if (user == null)
-                                                return Mono.just(false);
-                                        user.setEnabled(true);
-                                        user.setVerificationToken(null);
-                                        return userRepository.save(user).thenReturn(true);
-                                })
+                return userRepository.enableUserByToken(token)
+                                .map(count -> count > 0)
                                 .defaultIfEmpty(false);
         }
 }
