@@ -73,4 +73,8 @@ public class ProductService {
                     return productRepository.save(product);
                 });
     }
+
+    public Flux<Product> findAll() {
+        return productRepository.findAll();
+    }
 }

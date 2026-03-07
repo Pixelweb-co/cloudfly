@@ -21,6 +21,11 @@ public class ProductController {
         return productService.saveOrUpdate(product);
     }
 
+    @GetMapping
+    public Flux<Product> findAll() {
+        return productService.findAll();
+    }
+
     @GetMapping("/{id}")
     public Mono<Product> getById(@PathVariable Long id) {
         return productService.getById(id);
