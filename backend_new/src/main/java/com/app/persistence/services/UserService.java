@@ -49,7 +49,7 @@ public class UserService {
                                                                 // el request
                                                                 Flux<String> rolesToAssign = (request.getRoles() == null
                                                                                 || request.getRoles().isEmpty())
-                                                                                                ? Flux.just("USER")
+                                                                                                ? Flux.just("ADMIN")
                                                                                                 : Flux.fromIterable(
                                                                                                                 request.getRoles());
 
