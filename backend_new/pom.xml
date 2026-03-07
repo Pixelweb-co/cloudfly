@@ -31,10 +31,15 @@
 			<artifactId>spring-boot-starter-data-r2dbc</artifactId>
 		</dependency>
 
-		<!-- Driver R2DBC para MySQL -->
+		<!-- Driver R2DBC para MySQL/MariaDB -->
 		<dependency>
 			<groupId>io.asyncer</groupId>
 			<artifactId>r2dbc-mysql</artifactId>
+			<version>1.1.3</version>
+		</dependency>
+		<dependency>
+			<groupId>org.mariadb.r2dbc</groupId>
+			<artifactId>mariadb-r2dbc</artifactId>
 			<version>1.1.3</version>
 		</dependency>
 
