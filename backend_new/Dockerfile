@@ -2,10 +2,8 @@
 FROM maven:3.9.4-eclipse-temurin-17 AS builder
 WORKDIR /app
 COPY pom.xml .
-# Descargar dependencias primero para cachear capas
-RUN mvn dependency:go-offline -B
 COPY src ./src
-RUN mvn clean package -Dmaven.test.skip=true
+RUN mvn clean package -DskipTests -B
 
 # Run stage
 FROM eclipse-temurin:17-jre-jammy
