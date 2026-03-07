@@ -68,8 +68,10 @@ public class UserService {
         public Mono<Boolean> verifyEmail(String token) {
                 return userRepository.findByVerificationToken(token)
                                 .flatMap(user -> {
+                                        if (user == null)
+                                                return Mono.just(false);
                                         user.setEnabled(true);
-                                        user.setVerificationToken(null); // Limpiar el token tras uso
+                                        user.setVerificationToken(null);
                                         return userRepository.save(user).thenReturn(true);
                                 })
                                 .defaultIfEmpty(false);
