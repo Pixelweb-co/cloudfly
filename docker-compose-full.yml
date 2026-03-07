@@ -63,17 +63,21 @@ services:
 
   backend-api:
     build:
-      context: ./backend
+      context: ./backend_new
       dockerfile: Dockerfile
     container_name: backend-api
     restart: unless-stopped
+    ports:
+      - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=production
       - DB_HOST=db
       - DB_PORT=3306
-      - DB_DATABASE=cloudfly_main
+      - DB_DATABASE=cloud_master
       - DB_USERNAME=root
       - DB_PASSWORD=widowmaker
+      - SPRING_R2DBC_URL=r2dbc:mysql://db:3306/cloud_master
+      - JWT_SECRET=cloudfly-production-secret-998877
     depends_on:
       - db
       - kafka
@@ -83,7 +87,7 @@ services:
     labels:
       - "traefik.enable=true"
       # router HTTPS para el API
-      - "traefik.http.routers.api.rule=Host(`api.cloudfly.com.co`)"
+      - "traefik.http.routers.api.rule=Host(`api.cloudflyy.com.co`)"
       - "traefik.http.routers.api.entrypoints=websecure"
       - "traefik.http.routers.api.tls.certresolver=le"
       # puerto interno del backend
@@ -121,7 +125,7 @@ services:
   frontend-react:
     container_name: frontend_app
     build:
-      context: ./frontend
+      context: ./frontend_new
       dockerfile: Dockerfile
     environment:
       - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co   # Traefik termina SSL
