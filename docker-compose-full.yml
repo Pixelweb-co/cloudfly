@@ -86,25 +86,27 @@ services:
     depends_on:
       - kafka
 
-#  frontend-react:
-#    build:
-#      context: ./frontend_new
-#      dockerfile: Dockerfile
-#    container_name: frontend-react
-#    restart: always
-#    labels:
-#      - "traefik.enable=true"
-#      - "traefik.http.routers.frontend.rule=Host(`dashboard.cloudfly.com.co`)"
-#      - "traefik.http.routers.frontend.entrypoints=websecure"
-#      - "traefik.http.routers.frontend.tls.certresolver=le"
-#      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
-#    networks:
-#      - app-net
+  frontend-react:
+    build:
+      context: ./frontend_new
+      dockerfile: Dockerfile
+    container_name: frontend-react
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`dashboard.cloudfly.com.co`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=le"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+    networks:
+      - app-net
 
   traefik:
-    image: traefik:v2.10
+    image: traefik:v3.1
     container_name: traefik
     restart: always
+    environment:
+      - DOCKER_API_VERSION=1.44
     ports:
       - "80:80"
       - "443:443"
