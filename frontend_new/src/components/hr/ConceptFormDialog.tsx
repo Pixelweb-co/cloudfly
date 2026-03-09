@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+
 import {
     Dialog,
     DialogTitle,
@@ -17,7 +18,8 @@ import {
     Grid,
     Box
 } from '@mui/material'
-import { PayrollConcept } from '@/types/hr'
+
+import type { PayrollConcept } from '@/types/hr'
 
 interface ConceptFormDialogProps {
     open: boolean
@@ -52,6 +54,7 @@ export default function ConceptFormDialog({ open, onClose, onSuccess, concept }:
         isSystemConcept: false,
         isActive: true
     })
+
     const [saving, setSaving] = useState(false)
 
     const isEditMode = !!concept
@@ -94,10 +97,12 @@ export default function ConceptFormDialog({ open, onClose, onSuccess, concept }:
     const handleSubmit = async () => {
         if (!formData.code || !formData.name) {
             alert('Por favor complete los campos requeridos: Código y Nombre')
-            return
+            
+return
         }
 
         setSaving(true)
+
         try {
             const { payrollConceptService } = await import('@/services/hr/payrollConceptService')
             const customerId = 1 // TODO: Get from context

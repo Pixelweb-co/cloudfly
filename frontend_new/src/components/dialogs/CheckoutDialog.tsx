@@ -1,6 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+
+import { useRouter } from 'next/navigation'
+
 import {
   Dialog,
   DialogTitle,
@@ -18,9 +21,10 @@ import {
   Grid
 } from '@mui/material'
 import { useForm, Controller } from 'react-hook-form'
-import { useSubscription } from '@/hooks/useSubscription'
-import { useRouter } from 'next/navigation'
+
 import { toast } from 'react-toastify'
+
+import { useSubscription } from '@/hooks/useSubscription'
 
 interface Plan {
   id: number
@@ -57,6 +61,7 @@ const CheckoutDialog = ({
   const { subscribeToPlan, loading: subscriptionLoading, error } = useSubscription()
   const router = useRouter()
   const [isProcessing, setIsProcessing] = useState(false)
+
   const { control, handleSubmit, reset, formState: { errors } } = useForm<CheckoutFormData>({
     defaultValues: {
       cardNumber: '',
@@ -77,7 +82,8 @@ const CheckoutDialog = ({
       // Aquí solo validamos que los datos sean válidos
       if (!data.cardNumber || !data.cardHolder || !data.expiryDate || !data.cvv) {
         toast.error('Por favor completa todos los datos de la tarjeta')
-        return
+        
+return
       }
 
       // Simular delay de procesamiento de pago

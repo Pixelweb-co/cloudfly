@@ -133,9 +133,11 @@ export interface PayrollPeriod {
     description?: string
     periodName: string
     workingDays: number
+
     // Empleados asignados
     employeeIds?: number[]
     employeeCount?: number
+
     // Totales de nómina
     totalPayroll?: number
     elapsedPayroll?: number
@@ -241,6 +243,7 @@ export interface LiquidationResult {
     receiptsGenerated: number
     totalNetPay: number
     liquidatedAt?: string
+
     // Optional fields if backend sends them
     totalEmployees?: number
     noveltiesProcessed?: number

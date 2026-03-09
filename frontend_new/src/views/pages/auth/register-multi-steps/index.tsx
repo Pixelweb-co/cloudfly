@@ -20,8 +20,9 @@ import type { StepProps } from '@mui/material/Step'
 import classnames from 'classnames'
 
 // Type Imports
-import type { SystemMode } from '@core/types'
 import type { Locale } from '@configs/i18n'
+
+import type { SystemMode } from '@core/types'
 
 // Component Imports
 import CustomAvatar from '@core/components/mui/Avatar'

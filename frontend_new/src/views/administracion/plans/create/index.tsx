@@ -1,7 +1,9 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+
 import { useRouter } from 'next/navigation'
+
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import CardHeader from '@mui/material/CardHeader'
@@ -18,12 +20,15 @@ import OutlinedInput from '@mui/material/OutlinedInput'
 import Chip from '@mui/material/Chip'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
+
+import { useForm, Controller } from 'react-hook-form'
+
+import { toast } from 'react-hot-toast'
+
 import CustomTextField from '@core/components/mui/TextField'
-import { PlanValues } from '@/types/plans'
+import type { PlanValues } from '@/types/plans'
 import { planService } from '@/services/plans/planService'
 import { rbacService } from '@/services/rbac/rbacService'
-import { useForm, Controller } from 'react-hook-form'
-import { toast } from 'react-hot-toast'
 
 const NewPlanView = () => {
     const router = useRouter()
@@ -72,18 +77,21 @@ const NewPlanView = () => {
         const fetchModules = async () => {
             try {
                 const modules = await rbacService.getModulesList()
+
                 console.log('Loaded modules:', modules)
                 setAvailableModules(modules)
             } catch (error) {
                 console.error('Error fetching modules:', error)
             }
         }
+
         fetchModules()
     }, [])
 
     const onSubmit = async (formData: PlanValues) => {
         try {
             setIsSubmitting(true)
+
             const payload = {
                 ...formData,
                 moduleIds: selectedModules
@@ -95,6 +103,7 @@ const NewPlanView = () => {
         } catch (error: any) {
             console.error('Error creating plan:', error)
             const errorMessage = error?.response?.data?.message || error?.message || 'Error al crear el plan'
+
             toast.error(errorMessage)
         } finally {
             setIsSubmitting(false)
@@ -103,6 +112,7 @@ const NewPlanView = () => {
 
     const handleModuleChange = (event: any) => {
         const value = event.target.value
+
         setSelectedModules(typeof value === 'string' ? value.split(',').map(Number) : value)
     }
 

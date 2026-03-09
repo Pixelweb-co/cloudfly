@@ -1,11 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+
 import { useRouter } from 'next/navigation'
+
 import { Controller, useForm } from 'react-hook-form'
 import { Button, Card, CardContent, CardHeader, Checkbox, Grid, TextField, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress, Divider, Chip } from '@mui/material'
+
 import { axiosInstance } from '@/utils/axiosInstance'
-import { RoleFormData, RoleAction } from '@/types/apps/roleType'
+import type { RoleFormData, RoleAction } from '@/types/apps/roleType'
 
 interface Props {
     id?: string // 'new' or numeric id
@@ -30,6 +33,7 @@ const RoleForm = ({ id }: Props) => {
                 setLoading(true)
                 const roleId = id || 'new'
                 const response = await axiosInstance.get(`/api/roles/form/${roleId}`)
+
                 setFormData(response.data)
                 reset(response.data)
             } catch (error) {
@@ -38,6 +42,7 @@ const RoleForm = ({ id }: Props) => {
                 setLoading(false)
             }
         }
+
         fetchData()
     }, [id, reset])
 
@@ -59,8 +64,10 @@ const RoleForm = ({ id }: Props) => {
     const handleActionChange = (moduleIndex: number, actionId: number, checked: boolean) => {
         if (!formData) return
         const updatedModules = [...formData.modules]
+
         // Encontrar la acción por ID en el array plano
         const actionIndex = updatedModules[moduleIndex].actions.findIndex(a => a.id === actionId)
+
         if (actionIndex !== -1) {
             updatedModules[moduleIndex].actions[actionIndex].granted = checked
             setFormData({ ...formData, modules: updatedModules })

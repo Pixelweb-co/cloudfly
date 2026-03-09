@@ -1,11 +1,11 @@
 
 import React, { useEffect, useState } from 'react';
+
 import {
     Dialog,
     DialogContent,
     DialogTitle,
-} from "@mui/material";
-import {
+
     Table,
     TableBody,
     TableCell,
@@ -15,6 +15,7 @@ import {
     Paper,
     Chip
 } from "@mui/material";
+
 import axiosInstance from '@/utils/axiosInstance';
 
 interface AccountingEntry {
@@ -63,8 +64,10 @@ export function AccountingVoucherModal({ open, onOpenChange, voucherId }: Accoun
     const fetchVoucher = async (id: number) => {
         setLoading(true);
         setError(null);
+
         try {
             const response = await axiosInstance.get(`/accounting/vouchers/${id}`);
+
             setVoucher(response.data);
         } catch (err: any) {
             console.error("Error fetching voucher", err);

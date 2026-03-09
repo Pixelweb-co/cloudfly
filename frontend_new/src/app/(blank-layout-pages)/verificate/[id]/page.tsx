@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+
 import { useParams } from 'next/navigation'
 
 import VerifyEmailLink from '@/views/pages/auth/VerifyEmailLink'
@@ -20,6 +21,7 @@ const VerficateEmailPage = () => {
 
       try {
         const result = await AuthManager.validateAccount({ validationToken: String(params.id) })
+
         console.log('Resultado de validación:', result)
       } catch (error) {
         console.error('Error en validación:', error)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+
 import {
   Dialog,
   DialogTitle,
@@ -16,6 +17,7 @@ import {
   CircularProgress,
   Alert
 } from '@mui/material'
+
 import { useSubscription } from '@/hooks/useSubscription'
 
 interface Plan {

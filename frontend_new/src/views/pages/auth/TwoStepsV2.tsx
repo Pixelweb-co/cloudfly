@@ -18,8 +18,9 @@ import type { SlotProps } from 'input-otp'
 import classnames from 'classnames'
 
 // Type Imports
-import type { SystemMode } from '@core/types'
 import type { Locale } from '@configs/i18n'
+
+import type { SystemMode } from '@core/types'
 
 // Component Imports
 import Form from '@components/Form'

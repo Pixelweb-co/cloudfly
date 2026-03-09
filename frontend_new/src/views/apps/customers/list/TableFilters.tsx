@@ -27,7 +27,9 @@ const TableFilters = ({
 
         const filteredData = tableData.filter(customer => {
             const matchStatus = status !== '' ? customer.status === status : true // Comparar el estado
-            return matchStatus
+
+            
+return matchStatus
         })
 
         setData(filteredData)

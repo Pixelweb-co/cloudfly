@@ -3,7 +3,10 @@
 // React Imports
 import { useEffect, useRef } from 'react'
 import type { CSSProperties } from 'react'
+
 import Image from "next/image";
+
+
 // Third-party Imports
 import styled from '@emotion/styled'
 

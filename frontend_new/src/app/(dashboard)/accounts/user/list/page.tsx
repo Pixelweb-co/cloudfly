@@ -7,7 +7,8 @@ import { useEffect, useState } from 'react'
 import UserList from '@/views/apps/user/list'
 
 // Service Imports
-import userService, { User } from '@/services/userService'
+import type { User } from '@/services/userService';
+import userService from '@/services/userService'
 
 const UserListPage = () => {
     // States
@@ -18,6 +19,7 @@ const UserListPage = () => {
         const fetchData = async () => {
             try {
                 const data = await userService.getAllUsers()
+
                 // Map backend UserDTO to frontend UsersType if needed
                 // Backend: UserDTO { id, username, email, roles: Set<String>, ... }
                 // Frontend: UsersType { id, role, username, email, ... }

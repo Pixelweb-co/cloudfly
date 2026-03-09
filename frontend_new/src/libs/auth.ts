@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+
 // Third-party Imports
 import CredentialProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
@@ -98,13 +99,16 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         // When user signs in, user object maps to the return value of authorize callback
         const u = user as any
+
         token.accessToken = u.token || u.accessToken
         token.id = u.id
         token.role = u.role
         token.name = u.fullName || u.name
         token.userCapabilities = u.userCapabilities
       }
-      return token
+
+      
+return token
     },
     async session({ session, token }) {
       if (session.user) {
@@ -115,7 +119,9 @@ export const authOptions: NextAuthOptions = {
           ; (session as any).user.name = token.name
           ; (session as any).user.userCapabilities = token.userCapabilities
       }
-      return session
+
+      
+return session
     }
   }
 }

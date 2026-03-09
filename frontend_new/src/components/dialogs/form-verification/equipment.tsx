@@ -1,11 +1,14 @@
-import CustomTextField from '@/@core/components/mui/TextField';
+import React, { useEffect } from 'react';
+
 import { Button, Card, CardContent, CardHeader, Divider, Grid, IconButton, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import React, { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import * as yup from 'yup';
-import JsonTreeBuilder from './treeBuilder';
+
 import { yupResolver } from '@hookform/resolvers/yup';
+
+import JsonTreeBuilder from './treeBuilder';
+import CustomTextField from '@/@core/components/mui/TextField';
 
 
 const Equipment = ({

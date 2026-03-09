@@ -74,13 +74,17 @@ export const dashboardService = {
     // Get user's accessible modules
     async getAccessibleModules(): Promise<DashboardModule[]> {
         const response = await axiosInstance.get('/api/rbac/menu')
-        return response.data
+
+        
+return response.data
     },
 
     // Get dashboard stats based on user's modules
     async getStats(): Promise<DashboardStats> {
         const response = await axiosInstance.get('/dashboard/stats')
-        return response.data
+
+        
+return response.data
     },
 
     // Get sales chart data
@@ -88,7 +92,9 @@ export const dashboardService = {
         const response = await axiosInstance.get(`/dashboard/sales`, {
             params: { period }
         })
-        return response.data
+
+        
+return response.data
     },
 
     // Get recent activity
@@ -96,7 +102,9 @@ export const dashboardService = {
         const response = await axiosInstance.get(`/dashboard/activity`, {
             params: { limit }
         })
-        return response.data
+
+        
+return response.data
     },
 
     // Get top products
@@ -104,7 +112,9 @@ export const dashboardService = {
         const response = await axiosInstance.get(`/dashboard/top-products`, {
             params: { period }
         })
-        return response.data
+
+        
+return response.data
     },
 
     // TODO: Implement these endpoints in backend first

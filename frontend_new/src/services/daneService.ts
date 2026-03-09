@@ -9,7 +9,9 @@ export const daneService = {
      */
     async getAll(): Promise<DaneCode[]> {
         const response = await axiosInstance.get<DaneCode[]>(API_URL)
-        return response.data
+
+        
+return response.data
     },
 
     /**
@@ -17,7 +19,9 @@ export const daneService = {
      */
     async getDepartamentos(): Promise<DaneCode[]> {
         const response = await axiosInstance.get<DaneCode[]>(`${API_URL}/departamentos`)
-        return response.data
+
+        
+return response.data
     },
 
     /**
@@ -25,7 +29,9 @@ export const daneService = {
      */
     async getCiudadesByDepartamento(codigoDepartamento: string): Promise<DaneCode[]> {
         const response = await axiosInstance.get<DaneCode[]>(`${API_URL}/ciudades/${codigoDepartamento}`)
-        return response.data
+
+        
+return response.data
     },
 
     /**
@@ -33,7 +39,9 @@ export const daneService = {
      */
     async getByCodigo(codigo: string): Promise<DaneCode> {
         const response = await axiosInstance.get<DaneCode>(`${API_URL}/codigo/${codigo}`)
-        return response.data
+
+        
+return response.data
     },
 
     /**
@@ -41,7 +49,9 @@ export const daneService = {
      */
     async create(data: Partial<DaneCode>): Promise<DaneCode> {
         const response = await axiosInstance.post<DaneCode>(API_URL, data)
-        return response.data
+
+        
+return response.data
     },
 
     /**
@@ -49,7 +59,9 @@ export const daneService = {
      */
     async update(id: number, data: Partial<DaneCode>): Promise<DaneCode> {
         const response = await axiosInstance.put<DaneCode>(`${API_URL}/${id}`, data)
-        return response.data
+
+        
+return response.data
     },
 
     /**

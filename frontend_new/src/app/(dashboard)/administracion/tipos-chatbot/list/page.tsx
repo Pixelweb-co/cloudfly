@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+
 import { LinearProgress } from '@mui/material'
+
 import { axiosInstance } from '@/utils/axiosInstance'
 import ChatbotTypeList from '@/views/administracion/chatbot-types/list'
 
@@ -36,6 +38,7 @@ const ChatbotTypeListApp = () => {
 
         try {
             const res = await axiosInstance.get('/chatbot-types')
+
             setChatbotTypeData(res.data)
         } catch (error: any) {
             console.warn('Error fetching Chatbot Types data, using mock:', error)

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { jwtDecode } from "jwt-decode";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 
 export const AuthManager = {
@@ -16,6 +17,7 @@ export const AuthManager = {
       })
 
       console.log(response.data)
+
       // ESTANDARIZADO: usar 'jwt'
       localStorage.setItem('jwt', response.data.jwt)
       localStorage.setItem('userData', JSON.stringify(response.data.user))
@@ -108,7 +110,8 @@ export const AuthManager = {
 
       if (!token) {
         console.error('Token no encontrado')
-        return false
+        
+return false
       }
 
       const decodedToken: any = jwtDecode(token)
@@ -117,13 +120,15 @@ export const AuthManager = {
 
       if (expirationDate < currentDate) {
         console.error('Token expirado')
-        return false
+        
+return false
       }
 
       return true
     } catch (error) {
       console.error('Error durante la validación del token:', error)
-      return false
+      
+return false
     }
   },
 

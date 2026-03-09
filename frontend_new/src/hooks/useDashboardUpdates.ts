@@ -46,6 +46,7 @@ export const useDashboardUpdates = () => {
         // Escuchar nueva venta
         socket.on('dashboard-new-sale', (sale: any) => {
             console.log('💰 Nueva venta:', sale)
+
             // Trigger refetch de stats
             setStats(prev => ({
                 ...prev,

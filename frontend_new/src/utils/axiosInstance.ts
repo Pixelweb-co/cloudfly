@@ -23,7 +23,9 @@ axiosInstance.interceptors.request.use(
                 config.headers.Authorization = `Bearer ${token}`
             }
         }
-        return config
+
+        
+return config
     },
     error => {
         return Promise.reject(error)
@@ -46,13 +48,16 @@ axiosInstance.interceptors.response.use(
 
                 // Solo redirigir si no estamos ya en la ruta de login / register / forgot
                 const path = window.location.pathname
+
                 if (!path.includes('/login') && !path.includes('/register') && !path.includes('/recover-password')) {
                     console.log('Redirigiendo al login desde interceptor...')
                     window.location.href = '/login'
                 }
             }
         }
-        return Promise.reject(error)
+
+        
+return Promise.reject(error)
     }
 )
 

@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+
 import { useRouter } from 'next/navigation'
+
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Button from '@mui/material/Button'
@@ -28,13 +30,15 @@ import {
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
+
+import { Chip, Tooltip } from '@mui/material'
+
 import TablePaginationComponent from '@/components/TablePaginationComponent' // Fixed import
 import type { ChatbotTypeConfig } from '@/types/chatbotTypes' // Fixed import
 import ChatbotTypeForm from '@/components/dialogs/form-chatbot-type' // Fixed import
 import CustomTextField from '@core/components/mui/TextField'
 import tableStyles from '@core/styles/table.module.css'
 import { userMethods } from '@/utils/userMethods'
-import { Chip, Tooltip } from '@mui/material'
 import { axiosInstance } from '@/utils/axiosInstance'
 import ErrorDialog from '@/components/dialogs/ErrorDialog' // Fixed import
 
@@ -53,10 +57,12 @@ type ChatbotTypeConfigWithAction = ChatbotTypeConfig & {
 
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
     const itemRank = rankItem(row.getValue(columnId), value)
+
     addMeta({
         itemRank
     })
-    return itemRank.passed
+    
+return itemRank.passed
 }
 
 const DebouncedInput = ({

@@ -89,6 +89,7 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
       const hasAdmin = roles.some(r => r.includes('ADMIN') && !r.includes('SUPERADMIN'))
 
       let userRole: string | null = null
+
       if (hasSuperAdmin) {
         userRole = 'SUPERADMIN'
       } else if (hasManager) {
@@ -100,7 +101,8 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
       return { userRole, userRoles: roles }
     } catch (e) {
       console.error('Failed to decode token:', e)
-      return { userRole: null, userRoles: [] }
+      
+return { userRole: null, userRoles: [] }
     }
   }, []) // Empty deps means this runs once on mount
 
@@ -123,7 +125,8 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
       if (!token) {
         setMenuData([])
         setIsLoading(false)
-        return
+        
+return
       }
 
       try {
@@ -132,10 +135,12 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
 
         // Fetch menu from endpoint /api/rbac/menu
         const menu = await menuService.getMenu()
+
         setMenuData(menu)
       } catch (err) {
         console.error('Error loading menu from backend:', err)
         setError('Error al cargar menú')
+
         // Fallback to static menu if available, parsed as MenuItem[]
         // @ts-ignore
         setMenuData(verticalMenuData())
@@ -158,12 +163,15 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
         const isExcluded = item.excludedRoles.some(excluded =>
           userRoles.some(ur => ur.includes(excluded.toUpperCase()))
         )
+
         if (isExcluded) return null
       }
 
       if (item.children && item.children.length > 0) {
         // Render SubMenu if there are children
         const children = renderMenuItems(item.children)
+
+
         // If all children are null (filtered out), don't render the parent
         if (children.every(child => child === null)) return null
 

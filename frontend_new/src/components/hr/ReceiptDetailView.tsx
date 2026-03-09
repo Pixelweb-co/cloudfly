@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
-import { PayrollReceipt } from '@/types/hr'
-import { AccountingVoucherModal } from '@/components/accounting/AccountingVoucherModal'
+
 import {
     Card,
     CardContent,
@@ -15,6 +14,7 @@ import {
     Tooltip,
     Paper
 } from '@mui/material'
+
 import {
     Download,
     Payment,
@@ -25,6 +25,9 @@ import {
     CheckCircle,
     Warning
 } from '@mui/icons-material'
+
+import type { PayrollReceipt } from '@/types/hr'
+import { AccountingVoucherModal } from '@/components/accounting/AccountingVoucherModal'
 
 interface ReceiptDetailViewProps {
     receipt: PayrollReceipt
@@ -40,9 +43,11 @@ export default function ReceiptDetailView({ receipt, onDownloadPdf, onPay }: Rec
     const devengos = receipt.devengos || {
         salario: 0, horasExtras: 0, comisiones: 0, auxilioTransporte: 0, bonos: 0, otros: 0, total: 0
     }
+
     const deducciones = receipt.deducciones || {
         salud: 0, pension: 0, otras: 0, total: 0
     }
+
     const [accountingModalOpen, setAccountingModalOpen] = useState(false)
 
     return (

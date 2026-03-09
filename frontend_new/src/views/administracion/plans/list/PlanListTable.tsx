@@ -2,6 +2,7 @@
 
 // React Imports
 import { useEffect, useState, useMemo } from 'react'
+
 import { useRouter } from 'next/navigation'
 
 // MUI Imports
@@ -31,11 +32,15 @@ import { rankItem } from '@tanstack/match-sorter-utils'
 
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
     const itemRank = rankItem(row.getValue(columnId), value)
+
     addMeta({ itemRank })
-    return itemRank.passed
+    
+return itemRank.passed
 }
 
 // Style Imports
+import { toast } from 'react-hot-toast'
+
 import tableStyles from '@core/styles/table.module.css'
 
 // Component Imports
@@ -44,11 +49,10 @@ import TablePaginationComponent from '@/components/TablePaginationComponent'
 import ConfirmDialog from '@/components/dialogs/ConfirmDialog'
 
 // Type Imports
-import { PlanResponse } from '@/types/plans'
+import type { PlanResponse } from '@/types/plans'
 import { planService } from '@/services/plans/planService'
 
 // Util Imports
-import { toast } from 'react-hot-toast'
 
 const columnHelper = createColumnHelper<PlanResponse>()
 
@@ -67,6 +71,7 @@ const PlanListTable = () => {
         try {
             setIsLoading(true)
             const plans = await planService.getAllPlans()
+
             setData(plans)
         } catch (error) {
             console.error('Error fetching plans:', error)

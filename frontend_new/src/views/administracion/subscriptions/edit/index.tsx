@@ -1,7 +1,9 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+
 import { useRouter } from 'next/navigation'
+
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import CardHeader from '@mui/material/CardHeader'
@@ -14,6 +16,7 @@ import Switch from '@mui/material/Switch'
 import Chip from '@mui/material/Chip'
 import CircularProgress from '@mui/material/CircularProgress'
 import Alert from '@mui/material/Alert'
+
 import CustomTextField from '@core/components/mui/TextField'
 import { axiosInstance } from '@/utils/axiosInstance'
 import { getModulesList } from '@/services/rbac/rbacService'
@@ -70,11 +73,13 @@ const SubscriptionEditView: React.FC<SubscriptionEditViewProps> = ({ subscriptio
 
                 // Cargar suscripción
                 const subRes = await axiosInstance.get(`/api/v1/subscriptions/${subscriptionId}`)
+
                 setSubscription(subRes.data)
                 setSelectedModules(subRes.data.moduleIds || [])
 
                 // Cargar módulos disponibles
                 const modulesRes = await getModulesList()
+
                 setAvailableModules(modulesRes)
             } catch (err: any) {
                 console.error('Error loading subscription:', err)
@@ -122,6 +127,7 @@ const SubscriptionEditView: React.FC<SubscriptionEditViewProps> = ({ subscriptio
 
             // Recargar suscripción
             const subRes = await axiosInstance.get(`/api/v1/subscriptions/${subscriptionId}`)
+
             setSubscription(subRes.data)
             setSelectedModules(subRes.data.moduleIds || [])
         } catch (err: any) {
@@ -161,6 +167,7 @@ const SubscriptionEditView: React.FC<SubscriptionEditViewProps> = ({ subscriptio
 
             // Recargar suscripción
             const subRes = await axiosInstance.get(`/api/v1/subscriptions/${subscriptionId}`)
+
             setSubscription(subRes.data)
         } catch (err: any) {
             console.error('Error renewing subscription:', err)
@@ -176,13 +183,16 @@ const SubscriptionEditView: React.FC<SubscriptionEditViewProps> = ({ subscriptio
         try {
             // Actualización optimista
             const newState = !subscription.isAutoRenew
+
             setSubscription({ ...subscription, isAutoRenew: newState })
 
             await axiosInstance.patch(`/api/v1/subscriptions/${subscriptionId}/toggle-auto-renew`)
+
             // No necesitamos alerta, es una acción rápida
         } catch (err: any) {
             console.error('Error toggling auto-renew:', err)
             setError(err.response?.data?.message || 'Error al cambiar auto-renovación')
+
             // Revertir cambio
             setSubscription({ ...subscription, isAutoRenew: !subscription.isAutoRenew })
         }

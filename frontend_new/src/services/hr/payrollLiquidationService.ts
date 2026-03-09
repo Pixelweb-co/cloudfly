@@ -1,5 +1,5 @@
 import { axiosInstance } from '@/utils/axiosInstance'
-import { PayrollReceipt, LiquidationResult, PaymentRequest } from '@/types/hr'
+import type { PayrollReceipt, LiquidationResult, PaymentRequest } from '@/types/hr'
 
 export interface PaymentResult {
     receiptId: number
@@ -18,7 +18,9 @@ export const payrollLiquidationService = {
             null,
             { params: { customerId } }
         )
-        return response.data
+
+        
+return response.data
     },
 
     /**
@@ -34,7 +36,9 @@ export const payrollLiquidationService = {
             paymentData,
             { params: { customerId } }
         )
-        return response.data
+
+        
+return response.data
     },
 
     /**
@@ -45,7 +49,9 @@ export const payrollLiquidationService = {
             `/api/hr/payroll/periods/${periodId}/receipts`,
             { params: { customerId } }
         )
-        return response.data
+
+        
+return response.data
     },
 
     /**
@@ -56,7 +62,9 @@ export const payrollLiquidationService = {
             `/api/hr/payroll/receipts/${receiptId}`,
             { params: { customerId } }
         )
-        return response.data
+
+        
+return response.data
     },
 
     /**
@@ -70,7 +78,9 @@ export const payrollLiquidationService = {
                 responseType: 'blob'
             }
         )
-        return response.data
+
+        
+return response.data
     }
 }
 

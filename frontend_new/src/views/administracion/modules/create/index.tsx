@@ -1,7 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
+
 import { useRouter } from 'next/navigation'
+
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import CardHeader from '@mui/material/CardHeader'
@@ -10,11 +12,14 @@ import Grid from '@mui/material/Grid'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
-import CustomTextField from '@core/components/mui/TextField'
-import { ModuleCreateRequest, MenuItem as MenuItemType } from '@/types/modules'
-import { moduleService } from '@/services/modules/moduleService'
+
 import { useForm, Controller } from 'react-hook-form'
+
 import { toast } from 'react-hot-toast'
+
+import CustomTextField from '@core/components/mui/TextField'
+import type { ModuleCreateRequest, MenuItem as MenuItemType } from '@/types/modules'
+import { moduleService } from '@/services/modules/moduleService'
 
 // Lista curada de iconos Tabler comunes
 const AVAILABLE_ICONS = [
@@ -72,6 +77,7 @@ const NewModuleView = () => {
 
     const handleMenuItemChange = (index: number, field: 'name' | 'path', value: string) => {
         const updated = [...menuItems]
+
         updated[index][field] = value
         setMenuItems(updated)
     }

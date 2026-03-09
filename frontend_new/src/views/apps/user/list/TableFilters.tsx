@@ -23,19 +23,24 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
   useEffect(() => {
     const user = userMethods.getUserLogin?.()
     const r = user?.roles?.[0]?.role
+
     if (r) setUserRole(String(r))
   }, [])
 
   // Opciones de rol permitidas según el rol del usuario logueado
   const roleOptions = useMemo(() => {
     const current = String(userRole || '').toUpperCase()
+
     if (current === 'SUPERADMIN' || current === 'BIOMEDICAL') {
       return ['SUPERADMIN', 'ADMIN', 'USER', 'BIOMEDICAL']
     }
+
     if (current === 'ADMIN') {
       return ['ADMIN', 'USER']
     }
-    return []
+
+    
+return []
   }, [userRole])
 
   useEffect(() => {
@@ -44,7 +49,9 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
     const filteredData = tableData.filter(user => {
       const matchRole = role ? user?.roles?.some(r => String(r.role).toUpperCase() === role.toUpperCase()) : true
       const matchStatus = status !== '' ? user.enabled === status : true
-      return matchRole && matchStatus
+
+      
+return matchRole && matchStatus
     })
 
     setData(filteredData)
@@ -79,6 +86,7 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
             value={status === '' ? '' : status ? 'active' : 'inactive'}
             onChange={e => {
               const v = e.target.value
+
               setStatus(v === '' ? '' : v === 'active' ? true : false)
             }}
             SelectProps={{ displayEmpty: true }}

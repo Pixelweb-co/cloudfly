@@ -24,6 +24,7 @@ const VerifyEmailV1 = () => {
 
   useEffect(() => {
     const data = userMethods.getUserLogin()
+
     if (data) {
       setUserLogin(data)
     }

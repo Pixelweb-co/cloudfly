@@ -1,7 +1,9 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+
 import { useRouter, useParams } from 'next/navigation'
+
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import CardHeader from '@mui/material/CardHeader'
@@ -10,15 +12,17 @@ import Grid from '@mui/material/Grid'
 import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
-import CustomTextField from '@core/components/mui/TextField'
-import { ModuleCreateRequest, MenuItem as MenuItemType } from '@/types/modules'
-import { moduleService } from '@/services/modules/moduleService'
+
 import { useForm, Controller } from 'react-hook-form'
 import { toast } from 'react-hot-toast'
 import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
 import InputLabel from '@mui/material/InputLabel'
 import FormControl from '@mui/material/FormControl'
+
+import { moduleService } from '@/services/modules/moduleService'
+import type { ModuleCreateRequest, MenuItem as MenuItemType } from '@/types/modules'
+import CustomTextField from '@core/components/mui/TextField'
 
 // Lista de iconos Tabler disponibles
 const iconList = [
@@ -78,9 +82,12 @@ const EditModuleView = () => {
 
                 // Parse menuItems if exists
                 let parsedMenuItems: MenuItemType[] = []
+
                 if (moduleData.menuItems) {
                     try {
                         const rawItems = JSON.parse(moduleData.menuItems)
+
+
                         // Map DB format (label, href) to Frontend format (name, path)
                         parsedMenuItems = rawItems.map((item: any) => ({
                             name: item.label || item.name || '',
@@ -109,6 +116,7 @@ const EditModuleView = () => {
                 setIsLoading(false)
             }
         }
+
         fetchModule()
     }, [moduleId, reset])
 
@@ -152,6 +160,7 @@ const EditModuleView = () => {
 
     const handleMenuItemChange = (index: number, field: 'name' | 'path', value: string) => {
         const updatedItems = [...menuItems]
+
         updatedItems[index][field] = value
         setMenuItems(updatedItems)
     }

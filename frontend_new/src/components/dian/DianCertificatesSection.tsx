@@ -5,6 +5,7 @@
  */
 
 import React, { useState } from 'react'
+
 import {
     Box,
     Button,
@@ -35,9 +36,11 @@ import {
     Upload as UploadIcon
 } from '@mui/icons-material'
 import { useForm, Controller } from 'react-hook-form'
+
+import { format } from 'date-fns'
+
 import type { DianCertificate } from '@/types/dian'
 import { CertificateType, CertificateTypeLabels } from '@/types/dian'
-import { format } from 'date-fns'
 
 interface Props {
     certificates: DianCertificate[]
@@ -84,7 +87,8 @@ export default function DianCertificatesSection({
     const onSubmitUpload = async (data: UploadFormData) => {
         if (!selectedFile) {
             alert('Por favor seleccione un archivo')
-            return
+            
+return
         }
 
         try {
@@ -99,6 +103,7 @@ export default function DianCertificatesSection({
 
     const formatDate = (dateStr?: string | null) => {
         if (!dateStr) return '-'
+
         try {
             return format(new Date(dateStr), 'dd/MM/yyyy HH:mm')
         } catch {

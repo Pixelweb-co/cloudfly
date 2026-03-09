@@ -66,6 +66,7 @@ const RegisterV3 = ({ id }: { id: string }) => {
   useEffect(() => {
     console.log('load role admin', userMethods.isRole('SUPERADMIN'))
     alert("id" + id)
+
     // Cargar las opciones de clientes y roles
     fetchOptions()
   }, [])

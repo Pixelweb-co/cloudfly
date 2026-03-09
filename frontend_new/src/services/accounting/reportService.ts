@@ -20,10 +20,13 @@ export class AccountingReportService {
         voucherType?: VoucherType
     ): Promise<LibroDiarioDTO> {
         const params: any = { tenantId, fromDate, toDate }
+
         if (voucherType) params.voucherType = voucherType
 
         const response = await axiosInstance.get('/api/accounting/reports/libro-diario', { params })
-        return response.data
+
+        
+return response.data
     }
 
     /**
@@ -38,7 +41,9 @@ export class AccountingReportService {
         const response = await axiosInstance.get('/api/accounting/reports/libro-mayor', {
             params: { tenantId, accountCode, fromDate, toDate }
         })
-        return response.data
+
+        
+return response.data
     }
 
     /**
@@ -48,7 +53,9 @@ export class AccountingReportService {
         const response = await axiosInstance.get('/api/accounting/reports/balance-general', {
             params: { tenantId, asOfDate }
         })
-        return response.data
+
+        
+return response.data
     }
 
     /**
@@ -58,7 +65,9 @@ export class AccountingReportService {
         const response = await axiosInstance.get('/api/accounting/reports/balance-prueba', {
             params: { tenantId, asOfDate }
         })
-        return response.data
+
+        
+return response.data
     }
 
     /**
@@ -72,7 +81,9 @@ export class AccountingReportService {
         const response = await axiosInstance.get('/api/accounting/reports/estado-resultados', {
             params: { tenantId, fromDate, toDate }
         })
-        return response.data
+
+        
+return response.data
     }
 
     /**
@@ -82,6 +93,7 @@ export class AccountingReportService {
         const XLSX = await import('xlsx')
         const ws = XLSX.utils.json_to_sheet(data)
         const wb = XLSX.utils.book_new()
+
         XLSX.utils.book_append_sheet(wb, ws, 'Reporte')
         XLSX.writeFile(wb, `${filename}.xlsx`)
     }
@@ -91,6 +103,7 @@ export class AccountingReportService {
      */
     static async exportToPDF(htmlElement: HTMLElement, filename: string) {
         const html2pdf = (await import('html2pdf.js')).default
+
         html2pdf().from(htmlElement).save(`${filename}.pdf`)
     }
 }

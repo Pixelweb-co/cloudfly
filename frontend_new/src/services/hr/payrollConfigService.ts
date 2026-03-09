@@ -65,7 +65,9 @@ export const payrollConfigService = {
      */
     async getConfig(customerId: number): Promise<PayrollConfiguration> {
         const response = await api.get(`${BASE_URL}?customerId=${customerId}`)
-        return response.data
+
+        
+return response.data
     },
 
     /**
@@ -73,7 +75,9 @@ export const payrollConfigService = {
      */
     async updateConfig(customerId: number, config: Partial<PayrollConfiguration>): Promise<PayrollConfiguration> {
         const response = await api.put(`${BASE_URL}?customerId=${customerId}`, config)
-        return response.data
+
+        
+return response.data
     },
 
     /**
@@ -81,6 +85,8 @@ export const payrollConfigService = {
      */
     async resetConfig(customerId: number): Promise<{ message: string; config: PayrollConfiguration }> {
         const response = await api.post(`${BASE_URL}/reset?customerId=${customerId}`)
-        return response.data
+
+        
+return response.data
     }
 }

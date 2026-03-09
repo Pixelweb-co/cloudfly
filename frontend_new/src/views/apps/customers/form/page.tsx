@@ -2,9 +2,9 @@
 
 // React Imports
 import { useState, useEffect } from 'react'
+
 import { useRouter } from 'next/navigation'
 
-import { axiosInstance } from '@/utils/axiosInstance'
 
 // MUI Imports
 import Grid from '@mui/material/Grid'
@@ -15,6 +15,8 @@ import { Box, Button, TextField } from '@mui/material'
 import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
+
+import { axiosInstance } from '@/utils/axiosInstance'
 
 import { userMethods } from '@/utils/userMethods'
 import CustomTextField from '@core/components/mui/TextField'
@@ -76,6 +78,7 @@ const FormCustomer = ({ onSuccess }: FormCustomerProps) => {
 
     useEffect(() => {
         const user = userMethods.getUserLogin()
+
         if (!user || !user.id) {
             router.push('/login')
         }
@@ -85,9 +88,11 @@ const FormCustomer = ({ onSuccess }: FormCustomerProps) => {
         try {
             setLoading(true)
             const user = userMethods.getUserLogin()
+
             if (!user || !user.id) {
                 router.push('/login')
-                return
+                
+return
             }
 
             const response = await axiosInstance.post('/customers/account-setup', {

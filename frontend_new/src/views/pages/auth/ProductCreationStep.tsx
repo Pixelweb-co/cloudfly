@@ -1,7 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
+
 import { Box, Typography, TextField, Button, Alert, CircularProgress } from '@mui/material'
+
 import { axiosInstance } from '@/utils/axiosInstance'
 
 interface ProductCreationStepProps {
@@ -27,7 +29,8 @@ const ProductCreationStep = ({ onProductCreated }: ProductCreationStepProps) => 
 
         if (!categoryName.trim()) {
             setMessage({ type: 'error', text: 'Por favor ingresa el nombre de la categoría' })
-            return
+            
+return
         }
 
         try {
@@ -64,7 +67,8 @@ const ProductCreationStep = ({ onProductCreated }: ProductCreationStepProps) => 
 
         if (!productName.trim() || !productPrice) {
             setMessage({ type: 'error', text: 'Por favor completa todos los campos obligatorios' })
-            return
+            
+return
         }
 
         try {

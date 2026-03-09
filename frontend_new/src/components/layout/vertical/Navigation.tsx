@@ -15,8 +15,10 @@ import type { Mode, SystemMode } from '@core/types'
 
 // Component Imports
 import VerticalNav, { NavHeader, NavCollapseIcons } from '@menu/vertical-menu'
+
 // import VerticalMenu from './VerticalMenu'
 const VerticalMenu = dynamic(() => import('./VerticalMenu'), { ssr: false })
+
 import Logo from '@components/layout/shared/Logo'
 
 // Hook Imports

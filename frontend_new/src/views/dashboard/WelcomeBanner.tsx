@@ -2,6 +2,7 @@
 
 // React Imports
 import { useEffect, useState } from 'react'
+
 import { useRouter } from 'next/navigation'
 
 // MUI Imports
@@ -43,6 +44,7 @@ interface QuickAction {
 const WelcomeBanner = () => {
     const theme = useTheme()
     const router = useRouter()
+
     // Fallback si usePermissions falla o no existe
     const { menu, modules, loading } = usePermissions() || { menu: [], modules: [], loading: false }
     const [currentTime, setCurrentTime] = useState(new Date())
@@ -59,12 +61,14 @@ const WelcomeBanner = () => {
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const userDataStr = localStorage.getItem('userData')
+
             if (userDataStr) {
                 try {
                     const userData = JSON.parse(userDataStr)
                     const nombres = userData.user?.nombres || userData.nombres || ''
                     const apellidos = userData.user?.apellidos || userData.apellidos || ''
                     const fullName = `${nombres} ${apellidos}`.trim() || 'Usuario'
+
                     setUserName(fullName)
                 } catch (err) {
                     console.error('Error parsing user data:', err)
@@ -77,6 +81,7 @@ const WelcomeBanner = () => {
     useEffect(() => {
         const updateGreeting = () => {
             const hour = currentTime.getHours()
+
             if (hour >= 5 && hour < 12) {
                 setGreeting('Buenos días')
             } else if (hour >= 12 && hour < 19) {
@@ -85,6 +90,7 @@ const WelcomeBanner = () => {
                 setGreeting('Buenas noches')
             }
         }
+
         updateGreeting()
     }, [currentTime])
 
@@ -179,9 +185,11 @@ const WelcomeBanner = () => {
 
     const getTimeIcon = () => {
         const hour = currentTime.getHours()
+
         if (hour >= 5 && hour < 12) return <WbSunnyIcon sx={{ fontSize: 40, color: '#FFD700' }} />
         if (hour >= 12 && hour < 19) return <CloudIcon sx={{ fontSize: 40, color: '#FF8C00' }} />
-        return <NightsStayIcon sx={{ fontSize: 40, color: '#9370DB' }} />
+        
+return <NightsStayIcon sx={{ fontSize: 40, color: '#9370DB' }} />
     }
 
     const handleQuickAction = (path: string) => {

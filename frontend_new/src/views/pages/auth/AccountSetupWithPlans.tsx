@@ -1,8 +1,9 @@
 'use client'
 
 // Next Imports
-import { useParams } from 'next/navigation'
 import { useState } from 'react'
+
+import { useParams } from 'next/navigation'
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -59,6 +60,7 @@ const AccountSetupWithPlans = () => {
 
   const handleCheckoutClose = () => {
     setShowCheckoutDialog(false)
+
     // No cerrar el dialog de planes para permitir cambiar de plan
   }
 

@@ -1,8 +1,9 @@
 'use client'
 
 // Third-party Imports
-import classnames from 'classnames'
 import Image from "next/image";
+
+import classnames from 'classnames'
 
 // Component Imports
 import NavToggle from './NavToggle'

@@ -1,11 +1,13 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import type { ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 
 import type { MenuItem, UserPermissions } from '@/types/rbac'
 import { getMyPermissions, hasPermission, hasModuleAccess, hasRole, isAdmin, isSuperAdmin } from '@/services/rbac/rbacService'
 
 interface PermissionContextType {
+
     // State
     isLoading: boolean
     error: string | null
@@ -43,7 +45,8 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
 
         if (!token) {
             setIsLoading(false)
-            return
+            
+return
         }
 
         try {

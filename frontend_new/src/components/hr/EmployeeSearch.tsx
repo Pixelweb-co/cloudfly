@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Employee } from '@/types/hr'
+
 import {
     TextField,
     Autocomplete,
@@ -11,6 +11,8 @@ import {
     Chip
 } from '@mui/material'
 import { Search, Person } from '@mui/icons-material'
+
+import type { Employee } from '@/types/hr'
 import { employeeService } from '@/services/hr/employeeService'
 
 interface EmployeeSearchProps {
@@ -41,7 +43,8 @@ export default function EmployeeSearch({
     useEffect(() => {
         if (inputValue.length < minChars) {
             setOptions([])
-            return
+            
+return
         }
 
         const timeoutId = setTimeout(() => {
@@ -53,12 +56,16 @@ export default function EmployeeSearch({
 
     const searchEmployees = async (query: string) => {
         setLoading(true)
+
         try {
             const response = await employeeService.search(customerId, query, 0, 20)
+
+
             // Filtrar empleados ya excluidos
             const filtered = (response.content || []).filter(
                 emp => !excludeIds.includes(emp.id)
             )
+
             setOptions(filtered)
         } catch (error) {
             console.error('Error searching employees:', error)
