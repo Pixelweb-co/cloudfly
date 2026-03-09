@@ -16,6 +16,8 @@ import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
+import com.app.dto.UserDto;
+
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -27,18 +29,19 @@ public class AuthController {
 
         @PostMapping("/login")
         public Mono<AuthResponse> login(@RequestBody @Valid LoginRequest loginRequest) {
-                return userService.findByUsername(loginRequest.getUsername())
-                                .flatMap(user -> authenticationManager.authenticate(
-                                                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
-                                                                loginRequest.getPassword()))
-                                                .map(auth -> {
+                return authenticationManager.authenticate(
+                                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
+                                                loginRequest.getPassword()))
+                                .flatMap(auth -> userService.findByUsername(loginRequest.getUsername())
+                                                .flatMap(user -> userService.convertToDto(user))
+                                                .map(userDto -> {
                                                         String token = jwtProvider.createToken(auth);
                                                         return AuthResponse.builder()
                                                                         .username(auth.getName())
                                                                         .message("Login exitoso")
                                                                         .jwt(token)
                                                                         .status(true)
-                                                                        .user(user)
+                                                                        .user(userDto)
                                                                         .build();
                                                 }));
         }
@@ -47,11 +50,12 @@ public class AuthController {
         @ResponseStatus(HttpStatus.CREATED)
         public Mono<AuthResponse> register(@RequestBody @Valid AuthRegisterRequest registerRequest) {
                 return userService.registerUser(registerRequest)
-                                .map(user -> AuthResponse.builder()
-                                                .username(user.getUsername())
+                                .flatMap(user -> userService.convertToDto(user))
+                                .map(userDto -> AuthResponse.builder()
+                                                .username(userDto.getUsername())
                                                 .message("Registro exitoso. Revise su email para verificar la cuenta.")
                                                 .status(true)
-                                                .user(user)
+                                                .user(userDto)
                                                 .build());
         }
 

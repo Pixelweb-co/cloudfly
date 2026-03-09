@@ -100,15 +100,24 @@ export const authOptions: NextAuthOptions = {
         // When user signs in, user object maps to the return value of authorize callback
         const u = user as any
 
-        token.accessToken = u.token || u.accessToken
-        token.id = u.id
-        token.role = u.role
-        token.name = u.fullName || u.name
-        token.userCapabilities = u.userCapabilities
+        token.accessToken = u.jwt || u.token || u.accessToken
+
+        // Mapear datos desde el UserDto anidado
+        if (u.user) {
+          token.id = u.user.id
+          token.role = u.user.roles?.[0]?.name || u.role
+          token.name = `${u.user.nombres || ''} ${u.user.apellidos || ''}`.trim() || u.username
+          token.userCapabilities = u.user.userCapabilities // Asumiendo que se agregará o manejará luego
+        } else {
+          token.id = u.id
+          token.role = u.role
+          token.name = u.fullName || u.name
+          token.userCapabilities = u.userCapabilities
+        }
       }
 
-      
-return token
+
+      return token
     },
     async session({ session, token }) {
       if (session.user) {
@@ -120,8 +129,8 @@ return token
           ; (session as any).user.userCapabilities = token.userCapabilities
       }
 
-      
-return session
+
+      return session
     }
   }
 }
