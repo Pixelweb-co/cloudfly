@@ -71,4 +71,14 @@ public class UserService {
                                 .map(count -> count > 0)
                                 .defaultIfEmpty(false);
         }
+
+        public Mono<Boolean> checkUsernameAvailability(String username) {
+                return userRepository.existsByUsername(username)
+                                .map(exists -> !exists);
+        }
+
+        public Mono<Boolean> checkEmailAvailability(String email) {
+                return userRepository.existsByEmail(email)
+                                .map(exists -> !exists);
+        }
 }
