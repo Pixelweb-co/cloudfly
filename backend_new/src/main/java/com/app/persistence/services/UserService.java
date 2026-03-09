@@ -10,9 +10,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -24,6 +26,7 @@ public class UserService {
         private final UserRoleRepository userRoleRepository;
         private final TenantService tenantService;
         private final PasswordEncoder passwordEncoder;
+        private final ReactiveKafkaProducerTemplate<String, Object> kafkaTemplate;
 
         @Transactional
         public Mono<UserEntity> registerUser(AuthRegisterRequest request) {
@@ -61,6 +64,11 @@ public class UserService {
                                                                                 .findByName(roleName))
                                                                 .flatMap(role -> userRoleRepository.save(new UserRole(
                                                                                 savedUser.getId(), role.getId())))
+                                                                .then(kafkaTemplate.send("register-user", Map.of(
+                                                                                "name", savedUser.getNombres(),
+                                                                                "email", savedUser.getEmail(),
+                                                                                "token",
+                                                                                savedUser.getVerificationToken())))
                                                                 .then(Mono.just(savedUser));
                                         });
                 });
