@@ -37,9 +37,9 @@ def run_e2e_test():
     mail_manager = MailManager(host=MAIL_HOST, port=MAIL_PORT, key_path=MAIL_KEY_PATH)
     
     # Datos de prueba dinámicos
-    timestamp = datetime.now().strftime('%m%d%H%M%S')
-    test_user = f"e2e_user_{timestamp}"
-    mail_acc = f"e2e_{timestamp}"
+    timestamp = datetime.now().strftime("%m%d%H%M%S")
+    test_user = f"prod_e2e_{timestamp}"
+    mail_acc = f"prod_e2e_{timestamp}"
     test_email = f"{mail_acc}@cloudfly.com.co"
     test_pass = "Password123*"
 
