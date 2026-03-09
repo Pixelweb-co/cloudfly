@@ -88,7 +88,7 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
     try {
       const result = await signIn('credentials', {
         redirect: false,
-        email: data.email,
+        username: data.username,
         password: data.password
       })
 
