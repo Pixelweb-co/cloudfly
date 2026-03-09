@@ -102,11 +102,9 @@ services:
       - app-net
 
   traefik:
-    image: traefik:v3.1
+    image: traefik:v2.11
     container_name: traefik
     restart: always
-    environment:
-      - DOCKER_API_VERSION=1.44
     ports:
       - "80:80"
       - "443:443"
