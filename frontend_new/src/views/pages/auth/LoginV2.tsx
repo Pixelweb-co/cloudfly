@@ -85,19 +85,19 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
 
   const onSubmit = async (data: FormInputs) => {
     try {
-      const result = await AuthManager.authorize(data) // Enviar username y password al backend
+      const result = await AuthManager.authorize(data)
+      const user = result?.user
 
       if (result.status) {
-        if (result.user.verificationToken != null && result.user.verificationToken != '') {
+        if (user?.verificationToken != null && user?.verificationToken != '') {
           router.push('/verify-email')
 
           return false
         } else {
-
           setSuccess(true)
           setError(null)
 
-          if (!result.user.customer) {
+          if (!user?.customer) {
             setSuccess(false)
             setError(null)
             router.push('/account-setup')
@@ -106,7 +106,7 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
           }
 
           // Redirección por roles
-          const roles = result.user.roles || []
+          const roles = user?.roles || []
           const hasRole = (role: string) => roles.some((r: any) => r.role === role)
 
           if (hasRole('SUPERADMIN') || hasRole('ADMIN') || hasRole('MANAGER')) {
@@ -118,7 +118,6 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
           }
 
           return true
-
         }
       }
     } catch (error: any) {
