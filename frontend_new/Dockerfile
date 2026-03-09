@@ -9,7 +9,7 @@ COPY package*.json ./
 COPY . .
 
 # Instalar dependencias y construir
-RUN npm install --legacy-peer-deps
+RUN npm install
 RUN npm run build
 
 # Etapa 2: Producción

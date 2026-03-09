@@ -1,0 +1,201 @@
+[
+  {
+    "label": "Comunicaciones",
+    "icon": "tabler-message-circle",
+    "suffix": {
+      "label": "New",
+      "color": "info"
+    },
+    "children": [
+      {
+        "label": "Chatbot IA WhatsApp",
+        "href": "/settings/chatbot"
+      },
+      {
+        "label": "Tipos de Chatbot",
+        "href": "/settings/chatbot-types/list",
+        "excludedRoles": [
+          "VENDEDOR",
+          "CONTABILIDAD",
+          "MARKETING"
+        ]
+      },
+      {
+        "label": "Conversaciones",
+        "href": "/comunicaciones/conversaciones"
+      }
+    ]
+  },
+  {
+    "label": "Marketing",
+    "icon": "tabler-speakerphone",
+    "children": [
+      {
+        "label": "Campañas",
+        "href": "/marketing/campanas"
+      },
+      {
+        "label": "Contactos",
+        "href": "/marketing/contacts/list"
+      }
+    ]
+  },
+  {
+    "label": "Calendario",
+    "icon": "tabler-calendar",
+    "href": "/calendar"
+  },
+  {
+    "label": "Usuarios y Roles",
+    "icon": "tabler-users",
+    "excludedRoles": [
+      "VENDEDOR",
+      "CONTABILIDAD",
+      "MARKETING"
+    ],
+    "children": [
+      {
+        "label": "Gestión de Usuarios",
+        "href": "/accounts/user/list"
+      }
+    ]
+  },
+  {
+    "label": "Ventas",
+    "icon": "tabler-shopping-cart",
+    "children": [
+      {
+        "label": "Categorías",
+        "href": "/ventas/categorias/list"
+      },
+      {
+        "label": "Productos",
+        "href": "/ventas/productos/list"
+      },
+      {
+        "label": "Cotizaciones",
+        "href": "/ventas/cotizaciones/list"
+      },
+      {
+        "label": "Pedidos",
+        "href": "/ventas/pedidos"
+      },
+      {
+        "label": "Facturas",
+        "href": "/ventas/facturas/list"
+      }
+    ]
+  },
+  {
+    "label": "Recursos Humanos",
+    "icon": "tabler-users",
+    "excludedRoles": [
+      "VENDEDOR",
+      "MARKETING"
+    ],
+    "children": [
+      {
+        "label": "Dashboard",
+        "href": "/hr/dashboard",
+        "icon": "tabler-chart-pie"
+      },
+      {
+        "label": "Empleados",
+        "href": "/hr/employees"
+      },
+      {
+        "label": "Conceptos de Nómina",
+        "href": "/hr/concepts"
+      },
+      {
+        "label": "Novedades",
+        "href": "/hr/novelties"
+      },
+      {
+        "label": "Periodos",
+        "href": "/hr/periods"
+      },
+      {
+        "label": "Procesar Nómina",
+        "href": "/hr/process"
+      },
+      {
+        "label": "Recibos",
+        "href": "/hr/receipts"
+      },
+      {
+        "label": "Configuración",
+        "href": "/hr/config",
+        "excludedRoles": [
+          "HR"
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Contabilidad",
+    "icon": "tabler-calculator",
+    "excludedRoles": [
+      "VENDEDOR",
+      "MARKETING"
+    ],
+    "children": [
+      {
+        "label": "Plan de Cuentas",
+        "href": "/contabilidad/plan-cuentas"
+      },
+      {
+        "label": "Comprobantes",
+        "href": "/contabilidad/comprobantes"
+      },
+      {
+        "label": "Contactos",
+        "href": "/contabilidad/terceros"
+      },
+      {
+        "label": "Centros de Costo",
+        "href": "/contabilidad/centros-costo"
+      },
+      {
+        "label": "Balance de Prueba",
+        "href": "/contabilidad/balance-prueba"
+      },
+      {
+        "label": "Libro Diario",
+        "href": "/contabilidad/libro-diario"
+      },
+      {
+        "label": "Libro Mayor",
+        "href": "/contabilidad/libro-mayor"
+      },
+      {
+        "label": "Estado de Resultados",
+        "href": "/contabilidad/estado-resultados"
+      },
+      {
+        "label": "Balance General",
+        "href": "/contabilidad/balance-general"
+      }
+    ]
+  },
+  {
+    "label": "Administración",
+    "icon": "tabler-settings",
+    "excludedRoles": [
+      "VENDEDOR",
+      "CONTABILIDAD",
+      "MARKETING",
+      "HR"
+    ],
+    "children": [
+      {
+        "label": "Clientes",
+        "href": "/administracion/clientes/list"
+      },
+      {
+        "label": "Tipos de Chatbot",
+        "href": "/settings/chatbot-types/list"
+      }
+    ]
+  }
+]

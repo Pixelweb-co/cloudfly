@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Configuraciones
 FRONTEND_URL = "http://localhost:3000"
-BACKEND_HOST = "109.205.182.94"
+BACKEND_HOST = "api.cloudfly.com.co"
 DB_USER = "root"
 DB_PASS = "widowmaker"
 
