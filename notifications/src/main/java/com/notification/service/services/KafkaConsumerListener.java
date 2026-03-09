@@ -46,6 +46,29 @@ public class KafkaConsumerListener {
         }
     }
 
+    @KafkaListener(topics = "register-user", groupId = "notification-service-register")
+    public void consumeRegisterUser(String messageJson) {
+        try {
+            LOGGER.info("Received register-user message: " + messageJson);
+            Map<String, String> data = objectMapper.readValue(messageJson, Map.class);
+
+            NotificationMessage notification = new NotificationMessage();
+            notification.setTo(data.get("email"));
+            notification.setSubject("Bienvenido a Cloudfly - Activa tu cuenta");
+            notification.setUsername(data.get("name"));
+            notification.setType("register");
+
+            // Construimos el link de activación (por ahora hardcodeado como en el test)
+            String activateLink = "https://cloudfly.com.co/auth/verify?token=" + data.get("token");
+            notification.setBody(activateLink);
+
+            emailService.sendEmail(notification);
+            LOGGER.info("Registration email sent to: " + data.get("email"));
+        } catch (Exception e) {
+            LOGGER.error("Error consuming register-user notification: ", e);
+        }
+    }
+
     @KafkaListener(topics = "payroll-notifications", groupId = "notification-service-payroll")
     public void consumePayrollNotification(String messageJson) {
         try {
