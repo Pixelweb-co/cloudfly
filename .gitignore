@@ -66,3 +66,6 @@ vuexy/
 *.ps1
 backend_logs*.txt
 test_e2e_api.py
+
+docker-compose-full.yml.b64
+recreate_db.sql
