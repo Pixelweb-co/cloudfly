@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Configuraciones
-FRONTEND_URL = "http://localhost:3000"
+FRONTEND_URL = "https://dashboard.cloudfly.com.co"
 BACKEND_HOST = "api.cloudfly.com.co"
 DB_USER = "root"
 DB_PASS = "widowmaker"

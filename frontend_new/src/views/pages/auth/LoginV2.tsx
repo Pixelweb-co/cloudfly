@@ -82,6 +82,7 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
 
   const handleClickShowPassword = () => setIsPasswordShown(show => !show)
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+
   const onSubmit = async (data: FormInputs) => {
     try {
       const result = await AuthManager.authorize(data) // Enviar username y password al backend

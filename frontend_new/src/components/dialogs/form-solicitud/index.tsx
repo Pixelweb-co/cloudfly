@@ -27,13 +27,15 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
 import axios from 'axios'
 import dotenv from "dotenv";
+
+import Typography from '@mui/material/Typography'
+
 import type { SolicitudType } from '@/types/apps/solicitudType'
 
 
 import CustomTextField from '@/@core/components/mui/TextField'
 import type { UsersType } from '@/types/apps/userType'
 import { userMethods } from '@/utils/userMethods'
-import Typography from '@mui/material/Typography'
 
 
 interface Solicitud {
@@ -94,13 +96,15 @@ const SolicitudForm = ({
 
     if (!Array.isArray(productsList)) {
       setFilteredProducts([])
-      return
+      
+return
     }
 
     if (!term) {
       // When no term, show all except selected
       setFilteredProducts(productsList.filter((p: any) => !checked.includes(p?.id)))
-      return
+      
+return
     }
 
     const filtered = productsList.filter((product: any) => {
@@ -184,10 +188,14 @@ const SolicitudForm = ({
       ])
 
       const productos = Array.isArray(productsRes?.data?.productos) ? productsRes.data.productos : []
+
       setProductsList(productos)
+
+
       // Reaplicar filtro si ya hay término
       if ((searchTerm ?? '').trim().length >= 2) {
         const term = (searchTerm ?? '').toString().toLowerCase().trim()
+
         if (term.length >= 2) {
           setFilteredProducts(productos.filter((p: any) =>
             String(p?.productName ?? '').toLowerCase().includes(term) ||
@@ -217,6 +225,7 @@ const SolicitudForm = ({
   // Recompute filtered list when selection or products change
   useEffect(() => {
     const len = (searchTerm ?? '').toString().trim().length
+
     if (len >= 2) {
       filterProducts(searchTerm)
     } else {
@@ -523,7 +532,9 @@ const SolicitudForm = ({
                     value={searchTerm}
                     onChange={(e) => {
                       const term = (e.target.value ?? '').toString()
+
                       setSearchTerm(term)
+
                       if ((term ?? '').toString().trim().length >= 2) {
                         filterProducts(term)
                       } else {
@@ -540,13 +551,17 @@ const SolicitudForm = ({
                       <List sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
                         {selectedProducts.map(value => {
                           const labelId = `checkbox-list-label-selected-${value.id}`
+
                           const handleToggle = (val: any) => () => {
                             const idVal = val?.id
+
                             setChecked((prevChecked: any[]) =>
                               prevChecked.includes(idVal) ? prevChecked.filter((item) => item !== idVal) : [...prevChecked, idVal]
                             )
                           }
-                          return (
+
+                          
+return (
                             <ListItem key={`selected-${value.id}`} disablePadding>
                               <ListItemButton role={undefined} onClick={handleToggle(value)} dense>
                                 <ListItemIcon>
@@ -574,8 +589,10 @@ const SolicitudForm = ({
 
                     {filteredProducts.map(value => {
                       const labelId = `checkbox-list-label-${value.id}`
+
                       const handleToggle = (val: any) => () => {
                         const idVal = val?.id
+
                         setChecked((prevChecked: any[]) =>
                           prevChecked.includes(idVal) ? prevChecked.filter((item) => item !== idVal) : [...prevChecked, idVal]
                         )

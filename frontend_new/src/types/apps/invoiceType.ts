@@ -10,6 +10,7 @@ export type InvoiceItemType = {
     subtotal: number
     tax: number
     total: number
+
     // DIAN fields
     descriptionDian?: string
     unitMeasure?: string
@@ -33,6 +34,7 @@ export type InvoiceType = {
     notes: string | null
     createdBy: number
     items: InvoiceItemType[]
+
     // DIAN fields
     cufe?: string
     qrCode?: string

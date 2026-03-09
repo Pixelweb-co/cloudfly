@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+
 import SubscriptionEditView from '@/views/administracion/subscriptions/edit'
 
 const EditSubscriptionPage = ({ params }: { params: { id: string } }) => {

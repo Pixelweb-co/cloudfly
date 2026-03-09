@@ -61,8 +61,10 @@ type CustomersTypeWithAction = CustomersType & {
 
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
     const itemRank = rankItem(row.getValue(columnId), value)
+
     addMeta({ itemRank })
-    return itemRank.passed
+    
+return itemRank.passed
 }
 
 const DebouncedInput = ({
@@ -85,7 +87,9 @@ const DebouncedInput = ({
         const timeout = setTimeout(() => {
             onChange(value)
         }, debounce)
-        return () => clearTimeout(timeout)
+
+        
+return () => clearTimeout(timeout)
     }, [value])
 
     return <CustomTextField {...props} value={value} onChange={e => setValue(e.target.value)} />
@@ -95,6 +99,7 @@ const columnHelper = createColumnHelper<CustomersTypeWithAction>()
 
 const CustomersListTable = ({ reload, tableData }: any) => {
     const [loadForm, setOpenForm] = useState(false)
+
     const [rowSelection, setRowSelection] = useState<any>({
         name: '',
         nit: '',

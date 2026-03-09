@@ -1,7 +1,9 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+
 import { useRouter } from 'next/navigation'
+
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import CardHeader from '@mui/material/CardHeader'
@@ -18,9 +20,11 @@ import OutlinedInput from '@mui/material/OutlinedInput'
 import Chip from '@mui/material/Chip'
 import Switch from '@mui/material/Switch'
 import FormControlLabel from '@mui/material/FormControlLabel'
-import CustomTextField from '@core/components/mui/TextField'
+
 import { useForm, Controller } from 'react-hook-form'
 import { toast } from 'react-hot-toast'
+
+import CustomTextField from '@core/components/mui/TextField'
 import subscriptionService from '@/services/subscriptions/subscriptionService'
 import { planService } from '@/services/plans/planService'
 import { getModulesList } from '@/services/rbac/rbacService'
@@ -78,6 +82,7 @@ const NewSubscriptionView = () => {
                     getModulesList(),
                     customerService.getActiveCustomers()
                 ])
+
                 setPlans(plansData)
                 setAvailableModules(modulesData)
                 setCustomers(customersData)
@@ -86,6 +91,7 @@ const NewSubscriptionView = () => {
                 toast.error('Error al cargar datos')
             }
         }
+
         fetchData()
     }, [])
 
@@ -113,7 +119,9 @@ const NewSubscriptionView = () => {
     useEffect(() => {
         if (watchPlanId) {
             const plan = plans.find(p => p.id === watchPlanId)
+
             setSelectedPlan(plan || null)
+
             if (plan && !customizeModules) {
                 setValue('customModuleIds', plan.moduleIds || [])
             }
@@ -124,6 +132,7 @@ const NewSubscriptionView = () => {
     useEffect(() => {
         if (selectedPlan && watchBillingCycle) {
             const calculatedPrice = calculateTotalPrice(selectedPlan.price, watchBillingCycle)
+
             setValue('customMonthlyPrice', calculatedPrice)
         }
     }, [selectedPlan, watchBillingCycle, setValue])

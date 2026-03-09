@@ -18,8 +18,8 @@ import CircularProgress from '@mui/material/CircularProgress'
 import { useSession } from 'next-auth/react'
 
 // Type Imports
-import type { DianOperationMode, DianResolution, DianCertificate, DianOperationModeRequest, DianResolutionRequest } from '@/types/dian'
-import { DianEnvironment, CertificateType } from '@/types/dian'
+import type { DianOperationMode, DianResolution, DianCertificate, DianOperationModeRequest, DianResolutionRequest , CertificateType } from '@/types/dian'
+import { DianEnvironment } from '@/types/dian'
 
 // Component Imports
 import DianOperationModeList from '@/components/dian/DianOperationModeList'
@@ -59,6 +59,7 @@ const DianSettings = () => {
     const fetchData = async () => {
         try {
             setLoading(true)
+
             const [modesData, resolutionsData, certificatesData] = await Promise.all([
                 dianOperationModeService.getAll(),
                 dianResolutionService.getAll(),
@@ -93,16 +94,19 @@ const DianSettings = () => {
 
             if (exists) {
                 alert(`Ya existe un modo de operación ACTIVO para ${data.documentType} en ${data.environment}. Desactívelo primero.`)
-                return
+                
+return
             }
         }
 
         // Validation: Production Mode requires Active Certificate
         if (data.active && data.environment === DianEnvironment.PRODUCTION) {
             const hasActiveCert = certificates.some(c => c.active && c.isValid)
+
             if (!hasActiveCert) {
                 alert('Para activar un modo en PRODUCCIÓN, debe tener al menos un Certificado Digital activo y válido cargado en la pestaña de Certificados.')
-                return
+                
+return
             }
         }
 
@@ -112,6 +116,7 @@ const DianSettings = () => {
             } else {
                 await dianOperationModeService.create(data)
             }
+
             await fetchData()
             setOpenModeForm(false)
             setEditingMode(null)
@@ -139,6 +144,7 @@ const DianSettings = () => {
                 r.prefix === data.prefix &&
                 r.documentType === data.documentType
             )
+
             if (overlap) {
                 if (!confirm('Ya existe una resolución activa con este prefijo. ¿Desea continuar?')) return
             }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+
 import { axiosInstance } from '@/utils/axiosInstance'
 
 // La API /api/rbac/menu devuelve un array de MenuItems
@@ -34,8 +35,10 @@ export function usePermissions(): UsePermissionsReturn {
         const fetchPermissions = async () => {
             try {
                 setLoading(true)
+
                 // /api/rbac/menu devuelve un array de MenuItems
                 const response = await axiosInstance.get<MenuItem[]>('/api/rbac/menu')
+
                 console.log('Menu response:', response.data)
                 setMenu(Array.isArray(response.data) ? response.data : [])
                 setError(null)
@@ -54,18 +57,22 @@ export function usePermissions(): UsePermissionsReturn {
     // Extraer módulos del menú
     const extractModules = (items: MenuItem[]): string[] => {
         const modules: string[] = []
+
         const traverse = (menuItems: MenuItem[]) => {
             menuItems.forEach(item => {
                 if (item.moduleCode) {
                     modules.push(item.moduleCode)
                 }
+
                 if (item.children) {
                     traverse(item.children)
                 }
             })
         }
+
         traverse(items)
-        return [...new Set(modules)] // Remove duplicates
+        
+return [...new Set(modules)] // Remove duplicates
     }
 
     // Extraer roles del JWT del localStorage
@@ -77,6 +84,7 @@ export function usePermissions(): UsePermissionsReturn {
 
         try {
             const token = localStorage.getItem('jwt')
+
             if (!token) return []
 
             // Decodificar el JWT (payload es la parte del medio)
@@ -89,10 +97,13 @@ export function usePermissions(): UsePermissionsReturn {
                     .filter((auth: string) => auth.startsWith('ROLE_'))
                     .map((auth: string) => auth.replace('ROLE_', ''))
             }
-            return []
+
+            
+return []
         } catch (error) {
             console.error('Error parsing token:', error)
-            return []
+            
+return []
         }
     }
 
@@ -103,17 +114,21 @@ export function usePermissions(): UsePermissionsReturn {
     const hasModule = (moduleCode: string): boolean => {
         if (!moduleCode) return false
         const upperCode = moduleCode.toUpperCase()
-        return modules.some(m => m.toUpperCase() === upperCode)
+
+        
+return modules.some(m => m.toUpperCase() === upperCode)
     }
 
     const hasPermission = (permission: string): boolean => {
         if (!permission) return false
-        return permissions.includes(permission)
+        
+return permissions.includes(permission)
     }
 
     const hasAnyRole = (...roleCodes: string[]): boolean => {
         if (!roleCodes || roleCodes.length === 0) return false
-        return roleCodes.some(role =>
+        
+return roleCodes.some(role =>
             roles.some(userRole =>
                 userRole.toUpperCase() === role.toUpperCase()
             )

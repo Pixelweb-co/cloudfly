@@ -29,9 +29,12 @@ const getMockData = () => {
 const getCustomerData = async () => {
     try {
         const res = await axiosInstance.get('/customers')
-        return res.data
+
+        
+return res.data
     } catch (error) {
         console.warn('Error fetching customer data, using mock:', error)
+
         // Return mock data if API fails (e.g. backend not ready)
         return getMockData()
     }
@@ -45,8 +48,10 @@ const CustomerListApp = () => {
 
     const fetchData = async () => {
         setLoading(true)
+
         try {
             const data = await getCustomerData()
+
             setCustomerData(data)
             setError(null)
         } catch (err: any) {

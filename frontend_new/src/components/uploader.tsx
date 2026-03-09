@@ -48,6 +48,7 @@ const Uploader = ({ tenantId, onUploaded }: UploaderProps) => {
 
   const handleRemoveFile = (file: FileProp) => {
     const filtered = files.filter(i => i.name !== file.name)
+
     setFiles(filtered)
   }
 
@@ -76,9 +77,11 @@ const Uploader = ({ tenantId, onUploaded }: UploaderProps) => {
 
   const handleUpload = async () => {
     if (!files.length) return
+
     if (!tenantId) {
       console.error('tenantId es obligatorio para subir archivos')
-      return
+      
+return
     }
 
     try {

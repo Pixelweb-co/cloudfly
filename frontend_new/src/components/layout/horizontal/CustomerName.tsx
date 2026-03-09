@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+
 import { userMethods } from '@/utils/userMethods'
 
 const CustomerName = () => {
@@ -8,6 +9,7 @@ const CustomerName = () => {
 
   useEffect(() => {
     const loguedUser = userMethods.getUserLogin()
+
     setName((loguedUser && loguedUser.customer?.name) || '')
   }, [])
 

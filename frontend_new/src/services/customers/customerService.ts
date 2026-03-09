@@ -9,7 +9,9 @@ export const customerService = {
      */
     getAllCustomers: async (): Promise<Customer[]> => {
         const response = await axiosInstance.get<Customer[]>(API_BASE)
-        return response.data
+
+        
+return response.data
     },
 
     /**
@@ -17,6 +19,8 @@ export const customerService = {
      */
     getActiveCustomers: async (): Promise<Customer[]> => {
         const response = await axiosInstance.get<Customer[]>(`${API_BASE}`)
+
+
         // Filter active customers (status = true)
         return response.data.filter(customer => customer.status === true)
     },
@@ -26,7 +30,9 @@ export const customerService = {
      */
     getCustomerById: async (id: number): Promise<Customer> => {
         const response = await axiosInstance.get<Customer>(`${API_BASE}/${id}`)
-        return response.data
+
+        
+return response.data
     },
 
     /**
@@ -34,7 +40,9 @@ export const customerService = {
      */
     updateCustomer: async (id: number, data: Partial<Customer>): Promise<Customer> => {
         const response = await axiosInstance.put<Customer>(`${API_BASE}/${id}`, data)
-        return response.data
+
+        
+return response.data
     }
 }
 

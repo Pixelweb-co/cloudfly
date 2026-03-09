@@ -22,6 +22,8 @@ export const menuService = {
      */
     async getMenu(): Promise<MenuItem[]> {
         const response = await axiosInstance.get('/api/rbac/menu')
-        return response.data
+
+        
+return response.data
     }
 }

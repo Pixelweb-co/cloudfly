@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+
 import { TextField, Button, List, ListItem, ListItemButton, ListItemText, ListItemIcon, Collapse, Divider, IconButton } from '@mui/material';
 import { Delete, Add } from '@mui/icons-material';
 import { any } from 'valibot';
@@ -14,6 +15,7 @@ const JsonTreeBuilder = ({groupsData,onUpdate}:{groupsData:any[],onUpdate:any}) 
   // Función para agregar un grupo (nodo principal)
   const addGroup = () => {
     const newGroup = { id: Date.now(), name: '', options: [] }; // Grupo tiene un campo "options"
+
     setNodes([...nodes, newGroup]); // Agregamos el nuevo grupo a la lista existente
     setEditingNode(newGroup?.id); // Establecemos el nodo que estamos editando
   };
@@ -21,10 +23,12 @@ const JsonTreeBuilder = ({groupsData,onUpdate}:{groupsData:any[],onUpdate:any}) 
   // Función para agregar una opción dentro de un grupo
   const addOption = (groupId:any) => {
     const newOption = { id: Date.now(), name: '' }; // Nueva opción dentro del grupo
+
     const updateGroups = (items:any) =>
       items.map((item:any) =>
         item.id === groupId ? { ...item, options: [...item.options, newOption] } : item
       );
+
     setNodes(updateGroups(nodes)); // Actualizamos el grupo con la nueva opción
     setEditingNode(newOption.id); // Establecemos que estamos editando la nueva opción
   };
@@ -33,6 +37,7 @@ const JsonTreeBuilder = ({groupsData,onUpdate}:{groupsData:any[],onUpdate:any}) 
   const saveName = (id:any, isOption = false) => {
     if (isOption) {
       if (editOptionName.trim() === '') return;
+
       const updateName = (items:any) =>
         items.map((item:any) => ({
           ...item,
@@ -40,20 +45,24 @@ const JsonTreeBuilder = ({groupsData,onUpdate}:{groupsData:any[],onUpdate:any}) 
             option.id === id ? { ...option, name: editOptionName } : option
           ),
         }));
+
       setNodes(updateName(nodes)); // Actualizamos el nombre de la opción
       setEditOptionName('');
     } else {
       if (editName.trim() === '') return;
+
       const updateName = (items:any) =>
         items.map((item:any) =>
           item.id === id
             ? { ...item, name: editName }
             : { ...item, options: item.options.map((option:any) => (option.id === id ? { ...option, name: editName } : option)) }
         );
+
       setNodes(updateName(nodes)); // Actualizamos el nombre del grupo
       setEditName('');
 
     }
+
     setEditingNode(null);
   };
 
@@ -66,8 +75,11 @@ const JsonTreeBuilder = ({groupsData,onUpdate}:{groupsData:any[],onUpdate:any}) 
           options: item.options.filter((option:any) => option.id !== id),
         }));
       }
-      return items.filter((item:any) => item.id !== id);
+
+      
+return items.filter((item:any) => item.id !== id);
     };
+
     setNodes(removeNode(nodes)); // Eliminamos el grupo u opción
   };
 
@@ -78,6 +90,7 @@ const JsonTreeBuilder = ({groupsData,onUpdate}:{groupsData:any[],onUpdate:any}) 
 
   useEffect(() => {
     console.log('groupsData:', nodes);
+
     //enviar los datos a equiment y actualizar la propiedad groupsData de el padre
     onUpdate(nodes)
 

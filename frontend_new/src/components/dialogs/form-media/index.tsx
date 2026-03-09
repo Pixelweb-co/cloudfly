@@ -1,11 +1,15 @@
+import type { SyntheticEvent} from 'react';
+import React, { useEffect, useState } from 'react'
+
 import Image from 'next/image'
-import Uploader from '@/components/uploader'
-import { userMethods } from '@/utils/userMethods'
+
 import TabContext from '@mui/lab/TabContext'
 import TabList from '@mui/lab/TabList'
 import TabPanel from '@mui/lab/TabPanel'
 import { Dialog, DialogTitle, DialogContent, Card, Alert, Tab, CardContent, Grid, Box, DialogActions, Button, Typography } from '@mui/material'
-import React, { SyntheticEvent, useEffect, useState } from 'react'
+
+import { userMethods } from '@/utils/userMethods'
+import Uploader from '@/components/uploader'
 
 export default function MediaModal({ open, onClose }: any) {
   const [valueT, setValueT] = useState('biblioteca')
@@ -21,14 +25,17 @@ export default function MediaModal({ open, onClose }: any) {
 
     try {
       const token = localStorage.getItem('AuthToken')
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/media/tenant/${id_customer}`, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         }
       })
+
       if (response.ok) {
         const data = await response.json()
+
         setMediaItems(data)
       } else {
         console.error('Error fetching media items')
@@ -112,6 +119,7 @@ export default function MediaModal({ open, onClose }: any) {
                         tenantId={id_customer}
                         onUploaded={ids => {
                           console.log('Ids recibidos del backend:', ids)
+
                           // aquí cambiar a la tab de biblioteca y refrescar la lista
                           setValueT('biblioteca')
                             getMediaItems()

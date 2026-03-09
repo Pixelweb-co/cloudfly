@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react'
 
 // Next Imports
 import Link from 'next/link'
-import { axiosInstance } from '@/utils/axiosInstance'
+
 
 // MUI Imports
 import Card from '@mui/material/Card'
@@ -19,7 +19,6 @@ import TablePagination from '@mui/material/TablePagination'
 import type { TextFieldProps } from '@mui/material/TextField'
 
 // Style Imports
-import tableStyles from '@core/styles/table.module.css'
 
 // Third-party Imports
 import classnames from 'classnames'
@@ -38,6 +37,9 @@ import {
 } from '@tanstack/react-table'
 import type { ColumnDef, FilterFn } from '@tanstack/react-table'
 import type { RankingInfo } from '@tanstack/match-sorter-utils'
+
+import tableStyles from '@core/styles/table.module.css'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 // Component Imports
 import TablePaginationComponent from '@components/TablePaginationComponent'
@@ -58,8 +60,10 @@ declare module '@tanstack/table-core' {
 
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
   const itemRank = rankItem(row.getValue(columnId), value)
+
   addMeta({ itemRank })
-  return itemRank.passed
+  
+return itemRank.passed
 }
 
 const DebouncedInput = ({

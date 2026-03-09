@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
+
+import Image from 'next/image';
+
 import axios from 'axios';
 import dotenv from "dotenv";
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import SignatureDialog from '@components/dialogs/SignatureDialog'
+
 import { Button } from '@mui/material';
-import Image from 'next/image';
+
+import SignatureDialog from '@components/dialogs/SignatureDialog'
 import { userMethods } from '@/utils/userMethods';
 
 

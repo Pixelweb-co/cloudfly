@@ -1,9 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { payrollPeriodService } from '@/services/hr/payrollPeriodService'
-import { employeeService } from '@/services/hr/employeeService'
-import { PayrollPeriod, Employee } from '@/types/hr'
+
 import {
     Dialog,
     DialogTitle,
@@ -26,7 +24,12 @@ import {
     Paper,
     Chip
 } from '@mui/material'
+
 import { PersonRemove } from '@mui/icons-material'
+
+import { payrollPeriodService } from '@/services/hr/payrollPeriodService'
+import { employeeService } from '@/services/hr/employeeService'
+import type { PayrollPeriod, Employee } from '@/types/hr'
 
 interface PeriodFormDialogProps {
     open: boolean
@@ -73,9 +76,12 @@ export default function PeriodFormDialog({ open, onClose, onSuccess, period }: P
                 paymentDate: period.paymentDate ? period.paymentDate.toString().split('T')[0] : '',
                 description: period.description || ''
             })
+
+
             // En modo edición, cargar los empleados que ya están en el período
             if (period.employeeIds && period.employeeIds.length > 0) {
                 const included = allEmployees.filter(e => period.employeeIds?.includes(e.id))
+
                 setIncludedEmployees(included)
             }
         } else {
@@ -88,9 +94,11 @@ export default function PeriodFormDialog({ open, onClose, onSuccess, period }: P
                 paymentDate: '',
                 description: ''
             })
+
             // En modo crear, incluir TODOS los empleados activos
             setIncludedEmployees([...allEmployees])
         }
+
         setSelectedToRemove([])
         setError(null)
     }, [period, open, currentYear, allEmployees])
@@ -99,7 +107,10 @@ export default function PeriodFormDialog({ open, onClose, onSuccess, period }: P
         try {
             const response = await employeeService.getAll(1, 0, 1000, true)
             const activeEmployees = response.content || []
+
             setAllEmployees(activeEmployees)
+
+
             // Si no es modo edición, incluir todos por defecto
             if (!period) {
                 setIncludedEmployees(activeEmployees)
@@ -140,7 +151,9 @@ export default function PeriodFormDialog({ open, onClose, onSuccess, period }: P
     const filteredEmployees = includedEmployees.filter(emp => {
         if (searchFilter.length < 4) return true // Mostrar todos si menos de 4 caracteres
         const search = searchFilter.toLowerCase()
-        return (
+
+        
+return (
             emp.nationalId?.toLowerCase().includes(search) ||
             emp.fullName?.toLowerCase().includes(search) ||
             emp.phone?.toLowerCase().includes(search)
@@ -181,7 +194,9 @@ export default function PeriodFormDialog({ open, onClose, onSuccess, period }: P
         const end = new Date(formData.endDate)
         const diffTime = Math.abs(end.getTime() - start.getTime())
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1 // +1 para incluir ambos días
-        return diffDays
+
+        
+return diffDays
     }
 
     const periodDays = calculatePeriodDays()
@@ -241,17 +256,21 @@ export default function PeriodFormDialog({ open, onClose, onSuccess, period }: P
             // Info del período
             diasPeriodo: periodDays,
             factorPeriodo,
+
             // Salario
             salarioMensual,
             salarioPeriodo,
             auxilioTransporte,
             aplicaAuxTransporte,
+
             // Deducciones empleado
             saludEmpleado,
             pensionEmpleado,
             totalDeducciones,
+
             // Neto
             netoPagar,
+
             // Aportes empleador
             saludEmpleador,
             pensionEmpleador,
@@ -262,12 +281,14 @@ export default function PeriodFormDialog({ open, onClose, onSuccess, period }: P
             icbf,
             sena,
             totalAportesEmpleador,
+
             // Provisiones
             prima,
             cesantias,
             interesesCesantias,
             vacaciones,
             totalProvisiones,
+
             // Total
             costoTotal
         }
@@ -285,6 +306,7 @@ export default function PeriodFormDialog({ open, onClose, onSuccess, period }: P
 
         includedEmployees.forEach(emp => {
             const payroll = calculatePayroll(emp)
+
             totalSalarios += payroll.salarioPeriodo
             totalAuxTransporte += payroll.auxilioTransporte
             totalDeducciones += payroll.totalDeducciones
@@ -342,6 +364,7 @@ export default function PeriodFormDialog({ open, onClose, onSuccess, period }: P
             handleClose()
         } catch (err: any) {
             const errorMessage = err.response?.data?.error || err.message || 'Error al guardar periodo'
+
             setError(errorMessage)
         } finally {
             setLoading(false)
@@ -601,7 +624,9 @@ export default function PeriodFormDialog({ open, onClose, onSuccess, period }: P
                                         ) : (
                                             filteredEmployees.map((emp) => {
                                                 const isSelected = selectedToRemove.includes(emp.id)
-                                                return (
+
+                                                
+return (
                                                     <TableRow
                                                         key={emp.id}
                                                         hover

@@ -22,12 +22,18 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Divider from '@mui/material/Divider'
 
 
-import CustomTextField from '@core/components/mui/TextField'
 import { Alert } from '@mui/material'
+
 import CheckIcon from '@mui/icons-material/Check'
+
 import DangerousIcon from '@mui/icons-material/Dangerous'
 
 import classnames from 'classnames'
+
+import { set } from 'date-fns'
+
+import CustomTextField from '@core/components/mui/TextField'
+
 
 import { AuthManager } from '@/utils/authManager'
 
@@ -39,7 +45,6 @@ import { useSettings } from '@core/hooks/useSettings'
 import Logo from '@components/layout/shared/Logo'
 
 
-import { set } from 'date-fns'
 
 // Styled Custom Components
 const RegisterIllustration = styled('img')(({ theme }) => ({

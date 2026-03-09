@@ -1,7 +1,11 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { io, Socket } from 'socket.io-client'
+import type { ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react'
+
+import type { Socket } from 'socket.io-client';
+import { io } from 'socket.io-client'
+
 import type { Message } from '@/types/apps/chatTypes'
 import { userMethods } from '@/utils/userMethods'
 
@@ -16,6 +20,7 @@ interface SocketContextType {
     markAsRead: (messageIds: number[], conversationId: string) => void
     startTyping: (conversationId: string) => void
     stopTyping: (conversationId: string) => void
+
     // Dashboard events
     subscribeDashboard: () => void
     unsubscribeDashboard: () => void
@@ -34,6 +39,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
     useEffect(() => {
         const token = localStorage.getItem('jwt')
+
         if (!token) return
 
         const user = userMethods.getUserLogin()
@@ -70,12 +76,16 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
             console.log('🆕 Mensaje recibido por socket:', message)
             setMessages((prev) => {
                 const exists = prev.some(m => m.id === message.id)
+
                 if (exists) {
                     console.log('⚠️ Mensaje duplicado, ignorando')
-                    return prev
+                    
+return prev
                 }
+
                 console.log('✅ Agregando mensaje nuevo a la lista')
-                return [...prev, message]
+                
+return [...prev, message]
             })
         })
 
@@ -86,10 +96,13 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
     const sendMessage = (conversationId: string, body: string, messageType = 'TEXT', platform = 'WHATSAPP') => {
         console.log('📤 Intentando enviar mensaje:', { conversationId, body, platform, socket: !!socket, isConnected })
+
         if (!socket) {
             console.error('❌ Socket no disponible')
-            return
+            
+return
         }
+
         console.log('✅ Emitiendo evento send-message')
         socket.emit('send-message', { conversationId, body, messageType, platform })
     }
@@ -149,6 +162,8 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
 export const useSocket = () => {
     const context = useContext(SocketContext)
+
     if (!context) throw new Error('useSocket must be used within SocketProvider')
-    return context
+    
+return context
 }

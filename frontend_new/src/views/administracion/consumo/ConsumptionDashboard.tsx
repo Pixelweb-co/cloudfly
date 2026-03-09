@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+
 import Grid from '@mui/material/Grid'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
@@ -14,8 +15,6 @@ import Stack from '@mui/material/Stack'
 import { toast } from 'react-hot-toast'
 
 // Imports locales adaptados
-import subscriptionService from '@/services/subscriptionService'
-import type { SubscriptionResponse } from '@/types/subscriptions'
 
 // Icon Imports
 import AlertTriangle from '@mui/icons-material/Warning'
@@ -25,6 +24,9 @@ import FileInvoice from '@mui/icons-material/Description'
 import Users from '@mui/icons-material/People'
 import Bulb from '@mui/icons-material/Lightbulb'
 
+import type { SubscriptionResponse } from '@/types/subscriptions'
+import subscriptionService from '@/services/subscriptionService'
+
 interface UsageData {
     aiTokensUsed: number
     docsUsed: number
@@ -33,11 +35,13 @@ interface UsageData {
 
 const ConsumptionDashboard = () => {
     const [subscription, setSubscription] = useState<SubscriptionResponse | null>(null)
+
     const [usage, setUsage] = useState<UsageData>({
         aiTokensUsed: 0,
         docsUsed: 0,
         usersActive: 0
     })
+
     const [isLoading, setIsLoading] = useState(true)
 
     // TODO: Obtener tenantId del usuario autenticado o del contexto
@@ -48,11 +52,15 @@ const ConsumptionDashboard = () => {
         const fetchData = async () => {
             try {
                 setIsLoading(true)
+
+
                 // En un escenario real, esto debería venir del contexto de usuario o sesión
                 // Si falla por 404/403 (porque no existe tenant 1), usaremos datos mock
                 try {
                     const subscriptionData = await subscriptionService.getActiveTenantSubscription(TENANT_ID)
+
                     setSubscription(subscriptionData)
+
                     // Mock usage data based on limits
                     setUsage({
                         aiTokensUsed: Math.floor(Math.random() * (subscriptionData.effectiveAiTokensLimit || 100000)),
@@ -61,6 +69,7 @@ const ConsumptionDashboard = () => {
                     })
                 } catch (apiError) {
                     console.warn('Backend subscription fetch failed, using mock data for UI demo', apiError)
+
                     // Mock fallback para que el usuario vea la UI funcionando
                     setSubscription({
                         id: 0,
@@ -108,13 +117,15 @@ const ConsumptionDashboard = () => {
 
     const calculatePercentage = (used: number, limit: number | null): number => {
         if (!limit) return 0
-        return Math.min((used / limit) * 100, 100)
+        
+return Math.min((used / limit) * 100, 100)
     }
 
     const getProgressColor = (percentage: number): 'success' | 'warning' | 'error' => {
         if (percentage < 70) return 'success'
         if (percentage < 90) return 'warning'
-        return 'error'
+        
+return 'error'
     }
 
     if (isLoading) {

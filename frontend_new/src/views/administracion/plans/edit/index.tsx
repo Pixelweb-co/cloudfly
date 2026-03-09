@@ -1,7 +1,9 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+
 import { useRouter, useParams } from 'next/navigation'
+
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import CardHeader from '@mui/material/CardHeader'
@@ -18,12 +20,16 @@ import OutlinedInput from '@mui/material/OutlinedInput'
 import Chip from '@mui/material/Chip'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
+
+import { useForm, Controller } from 'react-hook-form'
+
+import { toast } from 'react-hot-toast'
+
 import CustomTextField from '@core/components/mui/TextField'
-import { PlanValues, PlanResponse } from '@/types/plans'
+import type { PlanValues} from '@/types/plans';
+import { PlanResponse } from '@/types/plans'
 import { planService } from '@/services/plans/planService'
 import { rbacService } from '@/services/rbac/rbacService'
-import { useForm, Controller } from 'react-hook-form'
-import { toast } from 'react-hot-toast'
 
 const EditPlanView = () => {
     const router = useRouter()
@@ -68,8 +74,10 @@ const EditPlanView = () => {
         const fetchData = async () => {
             try {
                 setIsLoading(true)
+
                 // Fetch modules
                 const modules = await rbacService.getModulesList()
+
                 setAvailableModules(modules)
 
                 // Fetch plan data
@@ -98,12 +106,14 @@ const EditPlanView = () => {
                 setIsLoading(false)
             }
         }
+
         fetchData()
     }, [planId, reset])
 
     const onSubmit = async (formData: PlanValues) => {
         try {
             setIsSubmitting(true)
+
             const payload = {
                 ...formData,
                 moduleIds: selectedModules
@@ -122,6 +132,7 @@ const EditPlanView = () => {
 
     const handleModuleChange = (event: any) => {
         const value = event.target.value
+
         setSelectedModules(typeof value === 'string' ? value.split(',').map(Number) : value)
     }
 

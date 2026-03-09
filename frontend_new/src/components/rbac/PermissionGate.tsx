@@ -1,6 +1,7 @@
 'use client'
 
-import React, { ReactNode } from 'react'
+import type { ReactNode } from 'react';
+import React from 'react'
 
 import { usePermissions } from '@/contexts/PermissionContext'
 
@@ -66,26 +67,32 @@ export const PermissionGate: React.FC<PermissionGateProps> = ({
     if (module && action) {
         hasAccess = can(module, action)
     }
+
     // Check module access (any action)
     else if (module && !action) {
         hasAccess = canAccessModule(module)
     }
+
     // Check specific role
     else if (role) {
         hasAccess = hasRole(role)
     }
+
     // Check multiple roles (any of them)
     else if (roles && roles.length > 0) {
         hasAccess = roles.some(r => hasRole(r))
     }
+
     // Check admin requirement
     else if (requireAdmin) {
         hasAccess = isAdmin()
     }
+
     // Check superadmin requirement
     else if (requireSuperAdmin) {
         hasAccess = isSuperAdmin()
     }
+
     // If no requirements specified, allow access
     else {
         hasAccess = true

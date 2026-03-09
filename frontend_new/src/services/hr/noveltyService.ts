@@ -19,12 +19,16 @@ const BASE_URL = '/api/hr/novelties'
 export const noveltyService = {
     getAll: async (customerId: number, page: number = 0, size: number = 10) => {
         const response = await api.get(`${BASE_URL}?customerId=${customerId}&page=${page}&size=${size}`)
-        return response.data
+
+        
+return response.data
     },
 
     create: async (novelty: PayrollNovelty, customerId: number) => {
         const response = await api.post(`${BASE_URL}?customerId=${customerId}`, novelty)
-        return response.data
+
+        
+return response.data
     },
 
     delete: async (id: number, customerId: number) => {

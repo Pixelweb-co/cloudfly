@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+
 import {
     Card,
     CardHeader,
@@ -40,6 +41,7 @@ const GeneralSettings = () => {
                 // We will add a logic to get the "Self" customer.
                 // For now, let's assume we can fetch customer by ID 1
                 const data = await customerService.getCustomerById(1)
+
                 setCompanyData(data)
                 setIsDianEnabled(data.esEmisorFE || false)
             } catch (error) {
@@ -48,6 +50,7 @@ const GeneralSettings = () => {
                 setLoading(false)
             }
         }
+
         fetchSettings()
     }, [])
 
@@ -56,6 +59,8 @@ const GeneralSettings = () => {
 
         try {
             setSaving(true)
+
+
             // Update only the esEmisorFE field
             // dependent on how the update API works (PUT vs PATCH)
             if (companyData) {
@@ -63,6 +68,7 @@ const GeneralSettings = () => {
                     ...companyData,
                     esEmisorFE: checked
                 })
+
                 // Ideally, trigger a context refresh here so the Menu updates immediately
                 window.location.reload() // Simple brute force refresh for menu to catch up
             }

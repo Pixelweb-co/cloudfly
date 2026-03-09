@@ -5,6 +5,7 @@
  */
 
 import React, { useState } from 'react'
+
 import {
     Box,
     Button,
@@ -36,9 +37,11 @@ import {
     Delete as DeleteIcon
 } from '@mui/icons-material'
 import { useForm, Controller } from 'react-hook-form'
+
+import { format } from 'date-fns'
+
 import type { DianResolution, DianResolutionRequest } from '@/types/dian'
 import { DianDocumentType, DocumentTypeLabels } from '@/types/dian'
-import { format } from 'date-fns'
 
 interface Props {
     resolutions: DianResolution[]
@@ -105,6 +108,7 @@ export default function DianResolutionsSection({
                 active: true
             })
         }
+
         setDialogOpen(true)
     }
 
@@ -120,6 +124,7 @@ export default function DianResolutionsSection({
             } else {
                 await onCreate(data)
             }
+
             handleCloseDialog()
         } catch (error) {
             console.error('Error guardando resolución:', error)
@@ -137,7 +142,9 @@ export default function DianResolutionsSection({
     const calculateProgress = (resolution: DianResolution) => {
         const total = resolution.numberRangeTo - resolution.numberRangeFrom + 1
         const used = resolution.currentNumber - resolution.numberRangeFrom
-        return (used / total) * 100
+
+        
+return (used / total) * 100
     }
 
     return (

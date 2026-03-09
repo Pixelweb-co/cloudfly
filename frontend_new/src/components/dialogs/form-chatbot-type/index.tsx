@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+
 import {
     Dialog,
     DialogTitle,
@@ -14,6 +15,7 @@ import {
     Alert
 } from '@mui/material'
 import toast from 'react-hot-toast'
+
 import { axiosInstance } from '@/utils/axiosInstance'
 import type { ChatbotTypeConfig } from '@/types/chatbotTypes'
 
@@ -32,6 +34,7 @@ const ChatbotTypeForm = ({ open, onClose, rowSelect }: ChatbotTypeFormProps) => 
         webhookUrl: '',
         status: true
     })
+
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -61,7 +64,8 @@ const ChatbotTypeForm = ({ open, onClose, rowSelect }: ChatbotTypeFormProps) => 
         // Validación
         if (!formData.typeName || !formData.webhookUrl) {
             setError('El nombre del tipo y la URL del webhook son obligatorios')
-            return
+            
+return
         }
 
         setLoading(true)

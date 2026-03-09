@@ -2,6 +2,7 @@
  * Customer interface with full DIAN support for electronic invoicing
  */
 export interface Customer {
+
     // ========== BASIC FIELDS ==========
     id: number
     name: string

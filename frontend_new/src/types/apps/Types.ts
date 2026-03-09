@@ -1,5 +1,5 @@
 
-import {ProductType} from './productType';
+import type {ProductType} from './productType';
 
 export interface CartItem extends ProductType {
   quantity: number;
@@ -23,6 +23,7 @@ export enum PaymentMethod {
   PAYTM = 'PAYTM',
   GPAY = 'GPAY',
   WALLET = 'WALLET',
+
   // Fix: Added QR as it is used in PaymentModal
   QR = 'QR'
 }

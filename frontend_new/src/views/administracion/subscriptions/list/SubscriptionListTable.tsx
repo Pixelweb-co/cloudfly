@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+
 import { useRouter } from 'next/navigation'
+
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Button from '@mui/material/Button'
@@ -24,18 +26,22 @@ import {
 } from '@tanstack/react-table'
 import { rankItem } from '@tanstack/match-sorter-utils'
 
+import { toast } from 'react-hot-toast'
+
 import tableStyles from '@core/styles/table.module.css'
 import CustomTextField from '@core/components/mui/TextField'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
 import ConfirmDialog from '@/components/dialogs/ConfirmDialog'
-import { SubscriptionResponse, SubscriptionStatus, BillingCycle } from '@/types/subscriptions'
+import type { SubscriptionResponse} from '@/types/subscriptions';
+import { SubscriptionStatus, BillingCycle } from '@/types/subscriptions'
 import subscriptionService from '@/services/subscriptions/subscriptionService'
-import { toast } from 'react-hot-toast'
 
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
     const itemRank = rankItem(row.getValue(columnId), value)
+
     addMeta({ itemRank })
-    return itemRank.passed
+    
+return itemRank.passed
 }
 
 const columnHelper = createColumnHelper<SubscriptionResponse>()
@@ -52,6 +58,7 @@ const SubscriptionListTable = () => {
         try {
             setIsLoading(true)
             const subscriptions = await subscriptionService.getAllSubscriptions()
+
             setData(subscriptions)
         } catch (error) {
             console.error('Error fetching subscriptions:', error)

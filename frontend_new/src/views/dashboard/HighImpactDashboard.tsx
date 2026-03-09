@@ -15,7 +15,8 @@ import CardStatsWithAreaChart from '@/components/card-statistics/StatsWithAreaCh
 import CardStatsSquare from '@/components/card-statistics/CardStatsSquare'
 
 // Service Imports
-import dashboardService, { DashboardStats } from '@/services/dashboardService'
+import type { DashboardStats } from '@/services/dashboardService';
+import dashboardService from '@/services/dashboardService'
 import usePermissions from '@/hooks/usePermissions'
 
 // Util Imports
@@ -33,10 +34,12 @@ const HighImpactDashboard = () => {
             try {
                 setLoading(true)
                 const data = await dashboardService.getStats()
+
                 setStats(data)
             } catch (err) {
                 console.error('Error fetching dashboard stats:', err)
                 setError('No se pudieron cargar las estadísticas. Mostrando datos de ejemplo.')
+
                 // Mock data fallback if API fails
                 setStats({
                     totalRevenue: 24500,

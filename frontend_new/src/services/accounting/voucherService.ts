@@ -49,22 +49,30 @@ export class VoucherService {
         const response = await axiosInstance.get('/accounting/vouchers', {
             params: { tenantId }
         })
-        return response.data
+
+        
+return response.data
     }
 
     static async getById(id: number): Promise<VoucherResponse> {
         const response = await axiosInstance.get(`/accounting/vouchers/${id}`)
-        return response.data
+
+        
+return response.data
     }
 
     static async create(voucher: VoucherRequest): Promise<VoucherResponse> {
         const response = await axiosInstance.post('/accounting/vouchers', voucher)
-        return response.data
+
+        
+return response.data
     }
 
     static async update(id: number, voucher: VoucherRequest): Promise<VoucherResponse> {
         const response = await axiosInstance.put(`/accounting/vouchers/${id}`, voucher)
-        return response.data
+
+        
+return response.data
     }
 
     static async delete(id: number): Promise<void> {
@@ -73,11 +81,15 @@ export class VoucherService {
 
     static async post(id: number): Promise<VoucherResponse> {
         const response = await axiosInstance.post(`/accounting/vouchers/${id}/post`)
-        return response.data
+
+        
+return response.data
     }
 
     static async void(id: number): Promise<VoucherResponse> {
         const response = await axiosInstance.post(`/accounting/vouchers/${id}/void`)
-        return response.data
+
+        
+return response.data
     }
 }

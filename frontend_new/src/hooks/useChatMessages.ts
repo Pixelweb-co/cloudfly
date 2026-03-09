@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+
 import { axiosInstance } from '@/utils/axiosInstance'
 import { useSocket } from '@/contexts/SocketContext'
 import type { Message } from '@/types/apps/chatTypes'
@@ -63,7 +64,8 @@ export const useChatMessages = ({ conversationId, autoJoin = true }: UseChatMess
     useEffect(() => {
         if (!conversationId) {
             setMessages([])
-            return
+            
+return
         }
 
         // Cargar mensajes históricos
@@ -93,6 +95,7 @@ export const useChatMessages = ({ conversationId, autoJoin = true }: UseChatMess
         setMessages(prev => {
             // Verificar si ya existe
             const exists = prev.some(m => m.id === lastSocketMessage.id)
+
             if (exists) return prev
 
             // Agregar al final (ya viene ordenado)

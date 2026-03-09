@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+
 import { useRouter } from 'next/navigation'
-import { employeeService } from '@/services/hr/employeeService'
-import { Employee, AvailableUser } from '@/types/hr'
+
 import {
     Dialog,
     DialogTitle,
@@ -28,7 +28,11 @@ import {
     InputAdornment,
     IconButton
 } from '@mui/material'
+
 import { Visibility, VisibilityOff, Refresh } from '@mui/icons-material'
+
+import { employeeService } from '@/services/hr/employeeService'
+import type { Employee, AvailableUser } from '@/types/hr'
 
 interface EmployeeFormDialogProps {
     open: boolean
@@ -172,8 +176,10 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
 
     const loadAvailableUsers = async () => {
         setLoadingUsers(true)
+
         try {
             const users = await employeeService.getAvailableUsers(1) // TODO: get customerId from context
+
             setAvailableUsers(users)
         } catch (err) {
             console.error('Error loading available users:', err)
@@ -215,6 +221,7 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
                 workSchedule: employee.workSchedule || 'TIEMPO_COMPLETO',
                 monthlyWorkedDays: employee.monthlyWorkedDays?.toString() || '30',
                 hasFamilySubsidy: employee.hasFamilySubsidy ?? false,
+
                 // Acceso al sistema
                 accessOption: employee.hasSystemAccess ? 'EXISTING' : 'NONE',
                 existingUserId: employee.userId?.toString() || '',
@@ -231,6 +238,7 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target
+
         setFormData({
             ...formData,
             [name]: type === 'checkbox' ? checked : value
@@ -244,6 +252,7 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
                 .replace(/\s+/g, '')
                 .normalize('NFD')
                 .replace(/[\u0300-\u036f]/g, '') // Remove accents
+
             setFormData({ ...formData, newUsername: username })
         }
     }
@@ -252,9 +261,11 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
     const generatePassword = () => {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%'
         let password = ''
+
         for (let i = 0; i < 12; i++) {
             password += chars.charAt(Math.floor(Math.random() * chars.length))
         }
+
         setFormData({ ...formData, newPassword: password })
     }
 
@@ -281,6 +292,7 @@ export default function EmployeeFormDialog({ open, onClose, onSuccess, employee 
                 // Create new employee
                 await employeeService.create(employeeData, 1)
             }
+
             onSuccess()
             handleClose()
         } catch (err: any) {

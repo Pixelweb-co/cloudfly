@@ -122,6 +122,7 @@ const CategoryForm = ({ open, onClose, rowSelect }: any) => {
 
       // Si tienes un ID, significa que estás actualizando el usuario, de lo contrario, creas uno nuevo
       console.log('data to submit:', data)
+
       if (rowSelect.id) {
         console.log('Actualizando categoría con ID:', id)
       } else {

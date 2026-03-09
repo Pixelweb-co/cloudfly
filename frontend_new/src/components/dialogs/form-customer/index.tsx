@@ -1,5 +1,6 @@
 'use client'
-import React, { useEffect, useState, SyntheticEvent } from 'react'
+import type { SyntheticEvent } from 'react';
+import React, { useEffect, useState } from 'react'
 
 import {
   Dialog,
@@ -205,6 +206,7 @@ const ClienteForm = ({
       fechaFinal: '',
       descripcionContrato: '',
       status: '1',
+
       // DIAN
       esEmisorFE: false,
       esEmisorPrincipal: false,
@@ -231,11 +233,13 @@ const ClienteForm = ({
     const loadDepartamentos = async () => {
       try {
         const data = await daneService.getDepartamentos()
+
         setDepartamentos(data)
       } catch (error) {
         console.error('Error cargando departamentos:', error)
       }
     }
+
     loadDepartamentos()
   }, [])
 
@@ -244,11 +248,15 @@ const ClienteForm = ({
     const loadCiudades = async () => {
       if (!watchDepartamento) {
         setCiudades([])
-        return
+        
+return
       }
+
       setLoadingDane(true)
+
       try {
         const data = await daneService.getCiudadesByDepartamento(watchDepartamento)
+
         setCiudades(data)
       } catch (error) {
         console.error('Error cargando ciudades:', error)
@@ -256,6 +264,7 @@ const ClienteForm = ({
         setLoadingDane(false)
       }
     }
+
     loadCiudades()
   }, [watchDepartamento])
 
@@ -270,6 +279,7 @@ const ClienteForm = ({
   const onSubmit = async (data: any) => {
     try {
       const token = localStorage.getItem('AuthToken')
+
       if (!token) throw new Error('Token no disponible')
 
       const method = id ? 'put' : 'post'
@@ -310,6 +320,7 @@ const ClienteForm = ({
   useEffect(() => {
     if (rowSelect.id) {
       setId(rowSelect.id)
+
       // Mapear campos básicos
       setValue('name', rowSelect.name || '')
       setValue('nit', rowSelect.nit || '')
@@ -322,6 +333,7 @@ const ClienteForm = ({
       setValue('status', typeof rowSelect.status === 'boolean' ? (rowSelect.status ? '1' : '0') : rowSelect.status || '1')
       setValue('businessType', rowSelect.businessType || '')
       setValue('businessDescription', rowSelect.businessDescription || '')
+
       // Contrato
       setValue('fechaInicio', rowSelect.contrato?.fechaInicio || '')
       setValue('fechaFinal', rowSelect.contrato?.fechaFinal || '')

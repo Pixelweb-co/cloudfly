@@ -1,5 +1,5 @@
 import axios from '@/utils/axiosInstance';
-import { PortfolioDocument, PortfolioPayment } from '@/types/portfolio';
+import type { PortfolioDocument, PortfolioPayment } from '@/types/portfolio';
 
 // Placeholder types if not yet created (will be created in next step)
 // We assume axios instance is configured with base URL
@@ -11,19 +11,25 @@ export const portfolioService = {
     getReceivables: async (tenantId: number, contactId?: number): Promise<PortfolioDocument[]> => {
         const params = { tenantId, contactId };
         const response = await axios.get(`${BASE_URL}/receivables`, { params });
-        return response.data;
+
+        
+return response.data;
     },
 
     // Obtener resumen (totales)
     getTotalReceivables: async (tenantId: number): Promise<number> => {
         const response = await axios.get(`${BASE_URL}/summary/receivables`, { params: { tenantId } });
-        return response.data;
+
+        
+return response.data;
     },
 
     // Registrar un pago
     createPayment: async (payment: any): Promise<PortfolioPayment> => {
         // payment should implement PortfolioPaymentRequestDTO structure
         const response = await axios.post(`${BASE_URL}/payments`, payment);
-        return response.data;
+
+        
+return response.data;
     }
 };

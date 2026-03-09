@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+
 import { axiosInstance } from '@/utils/axiosInstance'
 import { useSocket } from '@/contexts/SocketContext'
 import type { ContactGroup, ContactCard, MessagePlatform } from '@/types/apps/chatTypes'
 
 export const useContactList = (platform: MessagePlatform) => {
     const { subscribePlatform } = useSocket()
+
     const [contacts, setContacts] = useState<ContactGroup>({
         groups: {
             LEAD: [],
@@ -14,6 +16,7 @@ export const useContactList = (platform: MessagePlatform) => {
             CLIENT: []
         }
     })
+
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -23,6 +26,7 @@ export const useContactList = (platform: MessagePlatform) => {
             setError(null)
 
             const response = await axiosInstance.get(`/api/chat/contacts/${platform}`)
+
             setContacts(response.data)
 
         } catch (err: any) {
@@ -54,6 +58,7 @@ export const useContactList = (platform: MessagePlatform) => {
                 // Encontrar y remover el contacto de su stage actual
                 for (const stage of Object.keys(newGroups) as Array<keyof typeof newGroups>) {
                     const index = newGroups[stage].findIndex(c => c.contactId === contactId)
+
                     if (index !== -1) {
                         movedContact = { ...newGroups[stage][index], stage: newStage }
                         newGroups[stage] = newGroups[stage].filter((_, i) => i !== index)
@@ -71,6 +76,7 @@ export const useContactList = (platform: MessagePlatform) => {
 
         } catch (err: any) {
             console.error('Error updating contact stage:', err)
+
             // Recargar en caso de error
             loadContacts()
         }

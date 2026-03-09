@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+
 import { axiosInstance } from '@/utils/axiosInstance'
 
 interface Plan {
@@ -33,10 +34,13 @@ export const useSubscription = () => {
       setLoading(true)
       setError(null)
       const response = await axiosInstance.get('/api/v1/plans/active')
+
       setPlans(response.data)
-      return response.data
+      
+return response.data
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Error al cargar planes'
+
       setError(errorMsg)
       console.error('Error fetching plans:', err)
       throw err
@@ -51,13 +55,17 @@ export const useSubscription = () => {
       try {
         setLoading(true)
         setError(null)
+
         const response = await axiosInstance.post(`/api/v1/subscriptions/users/${userId}/subscribe`, {
           planId,
           isAutoRenew: autoRenew
         })
-        return response.data
+
+        
+return response.data
       } catch (err: any) {
         const errorMsg = err.response?.data?.message || 'Error al suscribirse'
+
         setError(errorMsg)
         console.error('Error subscribing to plan:', err)
         throw err
@@ -74,13 +82,17 @@ export const useSubscription = () => {
       setLoading(true)
       setError(null)
       const response = await axiosInstance.get(`/api/v1/subscriptions/users/${userId}/active`)
-      return response.data
+
+      
+return response.data
     } catch (err: any) {
       // 404 es esperado si no tiene suscripción
       if (err.response?.status === 404) {
         return null
       }
+
       const errorMsg = err.response?.data?.message || 'Error al obtener suscripción'
+
       setError(errorMsg)
       console.error('Error fetching subscription:', err)
       throw err
@@ -95,9 +107,12 @@ export const useSubscription = () => {
       setLoading(true)
       setError(null)
       const response = await axiosInstance.patch(`/api/v1/subscriptions/${subscriptionId}/cancel`)
-      return response.data
+
+      
+return response.data
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Error al cancelar suscripción'
+
       setError(errorMsg)
       console.error('Error cancelling subscription:', err)
       throw err
@@ -112,9 +127,12 @@ export const useSubscription = () => {
       setLoading(true)
       setError(null)
       const response = await axiosInstance.post(`/api/v1/subscriptions/${subscriptionId}/renew`)
-      return response.data
+
+      
+return response.data
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Error al renovar suscripción'
+
       setError(errorMsg)
       console.error('Error renewing subscription:', err)
       throw err
@@ -129,18 +147,23 @@ export const useSubscription = () => {
 
     try {
       const token = localStorage.getItem('jwt')
+
       if (!token) return false
 
       const payload = JSON.parse(atob(token.split('.')[1]))
+
       if (!payload.authorities) return false
 
       const roles = payload.authorities.split(',')
-      return roles.some((role: string) =>
+
+      
+return roles.some((role: string) =>
         role === 'ROLE_SUPERADMIN' || role === 'ROLE_MANAGER'
       )
     } catch (error) {
       console.error('Error checking system role:', error)
-      return false
+      
+return false
     }
   }
 
@@ -150,22 +173,28 @@ export const useSubscription = () => {
     // Si es rol de sistema, no hacer la llamada
     if (isSystemRole()) {
       console.log('SUPERADMIN/MANAGER detected - skipping subscription check')
-      return null
+      
+return null
     }
 
     try {
       setLoading(true)
       setError(null)
       const response = await axiosInstance.get(`/api/v1/subscriptions/tenant/${tenantId}/active`)
+
       console.log('Tenant subscription:', response.data)
-      return response.data
+      
+return response.data
     } catch (err: any) {
       // 404 es esperado si no tiene suscripción
       if (err.response?.status === 404) {
         console.warn('No active subscription found for tenant:', tenantId)
-        return null
+        
+return null
       }
+
       const errorMsg = err.response?.data?.message || 'Error al obtener suscripción del tenant'
+
       setError(errorMsg)
       console.error('Error fetching tenant subscription:', err)
       throw err
@@ -179,12 +208,16 @@ export const useSubscription = () => {
     try {
       setLoading(true)
       setError(null)
+
       const response = await axiosInstance.patch(
         `/api/v1/subscriptions/${subscriptionId}/change-plan/${newPlanId}`
       )
-      return response.data
+
+      
+return response.data
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Error al cambiar plan'
+
       setError(errorMsg)
       console.error('Error changing plan:', err)
       throw err

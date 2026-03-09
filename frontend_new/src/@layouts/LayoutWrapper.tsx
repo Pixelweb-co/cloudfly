@@ -25,6 +25,7 @@ const LayoutWrapper = (props: LayoutWrapperProps) => {
   const { systemMode, verticalLayout, horizontalLayout } = props
 
   const [isLogin, setIsLogin] = useState(false)
+
   // Estado de carga para evitar redirecciones prematuras
   const [isLoading, setIsLoading] = useState(true)
 
@@ -52,7 +53,8 @@ const LayoutWrapper = (props: LayoutWrapperProps) => {
 
           if (!window.location.pathname.includes('/login')) {
             window.location.href = '/login'
-            return
+            
+return
           }
         }
       } catch (error) {
@@ -68,9 +70,11 @@ const LayoutWrapper = (props: LayoutWrapperProps) => {
     // Validación periódica cada 60 segundos
     const interval = setInterval(async () => {
       const isValid = await AuthManager.validateToken()
+
       if (!isValid) {
         console.warn('Layout: Sesión expirada durante intervalo.')
         setIsLogin(false)
+
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login'
         }

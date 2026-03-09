@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+
 import { Typography } from '@mui/material'
+
 import { userMethods } from '@/utils/userMethods'
 import { axiosInstance } from '@/utils/axiosInstance'
 
@@ -14,11 +16,14 @@ const PlanName = () => {
             try {
                 // Verificar si es rol de sistema (SUPERADMIN/MANAGER)
                 const token = localStorage.getItem('jwt')
+
                 if (token) {
                     try {
                         const payload = JSON.parse(atob(token.split('.')[1]))
+
                         if (payload.authorities) {
                             const roles = payload.authorities.split(',')
+
                             const isSystemRole = roles.some((role: string) =>
                                 role === 'ROLE_SUPERADMIN' || role === 'ROLE_MANAGER'
                             )
@@ -27,7 +32,8 @@ const PlanName = () => {
                             if (isSystemRole) {
                                 console.log('System role detected - no plan display needed')
                                 setLoading(false)
-                                return
+                                
+return
                             }
                         }
                     } catch (err) {
@@ -40,7 +46,8 @@ const PlanName = () => {
 
                 if (!userData) {
                     setLoading(false)
-                    return
+                    
+return
                 }
 
                 // Intentar obtener tenantId de diferentes lugares
@@ -50,7 +57,8 @@ const PlanName = () => {
                 if (!tenantId) {
                     console.warn('No se encontró tenant ID para obtener el plan')
                     setLoading(false)
-                    return
+                    
+return
                 }
 
                 // Obtener la suscripción activa del tenant

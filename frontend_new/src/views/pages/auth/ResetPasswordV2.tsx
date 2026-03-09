@@ -19,8 +19,9 @@ import Button from '@mui/material/Button'
 import classnames from 'classnames'
 
 // Type Imports
-import type { SystemMode } from '@core/types'
 import type { Locale } from '@configs/i18n'
+
+import type { SystemMode } from '@core/types'
 
 // Component Imports
 import DirectionalIcon from '@components/DirectionalIcon'
@@ -90,7 +91,8 @@ const ResetPasswordV2 = ({ mode }: { mode: SystemMode }) => {
 
     if (password !== confirmPassword) {
       setError('Las contraseñas no coinciden')
-      return
+      
+return
     }
 
     setLoading(true)

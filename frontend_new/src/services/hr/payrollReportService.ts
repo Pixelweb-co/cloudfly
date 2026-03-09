@@ -16,7 +16,9 @@ export const getPayrollCostsByCostCenter = async (
         `${BASE_URL}/cost-by-center/${periodId}`,
         { params: { customerId } }
     )
-    return response.data
+
+    
+return response.data
 }
 
 /**
@@ -30,7 +32,9 @@ export const getPayrollCostsByCostCenterForYear = async (
         `${BASE_URL}/cost-by-center/year/${year}`,
         { params: { customerId } }
     )
-    return response.data
+
+    
+return response.data
 }
 
 /**
@@ -38,7 +42,9 @@ export const getPayrollCostsByCostCenterForYear = async (
  */
 export const getCostCenters = async (): Promise<CostCenter[]> => {
     const response = await axiosInstance.get<CostCenter[]>(COST_CENTER_URL)
-    return response.data
+
+    
+return response.data
 }
 
 /**
@@ -46,7 +52,9 @@ export const getCostCenters = async (): Promise<CostCenter[]> => {
  */
 export const getCostCenterById = async (id: number): Promise<CostCenter> => {
     const response = await axiosInstance.get<CostCenter>(`${COST_CENTER_URL}/${id}`)
-    return response.data
+
+    
+return response.data
 }
 
 const payrollReportService = {

@@ -42,14 +42,18 @@ const Documents: React.FC<DocumentsProps> = ({ product_id }) => {
   const separateDocuments = (docs: any[]) => {
     if (!Array.isArray(docs)) {
       console.error('separateDocuments recibió datos inválidos:', docs);
-      return;
+      
+return;
     }
+
     console.log('Separando documentos:', docs);
     
     const reports = docs.filter(doc => {
       console.log('Documento siendo evaluado:', doc, 'report value:', doc.report);
-      return doc.report === true;
+      
+return doc.report === true;
     });
+
     const normal = docs.filter(doc => doc.report === false);
     
     console.log('Reportes encontrados:', reports.length, 'documentos');
@@ -106,7 +110,8 @@ const Documents: React.FC<DocumentsProps> = ({ product_id }) => {
   const handleUpload = async () => {
     if (!file) {
       alert('Por favor, selecciona un archivo.');
-      return;
+      
+return;
     }
 
     const formData = new FormData();

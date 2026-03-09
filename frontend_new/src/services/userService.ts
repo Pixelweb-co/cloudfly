@@ -26,22 +26,30 @@ export interface UserCreateUpdateRequest {
 const userService = {
     getAllUsers: async () => {
         const response = await axiosInstance.get<User[]>('/api/users')
-        return response.data
+
+        
+return response.data
     },
 
     getUserById: async (id: number) => {
         const response = await axiosInstance.get<User>(`/api/users/${id}`)
-        return response.data
+
+        
+return response.data
     },
 
     createUser: async (data: UserCreateUpdateRequest) => {
         const response = await axiosInstance.post<User>('/api/users', data)
-        return response.data
+
+        
+return response.data
     },
 
     updateUser: async (id: number, data: UserCreateUpdateRequest) => {
         const response = await axiosInstance.put<User>(`/api/users/${id}`, data)
-        return response.data
+
+        
+return response.data
     },
 
     deleteUser: async (id: number) => {

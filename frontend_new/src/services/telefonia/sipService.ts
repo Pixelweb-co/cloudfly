@@ -1,4 +1,5 @@
-import { UserAgent, UserAgentOptions, Inviter, SessionState, Registerer } from 'sip.js';
+import type { UserAgentOptions} from 'sip.js';
+import { UserAgent, Inviter, SessionState, Registerer } from 'sip.js';
 
 export interface SipConfig {
     extension: string;
@@ -23,6 +24,7 @@ class SipService {
     async initialize(config: SipConfig) {
         // Use unique URI 'webrtc_2500' to match PJSIP endpoint name, avoiding conflict with numeric extension
         const uri = UserAgent.makeURI(`sip:webrtc_${config.extension}@${config.domain}`);
+
         if (!uri) throw new Error("Invalid URI");
 
         const transportOptions = {
@@ -44,6 +46,7 @@ class SipService {
                     console.log("Incoming call...");
                     this.currentSession = invite;
                     this.setupSessionListeners(invite);
+
                     if (this.delegate?.onIncomingCall) {
                         this.delegate.onIncomingCall(invite);
                     }
@@ -66,6 +69,7 @@ class SipService {
         });
         this.registerer.stateChange.addListener((state) => {
             console.log(`Registerer state: ${state}`);
+
             if (state === 'Registered') {
                 this.delegate?.onRegistered?.();
             } else if (state === 'Unregistered') {
@@ -80,20 +84,24 @@ class SipService {
         if (!this.userAgent) return;
 
         const targetURI = UserAgent.makeURI(`sip:${target}@${this.userAgent.configuration.uri.host}`);
+
         if (!targetURI) return;
 
         const inviter = new Inviter(this.userAgent, targetURI);
+
         this.currentSession = inviter;
 
         this.setupSessionListeners(inviter);
 
         await inviter.invite();
-        return inviter;
+        
+return inviter;
     }
 
     private setupSessionListeners(session: any) {
         session.stateChange.addListener((state: SessionState) => {
             console.log(`Session state changed to: ${state}`);
+
             if (state === SessionState.Terminated) {
                 this.delegate?.onCallEnded?.();
                 this.currentSession = null;
@@ -113,6 +121,7 @@ class SipService {
             } else {
                 await this.currentSession.bye();
             }
+
             this.currentSession = null;
         }
     }
@@ -121,6 +130,7 @@ class SipService {
         if (this.registerer) {
             await this.registerer.unregister();
         }
+
         if (this.userAgent) {
             await this.userAgent.stop();
         }

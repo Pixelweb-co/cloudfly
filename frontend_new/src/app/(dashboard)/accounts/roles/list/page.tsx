@@ -7,7 +7,8 @@ import { useEffect, useState } from 'react'
 import RoleList from '@/views/apps/roles/list'
 
 // Service Imports
-import roleService, { Role } from '@/services/roleService'
+import type { Role } from '@/services/roleService';
+import roleService from '@/services/roleService'
 
 const RoleListPage = () => {
     // States
@@ -18,6 +19,7 @@ const RoleListPage = () => {
         const fetchData = async () => {
             try {
                 const data = await roleService.getAllRoles()
+
                 setRoleData(data)
             } catch (error) {
                 console.error('Error fetching roles:', error)

@@ -153,6 +153,7 @@ const Login = ({ mode }: { mode: SystemMode }) => {
         document.cookie = `jwt=${responseData.jwt}; path=/`
 
         const redirectURL = searchParams.get('redirectTo') ?? '/'
+
         router.replace(getLocalizedUrl(redirectURL, locale as Locale))
       } else {
         setErrorState({ message: ['Invalid credentials'] })

@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+
 import { useRouter } from 'next/navigation'
+
 import Card from '@mui/material/Card'
 import CardHeader from '@mui/material/CardHeader'
 import Button from '@mui/material/Button'
@@ -24,18 +26,21 @@ import {
 } from '@tanstack/react-table'
 import { rankItem } from '@tanstack/match-sorter-utils'
 
+import { toast } from 'react-hot-toast'
+
 import tableStyles from '@core/styles/table.module.css'
 import CustomTextField from '@core/components/mui/TextField'
 import TablePaginationComponent from '@/components/TablePaginationComponent'
 import ConfirmDialog from '@/components/dialogs/ConfirmDialog'
-import { ModuleDTO } from '@/types/modules'
+import type { ModuleDTO } from '@/types/modules'
 import { moduleService } from '@/services/modules/moduleService'
-import { toast } from 'react-hot-toast'
 
 const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
     const itemRank = rankItem(row.getValue(columnId), value)
+
     addMeta({ itemRank })
-    return itemRank.passed
+    
+return itemRank.passed
 }
 
 const columnHelper = createColumnHelper<ModuleDTO>()
@@ -52,6 +57,7 @@ const ModuleListTable = () => {
         try {
             setIsLoading(true)
             const modules = await moduleService.getAllModules()
+
             setData(modules)
         } catch (error) {
             console.error('Error fetching modules:', error)
@@ -148,7 +154,9 @@ const ModuleListTable = () => {
                     const itemsCount = row.original.menuItems
                         ? JSON.parse(row.original.menuItems).length
                         : 0
-                    return (
+
+                    
+return (
                         <Chip
                             label={`${itemsCount} items`}
                             size='small'

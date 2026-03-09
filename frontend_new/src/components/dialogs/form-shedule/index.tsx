@@ -1,5 +1,6 @@
 'use client'
 import React, { use, useEffect, useState } from 'react'
+
 import {
   Dialog,
   DialogTitle,
@@ -68,7 +69,8 @@ const SheduleForm = ({ open, onClose, rowSelect, onSuccess }: { open: boolean; o
 
     if (!fechaInicio || !fechaFin || isNaN(numVeces) || numVeces <= 0) {
       console.error('Datos de entrada inválidos.')
-      return []
+      
+return []
     }
 
     const startDate = new Date(fechaInicio)
@@ -77,7 +79,8 @@ const SheduleForm = ({ open, onClose, rowSelect, onSuccess }: { open: boolean; o
 
     if (diffTime < 0) {
       console.error('La fecha de inicio es mayor que la fecha de fin.')
-      return []
+      
+return []
     }
 
     const fechasGeneradas = []
@@ -87,8 +90,10 @@ const SheduleForm = ({ open, onClose, rowSelect, onSuccess }: { open: boolean; o
       fechasGeneradas.push({ fecha: startDate.toISOString().split('T')[0], id_servicio: idServicio })
     } else {
       const interval = diffTime / (numVeces - 1)
+
       for (let i = 0; i < numVeces; i++) {
         const fecha = new Date(startDate.getTime() + interval * i)
+
         fechasGeneradas.push({ fecha: fecha.toISOString().split('T')[0], id_servicio: idServicio })
       }
     }
@@ -116,7 +121,8 @@ const SheduleForm = ({ open, onClose, rowSelect, onSuccess }: { open: boolean; o
 
     if (fechasSeleccionadas.length === 0) {
       alert('Debe seleccionar al menos una fecha.')
-      return
+      
+return
     }
 
     try {
