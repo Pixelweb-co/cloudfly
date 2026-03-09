@@ -27,18 +27,20 @@ public class AuthController {
 
         @PostMapping("/login")
         public Mono<AuthResponse> login(@RequestBody @Valid LoginRequest loginRequest) {
-                return authenticationManager.authenticate(
-                                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
-                                                loginRequest.getPassword()))
-                                .map(auth -> {
-                                        String token = jwtProvider.createToken(auth);
-                                        return AuthResponse.builder()
-                                                        .username(auth.getName())
-                                                        .message("Login exitoso")
-                                                        .jwt(token)
-                                                        .status(true)
-                                                        .build();
-                                });
+                return userService.findByUsername(loginRequest.getUsername())
+                                .flatMap(user -> authenticationManager.authenticate(
+                                                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
+                                                                loginRequest.getPassword()))
+                                                .map(auth -> {
+                                                        String token = jwtProvider.createToken(auth);
+                                                        return AuthResponse.builder()
+                                                                        .username(auth.getName())
+                                                                        .message("Login exitoso")
+                                                                        .jwt(token)
+                                                                        .status(true)
+                                                                        .user(user)
+                                                                        .build();
+                                                }));
         }
 
         @PostMapping("/register")
@@ -49,6 +51,7 @@ public class AuthController {
                                                 .username(user.getUsername())
                                                 .message("Registro exitoso. Revise su email para verificar la cuenta.")
                                                 .status(true)
+                                                .user(user)
                                                 .build());
         }
 

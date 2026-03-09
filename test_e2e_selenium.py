@@ -22,7 +22,7 @@ DB_USER = "root"
 DB_PASS = "widowmaker"
 
 # Configuración Mail VPS (HestiaCP)
-MAIL_HOST = "cloudfly.com.co"
+MAIL_HOST = "89.117.147.134"
 MAIL_PORT = 10622
 MAIL_KEY_PATH = os.path.expanduser("~/.ssh/id_rsa_cloudfly")
 
@@ -94,21 +94,15 @@ def run_e2e_test():
             logger.error("Timeout esperando redirección tras registro.")
             raise
 
-        # 2. VERIFICACION POR EMAIL REAL
+        # 2. VERIFICACION POR EMAIL REAL (IMAP)
         logger.info("--- FASE 2: VERIFICACION POR EMAIL ---")
-        activation_link = mail_manager.wait_for_activation_link("cloudfly.com.co", mail_acc, timeout=90)
+        activation_link = mail_manager.wait_for_activation_link("cloudfly.com.co", mail_acc, test_pass, timeout=120)
         
         if not activation_link:
             raise Exception("No se recibió el correo de activación a tiempo.")
         
         logger.info(f"Navegando al link de activación: {activation_link}")
-        # El link apunta a dashboard.cloudfly.com.co, pero para el test local usamos FRONTEND_URL
-        if "dashboard.cloudfly.com.co" in activation_link:
-            local_activation_link = activation_link.replace("https://dashboard.cloudfly.com.co", FRONTEND_URL)
-            logger.info(f"Ajustando link para entorno local: {local_activation_link}")
-            driver.get(local_activation_link)
-        else:
-            driver.get(activation_link)
+        driver.get(activation_link)
             
         time.sleep(5)
         logger.info("Verificación completada.")

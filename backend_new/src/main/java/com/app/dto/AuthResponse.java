@@ -1,5 +1,6 @@
 package com.app.dto;
 
+import com.app.persistence.entity.UserEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,4 +15,5 @@ public class AuthResponse {
     private String message;
     private String jwt;
     private boolean status;
+    private UserEntity user;
 }
