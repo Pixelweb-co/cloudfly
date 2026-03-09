@@ -1,9 +1,8 @@
+import quopri
 import subprocess
 import time
 import re
 import logging
-
-# Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -62,19 +61,26 @@ class MailManager:
         while time.time() - start_time < timeout:
             content = self.get_latest_email_content(domain, account)
             if content:
-                # Buscar el enlace de activación en el contenido del correo
+                # Decodificar Quoted-Printable
+                try:
+                    decoded_content = quopri.decodestring(content).decode('utf-8', errors='ignore')
+                except Exception as e:
+                    logger.warning(f"Error decodificando contenido: {e}")
+                    decoded_content = content
+
+                # Buscar el enlace de activación en el contenido decodificado
                 # Basado en la plantilla: <a href="${activateLink}" ...
                 # El enlace suele ser algo como https://dashboard.cloudfly.com.co/verify-email?token=...
-                links = re.findall(r'https?://[^\s<>"]+/verify-email\?token=[^\s<>"]+', content)
+                links = re.findall(r'https?://[^\s<>"]+/auth/verify\?token=[^\s<>"]+', decoded_content)
                 if links:
                     logger.info(f"Enlace de activación encontrado: {links[0]}")
                     return links[0]
                 
                 # También buscar por el token plano si el link viene codificado
-                tokens = re.findall(r'token=([a-zA-Z0-9\-\._~]+)', content)
+                tokens = re.findall(r'token=([a-zA-Z0-9\-\._~]+)', decoded_content)
                 if tokens:
                     logger.info(f"Token de activación extraído: {tokens[0]}")
-                    return f"https://dashboard.cloudfly.com.co/verify-email?token={tokens[0]}"
+                    return f"https://cloudfly.com.co/auth/verify?token={tokens[0]}"
 
             time.sleep(5)
         
