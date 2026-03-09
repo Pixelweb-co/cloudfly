@@ -51,3 +51,18 @@ error_e2e.png
 # User-specific files
 ./backend/DS_Store
 ./bakend/Thumbs.db
+
+.cloudflared/
+__pycache__/
+callcenterIA/
+chatwoot/
+evolution-api/
+frontend/frontend_log.txt
+frontend_new/frontend_log.txt
+terraform/
+traefik/
+vuexy/
+*.sql
+*.ps1
+backend_logs*.txt
+test_e2e_api.py
