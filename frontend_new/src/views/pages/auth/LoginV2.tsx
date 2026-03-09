@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 
 // Next Imports
 import { useRouter } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 
 // React Hook Form
 import { useForm } from 'react-hook-form'
