@@ -92,6 +92,14 @@ services:
       dockerfile: Dockerfile
     container_name: frontend-react
     restart: always
+    environment:
+      - NEXTAUTH_URL=https://dashboard.cloudfly.com.co
+      - NEXTAUTH_SECRET=cloudfly-prod-secret-change-later
+      - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co
+      - NEXT_PUBLIC_BASE_URL=https://dashboard.cloudfly.com.co
+      - NEXT_PUBLIC_FRONTEND_URL=https://dashboard.cloudfly.com.co
+      - ENVIRONMENT=production
+      - NODE_ENV=production
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`dashboard.cloudfly.com.co`)"
