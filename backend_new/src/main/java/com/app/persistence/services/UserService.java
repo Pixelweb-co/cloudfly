@@ -27,42 +27,43 @@ public class UserService {
 
         @Transactional
         public Mono<UserEntity> registerUser(AuthRegisterRequest request) {
-                return tenantService.createTenant(request.getCompanyName())
-                                .flatMap(tenant -> {
-                                        UserEntity user = UserEntity.builder()
-                                                        .nombres(request.getNombres())
-                                                        .apellidos(request.getApellidos())
-                                                        .username(request.getUsername())
-                                                        .password(passwordEncoder.encode(request.getPassword()))
-                                                        .email(request.getEmail())
-                                                        .isEnabled(false)
-                                                        .accountNoExpired(true)
-                                                        .accountNoLocked(true)
-                                                        .credentialNoExpired(true)
-                                                        .verificationToken(UUID.randomUUID().toString())
-                                                        .customerId(tenant.getId())
-                                                        .build();
+                Mono<Long> customerIdProvider = (request.getCompanyName() != null
+                                && !request.getCompanyName().trim().isEmpty())
+                                                ? tenantService.createTenant(request.getCompanyName())
+                                                                .map(tenant -> tenant.getId())
+                                                : Mono.just(0L);
 
-                                        return userRepository.save(user)
-                                                        .flatMap(savedUser -> {
-                                                                // Por defecto asignamos el rol USER o el que venga en
-                                                                // el request
-                                                                Flux<String> rolesToAssign = (request.getRoles() == null
-                                                                                || request.getRoles().isEmpty())
-                                                                                                ? Flux.just("ADMIN")
-                                                                                                : Flux.fromIterable(
-                                                                                                                request.getRoles());
+                return customerIdProvider.flatMap(custId -> {
+                        Long finalCustId = (custId == 0L) ? null : custId;
+                        UserEntity user = UserEntity.builder()
+                                        .nombres(request.getNombres())
+                                        .apellidos(request.getApellidos())
+                                        .username(request.getUsername())
+                                        .password(passwordEncoder.encode(request.getPassword()))
+                                        .email(request.getEmail())
+                                        .isEnabled(false)
+                                        .accountNoExpired(true)
+                                        .accountNoLocked(true)
+                                        .credentialNoExpired(true)
+                                        .verificationToken(UUID.randomUUID().toString())
+                                        .customerId(finalCustId)
+                                        .build();
 
-                                                                return rolesToAssign
-                                                                                .flatMap(roleName -> roleRepository
-                                                                                                .findByName(roleName))
-                                                                                .flatMap(role -> userRoleRepository
-                                                                                                .save(new UserRole(
-                                                                                                                savedUser.getId(),
-                                                                                                                role.getId())))
-                                                                                .then(Mono.just(savedUser));
-                                                        });
-                                });
+                        return userRepository.save(user)
+                                        .flatMap(savedUser -> {
+                                                Flux<String> rolesToAssign = (request.getRoles() == null
+                                                                || request.getRoles().isEmpty())
+                                                                                ? Flux.just("ADMIN")
+                                                                                : Flux.fromIterable(request.getRoles());
+
+                                                return rolesToAssign
+                                                                .flatMap(roleName -> roleRepository
+                                                                                .findByName(roleName))
+                                                                .flatMap(role -> userRoleRepository.save(new UserRole(
+                                                                                savedUser.getId(), role.getId())))
+                                                                .then(Mono.just(savedUser));
+                                        });
+                });
         }
 
         public Mono<Boolean> verifyEmail(String token) {

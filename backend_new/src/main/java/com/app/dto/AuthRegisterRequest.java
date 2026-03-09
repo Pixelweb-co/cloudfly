@@ -23,7 +23,6 @@ public class AuthRegisterRequest {
     @NotBlank
     @Email
     private String email;
-    @NotBlank
     private String companyName;
     private List<String> roles;
 }
