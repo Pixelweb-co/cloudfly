@@ -58,8 +58,8 @@ public class KafkaConsumerListener {
             notification.setUsername(data.get("name"));
             notification.setType("register");
 
-            // Construimos el link de activación (por ahora hardcodeado como en el test)
-            String activateLink = "https://cloudfly.com.co/auth/verify?token=" + data.get("token");
+            // Construimos el link de activación correcto para producción
+            String activateLink = "https://dashboard.cloudfly.com.co/verificate/" + data.get("token");
             notification.setBody(activateLink);
 
             emailService.sendEmail(notification);
