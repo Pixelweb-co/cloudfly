@@ -1,19 +1,24 @@
 package com.app.persistence.services;
 
 import com.app.dto.AuthRegisterRequest;
+import com.app.dto.UserDto;
+import com.app.persistence.entity.CustomerEntity;
+import com.app.persistence.entity.RoleEntity;
 import com.app.persistence.entity.UserEntity;
 import com.app.persistence.entity.UserRole;
+import com.app.persistence.repository.CustomerRepository;
 import com.app.persistence.repository.RoleRepository;
 import com.app.persistence.repository.UserRepository;
 import com.app.persistence.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -26,6 +31,7 @@ public class UserService {
         private final UserRoleRepository userRoleRepository;
         private final TenantService tenantService;
         private final PasswordEncoder passwordEncoder;
+        private final CustomerRepository customerRepository;
         private final ReactiveKafkaProducerTemplate<String, Object> kafkaTemplate;
 
         @Transactional
@@ -72,6 +78,39 @@ public class UserService {
                                                                 .then(Mono.just(savedUser));
                                         });
                 });
+        }
+
+        public Mono<UserDto> convertToDto(UserEntity user) {
+                return roleRepository.findRolesByUserId(user.getId())
+                                .collectList()
+                                .flatMap(roles -> {
+                                        if (user.getCustomerId() != null) {
+                                                return customerRepository.findById(user.getCustomerId())
+                                                                .map(customer -> buildUserDto(user, roles, customer))
+                                                                .defaultIfEmpty(buildUserDto(user, roles, null));
+                                        } else {
+                                                return Mono.just(buildUserDto(user, roles, null));
+                                        }
+                                });
+        }
+
+        private UserDto buildUserDto(UserEntity user, List<RoleEntity> roles, CustomerEntity customer) {
+                return UserDto.builder()
+                                .id(user.getId())
+                                .nombres(user.getNombres())
+                                .apellidos(user.getApellidos())
+                                .username(user.getUsername())
+                                .email(user.getEmail())
+                                .isEnabled(user.isEnabled())
+                                .accountNoExpired(user.isAccountNoExpired())
+                                .accountNoLocked(user.isAccountNoLocked())
+                                .credentialNoExpired(user.isCredentialNoExpired())
+                                .verificationToken(user.getVerificationToken())
+                                .recoveryToken(user.getRecoveryToken())
+                                .customerId(user.getCustomerId())
+                                .roles(roles)
+                                .customer(customer)
+                                .build();
         }
 
         public Mono<Boolean> verifyEmail(String token) {

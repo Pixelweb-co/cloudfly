@@ -15,5 +15,5 @@ public class AuthResponse {
     private String message;
     private String jwt;
     private boolean status;
-    private UserEntity user;
+    private UserDto user;
 }
