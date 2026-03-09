@@ -34,6 +34,19 @@
 
 # Maven build directory
 /backend/target/
+/backend_new/target/
+
+# Next.js build directory
+/frontend_new/.next/
+/frontend_new/node_modules/
+
+# Temporary and log files
+*.tmp
+*.log
+e2e_log_full.txt
+e2e_log_full_utf8.txt
+error_dom.html
+error_e2e.png
 
 # User-specific files
 ./backend/DS_Store
