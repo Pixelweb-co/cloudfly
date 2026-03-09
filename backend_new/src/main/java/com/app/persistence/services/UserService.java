@@ -89,4 +89,8 @@ public class UserService {
                 return userRepository.existsByEmail(email)
                                 .map(exists -> !exists);
         }
+
+        public Mono<UserEntity> findByUsername(String username) {
+                return userRepository.findByUsername(username);
+        }
 }
