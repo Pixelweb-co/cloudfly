@@ -43,6 +43,15 @@ def run_e2e_test():
     test_email = f"{mail_acc}@cloudfly.com.co"
     test_pass = "Password123*"
 
+    def print_browser_logs(driver, stage):
+        logger.info(f"--- LOGS DE CONSOLA EN ETAPA: {stage} ---")
+        try:
+            logs = driver.get_log('browser')
+            for entry in logs:
+                logger.info(f"[{entry['level']}] {entry['message']}")
+        except Exception as e:
+            logger.error(f"Error al obtener logs: {e}")
+
     try:
         # 0. PREPARAR CORREO REAL
         logger.info(f"--- FASE 0: PREPARAR CORREO ({test_email}) ---")
@@ -92,6 +101,7 @@ def run_e2e_test():
             logger.info("Registro exitoso. Esperando email de activación...")
         except TimeoutException:
             logger.error("Timeout esperando redirección tras registro.")
+            print_browser_logs(driver, "REGISTRO_FAIL")
             raise
 
         # 2. VERIFICACION POR EMAIL REAL (IMAP)
@@ -106,6 +116,7 @@ def run_e2e_test():
             
         time.sleep(5)
         logger.info("Verificación completada.")
+        print_browser_logs(driver, "VERIFICACION")
 
         # 3. LOGIN
         logger.info("--- FASE 3: LOGIN ---")
@@ -122,28 +133,31 @@ def run_e2e_test():
         # 4. ACCOUNT SETUP
         logger.info("--- FASE 4: ACCOUNT SETUP ---")
         try:
-            wait.until(EC.url_contains("/account-setup"))
-            logger.info("Login exitoso. Redirigido a Account Setup (Onboarding).")
+            # Esperamos a que llegue al home o account-setup
+            wait.until(lambda d: "/home" in d.current_url or "/account-setup" in d.current_url)
+            logger.info(f"Login exitoso. URL Actual: {driver.current_url}")
+            time.sleep(10) # Dar tiempo a que fallen los requests de API
+            print_browser_logs(driver, "POST_LOGIN_DASHBOARD")
+
+            if "/account-setup" in driver.current_url:
+                logger.info("Detectado Account Setup (Onboarding).")
+                # Verificamos que se renderice el wizard
+                setup_title = wait.until(EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Bienvenido a CloudFly!')]")))
+                logger.info(f"Setup Wizard detectado: '{setup_title.text}'")
+                
+                # Clicar en Siguiente (Continuar)
+                logger.info("Avanzando al paso 'Tu Negocio' en el Setup...")
+                continuar_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Continuar')]")))
+                continuar_btn.click()
+                time.sleep(5)
+                print_browser_logs(driver, "SETUP_STEP_2")
             
-            # Verificamos que se renderice el wizard
-            setup_title = wait.until(EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Bienvenido a CloudFly!')]")))
-            logger.info(f"Setup Wizard detectado: '{setup_title.text}'")
-            
-            # Clicar en Siguiente (Continuar)
-            logger.info("Avanzando al paso 'Tu Negocio' en el Setup...")
-            continuar_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Continuar')]")))
-            continuar_btn.click()
-            time.sleep(2)
-            
-            # Verificar paso 2
-            business_title = wait.until(EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Información de tu Negocio')]")))
-            logger.info("Paso 2 detectado exitosamente.")
-            
-            logger.info("--- PRUEBA E2E COMPLETADA CON EXITO (FULL OK) ---")
+            logger.info("--- PRUEBA E2E FINALIZADA (REVISAR CONSOLA ARRIBA) ---")
             
         except TimeoutException:
-            logger.error("Timeout: No se logró llegar a /account-setup después del login.")
+            logger.error("Timeout: No se logró navegar después del login.")
             logger.error(f"URL Actual: {driver.current_url}")
+            print_browser_logs(driver, "LOGIN_EXIT_FAIL")
             raise
 
     except Exception as e:

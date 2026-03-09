@@ -85,23 +85,36 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
 
   const onSubmit = async (data: FormInputs) => {
     try {
-      const result = await AuthManager.authorize(data)
-      const user = result?.user
+      const result = await signIn('credentials', {
+        redirect: false,
+        email: data.email,
+        password: data.password
+      })
 
-      if (result.status) {
+      if (result?.error) {
+        setError('Error de autenticación: credenciales inválidas')
+        setSuccess(false)
+        return
+      }
+
+      // Obtener datos del usuario tras login exitoso para redirección
+      const response = await AuthManager.authorize(data)
+      const user = response?.user
+
+      if (response.status) {
+        // ESTANDARIZADO: usar 'jwt'
+        localStorage.setItem('jwt', response.jwt)
+        localStorage.setItem('userData', JSON.stringify(response.user))
+
         if (user?.verificationToken != null && user?.verificationToken != '') {
           router.push('/verify-email')
-
           return false
         } else {
           setSuccess(true)
           setError(null)
 
           if (!user?.customer) {
-            setSuccess(false)
-            setError(null)
             router.push('/account-setup')
-
             return false
           }
 
