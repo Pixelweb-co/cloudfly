@@ -49,8 +49,12 @@ public class PlanController {
 
     @GetMapping
     public Flux<PlanDto> getAllPlans() {
+        log.info("Obteniendo todos los planes");
         return planRepository.findAll()
-                .flatMap(this::mapToDto);
+                .flatMap(plan -> {
+                    log.info("Mapeando plan: {}", plan.getName());
+                    return mapToDto(plan);
+                });
     }
 
     @GetMapping("/active")
@@ -123,13 +127,15 @@ public class PlanController {
     }
 
     private Mono<PlanDto> mapToDto(PlanEntity entity) {
+        log.debug("Mapeando DTO para plan ID: {}", entity.getId());
         return planModuleRepository.findByPlanId(entity.getId())
                 .flatMap(pm -> moduleRepository.findById(pm.getModuleId())
-                        .map(m -> m)
                         .defaultIfEmpty(null))
                 .filter(m -> m != null)
                 .collectList()
-                .map(modules -> PlanDto.builder()
+                .flatMap(modules -> {
+                    log.debug("Plan {} tiene {} módulos", entity.getId(), modules.size());
+                    return Mono.just(PlanDto.builder()
                         .id(entity.getId())
                         .name(entity.getName())
                         .description(entity.getDescription())
@@ -142,6 +148,7 @@ public class PlanController {
                         .moduleIds(modules.stream().map(m -> m.getId()).collect(Collectors.toList()))
                         .moduleNames(modules.stream().map(m -> m.getName()).collect(Collectors.toList()))
                         .build());
+                });
     }
 
     private PlanEntity mapToEntity(PlanDto dto) {
