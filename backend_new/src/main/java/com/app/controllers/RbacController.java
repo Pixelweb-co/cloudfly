@@ -2,6 +2,8 @@ package com.app.controllers;
 
 import com.app.dto.MenuItemDto;
 import com.app.dto.UserPermissionsDto;
+import com.app.persistence.entity.ModuleEntity;
+import com.app.persistence.repository.ModuleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -24,6 +27,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class RbacController {
 
+        private final ModuleRepository moduleRepository;
+
         @GetMapping("/my-permissions")
         public Mono<ResponseEntity<UserPermissionsDto>> getMyPermissions() {
                 return ReactiveSecurityContextHolder.getContext()
@@ -34,8 +39,7 @@ public class RbacController {
                                                         .map(a -> a.replace("ROLE_", ""))
                                                         .collect(Collectors.toList());
 
-                                        // Hardcoded menu and permissions for now to allow progress
-                                        // In a future step, this should be moved to a Service that uses the DB
+                                        // Hardcoded menu for now to allow progress
                                         List<MenuItemDto> menu = new ArrayList<>();
                                         menu.add(MenuItemDto.builder()
                                                         .label("Dashboard")
@@ -184,43 +188,88 @@ public class RbacController {
                 return menu;
         }
 
-        // --- Gestión de Módulos (Basado en versión anterior) ---
+        // --- Gestión de Módulos (PERSISTENCIA REAL) ---
 
         @GetMapping("/modules-list")
         public Flux<ModuleDto> getAllModulesList() {
-                log.info("GET /api/rbac/modules-list - Fetching all modules");
-                return Flux.just(
-                                ModuleDto.builder().id(1L).name("Dashboard").code("DASHBOARD").active(true).build(),
-                                ModuleDto.builder().id(2L).name("Ventas").code("SALES").active(true).build(),
-                                ModuleDto.builder().id(3L).name("Contabilidad").code("ACCOUNTING").active(true).build(),
-                                ModuleDto.builder().id(4L).name("Recursos Humanos").code("HR").active(true).build());
+                log.info("GET /api/rbac/modules-list - Fetching all modules from DB");
+                return moduleRepository.findAll()
+                                .map(this::mapToDto);
         }
 
         @GetMapping("/modules/{id}")
         public Mono<ResponseEntity<ModuleDto>> getModuleById(@PathVariable Long id) {
                 log.info("GET /api/rbac/modules/{} - Fetching module", id);
-                return Mono.just(ResponseEntity.ok(
-                                ModuleDto.builder().id(id).name("Modulo " + id).code("MOD" + id).active(true).build()));
+                return moduleRepository.findById(id)
+                                .map(m -> ResponseEntity.ok(mapToDto(m)))
+                                .defaultIfEmpty(ResponseEntity.notFound().build());
         }
 
         @PostMapping("/modules")
         public Mono<ResponseEntity<ModuleDto>> createModule(@RequestBody ModuleDto request) {
                 log.info("POST /api/rbac/modules - Creating module {}", request.getCode());
-                request.setId(System.currentTimeMillis());
-                return Mono.just(ResponseEntity.ok(request));
+                ModuleEntity entity = mapToEntity(request);
+                entity.setCreatedAt(LocalDateTime.now());
+                entity.setUpdatedAt(LocalDateTime.now());
+                entity.setIsActive(true);
+
+                return moduleRepository.save(entity)
+                                .map(saved -> ResponseEntity.ok(mapToDto(saved)));
         }
 
         @PutMapping("/modules/{id}")
         public Mono<ResponseEntity<ModuleDto>> updateModule(@PathVariable Long id, @RequestBody ModuleDto request) {
                 log.info("PUT /api/rbac/modules/{} - Updating module", id);
-                request.setId(id);
-                return Mono.just(ResponseEntity.ok(request));
+                return moduleRepository.findById(id)
+                                .flatMap(existing -> {
+                                        existing.setName(request.getName());
+                                        existing.setCode(request.getCode());
+                                        existing.setDescription(request.getDescription());
+                                        existing.setIcon(request.getIcon());
+                                        existing.setMenuPath(request.getMenuPath());
+                                        existing.setMenuItems(request.getMenuItems());
+                                        existing.setDisplayOrder(request.getDisplayOrder());
+                                        existing.setIsActive(request.getIsActive());
+                                        existing.setUpdatedAt(LocalDateTime.now());
+                                        return moduleRepository.save(existing);
+                                })
+                                .map(saved -> ResponseEntity.ok(mapToDto(saved)))
+                                .defaultIfEmpty(ResponseEntity.notFound().build());
         }
 
         @DeleteMapping("/modules/{id}")
         public Mono<ResponseEntity<Void>> deleteModule(@PathVariable Long id) {
                 log.info("DELETE /api/rbac/modules/{} - Deleting module", id);
-                return Mono.just(ResponseEntity.noContent().build());
+                return moduleRepository.deleteById(id)
+                                .then(Mono.just(ResponseEntity.noContent().build()));
+        }
+
+        private ModuleDto mapToDto(ModuleEntity entity) {
+                return ModuleDto.builder()
+                                .id(entity.getId())
+                                .name(entity.getName())
+                                .code(entity.getCode())
+                                .description(entity.getDescription())
+                                .icon(entity.getIcon())
+                                .menuPath(entity.getMenuPath())
+                                .displayOrder(entity.getDisplayOrder())
+                                .isActive(entity.getIsActive())
+                                .menuItems(entity.getMenuItems())
+                                .build();
+        }
+
+        private ModuleEntity mapToEntity(ModuleDto dto) {
+                return ModuleEntity.builder()
+                                .id(dto.getId())
+                                .name(dto.getName())
+                                .code(dto.getCode())
+                                .description(dto.getDescription())
+                                .icon(dto.getIcon())
+                                .menuPath(dto.getMenuPath())
+                                .displayOrder(dto.getDisplayOrder())
+                                .isActive(dto.getIsActive())
+                                .menuItems(dto.getMenuItems())
+                                .build();
         }
 
         @lombok.Data
@@ -231,6 +280,11 @@ public class RbacController {
                 private Long id;
                 private String name;
                 private String code;
-                private boolean active;
+                private String description;
+                private String icon;
+                private String menuPath;
+                private Integer displayOrder;
+                private Boolean isActive;
+                private String menuItems;
         }
 }
