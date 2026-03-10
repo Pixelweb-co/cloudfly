@@ -64,7 +64,7 @@ const RegisterV3 = ({ id }: { id: string }) => {
   // Cargar los datos del usuario si el ID existe
 
   useEffect(() => {
-    console.log('load role admin', userMethods.isRole('SUPERADMIN'))
+    console.log('load role admin', userMethods.isRole('MANAGER'))
     alert("id" + id)
 
     // Cargar las opciones de clientes y roles
@@ -243,7 +243,7 @@ const RegisterV3 = ({ id }: { id: string }) => {
             <form onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-6'>
               {/* Cliente */}
 
-              {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('MANAGER')) && (
+              {(userMethods.isRole('MANAGER')) && (
                 <Controller
                   name='customer'
                   control={control}
@@ -292,9 +292,8 @@ const RegisterV3 = ({ id }: { id: string }) => {
                     {roleList.map((item: any) => {
                       const roleName = item.name || item.role
                       if (
-                        userMethods.isRole('SUPERADMIN') ||
                         userMethods.isRole('MANAGER') ||
-                        (userMethods.isRole('ADMIN') && roleName != 'SUPERADMIN' && roleName != 'BIOMEDICAL' && roleName != 'MANAGER')
+                        (userMethods.isRole('ADMIN') && roleName != 'MANAGER' && roleName != 'BIOMEDICAL')
                       ) {
                         return (
                           <MenuItem key={item.id} value={item.id}>

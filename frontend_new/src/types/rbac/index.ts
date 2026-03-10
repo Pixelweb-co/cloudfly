@@ -75,10 +75,7 @@ export interface PermissionGrant {
 }
 
 // Available roles enum (for type safety)
-export type RoleCode =
-    | 'SUPERADMIN'
-    | 'ADMIN'
-    | 'MANAGER'
+export type UserRole = 'MANAGER' | 'ADMIN' | 'USER' | 'BIOMEDICAL'
     | 'VENDEDOR'
     | 'CONTABILIDAD'
     | 'NOMINA'

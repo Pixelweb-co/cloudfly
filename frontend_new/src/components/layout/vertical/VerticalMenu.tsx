@@ -84,15 +84,12 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
       roles = roles.map(r => r.trim().toUpperCase())
 
       // Find the specific role we care about for hardcoded logic
-      const hasSuperAdmin = roles.some(r => r.includes('SUPERADMIN'))
       const hasManager = roles.some(r => r.includes('MANAGER'))
-      const hasAdmin = roles.some(r => r.includes('ADMIN') && !r.includes('SUPERADMIN'))
+      const hasAdmin = roles.some(r => r.includes('ADMIN'))
 
       let userRole: string | null = null
 
-      if (hasSuperAdmin) {
-        userRole = 'SUPERADMIN'
-      } else if (hasManager) {
+      if (hasManager) {
         userRole = 'MANAGER'
       } else if (hasAdmin) {
         userRole = 'ADMIN'
@@ -101,8 +98,8 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
       return { userRole, userRoles: roles }
     } catch (e) {
       console.error('Failed to decode token:', e)
-      
-return { userRole: null, userRoles: [] }
+
+      return { userRole: null, userRoles: [] }
     }
   }, []) // Empty deps means this runs once on mount
 
@@ -125,8 +122,8 @@ return { userRole: null, userRoles: [] }
       if (!token) {
         setMenuData([])
         setIsLoading(false)
-        
-return
+
+        return
       }
 
       try {
@@ -236,7 +233,7 @@ return
         {renderMenuItems(menuData)}
 
         {/* Hardcoded: Usuarios y Roles (no viene del backend) */}
-        {(userRole === 'ADMIN' || userRole === 'SUPERADMIN' || userRole === 'MANAGER') && (
+        {(userRole === 'ADMIN' || userRole === 'MANAGER') && (
           <SubMenu
             label='Usuarios y Roles'
             icon={<i className='tabler-users' />}
@@ -251,7 +248,7 @@ return
         )}
 
         {/* Hardcoded: Administración (Reemplaza al módulo de backend y agrupa ítems) */}
-        {(userRole === 'SUPERADMIN' || userRole === 'MANAGER') && (
+        {(userRole === 'MANAGER') && (
           <SubMenu
             label='Administración'
             icon={<i className='tabler-settings' />}

@@ -61,8 +61,8 @@ const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
     addMeta({
         itemRank
     })
-    
-return itemRank.passed
+
+    return itemRank.passed
 }
 
 const DebouncedInput = ({
@@ -189,7 +189,7 @@ const ChatbotTypesListTable = ({ reload, tableData }: any) => {
                 header: 'Acciones',
                 cell: ({ row }) => (
                     <div className='flex items-center'>
-                        {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('ADMIN')) ? (
+                        {(userMethods.isRole('MANAGER') || userMethods.isRole('ADMIN')) ? (
                             <Tooltip title='Editar'>
                                 <IconButton
                                     onClick={() => {
@@ -201,7 +201,7 @@ const ChatbotTypesListTable = ({ reload, tableData }: any) => {
                                 </IconButton>
                             </Tooltip>
                         ) : null}
-                        {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('ADMIN')) ? (
+                        {(userMethods.isRole('MANAGER') || userMethods.isRole('ADMIN')) ? (
                             <Tooltip title='Eliminar'>
                                 <IconButton onClick={() => deleteItem(row.original.id)}>
                                     <i className='tabler-trash text-textSecondary' />
@@ -275,7 +275,7 @@ const ChatbotTypesListTable = ({ reload, tableData }: any) => {
                             className='max-sm:is-full'
                         />
 
-                        {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('ADMIN')) && (
+                        {(userMethods.isRole('MANAGER') || userMethods.isRole('ADMIN')) && (
                             <Button
                                 onClick={() => {
                                     setLoadForm(true)

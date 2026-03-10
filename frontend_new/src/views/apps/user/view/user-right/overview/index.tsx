@@ -30,8 +30,8 @@ import { userMethods } from '@/utils/userMethods'
   return res.json()
 } */
 
-const OverViewTab =  () => {
-  const canSeeWorklist = userMethods.isRole('SUPERADMIN') || userMethods.isRole('BIOMEDICAL')
+const OverViewTab = () => {
+  const canSeeWorklist = userMethods.isRole('MANAGER') || userMethods.isRole('BIOMEDICAL')
 
   return (
     <Grid container spacing={6}>

@@ -371,7 +371,7 @@ const SolicitudForm = ({
             <Grid item xs={12} sm={6}>
               <Typography variant="h3">Datos de la solicitud</Typography>
 
-              {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('BIOMEDICAL')) && <Controller
+              {(userMethods.isRole('MANAGER') || userMethods.isRole('BIOMEDICAL')) && <Controller
                 name='entidad'
                 control={control}
                 render={({ field }) => (
@@ -479,7 +479,7 @@ const SolicitudForm = ({
                     <MenuItem key={0} value={'0'}>
                       Seleccionar ...
                     </MenuItem>
-                    {userList.filter((user) => user.roles?.find((rol: any) => ['BIOMEDICAL', 'SUPERADMIN'].includes(rol.name || rol.role)))?.map(item => (
+                    {userList.filter((user) => user.roles?.find((rol: any) => ['BIOMEDICAL', 'MANAGER'].includes(rol.name || rol.role)))?.map(item => (
                       <MenuItem key={item.id} value={item.id}>
                         {item.nombres} {item.apellidos} {`(${item.roles && item.roles[0] ? ((item.roles[0] as any).name || (item.roles[0] as any).role) : 'N/A'})`}
                       </MenuItem>

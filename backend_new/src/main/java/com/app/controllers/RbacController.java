@@ -81,7 +81,7 @@ public class RbacController {
                 boolean isAdmin = roles.stream()
                                 .map(String::toUpperCase)
                                 .map(r -> r.replace("ROLE_", "").trim())
-                                .anyMatch(r -> r.equals("SUPERADMIN") || r.equals("ADMIN") || r.equals("MANAGER"));
+                                .anyMatch(r -> r.equals("ADMIN") || r.equals("MANAGER"));
                 log.info("generateMenuByRoles: isAdmin detected: {}", isAdmin);
 
                 // Dashboard

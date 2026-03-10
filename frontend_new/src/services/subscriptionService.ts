@@ -15,8 +15,8 @@ export const subscriptionService = {
     createSubscription: async (request: SubscriptionCreateRequest): Promise<SubscriptionResponse> => {
         const response = await axiosInstance.post<SubscriptionResponse>(API_BASE, request)
 
-        
-return response.data
+
+        return response.data
     },
 
     /**
@@ -25,8 +25,8 @@ return response.data
     getSubscriptionById: async (id: number): Promise<SubscriptionResponse> => {
         const response = await axiosInstance.get<SubscriptionResponse>(`${API_BASE}/${id}`)
 
-        
-return response.data
+
+        return response.data
     },
 
     /**
@@ -35,8 +35,8 @@ return response.data
     getActiveTenantSubscription: async (tenantId: number): Promise<SubscriptionResponse> => {
         const response = await axiosInstance.get<SubscriptionResponse>(`${API_BASE}/tenant/${tenantId}/active`)
 
-        
-return response.data
+
+        return response.data
     },
 
     /**
@@ -45,8 +45,8 @@ return response.data
     getTenantSubscriptions: async (tenantId: number): Promise<SubscriptionResponse[]> => {
         const response = await axiosInstance.get<SubscriptionResponse[]>(`${API_BASE}/tenant/${tenantId}`)
 
-        
-return response.data
+
+        return response.data
     },
 
     /**
@@ -55,8 +55,8 @@ return response.data
     updateModules: async (id: number, request: SubscriptionModulesUpdateRequest): Promise<SubscriptionResponse> => {
         const response = await axiosInstance.patch<SubscriptionResponse>(`${API_BASE}/${id}/modules`, request)
 
-        
-return response.data
+
+        return response.data
     },
 
     /**
@@ -65,8 +65,8 @@ return response.data
     updateLimits: async (id: number, request: SubscriptionLimitsUpdateRequest): Promise<SubscriptionResponse> => {
         const response = await axiosInstance.patch<SubscriptionResponse>(`${API_BASE}/${id}/limits`, request)
 
-        
-return response.data
+
+        return response.data
     },
 
     /**
@@ -75,8 +75,8 @@ return response.data
     addModule: async (id: number, moduleId: number): Promise<SubscriptionResponse> => {
         const response = await axiosInstance.post<SubscriptionResponse>(`${API_BASE}/${id}/modules/${moduleId}`)
 
-        
-return response.data
+
+        return response.data
     },
 
     /**
@@ -85,8 +85,8 @@ return response.data
     removeModule: async (id: number, moduleId: number): Promise<SubscriptionResponse> => {
         const response = await axiosInstance.delete<SubscriptionResponse>(`${API_BASE}/${id}/modules/${moduleId}`)
 
-        
-return response.data
+
+        return response.data
     },
 
     /**
@@ -95,8 +95,8 @@ return response.data
     cancelSubscription: async (id: number): Promise<SubscriptionResponse> => {
         const response = await axiosInstance.patch<SubscriptionResponse>(`${API_BASE}/${id}/cancel`)
 
-        
-return response.data
+
+        return response.data
     },
 
     /**
@@ -105,8 +105,8 @@ return response.data
     renewSubscription: async (id: number): Promise<SubscriptionResponse> => {
         const response = await axiosInstance.post<SubscriptionResponse>(`${API_BASE}/${id}/renew`)
 
-        
-return response.data
+
+        return response.data
     },
 
     /**
@@ -115,18 +115,18 @@ return response.data
     changePlan: async (id: number, planId: number): Promise<SubscriptionResponse> => {
         const response = await axiosInstance.patch<SubscriptionResponse>(`${API_BASE}/${id}/change-plan/${planId}`)
 
-        
-return response.data
+
+        return response.data
     },
 
     /**
-     * Get all active subscriptions (SUPERADMIN only)
+     * Get all active subscriptions (MANAGER only)
      */
     getActiveSubscriptions: async (): Promise<SubscriptionResponse[]> => {
         const response = await axiosInstance.get<SubscriptionResponse[]>(`${API_BASE}/active`)
 
-        
-return response.data
+
+        return response.data
     }
 }
 

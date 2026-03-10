@@ -4,22 +4,22 @@ export const verticalMenuData = [
         label: 'Comunicaciones',
         icon: 'chat',
         route: '#',
-        roles: ['SUPERADMIN', 'ADMIN', 'USER'],
+        roles: ['MANAGER', 'ADMIN', 'USER'],
         children: [
             {
                 label: 'Chatbot IA WhatsApp',
                 route: '/settings/chatbot',
-                roles: ['SUPERADMIN', 'ADMIN']
+                roles: ['MANAGER', 'ADMIN']
             },
             {
                 label: 'Tipos de Chatbot',
                 route: '/settings/chatbot-types/list',
-                roles: ['SUPERADMIN']
+                roles: ['MANAGER']
             },
             {
                 label: 'Conversaciones',
                 route: '/comunicaciones/conversaciones',
-                roles: ['SUPERADMIN', 'ADMIN', 'USER']
+                roles: ['MANAGER', 'ADMIN', 'USER']
             }
         ]
     },
@@ -27,17 +27,17 @@ export const verticalMenuData = [
         label: 'Marqueting',
         icon: 'megaphone',
         route: '#',
-        roles: ['SUPERADMIN', 'ADMIN', 'USER'],
+        roles: ['MANAGER', 'ADMIN', 'USER'],
         children: [
             {
                 label: 'Campañas',
                 route: '/marketing/campanas',
-                roles: ['SUPERADMIN', 'ADMIN', 'USER']
+                roles: ['MANAGER', 'ADMIN', 'USER']
             },
             {
                 label: 'Contactos',
                 route: '/marketing/contacts/list',
-                roles: ['SUPERADMIN', 'ADMIN', 'USER']
+                roles: ['MANAGER', 'ADMIN', 'USER']
             }
         ]
     },
@@ -45,67 +45,67 @@ export const verticalMenuData = [
         label: 'Calendario',
         icon: 'calendar',
         route: '/calendar',
-        roles: ['SUPERADMIN', 'BIOMEDICAL', 'ADMIN', 'USER']
+        roles: ['MANAGER', 'BIOMEDICAL', 'ADMIN', 'USER']
     },
     {
         label: 'Usuarios y Roles',
         icon: 'users',
-        roles: ['SUPERADMIN', 'ADMIN'],
+        roles: ['MANAGER', 'ADMIN'],
         children: [
             {
                 label: 'Gestión de Usuarios',
                 route: '/accounts/user/list',
-                roles: ['SUPERADMIN', 'ADMIN']
+                roles: ['MANAGER', 'ADMIN']
             }
         ]
     },
     {
         label: 'Ventas',
         route: '/ventas/list',
-        roles: ['SUPERADMIN', 'ADMIN', 'USER'],
+        roles: ['MANAGER', 'ADMIN', 'USER'],
         icon: 'shopping-cart',
         children: [
             {
                 label: 'Categorías',
                 route: '/ventas/categorias/list',
-                roles: ['SUPERADMIN', 'ADMIN', 'USER']
+                roles: ['MANAGER', 'ADMIN', 'USER']
             },
             {
                 label: 'Productos',
                 route: '/ventas/productos/list',
-                roles: ['SUPERADMIN', 'ADMIN', 'USER']
+                roles: ['MANAGER', 'ADMIN', 'USER']
             },
             {
                 label: 'Cotizaciones',
                 route: '/ventas/cotizaciones/list',
-                roles: ['SUPERADMIN', 'ADMIN', 'USER']
+                roles: ['MANAGER', 'ADMIN', 'USER']
             },
             {
                 label: 'Pedidos',
                 route: '/ventas/pedidos',
-                roles: ['SUPERADMIN', 'ADMIN', 'USER']
+                roles: ['MANAGER', 'ADMIN', 'USER']
             },
             {
                 label: 'Facturas',
                 route: '/ventas/facturas/list',
-                roles: ['SUPERADMIN', 'ADMIN', 'USER']
+                roles: ['MANAGER', 'ADMIN', 'USER']
             }
         ]
     },
     {
         label: 'Administracion',
         icon: 'settings',
-        roles: ['SUPERADMIN', 'ADMIN'],
+        roles: ['MANAGER', 'ADMIN'],
         children: [
             {
                 label: 'Clientes',
                 route: '/administracion/clientes/list',
-                roles: ['SUPERADMIN', 'ADMIN']
+                roles: ['MANAGER', 'ADMIN']
             },
             {
                 label: 'Tipos de Chatbot',
                 route: '/settings/chatbot-types/list',
-                roles: ['SUPERADMIN', 'ADMIN']
+                roles: ['MANAGER', 'ADMIN']
             }
         ]
     }

@@ -123,7 +123,9 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
           const roles = user?.roles || []
           const hasRole = (role: string) => roles.some((r: any) => (r.name || r.role) === role)
 
-          if (hasRole('SUPERADMIN') || hasRole('ADMIN') || hasRole('MANAGER')) {
+          if (hasRole('MANAGER')) {
+            router.push('/home/dashboard')
+          } else if (hasRole('MANAGER') || hasRole('ADMIN')) {
             router.push('/home')
           } else if (hasRole('USER') || hasRole('BIOMEDICAL') || hasRole('BIOEDICAL')) {
             router.push('/accounts/user/view')
