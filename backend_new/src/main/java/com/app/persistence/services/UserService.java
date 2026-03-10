@@ -70,12 +70,20 @@ public class UserService {
                                                                                 .findByName(roleName))
                                                                 .flatMap(role -> userRoleRepository.save(new UserRole(
                                                                                 savedUser.getId(), role.getId())))
-                                                                .then(kafkaTemplate.send("register-user", Map.of(
-                                                                                "name", savedUser.getNombres(),
-                                                                                "email", savedUser.getEmail(),
-                                                                                "token",
-                                                                                savedUser.getVerificationToken())))
-                                                                .then(Mono.just(savedUser));
+                                                                .then(Mono.defer(() -> {
+                                                                        kafkaTemplate.send("register-user", Map.of(
+                                                                                        "name", savedUser.getNombres(),
+                                                                                        "email", savedUser.getEmail(),
+                                                                                        "token",
+                                                                                        savedUser.getVerificationToken()))
+                                                                                        .subscribe(
+                                                                                                        result -> {
+                                                                                                        },
+                                                                                                        error -> System.err
+                                                                                                                        .println("Error enviando a Kafka: "
+                                                                                                                                        + error.getMessage()));
+                                                                        return Mono.just(savedUser);
+                                                                }));
                                         });
                 });
         }
