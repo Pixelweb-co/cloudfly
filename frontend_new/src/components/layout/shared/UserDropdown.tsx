@@ -124,8 +124,8 @@ const UserDropdown = () => {
                         {user?.username || 'Usuario'}
                       </Typography>
                       <Typography variant='caption'>{user?.email || ''}</Typography>
-                      {user?.roles?.[0]?.role && (
-                        <Typography variant='caption'>{user.roles[0].role}</Typography>
+                      {user?.roles?.[0] && (
+                        <Typography variant='caption'>{user.roles[0].name || user.roles[0].role}</Typography>
                       )}
                     </div>
                   </div>

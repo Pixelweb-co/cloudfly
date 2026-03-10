@@ -23,7 +23,7 @@ export const userMethods = {
       return false
     }
 
-    return userLogin.roles.find((role: any) => role.role === roleName)
+    return userLogin.roles.find((role: any) => (role.name || role.role) === roleName)
   },
 
   getUserLogin: () => {

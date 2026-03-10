@@ -67,7 +67,7 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
   } = useForm<FormInputs>()
 
   const [isPasswordShown, setIsPasswordShown] = useState(false)
-  const [error, setError] = useState(null)
+  const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [disabled, setDisabled] = useState(false)
 
@@ -121,7 +121,7 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
 
           // Redirección por roles
           const roles = user?.roles || []
-          const hasRole = (role: string) => roles.some((r: any) => r.role === role)
+          const hasRole = (role: string) => roles.some((r: any) => (r.name || r.role) === role)
 
           if (hasRole('SUPERADMIN') || hasRole('ADMIN') || hasRole('MANAGER')) {
             router.push('/home')

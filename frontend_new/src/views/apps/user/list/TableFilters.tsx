@@ -39,19 +39,19 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
       return ['ADMIN', 'USER']
     }
 
-    
-return []
+
+    return []
   }, [userRole])
 
   useEffect(() => {
     if (!tableData || !Array.isArray(tableData)) return
 
     const filteredData = tableData.filter(user => {
-      const matchRole = role ? user?.roles?.some(r => String(r.role).toUpperCase() === role.toUpperCase()) : true
+      const matchRole = role ? user?.roles?.some(r => String(r.name || r.role).toUpperCase() === role.toUpperCase()) : true
       const matchStatus = status !== '' ? user.enabled === status : true
 
-      
-return matchRole && matchStatus
+
+      return matchRole && matchStatus
     })
 
     setData(filteredData)
