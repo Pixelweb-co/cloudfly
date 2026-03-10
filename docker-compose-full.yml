@@ -90,6 +90,9 @@ services:
     build:
       context: ./frontend_new
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co
+        - NEXT_PUBLIC_BASE_URL=https://dashboard.cloudfly.com.co
     container_name: frontend-react
     restart: always
     environment:

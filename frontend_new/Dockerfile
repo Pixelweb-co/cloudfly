@@ -8,8 +8,16 @@ COPY package*.json ./
 # Ignorar node_modules locales si existen
 COPY . .
 
-# Instalar dependencias y construir
+# Instalar dependencias
 RUN npm install
+
+# Aceptar variables de entorno para el build de Next.js
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_BASE_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
+
+# Construir aplicación
 RUN npm run build
 
 # Etapa 2: Producción
