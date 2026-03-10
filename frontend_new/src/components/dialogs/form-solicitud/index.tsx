@@ -96,15 +96,15 @@ const SolicitudForm = ({
 
     if (!Array.isArray(productsList)) {
       setFilteredProducts([])
-      
-return
+
+      return
     }
 
     if (!term) {
       // When no term, show all except selected
       setFilteredProducts(productsList.filter((p: any) => !checked.includes(p?.id)))
-      
-return
+
+      return
     }
 
     const filtered = productsList.filter((product: any) => {
@@ -479,9 +479,9 @@ return
                     <MenuItem key={0} value={'0'}>
                       Seleccionar ...
                     </MenuItem>
-                    {userList.filter((user) => user.roles?.find((rol) => ['BIOMEDICAL', 'SUPERADMIN'].find(roln => roln === rol.role)))?.map(item => (
+                    {userList.filter((user) => user.roles?.find((rol: any) => ['BIOMEDICAL', 'SUPERADMIN'].includes(rol.name || rol.role)))?.map(item => (
                       <MenuItem key={item.id} value={item.id}>
-                        {item.nombres} {item.apellidos} {`(${item.roles && item.roles[0] ? item.roles[0].role : 'N/A'})`}
+                        {item.nombres} {item.apellidos} {`(${item.roles && item.roles[0] ? ((item.roles[0] as any).name || (item.roles[0] as any).role) : 'N/A'})`}
                       </MenuItem>
                     ))}
                   </CustomTextField>
@@ -560,8 +560,8 @@ return
                             )
                           }
 
-                          
-return (
+
+                          return (
                             <ListItem key={`selected-${value.id}`} disablePadding>
                               <ListItemButton role={undefined} onClick={handleToggle(value)} dense>
                                 <ListItemIcon>

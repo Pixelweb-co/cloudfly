@@ -1,0 +1,56 @@
+[
+  {
+    "level": "DEBUG",
+    "message": "https://dashboard.cloudfly.com.co/login - [DOM] Input elements should have autocomplete attributes (suggested: \"current-password\"): (More info: https://goo.gl/9p2vKq) %o",
+    "source": "recommendation",
+    "timestamp": 1773107918163
+  },
+  {
+    "level": "INFO",
+    "message": "https://dashboard.cloudfly.com.co/_next/static/chunks/app/(dashboard)/layout-f1b39a33d7cc9c4d.js 0:78249 Object",
+    "source": "console-api",
+    "timestamp": 1773107921043
+  },
+  {
+    "level": "INFO",
+    "message": "https://dashboard.cloudfly.com.co/_next/static/chunks/app/(dashboard)/layout-f1b39a33d7cc9c4d.js 0:6933 \"Layout: Iniciando validaci\u00f3n de sesi\u00f3n...\"",
+    "source": "console-api",
+    "timestamp": 1773107921043
+  },
+  {
+    "level": "INFO",
+    "message": "https://dashboard.cloudfly.com.co/_next/static/chunks/app/(dashboard)/layout-f1b39a33d7cc9c4d.js 0:7069 \"Layout: Sesi\u00f3n v\u00e1lida.\"",
+    "source": "console-api",
+    "timestamp": 1773107921043
+  },
+  {
+    "level": "INFO",
+    "message": "https://dashboard.cloudfly.com.co/_next/static/chunks/app/(dashboard)/layout-f1b39a33d7cc9c4d.js 0:72028 \"System role detected - no plan display needed\"",
+    "source": "console-api",
+    "timestamp": 1773107921043
+  },
+  {
+    "level": "INFO",
+    "message": "https://dashboard.cloudfly.com.co/_next/static/chunks/app/(dashboard)/home/page-afbde90a3c999d3d.js 0:2213 \"Menu response:\" Array(1)",
+    "source": "console-api",
+    "timestamp": 1773107926050
+  },
+  {
+    "level": "SEVERE",
+    "message": "https://api.cloudfly.com.co/dashboard/stats - Failed to load resource: the server responded with a status of 404 ()",
+    "source": "network",
+    "timestamp": 1773107926050
+  },
+  {
+    "level": "SEVERE",
+    "message": "https://dashboard.cloudfly.com.co/_next/static/chunks/7023-29874b08dd2fd293.js 0:3969 \"Error fetching dashboard stats:\" AxiosError: Request failed with status code 404\n    at ej (https://dashboard.cloudfly.com.co/_next/static/chunks/1138-a2bffed5fc4da8fa.js:6:40496)\n    at XMLHttpRequest.g (https://dashboard.cloudfly.com.co/_next/static/chunks/1138-a2bffed5fc4da8fa.js:6:44902)\n    at tu.request (https://dashboard.cloudfly.com.co/_next/static/chunks/1138-a2bffed5fc4da8fa.js:6:53430)\n    at async Object.getStats (https://dashboard.cloudfly.com.co/_next/static/chunks/app/(dashboard)/home/page-afbde90a3c999d3d.js:1:11916)\n    at async https://dashboard.cloudfly.com.co/_next/static/chunks/app/(dashboard)/home/page-afbde90a3c999d3d.js:1:12874",
+    "source": "console-api",
+    "timestamp": 1773107926050
+  },
+  {
+    "level": "INFO",
+    "message": "https://dashboard.cloudfly.com.co/_next/static/chunks/app/(dashboard)/home/page-afbde90a3c999d3d.js 0:2213 \"Menu response:\" Array(1)",
+    "source": "console-api",
+    "timestamp": 1773107926050
+  }
+]

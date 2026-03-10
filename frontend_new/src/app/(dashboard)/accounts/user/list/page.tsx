@@ -12,7 +12,7 @@ import userService from '@/services/userService'
 
 const UserListPage = () => {
     // States
-    const [userData, setUserData] = useState<User[]>([])
+    const [userData, setUserData] = useState<any[]>([])
     const [loading, setLoading] = useState<boolean>(true)
 
     useEffect(() => {
@@ -27,7 +27,7 @@ const UserListPage = () => {
                 // Basic mapping
                 const mappedData = data.map((user: any) => ({
                     ...user,
-                    role: user.roles && user.roles.length > 0 ? user.roles[0] : 'User', // Display first role
+                    role: user.roles && user.roles.length > 0 ? (user.roles[0].name || user.roles[0].role || user.roles[0]) : 'User', // Display first role
                     currentPlan: 'Basic', // Mock or fetch
                     avatar: '',
                     status: user.isEnabled ? 'active' : 'inactive',

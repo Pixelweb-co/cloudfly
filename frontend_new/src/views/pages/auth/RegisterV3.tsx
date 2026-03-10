@@ -290,14 +290,15 @@ const RegisterV3 = ({ id }: { id: string }) => {
                     helperText={errors.role?.message}
                   >
                     {roleList.map((item: any) => {
+                      const roleName = item.name || item.role
                       if (
                         userMethods.isRole('SUPERADMIN') ||
                         userMethods.isRole('MANAGER') ||
-                        (userMethods.isRole('ADMIN') && item.role != 'SUPERADMIN' && item.role != 'BIOMEDICAL' && item.role != 'MANAGER')
+                        (userMethods.isRole('ADMIN') && roleName != 'SUPERADMIN' && roleName != 'BIOMEDICAL' && roleName != 'MANAGER')
                       ) {
                         return (
                           <MenuItem key={item.id} value={item.id}>
-                            {item.role}
+                            {roleName}
                           </MenuItem>
                         )
                       }
