@@ -105,13 +105,17 @@ export const authOptions: NextAuthOptions = {
         // Mapear datos desde el UserDto anidado
         if (u.user) {
           token.id = u.user.id
-          token.role = u.user.roles?.[0]?.name || u.role
+          token.role = u.user.roles?.[0]?.role_name || u.user.roles?.[0]?.name || u.role
           token.name = `${u.user.nombres || ''} ${u.user.apellidos || ''}`.trim() || u.username
-          token.userCapabilities = u.user.userCapabilities // Asumiendo que se agregará o manejará luego
+          token.enabled = u.user.enabled
+          token.verificationToken = u.user.verificationToken
+          token.userCapabilities = u.user.userCapabilities
         } else {
           token.id = u.id
           token.role = u.role
           token.name = u.fullName || u.name
+          token.enabled = u.enabled
+          token.verificationToken = u.verificationToken
           token.userCapabilities = u.userCapabilities
         }
       }
@@ -126,6 +130,8 @@ export const authOptions: NextAuthOptions = {
           ; (session as any).user.id = token.id
           ; (session as any).user.role = token.role
           ; (session as any).user.name = token.name
+          ; (session as any).user.enabled = token.enabled
+          ; (session as any).user.verificationToken = token.verificationToken
           ; (session as any).user.userCapabilities = token.userCapabilities
       }
 
