@@ -42,23 +42,23 @@ const Documents: React.FC<DocumentsProps> = ({ product_id }) => {
   const separateDocuments = (docs: any[]) => {
     if (!Array.isArray(docs)) {
       console.error('separateDocuments recibió datos inválidos:', docs);
-      
-return;
+
+      return;
     }
 
     console.log('Separando documentos:', docs);
-    
+
     const reports = docs.filter(doc => {
       console.log('Documento siendo evaluado:', doc, 'report value:', doc.report);
-      
-return doc.report === true;
+
+      return doc.report === true;
     });
 
     const normal = docs.filter(doc => doc.report === false);
-    
+
     console.log('Reportes encontrados:', reports.length, 'documentos');
     console.log('Documentos normales:', normal.length, 'documentos');
-    
+
     setReportDocuments(reports);
     setNormalDocuments(normal);
   };
@@ -93,7 +93,7 @@ return doc.report === true;
         ])
 
         console.log('Documentos recibidos del backend:', documentsRes.data);
-        
+
         setDocuments(documentsRes.data);
         separateDocuments(documentsRes.data);
 
@@ -110,12 +110,12 @@ return doc.report === true;
   const handleUpload = async () => {
     if (!file) {
       alert('Por favor, selecciona un archivo.');
-      
-return;
+
+      return;
     }
 
     const formData = new FormData();
-    
+
     console.log('Preparando datos para enviar:', {
       file: file.name,
       tag,
@@ -127,7 +127,7 @@ return;
     formData.append('tag', tag);
     formData.append('report', isReport.toString());
     formData.append('product_id', String(product_id));
-    
+
     // Debug para ver qué se está enviando
     console.log('Enviando al backend:', {
       file: file,
@@ -177,50 +177,50 @@ return;
     }
   };
 
-  const handleDeleteConfirm = async(document_name:string) => {
+  const handleDeleteConfirm = async (document_name: string) => {
 
-    console.log('Eliminar documento tr',document_name)
+    console.log('Eliminar documento tr', document_name)
     setName(document_name)
     setOpen(true)
 
   }
 
-  const handleDelete = async (document_name:string) => {
+  const handleDelete = async (document_name: string) => {
 
     // eslint-disable-next-line no-console
-    console.info('api.',document_name)
+    console.info('api.', document_name)
 
-    if(document_name ){
+    if (document_name) {
 
       try {
 
-      const token = localStorage.getItem('AuthToken');
+        const token = localStorage.getItem('AuthToken');
 
-      if (!token) {
-        throw new Error('Token no disponible. Por favor, inicia sesión nuevamente.');
+        if (!token) {
+          throw new Error('Token no disponible. Por favor, inicia sesión nuevamente.');
+        }
+
+        // Llamada a la API para eliminar el documento
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/document/${name}`;
+
+        await axios.delete(apiUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        // Eliminar el documento del estado local después de la confirmación
+        setDocuments((prevDocuments) =>
+          prevDocuments.filter((doc) => doc.name !== name)
+        );
+        setOpen(false)
+
+      } catch (error) {
+        console.error('Error al eliminar el documento:', error);
+
       }
 
-      // Llamada a la API para eliminar el documento
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/document/${name}`;
-
-      await axios.delete(apiUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      // Eliminar el documento del estado local después de la confirmación
-      setDocuments((prevDocuments) =>
-        prevDocuments.filter((doc) => doc.name !== name)
-      );
-      setOpen(false)
-
-    } catch (error) {
-      console.error('Error al eliminar el documento:', error);
-
     }
-
-  }
   }
 
   return (
@@ -270,13 +270,13 @@ return;
       </Card>
 
       {/* Card para reportes */}
-      <Card sx={{ mb: 4, mt:4 }}>
+      <Card sx={{ mb: 4, mt: 4 }}>
         <CardHeader title="Documentos de Reporte" />
         <CardContent>
           <Grid container spacing={2}>
             {reportDocuments.map((document) => (
               <Grid item xs={3} key={document.id}>
-                
+
                 <Chip
                   label={document.tag}
                   color='success'
@@ -284,7 +284,8 @@ return;
                   onClick={() => {
                     window.open(`${process.env.NEXT_PUBLIC_API_URL}/document/${document.name}`, '_blank');
                   }}
-                  onDelete={() => (userMethods.isRole('SUPERADMIN') || userMethods.isRole('BIOMEDICAL') || userMethods.isRole('ADMIN')) ? handleDeleteConfirm(document.name) : null }
+                  onDelete={() => (userMethods.isRole('MANAGER') || userMethods.isRole('BIOMEDICAL'))
+                    ? handleDeleteConfirm(document.name) : null}
                   deleteIcon={<i className='tabler-trash-x' />}
                   title={document.name}
                 />
@@ -336,8 +337,8 @@ return;
         open={open}
         setOpen={setOpen}
         name={name}
-        onConfirmation={(dv:string) => {
-          console.log('Documento eliminado desde c',dv)
+        onConfirmation={(dv: string) => {
+          console.log('Documento eliminado desde c', dv)
           handleDelete(dv)
           setOpen(false)
         }}

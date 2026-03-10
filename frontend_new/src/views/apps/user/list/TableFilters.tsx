@@ -31,7 +31,7 @@ const TableFilters = ({ setData, tableData }: { setData: (data: UsersType[]) => 
   const roleOptions = useMemo(() => {
     const current = String(userRole || '').toUpperCase()
 
-    if (current === 'SUPERADMIN' || current === 'BIOMEDICAL') {
+    if (current === 'MANAGER' || current === 'BIOMEDICAL') {
       return ['SUPERADMIN', 'ADMIN', 'USER', 'BIOMEDICAL']
     }
 

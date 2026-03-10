@@ -134,7 +134,7 @@ export const createRole = async (role: RoleRequest): Promise<Role> => {
 }
 
 /**
- * Update a role (SUPERADMIN only)
+ * Update a role (MANAGER only)
  */
 export const updateRole = async (id: number, role: RoleRequest): Promise<Role> => {
     const response = await fetch(`${API_URL}/api/rbac/roles/${id}`, {
@@ -222,17 +222,16 @@ export const hasRole = (roles: string[], role: string): boolean => {
 }
 
 /**
- * Check if user is admin (SUPERADMIN, ADMIN, or MANAGER)
+ * Check if user is admin (ADMIN, or MANAGER)
  */
 export const isAdmin = (roles: string[]): boolean => {
-    return roles.includes('SUPERADMIN') || roles.includes('ADMIN') || roles.includes('MANAGER')
+    return roles.includes('ADMIN') || roles.includes('MANAGER')
 }
 
 /**
- * Check if user is SUPERADMIN
  */
 export const isSuperAdmin = (roles: string[]): boolean => {
-    return roles.includes('SUPERADMIN')
+    return roles.includes('MANAGER')
 }
 
 // Default export for convenience

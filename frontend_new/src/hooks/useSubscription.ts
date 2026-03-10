@@ -36,8 +36,8 @@ export const useSubscription = () => {
       const response = await axiosInstance.get('/api/v1/plans/active')
 
       setPlans(response.data)
-      
-return response.data
+
+      return response.data
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Error al cargar planes'
 
@@ -61,8 +61,8 @@ return response.data
           isAutoRenew: autoRenew
         })
 
-        
-return response.data
+
+        return response.data
       } catch (err: any) {
         const errorMsg = err.response?.data?.message || 'Error al suscribirse'
 
@@ -83,8 +83,8 @@ return response.data
       setError(null)
       const response = await axiosInstance.get(`/api/v1/subscriptions/users/${userId}/active`)
 
-      
-return response.data
+
+      return response.data
     } catch (err: any) {
       // 404 es esperado si no tiene suscripción
       if (err.response?.status === 404) {
@@ -108,8 +108,8 @@ return response.data
       setError(null)
       const response = await axiosInstance.patch(`/api/v1/subscriptions/${subscriptionId}/cancel`)
 
-      
-return response.data
+
+      return response.data
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Error al cancelar suscripción'
 
@@ -128,8 +128,8 @@ return response.data
       setError(null)
       const response = await axiosInstance.post(`/api/v1/subscriptions/${subscriptionId}/renew`)
 
-      
-return response.data
+
+      return response.data
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Error al renovar suscripción'
 
@@ -156,14 +156,14 @@ return response.data
 
       const roles = payload.authorities.split(',')
 
-      
-return roles.some((role: string) =>
-        role === 'ROLE_SUPERADMIN' || role === 'ROLE_MANAGER'
+
+      return roles.some((role: string) =>
+        role === 'ROLE_MANAGER'
       )
     } catch (error) {
       console.error('Error checking system role:', error)
-      
-return false
+
+      return false
     }
   }
 
@@ -173,8 +173,8 @@ return false
     // Si es rol de sistema, no hacer la llamada
     if (isSystemRole()) {
       console.log('SUPERADMIN/MANAGER detected - skipping subscription check')
-      
-return null
+
+      return null
     }
 
     try {
@@ -183,14 +183,14 @@ return null
       const response = await axiosInstance.get(`/api/v1/subscriptions/tenant/${tenantId}/active`)
 
       console.log('Tenant subscription:', response.data)
-      
-return response.data
+
+      return response.data
     } catch (err: any) {
       // 404 es esperado si no tiene suscripción
       if (err.response?.status === 404) {
         console.warn('No active subscription found for tenant:', tenantId)
-        
-return null
+
+        return null
       }
 
       const errorMsg = err.response?.data?.message || 'Error al obtener suscripción del tenant'
@@ -213,8 +213,8 @@ return null
         `/api/v1/subscriptions/${subscriptionId}/change-plan/${newPlanId}`
       )
 
-      
-return response.data
+
+      return response.data
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || 'Error al cambiar plan'
 

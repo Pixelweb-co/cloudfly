@@ -25,15 +25,15 @@ const PlanName = () => {
                             const roles = payload.authorities.split(',')
 
                             const isSystemRole = roles.some((role: string) =>
-                                role === 'ROLE_SUPERADMIN' || role === 'ROLE_MANAGER'
+                                role === 'ROLE_MANAGER'
                             )
 
                             // SUPERADMIN y MANAGER no necesitan mostrar plan
                             if (isSystemRole) {
                                 console.log('System role detected - no plan display needed')
                                 setLoading(false)
-                                
-return
+
+                                return
                             }
                         }
                     } catch (err) {
@@ -46,8 +46,8 @@ return
 
                 if (!userData) {
                     setLoading(false)
-                    
-return
+
+                    return
                 }
 
                 // Intentar obtener tenantId de diferentes lugares
@@ -57,8 +57,8 @@ return
                 if (!tenantId) {
                     console.warn('No se encontró tenant ID para obtener el plan')
                     setLoading(false)
-                    
-return
+
+                    return
                 }
 
                 // Obtener la suscripción activa del tenant

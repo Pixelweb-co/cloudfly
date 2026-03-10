@@ -71,7 +71,7 @@ const ProductForm = ({ open, onClose, rowSelect }: any) => {
 
   const [selectedFile, setSelectedFile] = useState(null)
 
-  const handleFileChange = (event:any) => {
+  const handleFileChange = (event: any) => {
     // Obtiene el archivo seleccionado
     setSelectedFile(event.target.files[0])
   }
@@ -350,7 +350,7 @@ const ProductForm = ({ open, onClose, rowSelect }: any) => {
       setValue('periodicity', rowSelect.periodicity)
       setValue('location', rowSelect.location)
       setValue('placement', rowSelect.placement)
-    }else{
+    } else {
       console.log('rowSelect new:', rowSelect)
       setValue('typeDevice', '0')
       setValue('productCode', '')
@@ -528,11 +528,11 @@ const ProductForm = ({ open, onClose, rowSelect }: any) => {
                           helperText={errors.typeDevice?.message}
                         >
                           <MenuItem key={0} value={'0'}>
-                                Seleccionar ...
-                              </MenuItem>
-                          {typeDeviceList.map((item: any,index) => {
+                            Seleccionar ...
+                          </MenuItem>
+                          {typeDeviceList.map((item: any, index) => {
                             return (
-                              <MenuItem key={(index+1)} value={item.id}>
+                              <MenuItem key={(index + 1)} value={item.id}>
                                 {item.typeDevice}
                               </MenuItem>
                             )
@@ -642,7 +642,7 @@ const ProductForm = ({ open, onClose, rowSelect }: any) => {
                       )}
                     />
 
-                    {(userMethods.isRole('SUPERADMIN') || userMethods.isRole('BIOMEDICAL')) && (
+                    {(userMethods.isRole('MANAGER') || userMethods.isRole('BIOMEDICAL')) && (
                       <Controller
                         name='customer'
                         control={control}
@@ -830,7 +830,7 @@ const ProductForm = ({ open, onClose, rowSelect }: any) => {
 
                           {[
                             { id: '0', name: 'Seleccione...' },
-                           { id: '2', name: 'Activo' },
+                            { id: '2', name: 'Activo' },
                             { id: '1', name: 'Inactivo' }
                           ].map((item: any) => {
                             return (
@@ -1012,7 +1012,7 @@ const ProductForm = ({ open, onClose, rowSelect }: any) => {
                     />
 
                     {editData.image && (
-                      <Card sx={{ textAlign: 'center',marginTop: 5 }}>
+                      <Card sx={{ textAlign: 'center', marginTop: 5 }}>
                         <Image src={`${process.env.NEXT_PUBLIC_API_URL}/media/${editData.image.name}`} width={150} height={150} alt="Imagen de el dispositivo" />
                       </Card>
                     )}
