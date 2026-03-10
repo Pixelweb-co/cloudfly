@@ -1,6 +1,9 @@
 package com.app.controllers;
 
 import com.app.dto.SubscriptionResponse;
+import com.app.persistence.entity.SubscriptionEntity;
+import com.app.persistence.entity.SubscriptionModuleEntity;
+import com.app.persistence.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +13,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/subscriptions")
@@ -17,51 +21,152 @@ import java.util.List;
 @Slf4j
 public class SubscriptionController {
 
+    private final SubscriptionRepository subscriptionRepository;
+    private final SubscriptionModuleRepository subscriptionModuleRepository;
+    private final PlanRepository planRepository;
+    private final ModuleRepository moduleRepository;
+    private final CustomerRepository customerRepository;
+
     @GetMapping
     public Flux<SubscriptionResponse> getAllSubscriptions() {
         log.info("GET /api/v1/subscriptions - Returning list of subscriptions");
-        return Flux.just(
-                createMockSubscription(1L, 100L, "Tenant A", "ACTIVE"),
-                createMockSubscription(2L, 101L, "Tenant B", "PENDING"));
+        return subscriptionRepository.findAll()
+                .flatMap(this::mapToResponse);
+    }
+
+    @GetMapping("/tenant/{tenantId}/active")
+    public Mono<ResponseEntity<SubscriptionResponse>> getActiveTenantSubscription(@PathVariable Long tenantId) {
+        // En este sistema, tenantId se mapea a customerId en la base de datos
+        return subscriptionRepository.findFirstByCustomerIdAndStatusOrderByEndDateDesc(tenantId, "ACTIVE")
+                .flatMap(this::mapToResponse)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
     @PostMapping
     public Mono<ResponseEntity<SubscriptionResponse>> createSubscription(@RequestBody SubscriptionResponse request) {
         log.info("POST /api/v1/subscriptions - Creating subscription for tenant: {}", request.getTenantId());
-        request.setId(System.currentTimeMillis());
-        request.setStatus("ACTIVE");
-        return Mono.just(ResponseEntity.ok(request));
+        
+        return planRepository.findById(request.getPlanId())
+                .flatMap(plan -> {
+                    SubscriptionEntity entity = SubscriptionEntity.builder()
+                            .planId(plan.getId())
+                            .customerId(request.getTenantId())
+                            .status("ACTIVE")
+                            .billingCycle(request.getBillingCycle() != null ? request.getBillingCycle() : "MONTHLY")
+                            .startDate(LocalDateTime.now())
+                            .endDate(LocalDateTime.now().plusDays(plan.getDurationDays() != null ? plan.getDurationDays() : 30))
+                            .aiTokensLimit(request.getEffectiveAiTokensLimit())
+                            .usersLimit(request.getEffectiveUsersLimit())
+                            .monthlyPrice(request.getMonthlyPrice() != null ? request.getMonthlyPrice() : plan.getPrice())
+                            .createdAt(LocalDateTime.now())
+                            .updatedAt(LocalDateTime.now())
+                            .build();
+                    
+                    return subscriptionRepository.save(entity)
+                            .flatMap(savedSub -> {
+                                // If no custom modules provided, copy from plan
+                                if (request.getModuleIds() == null || request.getModuleIds().isEmpty()) {
+                                    return planModuleRepository.findByPlanId(plan.getId())
+                                            .map(pm -> SubscriptionModuleEntity.builder()
+                                                    .subscriptionId(savedSub.getId())
+                                                    .moduleId(pm.getModuleId())
+                                                    .build())
+                                            .collectList()
+                                            .flatMapMany(subscriptionModuleRepository::saveAll)
+                                            .then(Mono.just(savedSub));
+                                } else {
+                                    List<SubscriptionModuleEntity> modules = request.getModuleIds().stream()
+                                            .map(mid -> SubscriptionModuleEntity.builder()
+                                                    .subscriptionId(savedSub.getId())
+                                                    .moduleId(mid)
+                                                    .build())
+                                            .collect(Collectors.toList());
+                                    return subscriptionModuleRepository.saveAll(modules)
+                                            .then(Mono.just(savedSub));
+                                }
+                            });
+                })
+                .flatMap(this::mapToResponse)
+                .map(ResponseEntity::ok);
     }
+
+    private final PlanModuleRepository planModuleRepository;
 
     @PutMapping("/{id}")
     public Mono<ResponseEntity<SubscriptionResponse>> updateSubscription(@PathVariable Long id,
             @RequestBody SubscriptionResponse request) {
         log.info("PUT /api/v1/subscriptions/{} - Updating subscription", id);
-        request.setId(id);
-        return Mono.just(ResponseEntity.ok(request));
+        return subscriptionRepository.findById(id)
+                .flatMap(existing -> {
+                    existing.setStatus(request.getStatus());
+                    existing.setEndDate(request.getEndDate());
+                    existing.setAiTokensLimit(request.getEffectiveAiTokensLimit());
+                    existing.setUsersLimit(request.getEffectiveUsersLimit());
+                    existing.setUpdatedAt(LocalDateTime.now());
+                    return subscriptionRepository.save(existing);
+                })
+                .flatMap(savedSub -> {
+                    if (request.getModuleIds() != null) {
+                        return subscriptionModuleRepository.deleteBySubscriptionId(id)
+                                .thenMany(Flux.fromIterable(request.getModuleIds()))
+                                .map(mid -> SubscriptionModuleEntity.builder()
+                                        .subscriptionId(id)
+                                        .moduleId(mid)
+                                        .build())
+                                .collectList()
+                                .flatMapMany(subscriptionModuleRepository::saveAll)
+                                .then(Mono.just(savedSub));
+                    }
+                    return Mono.just(savedSub);
+                })
+                .flatMap(this::mapToResponse)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Void>> deleteSubscription(@PathVariable Long id) {
         log.info("DELETE /api/v1/subscriptions/{} - Deleting subscription", id);
-        return Mono.just(ResponseEntity.noContent().build());
+        return subscriptionRepository.deleteById(id)
+                .then(subscriptionModuleRepository.deleteBySubscriptionId(id).then())
+                .thenReturn(ResponseEntity.noContent().<Void>build());
     }
 
-    private SubscriptionResponse createMockSubscription(Long id, Long tenantId, String tenantName, String status) {
-        return SubscriptionResponse.builder()
-                .id(id)
-                .tenantId(tenantId)
-                .tenantName(tenantName)
-                .planId(1L)
-                .planName("Premium Plan")
-                .billingCycle("MONTHLY")
-                .startDate(LocalDateTime.now().minusMonths(1))
-                .endDate(LocalDateTime.now().plusMonths(11))
-                .status(status)
-                .moduleIds(List.of(1L, 2L, 3L))
-                .moduleNames(List.of("DASHBOARD", "SALES", "ACCOUNTING"))
-                .effectiveUsersLimit(10)
-                .createdAt(LocalDateTime.now())
-                .build();
+    private Mono<SubscriptionResponse> mapToResponse(SubscriptionEntity entity) {
+        return Mono.zip(
+                planRepository.findById(entity.getPlanId()).defaultIfEmpty(new com.app.persistence.entity.PlanEntity()),
+                customerRepository.findById(entity.getCustomerId()).defaultIfEmpty(new com.app.persistence.entity.CustomerEntity()),
+                subscriptionModuleRepository.findBySubscriptionId(entity.getId())
+                        .flatMap(sm -> moduleRepository.findById(sm.getModuleId()))
+                        .collectList()
+        ).map(tuple -> {
+            com.app.persistence.entity.PlanEntity plan = tuple.getT1();
+            com.app.persistence.entity.CustomerEntity customer = tuple.getT2();
+            List<com.app.persistence.entity.ModuleEntity> modules = tuple.getT3();
+
+            return SubscriptionResponse.builder()
+                    .id(entity.getId())
+                    .tenantId(entity.getCustomerId())
+                    .tenantName(customer.getName())
+                    .planId(entity.getPlanId())
+                    .planName(plan.getName())
+                    .billingCycle(entity.getBillingCycle())
+                    .startDate(entity.getStartDate())
+                    .endDate(entity.getEndDate())
+                    .status(entity.getStatus())
+                    .isAutoRenew(entity.getIsAutoRenew())
+                    .moduleIds(modules.stream().map(m -> m.getId()).collect(Collectors.toList()))
+                    .moduleNames(modules.stream().map(m -> m.getName()).collect(Collectors.toList()))
+                    .effectiveAiTokensLimit(entity.getAiTokensLimit() != null ? entity.getAiTokensLimit() : plan.getAiTokensLimit())
+                    .effectiveUsersLimit(entity.getUsersLimit() != null ? entity.getUsersLimit() : plan.getUsersLimit())
+                    .monthlyPrice(entity.getMonthlyPrice() != null ? entity.getMonthlyPrice() : plan.getPrice())
+                    .discountPercent(entity.getDiscountPercent())
+                    .notes(entity.getNotes())
+                    .createdAt(entity.getCreatedAt())
+                    .updatedAt(entity.getUpdatedAt())
+                    .build();
+        });
     }
 }
+

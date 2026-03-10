@@ -1,6 +1,7 @@
 package com.app.controllers;
 
 import com.app.dto.AccountSetupRequest;
+import com.app.dto.CustomerDto;
 import com.app.persistence.entity.TenantEntity;
 import com.app.persistence.entity.UserEntity;
 import com.app.persistence.repository.TenantRepository;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
@@ -22,6 +24,39 @@ public class CustomerController {
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
 
+    @GetMapping
+    public Flux<CustomerDto> getAllCustomers() {
+        log.info("GET /customers - Fetching all customers");
+        return tenantRepository.findAll()
+                .map(this::toDto);
+    }
+
+    @GetMapping("/{id}")
+    public Mono<ResponseEntity<CustomerDto>> getCustomerById(@PathVariable Long id) {
+        log.info("GET /customers/{} - Fetching customer", id);
+        return tenantRepository.findById(id)
+                .map(this::toDto)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    private CustomerDto toDto(TenantEntity t) {
+        return CustomerDto.builder()
+                .id(t.getId())
+                .name(t.getName())
+                .nit(t.getNit())
+                .phone(t.getPhone())
+                .email(t.getEmail())
+                .address(t.getAddress())
+                .contact(t.getContact())
+                .position(t.getPosition())
+                .type(t.getType())
+                .status(t.getStatus())
+                .businessType(t.getBusinessType())
+                .businessDescription(t.getBusinessDescription())
+                .build();
+    }
+
     @PostMapping("/account-setup")
     public Mono<ResponseEntity<UserEntity>> accountSetup(@RequestBody AccountSetupRequest request) {
         log.info("Account setup request for user: {}", request.getUserId());
@@ -31,6 +66,7 @@ public class CustomerController {
                     AccountSetupRequest.ClienteForm form = request.getForm();
 
                     TenantEntity tenant = TenantEntity.builder()
+                            .id(user.getCustomerId()) // Usar ID existente si hay uno
                             .name(form.getName())
                             .nit(form.getNit())
                             .phone(form.getPhone())
@@ -42,6 +78,9 @@ public class CustomerController {
                             .status(Boolean.parseBoolean(form.getStatus()))
                             .businessType(form.getBusinessType())
                             .businessDescription(form.getObjetoSocial())
+                            .isMasterTenant(true)
+                            .esEmisorFE(false) // Por defecto false hasta configurar resolución
+                            .esEmisorPrincipal(true) // Primera compañía del tenant
                             .createdAt(LocalDateTime.now())
                             .updatedAt(LocalDateTime.now())
                             .build();
