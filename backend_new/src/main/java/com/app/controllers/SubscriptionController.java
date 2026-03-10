@@ -4,10 +4,8 @@ import com.app.dto.SubscriptionResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
@@ -20,32 +18,51 @@ import java.util.List;
 @Slf4j
 public class SubscriptionController {
 
-    @GetMapping("/tenant/{tenantId}/active")
-    public Mono<ResponseEntity<SubscriptionResponse>> getActiveTenantSubscription(@PathVariable Long tenantId) {
-        log.info("GET /api/v1/subscriptions/tenant/{}/active - Returning mock active subscription", tenantId);
+    @GetMapping
+    public Flux<SubscriptionResponse> getAllSubscriptions() {
+        log.info("GET /api/v1/subscriptions - Returning list of subscriptions");
+        return Flux.just(
+                createMockSubscription(1L, 100L, "Tenant A", "ACTIVE"),
+                createMockSubscription(2L, 101L, "Tenant B", "PENDING"));
+    }
 
-        SubscriptionResponse mockResponse = SubscriptionResponse.builder()
-                .id(1L)
+    @PostMapping
+    public Mono<ResponseEntity<SubscriptionResponse>> createSubscription(@RequestBody SubscriptionResponse request) {
+        log.info("POST /api/v1/subscriptions - Creating subscription for tenant: {}", request.getTenantId());
+        request.setId(System.currentTimeMillis());
+        request.setStatus("ACTIVE");
+        return Mono.just(ResponseEntity.ok(request));
+    }
+
+    @PutMapping("/{id}")
+    public Mono<ResponseEntity<SubscriptionResponse>> updateSubscription(@PathVariable Long id,
+            @RequestBody SubscriptionResponse request) {
+        log.info("PUT /api/v1/subscriptions/{} - Updating subscription", id);
+        request.setId(id);
+        return Mono.just(ResponseEntity.ok(request));
+    }
+
+    @DeleteMapping("/{id}")
+    public Mono<ResponseEntity<Void>> deleteSubscription(@PathVariable Long id) {
+        log.info("DELETE /api/v1/subscriptions/{} - Deleting subscription", id);
+        return Mono.just(ResponseEntity.noContent().build());
+    }
+
+    private SubscriptionResponse createMockSubscription(Long id, Long tenantId, String tenantName, String status) {
+        return SubscriptionResponse.builder()
+                .id(id)
                 .tenantId(tenantId)
-                .tenantName("Cloudfly Master")
+                .tenantName(tenantName)
                 .planId(1L)
                 .planName("Premium Plan")
                 .billingCycle("MONTHLY")
                 .startDate(LocalDateTime.now().minusMonths(1))
                 .endDate(LocalDateTime.now().plusMonths(11))
-                .status("ACTIVE")
-                .isAutoRenew(true)
-                .moduleIds(List.of(1L, 2L, 3L, 4L, 5L))
-                .moduleNames(List.of("DASHBOARD", "SALES", "ACCOUNTING", "HR", "REPORTS"))
-                .effectiveAiTokensLimit(1000000L)
-                .effectiveElectronicDocsLimit(1000)
+                .status(status)
+                .moduleIds(List.of(1L, 2L, 3L))
+                .moduleNames(List.of("DASHBOARD", "SALES", "ACCOUNTING"))
                 .effectiveUsersLimit(10)
-                .effectiveAllowOverage(true)
-                .monthlyPrice(new BigDecimal("99.99"))
-                .discountPercent(BigDecimal.ZERO)
                 .createdAt(LocalDateTime.now())
                 .build();
-
-        return Mono.just(ResponseEntity.ok(mockResponse));
     }
 }
