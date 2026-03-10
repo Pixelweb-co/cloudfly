@@ -1,71 +1,32 @@
-﻿/frontend/node_modules
+# Maven
+**/target/
+*.class
 
-# Ignore files in the backend folder
-/backend/.idea/
-/backend/.classpath
-/backend/.project
-/backend/.settings/
-/backend/documents/
-/backend/uploads/
-/backend/firma_soporte/
-/backend/firmas/
-/backend/images/
+# Node / React
+**/node_modules/
+**/.next/
+**/dist/
+**/build/
+.env*.local
 
-
-/backend/src/main/resources/application.properties
-/backend/src/main/resources/application.yml
-
-
-/backup-service/public/secret_client.json
-/backup-service/public/token.json
-
-# Environment files with secrets
-/frontend/.env.local
-/.env
-/.env.local
-/.env.production
-/.env.*.local
-/chat-socket-service/.env
-/chat-socket-service/.env.local
+# Python
+**/__pycache__/
+*.py[cod]
+*$py.class
+venv/
+ENV/
 
 
-/backend/*.iml
-/backend/*.iws
-
-# Maven build directory
-/backend/target/
-/backend_new/target/
-
-# Next.js build directory
-/frontend_new/.next/
-/frontend_new/node_modules/
-
-# Temporary and log files
-*.tmp
+# Debug Reports & Screenshots
+debug_reports/
+screenshots*/
+selenium_session/
+debug_dom.html
+modules_crash_dom.html
 *.log
-e2e_log_full.txt
-e2e_log_full_utf8.txt
-error_dom.html
-error_e2e.png
 
-# User-specific files
-./backend/DS_Store
-./bakend/Thumbs.db
-
-.cloudflared/
-__pycache__/
-callcenterIA/
-chatwoot/
-evolution-api/
-frontend/frontend_log.txt
-frontend_new/frontend_log.txt
-terraform/
-traefik/
-vuexy/
-*.sql
-*.ps1
-backend_logs*.txt
-test_e2e_api.py
-
-docker-compose-full.yml.b64
-recreate_db.sql
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
