@@ -7,26 +7,39 @@
 **/.next/
 **/dist/
 **/build/
-.env*.local
+.env*
 
-# Python
+# Python & Scripts
 **/__pycache__/
 *.py[cod]
 *$py.class
 venv/
 ENV/
+*.ps1
+test_*.py
 
-
-# Debug Reports & Screenshots
+# Debug Reports, Logs & Screenshots
 debug_reports/
 screenshots*/
 selenium_session/
 debug_dom.html
 modules_crash_dom.html
+error_dom.html
+error_e2e.png
+frontend_log.txt
 *.log
+*.txt
+
+# Local Configs & Backups
+.cloudflared/
+backup-service/public/*.json
+callcenterIA/asterisk/data/*.sqlite3
+*.sql
+*.b64
 
 # IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
+
