@@ -71,7 +71,7 @@ services:
       - "traefik.http.routers.api.entrypoints=websecure"
       - "traefik.http.routers.api.tls.certresolver=le"
       - "traefik.http.services.api.loadbalancer.server.port=8080"
-      - "traefik.docker.network=app-net"
+      - "traefik.docker.network=cloudfly_app-net"
 
   notification-service:
     build:
@@ -110,7 +110,7 @@ services:
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls.certresolver=le"
       - "traefik.http.services.frontend.loadbalancer.server.port=3000"
-      - "traefik.docker.network=app-net"
+      - "traefik.docker.network=cloudfly_app-net"
     networks:
       - app-net
 
