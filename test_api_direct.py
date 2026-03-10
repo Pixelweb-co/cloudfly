@@ -59,7 +59,20 @@ def test_rbac_api(username, password):
     except Exception as e:
         print(f"ERROR en /my-permissions: {e}")
 
-    # 3. Get Menu
+    # 3. Get Modules List
+    print("\n3. Consultando Lista de Módulos (/api/rbac/modules-list)...")
+    try:
+        res_mod = requests.get(f"{BASE_URL}/api/rbac/modules-list", headers=headers, timeout=10)
+        print(f"Status modules-list: {res_mod.status_code}")
+        if res_mod.status_code != 200:
+            print(f"ERROR: Fallo al obtener módulos ({res_mod.status_code})")
+            print(f"Response Body: {res_mod.text}")
+        else:
+            print(f"Módulos obtenidos exitosamente.")
+    except Exception as e:
+        print(f"ERROR en /modules-list: {e}")
+
+    # 4. Get Menu
     print("\n3. Consultando Menú (/api/rbac/menu)...")
     try:
         res_menu = requests.get(f"{BASE_URL}/api/rbac/menu", headers=headers, timeout=10)
