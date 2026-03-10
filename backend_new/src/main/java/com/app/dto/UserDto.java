@@ -30,4 +30,5 @@ public class UserDto {
     // Enriquecido
     private List<RoleEntity> roles;
     private CustomerEntity customer;
+    private boolean hasActiveSubscription;
 }

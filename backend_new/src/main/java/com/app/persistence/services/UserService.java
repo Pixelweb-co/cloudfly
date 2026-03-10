@@ -3,13 +3,8 @@ package com.app.persistence.services;
 import com.app.dto.AuthRegisterRequest;
 import com.app.dto.UserDto;
 import com.app.persistence.entity.CustomerEntity;
-import com.app.persistence.entity.RoleEntity;
-import com.app.persistence.entity.UserEntity;
-import com.app.persistence.entity.UserRole;
-import com.app.persistence.repository.CustomerRepository;
-import com.app.persistence.repository.RoleRepository;
-import com.app.persistence.repository.UserRepository;
-import com.app.persistence.repository.UserRoleRepository;
+import com.app.persistence.entity.*;
+import com.app.persistence.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,6 +30,10 @@ public class UserService {
         private final PasswordEncoder passwordEncoder;
         private final CustomerRepository customerRepository;
         private final ReactiveKafkaProducerTemplate<String, Object> kafkaTemplate;
+        private final PlanRepository planRepository;
+        private final PlanModuleRepository planModuleRepository;
+        private final SubscriptionRepository subscriptionRepository;
+        private final SubscriptionModuleRepository subscriptionModuleRepository;
 
         @Transactional
         public Mono<UserEntity> registerUser(AuthRegisterRequest request) {
@@ -70,22 +71,62 @@ public class UserService {
                                                                                 .findByName(roleName))
                                                                 .flatMap(role -> userRoleRepository.save(new UserRole(
                                                                                 savedUser.getId(), role.getId())))
+                                                                .then(handleAutomaticSubscription(finalCustId))
                                                                 .then(Mono.defer(() -> {
-                                                                        kafkaTemplate.send("register-user", Map.of(
-                                                                                        "name", savedUser.getNombres(),
-                                                                                        "email", savedUser.getEmail(),
-                                                                                        "token",
-                                                                                        savedUser.getVerificationToken()))
-                                                                                        .subscribe(
-                                                                                                        result -> {
-                                                                                                        },
-                                                                                                        error -> System.err
-                                                                                                                        .println("Error enviando a Kafka: "
-                                                                                                                                        + error.getMessage()));
+                                                                        sendRegistrationEmail(savedUser);
                                                                         return Mono.just(savedUser);
                                                                 }));
                                         });
                 });
+        }
+
+        private Mono<Void> handleAutomaticSubscription(Long customerId) {
+                if (customerId == null)
+                        return Mono.empty();
+
+                return planRepository.findByIsFreeTrue()
+                                .next()
+                                .flatMap(freePlan -> {
+                                        SubscriptionEntity subscription = SubscriptionEntity.builder()
+                                                        .planId(freePlan.getId())
+                                                        .customerId(customerId)
+                                                        .status("ACTIVE")
+                                                        .billingCycle("MONTHLY")
+                                                        .startDate(LocalDateTime.now())
+                                                        .endDate(LocalDateTime.now()
+                                                                        .plusDays(freePlan.getDurationDays() != null
+                                                                                        ? freePlan.getDurationDays()
+                                                                                        : 365))
+                                                        .aiTokensLimit(freePlan.getAiTokensLimit())
+                                                        .usersLimit(freePlan.getUsersLimit())
+                                                        .monthlyPrice(BigDecimal.ZERO)
+                                                        .createdAt(LocalDateTime.now())
+                                                        .updatedAt(LocalDateTime.now())
+                                                        .build();
+
+                                        return subscriptionRepository.save(subscription)
+                                                        .flatMap(savedSub -> planModuleRepository
+                                                                        .findByPlanId(freePlan.getId())
+                                                                        .map(pm -> SubscriptionModuleEntity.builder()
+                                                                                        .subscriptionId(savedSub.getId())
+                                                                                        .moduleId(pm.getModuleId())
+                                                                                        .build())
+                                                                        .collectList()
+                                                                        .flatMapMany(subscriptionModuleRepository::saveAll)
+                                                                        .then());
+                                });
+        }
+
+        private void sendRegistrationEmail(UserEntity savedUser) {
+                kafkaTemplate.send("register-user", Map.of(
+                                "name", savedUser.getNombres(),
+                                "email", savedUser.getEmail(),
+                                "token", savedUser.getVerificationToken()))
+                                .subscribe(
+                                                result -> {
+                                                },
+                                                error -> System.err.println(
+                                                                "Error enviando a Kafka: " + error.getMessage()));
         }
 
         public Mono<UserDto> convertToDto(UserEntity user) {
@@ -93,16 +134,20 @@ public class UserService {
                                 .collectList()
                                 .flatMap(roles -> {
                                         if (user.getCustomerId() != null) {
-                                                return customerRepository.findById(user.getCustomerId())
-                                                                .map(customer -> buildUserDto(user, roles, customer))
-                                                                .defaultIfEmpty(buildUserDto(user, roles, null));
+                                                return Mono.zip(
+                                                        customerRepository.findById(user.getCustomerId()),
+                                                        subscriptionRepository.findFirstByCustomerIdAndStatusOrderByEndDateDesc(user.getCustomerId(), "ACTIVE")
+                                                                .map(s -> true)
+                                                                .defaultIfEmpty(false)
+                                                ).map(tuple -> buildUserDto(user, roles, tuple.getT1(), (Boolean) tuple.getT2()))
+                                                .defaultIfEmpty(buildUserDto(user, roles, null, false));
                                         } else {
-                                                return Mono.just(buildUserDto(user, roles, null));
+                                                return Mono.just(buildUserDto(user, roles, null, false));
                                         }
                                 });
         }
 
-        private UserDto buildUserDto(UserEntity user, List<RoleEntity> roles, CustomerEntity customer) {
+        private UserDto buildUserDto(UserEntity user, List<RoleEntity> roles, CustomerEntity customer, boolean hasActiveSub) {
                 return UserDto.builder()
                                 .id(user.getId())
                                 .nombres(user.getNombres())
@@ -118,6 +163,7 @@ public class UserService {
                                 .customerId(user.getCustomerId())
                                 .roles(roles)
                                 .customer(customer)
+                                .hasActiveSubscription(hasActiveSub)
                                 .build();
         }
 

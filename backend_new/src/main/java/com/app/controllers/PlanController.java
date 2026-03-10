@@ -129,13 +129,11 @@ public class PlanController {
     private Mono<PlanDto> mapToDto(PlanEntity entity) {
         log.debug("Mapeando DTO para plan ID: {}", entity.getId());
         return planModuleRepository.findByPlanId(entity.getId())
-                .flatMap(pm -> moduleRepository.findById(pm.getModuleId())
-                        .defaultIfEmpty(null))
-                .filter(m -> m != null)
+                .flatMap(pm -> moduleRepository.findById(pm.getModuleId()))
                 .collectList()
-                .flatMap(modules -> {
-                    log.debug("Plan {} tiene {} módulos", entity.getId(), modules.size());
-                    return Mono.just(PlanDto.builder()
+                .map(modules -> {
+                    log.debug("Plan {} mapeado con {} módulos", entity.getId(), modules.size());
+                    return PlanDto.builder()
                         .id(entity.getId())
                         .name(entity.getName())
                         .description(entity.getDescription())
@@ -147,7 +145,7 @@ public class PlanController {
                         .aiTokensLimit(entity.getAiTokensLimit())
                         .moduleIds(modules.stream().map(m -> m.getId()).collect(Collectors.toList()))
                         .moduleNames(modules.stream().map(m -> m.getName()).collect(Collectors.toList()))
-                        .build());
+                        .build();
                 });
     }
 
