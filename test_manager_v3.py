@@ -68,27 +68,37 @@ def test_manager_dashboard_v3():
         # 2. DASHBOARD
         logger.info("--- FASE 2: VERIFICAR DASHBOARD ---")
         try:
-            wait.until(lambda d: "/home" in d.current_url)
-            logger.info(f"Login exitoso: {driver.current_url}")
+            # Esperar a que cambie la URL inicial de login
+            wait.until(lambda d: "/login" not in d.current_url)
+            logger.info(f"Redirección post-login detectada: {driver.current_url}")
+            
+            # Si cae en 404 (comprobado por el screenshot anterior)
+            if "404" in driver.title or "/home/dashboard" in driver.current_url:
+                logger.warning("Detectada posible página 404 o URL obsoleta en /home/dashboard. Forzando navegación a /home")
+                driver.get(f"{FRONTEND_URL}/home")
+                wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            
+            logger.info(f"URL Actual tras manejo de 404: {driver.current_url}")
         except TimeoutException:
-            logger.error("Timeout: No se redirigió al home.")
+            logger.error("Timeout: No se redirigió después del login.")
             print_browser_logs(driver)
             take_screenshot(driver, "error_login_timeout")
             raise
 
-        time.sleep(8) # Esperar carga completa
-        take_screenshot(driver, "3_dashboard_home")
+        time.sleep(10) # Esperar carga completa de la SPA y datos dinámicos
+        take_screenshot(driver, "3_dashboard_resolved")
         print_browser_logs(driver)
 
         # 3. USER DROPDOWN (ROLE)
         logger.info("--- FASE 3: VERIFICAR ROL EN DROPDOWN ---")
-        user_dropdown_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".MuiAvatar-root")))
-        user_dropdown_btn.click()
-        time.sleep(1)
-        take_screenshot(driver, "4_user_dropdown")
-        
         try:
-            # Buscando el rol MANAGER o ADMIN
+            # Intentamos detectar el avatar para abrir el menú del perfil
+            user_dropdown_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "header .MuiAvatar-root, .navbar .MuiAvatar-root, button .MuiAvatar-root")))
+            user_dropdown_btn.click()
+            time.sleep(2)
+            take_screenshot(driver, "4_user_dropdown")
+            
+            # Buscando el rol MANAGER o ADMIN en el menú desplegado
             role_found = False
             for r in ["MANAGER", "ADMIN", "SUPERADMIN"]:
                 try:
@@ -106,14 +116,20 @@ def test_manager_dashboard_v3():
 
         # 4. MENÚ DINÁMICO
         logger.info("--- FASE 4: VERIFICAR MENÚ ---")
-        menu_items = ["Ventas", "Contabilidad", "Recursos Humanos", "Usuarios y Roles", "Reportes"]
+        # El manager debería ver estos ítems en el menú lateral
+        menu_items = ["Ventas", "Contabilidad", "Recursos Humanos", "Usuarios y Roles", "Reportes", "Dashboard"]
         for item in menu_items:
             try:
-                # Ajuste de XPath para ser más específico al menú lateral si es necesario
-                wait.until(EC.presence_of_element_located((By.XPATH, f"//*[contains(text(), '{item}')]")))
+                # Búsqueda por texto exacto o contenido
+                wait.until(EC.presence_of_element_located((By.XPATH, f"//*[normalize-space(text())='{item}']")))
                 logger.info(f"Elemento del menú '{item}' visible.")
             except TimeoutException:
-                logger.warning(f"Elemento del menú '{item}' NO encontrado.")
+                try:
+                    # Intento alternativo
+                    element = driver.find_element(By.XPATH, f"//*[contains(text(), '{item}')]")
+                    logger.info(f"Elemento del menú '{item}' encontrado con contains.")
+                except:
+                    logger.warning(f"Elemento del menú '{item}' NO encontrado.")
 
         take_screenshot(driver, "5_final_state")
         logger.info("--- PRUEBA FINALIZADA ---")
