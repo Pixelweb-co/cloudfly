@@ -28,6 +28,7 @@ public class PlanController {
         private BigDecimal price;
         private String cycle;
         private List<String> features;
+        private boolean active;
     }
 
     @GetMapping
@@ -35,10 +36,10 @@ public class PlanController {
         return Flux.just(
                 PlanDto.builder().id(1L).name("Básico").description("Para pequeñas empresas")
                         .price(new BigDecimal("29.99")).cycle("MONTHLY").features(List.of("1 usuario", "100 facturas"))
-                        .build(),
+                        .active(true).build(),
                 PlanDto.builder().id(2L).name("Premium").description("Para empresas en crecimiento")
                         .price(new BigDecimal("99.99")).cycle("MONTHLY")
-                        .features(List.of("10 usuarios", "1000 facturas", "AI Token 1M")).build());
+                        .features(List.of("10 usuarios", "1000 facturas", "AI Token 1M")).active(true).build());
     }
 
     @PostMapping
@@ -60,26 +61,12 @@ public class PlanController {
         return Flux.just(
                 PlanDto.builder().id(1L).name("Básico").description("Para pequeñas empresas")
                         .price(new BigDecimal("29.99")).cycle("MONTHLY").features(List.of("1 usuario", "100 facturas"))
-                        .build());
+                        .active(true).build());
     }
 
     @PatchMapping("/{id}/toggle-status")
     public Mono<ResponseEntity<PlanDto>> togglePlanStatus(@PathVariable Long id) {
         log.info("Cambiando estado del plan: {}", id);
         return Mono.just(ResponseEntity.ok(PlanDto.builder().id(id).name("Plan " + id).active(true).build()));
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class PlanDto {
-        private Long id;
-        private String name;
-        private String description;
-        private BigDecimal price;
-        private String cycle;
-        private List<String> features;
-        private boolean active;
     }
 }

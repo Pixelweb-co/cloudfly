@@ -107,7 +107,7 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
         localStorage.setItem('jwt', response.jwt)
         localStorage.setItem('userData', JSON.stringify(response.user))
 
-        if (user?.verificationToken != null && user?.verificationToken != '') {
+        if (!user?.enabled && user?.verificationToken != null && user?.verificationToken != '') {
           router.push('/verify-email')
           return false
         } else {
