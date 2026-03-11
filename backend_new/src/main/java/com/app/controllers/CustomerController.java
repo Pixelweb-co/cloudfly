@@ -2,10 +2,7 @@ package com.app.controllers;
 
 import com.app.dto.AccountSetupRequest;
 import com.app.dto.CustomerDto;
-import com.app.persistence.entity.SubscriptionEntity;
-import com.app.persistence.entity.SubscriptionModuleEntity;
-import com.app.persistence.entity.TenantEntity;
-import com.app.persistence.entity.UserEntity;
+import com.app.persistence.entity.*;
 import com.app.persistence.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +28,7 @@ public class CustomerController {
     private final SubscriptionModuleRepository subscriptionModuleRepository;
     private final PlanModuleRepository planModuleRepository;
     private final UserService userService;
+    private final CompanyRepository companyRepository;
 
     @GetMapping
     public Flux<CustomerDto> getAllCustomers() {
@@ -95,10 +93,26 @@ public class CustomerController {
 
                     return tenantRepository.save(tenant)
                             .flatMap(savedTenant -> {
-                                user.setCustomerId(savedTenant.getId());
-                                return userRepository.save(user)
-                                        .flatMap(savedUser -> handleAutomaticSubscription(savedTenant.getId())
-                                                .then(userService.convertToDto(savedUser)));
+                                // Crear la compañía principal basada en el tenant
+                                CompanyEntity company = CompanyEntity.builder()
+                                        .tenantId(savedTenant.getId())
+                                        .name(savedTenant.getName())
+                                        .nit(savedTenant.getNit())
+                                        .address(savedTenant.getAddress())
+                                        .phone(savedTenant.getPhone())
+                                        .status(true)
+                                        .isPrincipal(true)
+                                        .createdAt(LocalDateTime.now())
+                                        .updatedAt(LocalDateTime.now())
+                                        .build();
+
+                                return companyRepository.save(company)
+                                        .then(Mono.defer(() -> {
+                                            user.setCustomerId(savedTenant.getId());
+                                            return userRepository.save(user)
+                                                    .flatMap(savedUser -> handleAutomaticSubscription(savedTenant.getId())
+                                                            .then(userService.convertToDto(savedUser)));
+                                        }));
                             });
                 })
                 .map(ResponseEntity::ok)
