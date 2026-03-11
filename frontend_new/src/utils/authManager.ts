@@ -29,13 +29,18 @@ export const AuthManager = {
     }
   },
 
-  async register(data: { username: string; password: string; email: string; roleRequest: any }) {
+  async register(data: { username: string; password: string; email: string; roles: string[] }) {
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/register`, data, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
+      const token = localStorage.getItem('jwt')
+      const headers: any = {
+        'Content-Type': 'application/json'
+      }
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+
+      const response = await axios.post(`${API_BASE_URL}/auth/register`, data, { headers })
 
       // Solo guardar si vienen en la respuesta (el login los trae, el registro básico tal vez no)
       if (response.data.jwt) {

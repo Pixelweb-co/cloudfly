@@ -229,56 +229,8 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
         renderExpandedMenuItemIcon={{ icon: <i className='tabler-circle text-xs' /> }}
         menuSectionStyles={menuSectionStyles(verticalNavOptions, theme)}
       >
-        {/* Render dynamic menu from backend */}
+        {/* Render dynamic menu from backend (Modules from subscription) */}
         {renderMenuItems(menuData)}
-
-        {/* Hardcoded: Usuarios y Roles (no viene del backend) */}
-        {(userRole === 'ADMIN' || userRole === 'MANAGER') && (
-          <SubMenu
-            label='Usuarios y Roles'
-            icon={<i className='tabler-users' />}
-          >
-            <MenuItem href='/accounts/user/list' icon={<i className='tabler-user' />}>
-              Gestión de Usuarios
-            </MenuItem>
-            <MenuItem href='/accounts/roles/list' icon={<i className='tabler-lock' />}>
-              Roles
-            </MenuItem>
-          </SubMenu>
-        )}
-
-        {/* Hardcoded: Administración (Reemplaza al módulo de backend y agrupa ítems) */}
-        {(userRole === 'MANAGER') && (
-          <SubMenu
-            label='Administración'
-            icon={<i className='tabler-settings' />}
-          >
-            <MenuItem href='/administracion/clientes/list' icon={<i className='tabler-users' />}>
-              Clientes
-            </MenuItem>
-            <MenuItem href='/settings/chatbot-types/list' icon={<i className='tabler-robot' />}>
-              Tipos de Chatbot
-            </MenuItem>
-            <MenuItem href='/settings/system' icon={<i className='tabler-settings' />}>
-              Parámetros del sistema
-            </MenuItem>
-            <MenuItem href='/settings/system/dian' icon={<i className='tabler-file-settings' />}>
-              Configuración DIAN
-            </MenuItem>
-            <MenuItem href='/administracion/planes' icon={<i className='tabler-credit-card' />}>
-              Planes
-            </MenuItem>
-            <MenuItem href='/administracion/modules' icon={<i className='tabler-box' />}>
-              Módulos
-            </MenuItem>
-            <MenuItem href='/administracion/suscripciones' icon={<i className='tabler-package' />}>
-              Suscripciones
-            </MenuItem>
-            <MenuItem href='/administracion/consumo' icon={<i className='tabler-chart-pie' />}>
-              Dashboard Consumo
-            </MenuItem>
-          </SubMenu>
-        )}
 
         {/* Show error message if menu failed to load */}
         {error && (

@@ -49,14 +49,53 @@ public class AuthController {
         @PostMapping("/register")
         @ResponseStatus(HttpStatus.CREATED)
         public Mono<AuthResponse> register(@RequestBody @Valid AuthRegisterRequest registerRequest) {
-                return userService.registerUser(registerRequest)
-                                .flatMap(user -> userService.convertToDto(user))
-                                .map(userDto -> AuthResponse.builder()
-                                                .username(userDto.getUsername())
-                                                .message("Registro exitoso. Revise su email para verificar la cuenta.")
-                                                .status(true)
-                                                .user(userDto)
-                                                .build());
+                return ReactiveSecurityContextHolder.getContext()
+                        .map(SecurityContext::getAuthentication)
+                        .flatMap(auth -> {
+                            List<String> requesterRoles = auth.getAuthorities().stream()
+                                    .map(GrantedAuthority::getAuthority)
+                                    .map(a -> a.replace("ROLE_", ""))
+                                    .collect(Collectors.toList());
+                            
+                            boolean isAuthorizedToCreateUser = requesterRoles.contains("ADMIN") || requesterRoles.contains("MANAGER") || requesterRoles.contains("SUPERADMIN");
+                            
+                            if (registerRequest.getRoles() != null && registerRequest.getRoles().contains("USER") && !isAuthorizedToCreateUser) {
+                                return Mono.just(AuthResponse.builder()
+                                        .status(false)
+                                        .message("El rol USER solo puede ser registrado por un administrador.")
+                                        .build());
+                            }
+                            
+                            return userService.registerUser(registerRequest)
+                                    .flatMap(user -> userService.convertToDto(user))
+                                    .map(userDto -> AuthResponse.builder()
+                                            .username(userDto.getUsername())
+                                            .message("Registro exitoso. Revise su email para verificar la cuenta.")
+                                            .status(true)
+                                            .user(userDto)
+                                            .build());
+                        })
+                        .defaultIfEmpty(null) // Handle unauthenticated (public) case
+                        .flatMap(response -> {
+                            if (response != null) return Mono.just(response);
+                            
+                            // Public registration: check if USER role is requested
+                            if (registerRequest.getRoles() != null && registerRequest.getRoles().contains("USER")) {
+                                return Mono.just(AuthResponse.builder()
+                                        .status(false)
+                                        .message("El rol USER solo puede ser registrado por un administrador.")
+                                        .build());
+                            }
+                            
+                            return userService.registerUser(registerRequest)
+                                    .flatMap(user -> userService.convertToDto(user))
+                                    .map(userDto -> AuthResponse.builder()
+                                            .username(userDto.getUsername())
+                                            .message("Registro exitoso. Revise su email para verificar la cuenta.")
+                                            .status(true)
+                                            .user(userDto)
+                                            .build());
+                        });
         }
 
         @GetMapping("/verify")
