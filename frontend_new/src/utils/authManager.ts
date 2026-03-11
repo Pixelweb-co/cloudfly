@@ -37,9 +37,13 @@ export const AuthManager = {
         }
       })
 
-      // ESTANDARIZADO: usar 'jwt'
-      localStorage.setItem('jwt', response.data.jwt)
-      localStorage.setItem('userData', JSON.stringify(response.data.user))
+      // Solo guardar si vienen en la respuesta (el login los trae, el registro básico tal vez no)
+      if (response.data.jwt) {
+        localStorage.setItem('jwt', response.data.jwt)
+      }
+      if (response.data.user) {
+        localStorage.setItem('userData', JSON.stringify(response.data.user))
+      }
 
       return response.data
     } catch (error) {
