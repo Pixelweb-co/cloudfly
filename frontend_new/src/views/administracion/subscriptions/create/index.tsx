@@ -32,11 +32,16 @@ import customerService from '@/services/customers/customerService'
 import { BillingCycle } from '@/types/subscriptions'
 import type { PlanResponse } from '@/types/plans'
 import type { Customer } from '@/types/customers'
+import * as yup from 'yup'
+import { yupResolver } from '@hookform/resolvers/yup'
+import { addMonths, addYears, format } from 'date-fns'
 
 interface SubscriptionFormValues {
     planId: number
     tenantId: number
     billingCycle: BillingCycle
+    startDate: string
+    endDate: string
     isAutoRenew: boolean
     customModuleIds: number[]
     customAiTokensLimit?: number
@@ -46,6 +51,19 @@ interface SubscriptionFormValues {
     discountPercent?: number
     notes?: string
 }
+
+const schema = yup.object().shape({
+    tenantId: yup.number().min(1, 'El cliente es requerido').required('El cliente es requerido'),
+    planId: yup.number().min(1, 'El plan es requerido').required('El plan es requerido'),
+    billingCycle: yup.string().required('El ciclo de facturación es requerido'),
+    startDate: yup.string().required('La fecha de inicio es requerida'),
+    endDate: yup.string().required('La fecha de fin es requerida'),
+    isAutoRenew: yup.boolean(),
+    customModuleIds: yup.array().of(yup.number()),
+    customMonthlyPrice: yup.number().transform((value) => (isNaN(value) ? undefined : value)).optional(),
+    discountPercent: yup.number().min(0).max(100).transform((value) => (isNaN(value) ? 0 : value)).optional(),
+    notes: yup.string().optional()
+})
 
 const NewSubscriptionView = () => {
     const router = useRouter()
@@ -64,13 +82,17 @@ const NewSubscriptionView = () => {
         watch,
         setValue
     } = useForm<SubscriptionFormValues>({
+        resolver: yupResolver(schema) as any,
         defaultValues: {
             planId: 0,
             tenantId: 0,
             billingCycle: BillingCycle.MONTHLY,
+            startDate: format(new Date(), 'yyyy-MM-dd'),
+            endDate: format(addMonths(new Date(), 1), 'yyyy-MM-dd'),
             isAutoRenew: false,
             customModuleIds: [],
-            notes: ''
+            notes: '',
+            discountPercent: 0
         }
     })
 
@@ -97,6 +119,7 @@ const NewSubscriptionView = () => {
 
     const watchPlanId = watch('planId')
     const watchBillingCycle = watch('billingCycle')
+    const watchStartDate = watch('startDate')
 
     // Calculate total price based on plan and billing cycle
     const calculateTotalPrice = (planPrice: number, billingCycle: BillingCycle): number => {
@@ -137,6 +160,31 @@ const NewSubscriptionView = () => {
         }
     }, [selectedPlan, watchBillingCycle, setValue])
 
+    // Auto-calculate end date when start date or billing cycle changes
+    useEffect(() => {
+        if (watchStartDate && watchBillingCycle && watchBillingCycle !== BillingCycle.CUSTOM) {
+            const start = new Date(watchStartDate)
+            if (!isNaN(start.getTime())) {
+                let end = new Date(start)
+                switch (watchBillingCycle) {
+                    case BillingCycle.MONTHLY:
+                        end = addMonths(start, 1)
+                        break
+                    case BillingCycle.QUARTERLY:
+                        end = addMonths(start, 3)
+                        break
+                    case BillingCycle.SEMI_ANNUAL:
+                        end = addMonths(start, 6)
+                        break
+                    case BillingCycle.ANNUAL:
+                        end = addYears(start, 1)
+                        break
+                }
+                setValue('endDate', format(end, 'yyyy-MM-dd'))
+            }
+        }
+    }, [watchStartDate, watchBillingCycle, setValue])
+
     const onSubmit = async (formData: SubscriptionFormValues) => {
         try {
             setIsSubmitting(true)
@@ -145,6 +193,8 @@ const NewSubscriptionView = () => {
                 planId: formData.planId,
                 tenantId: formData.tenantId,
                 billingCycle: formData.billingCycle,
+                startDate: formData.startDate,
+                endDate: formData.endDate,
                 isAutoRenew: formData.isAutoRenew,
                 customModuleIds: customizeModules ? formData.customModuleIds : undefined,
                 customAiTokensLimit: customizeLimits ? formData.customAiTokensLimit : undefined,
@@ -251,7 +301,7 @@ const NewSubscriptionView = () => {
                                             name='billingCycle'
                                             control={control}
                                             render={({ field }) => (
-                                                <FormControl fullWidth>
+                                                <FormControl fullWidth error={!!errors.billingCycle}>
                                                     <InputLabel>Ciclo de Facturación</InputLabel>
                                                     <Select {...field} label='Ciclo de Facturación'>
                                                         <MenuItem value={BillingCycle.MONTHLY}>Mensual</MenuItem>
@@ -260,7 +310,46 @@ const NewSubscriptionView = () => {
                                                         <MenuItem value={BillingCycle.ANNUAL}>Anual</MenuItem>
                                                         <MenuItem value={BillingCycle.CUSTOM}>Personalizado</MenuItem>
                                                     </Select>
+                                                    {errors.billingCycle && (
+                                                        <Typography variant='caption' color='error'>
+                                                            {errors.billingCycle.message}
+                                                        </Typography>
+                                                    )}
                                                 </FormControl>
+                                            )}
+                                        />
+                                    </Grid>
+
+                                    <Grid item xs={12} sm={6}>
+                                        <Controller
+                                            name='startDate'
+                                            control={control}
+                                            render={({ field }) => (
+                                                <CustomTextField
+                                                    {...field}
+                                                    fullWidth
+                                                    type='date'
+                                                    label='Fecha de Inicio'
+                                                    error={!!errors.startDate}
+                                                    helperText={errors.startDate?.message}
+                                                />
+                                            )}
+                                        />
+                                    </Grid>
+
+                                    <Grid item xs={12} sm={6}>
+                                        <Controller
+                                            name='endDate'
+                                            control={control}
+                                            render={({ field }) => (
+                                                <CustomTextField
+                                                    {...field}
+                                                    fullWidth
+                                                    type='date'
+                                                    label='Fecha de Fin'
+                                                    error={!!errors.endDate}
+                                                    helperText={errors.endDate?.message}
+                                                />
                                             )}
                                         />
                                     </Grid>
