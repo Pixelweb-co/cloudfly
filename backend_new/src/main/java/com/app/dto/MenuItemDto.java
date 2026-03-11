@@ -21,4 +21,5 @@ public class MenuItemDto {
     private Boolean isSection;
     private String sectionTitle;
     private String moduleCode;
+    private Integer displayOrder;
 }
