@@ -9,6 +9,8 @@ import com.app.persistence.entity.UserEntity;
 import com.app.persistence.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.app.dto.UserDto;
+import com.app.persistence.services.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -28,6 +30,7 @@ public class CustomerController {
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionModuleRepository subscriptionModuleRepository;
     private final PlanModuleRepository planModuleRepository;
+    private final UserService userService;
 
     @GetMapping
     public Flux<CustomerDto> getAllCustomers() {
@@ -63,7 +66,7 @@ public class CustomerController {
     }
 
     @PostMapping("/account-setup")
-    public Mono<ResponseEntity<UserEntity>> accountSetup(@RequestBody AccountSetupRequest request) {
+    public Mono<ResponseEntity<UserDto>> accountSetup(@RequestBody AccountSetupRequest request) {
         log.info("Account setup request for user: {}", request.getUserId());
 
         return userRepository.findById(request.getUserId())
@@ -95,7 +98,7 @@ public class CustomerController {
                                 user.setCustomerId(savedTenant.getId());
                                 return userRepository.save(user)
                                         .flatMap(savedUser -> handleAutomaticSubscription(savedTenant.getId())
-                                                .thenReturn(savedUser));
+                                                .then(userService.convertToDto(savedUser)));
                             });
                 })
                 .map(ResponseEntity::ok)
