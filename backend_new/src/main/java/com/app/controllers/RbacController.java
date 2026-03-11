@@ -13,6 +13,8 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -116,8 +118,8 @@ public class RbacController {
             if (menuItemsJson != null && !menuItemsJson.isEmpty()) {
                 try {
                     // Convertir el JSON de menu_items a una lista de MenuItemDto
-                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                    List<MenuItemDto> children = mapper.readValue(menuItemsJson, new com.fasterxml.jackson.databind.TypeReference<List<MenuItemDto>>(){});
+                    ObjectMapper mapper = new ObjectMapper();
+                    List<MenuItemDto> children = mapper.readValue(menuItemsJson, new TypeReference<List<MenuItemDto>>(){});
                     
                     menu.add(MenuItemDto.builder()
                             .label(module.getName())
