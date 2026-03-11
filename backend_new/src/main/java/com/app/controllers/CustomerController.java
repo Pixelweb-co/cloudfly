@@ -2,10 +2,11 @@ package com.app.controllers;
 
 import com.app.dto.AccountSetupRequest;
 import com.app.dto.CustomerDto;
+import com.app.persistence.entity.SubscriptionEntity;
+import com.app.persistence.entity.SubscriptionModuleEntity;
 import com.app.persistence.entity.TenantEntity;
 import com.app.persistence.entity.UserEntity;
-import com.app.persistence.repository.TenantRepository;
-import com.app.persistence.repository.UserRepository;
+import com.app.persistence.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
