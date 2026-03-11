@@ -114,18 +114,21 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
           setSuccess(true)
           setError(null)
 
+          // Redirección por roles
+          const roles = user?.roles || []
+          const hasRole = (role: string) => roles.some((r: any) => (r.name || r.role) === role)
+
+          if (hasRole('MANAGER') || hasRole('SUPERADMIN') || hasRole('USER')) {
+            router.push('/home')
+            return true
+          }
+
           if (!user?.customer) {
             router.push('/account-setup')
             return false
           }
 
-          // Redirección por roles
-          const roles = user?.roles || []
-          const hasRole = (role: string) => roles.some((r: any) => (r.name || r.role) === role)
-
-          if (hasRole('MANAGER')) {
-            router.push('/home/dashboard')
-          } else if (hasRole('MANAGER') || hasRole('ADMIN')) {
+          if (hasRole('ADMIN')) {
             router.push('/home')
           } else if (hasRole('USER') || hasRole('BIOMEDICAL') || hasRole('BIOEDICAL')) {
             router.push('/accounts/user/view')

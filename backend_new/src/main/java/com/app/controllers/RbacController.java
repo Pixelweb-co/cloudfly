@@ -41,14 +41,14 @@ public class RbacController {
                             .map(a -> a.replace("ROLE_", ""))
                             .collect(Collectors.toList());
 
-                    return getActiveModuleCodes(auth.getName())
+                    return getActiveModuleCodes(auth.getName(), roles)
                             .flatMap(modules -> {
                                 List<MenuItemDto> menu = generateFilteredMenu(roles, modules);
                                 
                                 UserPermissionsDto permissionsDto = UserPermissionsDto.builder()
                                         .username(auth.getName())
                                         .roles(roles)
-                                        .permissions(Set.of("dashboard.view", "customers.view", "customers.create"))
+                                        .permissions(Set.of("dashboard.view", "customers.view", "customers.create", "settings.all"))
                                         .modules(modules)
                                         .menu(menu)
                                         .build();
@@ -68,7 +68,7 @@ public class RbacController {
                             .map(a -> a.replace("ROLE_", ""))
                             .collect(Collectors.toList());
 
-                    return getActiveModuleCodes(auth.getName())
+                    return getActiveModuleCodes(auth.getName(), roles)
                             .map(modules -> {
                                 List<MenuItemDto> menu = generateFilteredMenu(roles, modules);
                                 return ResponseEntity.ok(menu);
@@ -76,7 +76,16 @@ public class RbacController {
                 });
     }
 
-    private Mono<List<String>> getActiveModuleCodes(String username) {
+    private Mono<List<String>> getActiveModuleCodes(String username, List<String> roles) {
+        boolean isManager = roles.stream().anyMatch(r -> r.equals("MANAGER") || r.equals("SUPERADMIN"));
+        
+        if (isManager) {
+            log.info("User {} is MANAGER/SUPERADMIN - Granting all modules", username);
+            return moduleRepository.findAll()
+                    .map(ModuleEntity::getCode)
+                    .collectList();
+        }
+
         return userRepository.findByUsername(username)
                 .flatMap(user -> {
                     if (user.getCustomerId() == null) {

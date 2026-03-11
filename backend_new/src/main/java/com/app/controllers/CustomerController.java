@@ -23,6 +23,10 @@ public class CustomerController {
 
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
+    private final PlanRepository planRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final SubscriptionModuleRepository subscriptionModuleRepository;
+    private final PlanModuleRepository planModuleRepository;
 
     @GetMapping
     public Flux<CustomerDto> getAllCustomers() {
@@ -88,10 +92,43 @@ public class CustomerController {
                     return tenantRepository.save(tenant)
                             .flatMap(savedTenant -> {
                                 user.setCustomerId(savedTenant.getId());
-                                return userRepository.save(user);
+                                return userRepository.save(user)
+                                        .flatMap(savedUser -> handleAutomaticSubscription(savedTenant.getId())
+                                                .thenReturn(savedUser));
                             });
                 })
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    private Mono<Void> handleAutomaticSubscription(Long customerId) {
+        log.info("Creating automatic free subscription for customer: {}", customerId);
+        return planRepository.findByIsFreeTrue()
+                .next()
+                .flatMap(freePlan -> {
+                    SubscriptionEntity subscription = SubscriptionEntity.builder()
+                            .planId(freePlan.getId())
+                            .customerId(customerId)
+                            .status("ACTIVE")
+                            .billingCycle("MONTHLY")
+                            .startDate(LocalDateTime.now())
+                            .endDate(LocalDateTime.now().plusDays(freePlan.getDurationDays() != null ? freePlan.getDurationDays() : 365))
+                            .aiTokensLimit(freePlan.getAiTokensLimit())
+                            .usersLimit(freePlan.getUsersLimit())
+                            .monthlyPrice(java.math.BigDecimal.ZERO)
+                            .createdAt(LocalDateTime.now())
+                            .updatedAt(LocalDateTime.now())
+                            .build();
+
+                    return subscriptionRepository.save(subscription)
+                            .flatMap(savedSub -> planModuleRepository.findByPlanId(freePlan.getId())
+                                    .map(pm -> SubscriptionModuleEntity.builder()
+                                            .subscriptionId(savedSub.getId())
+                                            .moduleId(pm.getModuleId())
+                                            .build())
+                                    .collectList()
+                                    .flatMapMany(subscriptionModuleRepository::saveAll)
+                                    .then());
+                });
     }
 }
