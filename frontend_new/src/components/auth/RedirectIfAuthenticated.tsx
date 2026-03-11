@@ -14,7 +14,7 @@ const RedirectIfAuthenticated = () => {
             const jwt = localStorage.getItem('jwt')
             const userData = localStorage.getItem('userData')
 
-            if (jwt && userData) {
+            if (jwt && jwt !== 'undefined' && userData) {
                 console.log('Usuario ya autenticado, redirigiendo a /home')
                 router.replace('/home')
             }
