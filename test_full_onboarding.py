@@ -147,20 +147,29 @@ class OnboardingTest:
         self.wait.until(EC.presence_of_element_located((By.NAME, "name"))).send_keys("Empresa Test E2E")
         self.driver.find_element(By.NAME, "nit").send_keys("900.123.456-1")
         self.driver.find_element(By.NAME, "phone").send_keys("3001234567")
+        
+        # Debemos llenar todos los campos requeridos en el frontend
+        self.driver.find_element(By.NAME, "email").send_keys(self.test_email)
+        self.driver.find_element(By.NAME, "address").send_keys("Calle Falsa 123")
+        self.driver.find_element(By.NAME, "contact").send_keys("Juan Pérez")
+        self.driver.find_element(By.NAME, "position").send_keys("Gerente")
+        
+        # Seleccionar tipo de negocio (clic en el primer card)
+        try:
+            beauty_salon_card = self.driver.find_element(By.XPATH, "//*[contains(text(), 'Salón de Belleza')]")
+            beauty_salon_card.click()
+        except:
+            logger.warning("No se pudo seleccionar tipo de negocio explícitamente.")
+
+        self.driver.find_element(By.NAME, "objetoSocial").send_keys("Descripción de prueba para el negocio E2E.")
+        
         self.take_screenshot("wizard_step_1_filled")
         self.driver.find_element(By.XPATH, "//button[contains(text(), 'Siguiente')]").click()
         
-        # Paso 2: WhatsApp (Omitir/Continuar)
-        logger.info("Omitiendo paso de WhatsApp...")
-        time.sleep(2)
-        self.take_screenshot("wizard_step_2")
-        self.wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Continuar')]"))).click()
-        
-        # Paso 3: Productos (Finalizar)
-        logger.info("Finalizando Onboarding...")
-        time.sleep(2)
-        self.take_screenshot("wizard_step_3")
-        self.wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Finalizar')]"))).click()
+        logger.info("Esperando redirección final a /home...")
+        time.sleep(5)
+        self.wait.until(EC.url_contains("/home"))
+        logger.info("Onboarding finalizado correctamente.")
 
     def run_fase_4_verificar_menu(self):
         logger.info("--- FASE 4: VERIFICACIÓN DE DASHBOARD Y MENÚ ---")

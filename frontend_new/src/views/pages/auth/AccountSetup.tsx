@@ -64,8 +64,8 @@ const AccountSetup = () => {
   }
 
   const handleCustomerSuccess = (customerData: any) => {
-    // Cuando se crea el customer exitosamente, avanzar al siguiente paso
-    handleNext()
+    // Una vez configurado el negocio, redirigir directamente al home según el nuevo flujo
+    router.push('/home')
   }
 
   const renderStepContent = (step: number) => {
