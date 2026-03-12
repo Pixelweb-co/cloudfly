@@ -85,11 +85,14 @@ public class KafkaConsumerListener {
 
     @KafkaListener(topics = "welcome-notifications", groupId = "notification-service-welcome")
     public void consumeWelcomeNotification(String messageJson) {
+        LOGGER.info("Received message from welcome-notifications topic: " + messageJson);
         try {
             WelcomeNotificationMessage message = objectMapper.readValue(messageJson, WelcomeNotificationMessage.class);
-            LOGGER.info("Processing welcome notification for: " + message.getCustomerName());
+            LOGGER.info("Processing welcome notification for: " + message.getCustomerName() + " to phone: " + message.getPhoneNumber());
 
             String formattedPhone = formatPhoneNumber(message.getPhoneNumber());
+            LOGGER.info("Formatted phone number: " + formattedPhone);
+
             String welcomeCaption = String.format(
                 "🚀 *¡Bienvenido a CloudFly!* 🚀\n\n" +
                 "Hola %s,\n\n" +
@@ -111,21 +114,23 @@ public class KafkaConsumerListener {
             // Usamos la instancia específica para notificaciones de bienvenida
             String instanceId = "54DC1F63C38C-4F66-BCA6-0EBE8E786C09";
             
+            LOGGER.info("Sending welcome WhatsApp using instance: " + instanceId);
             boolean sent = sendWhatsAppTextWithInstance(formattedPhone, welcomeCaption, instanceId);
 
             if (sent)
-                LOGGER.info("Welcome WhatsApp sent to " + formattedPhone);
+                LOGGER.info("Welcome WhatsApp successfully sent to " + formattedPhone);
             else
-                LOGGER.error("Failed to send Welcome WhatsApp to " + formattedPhone);
+                LOGGER.error("Failed to send Welcome WhatsApp to " + formattedPhone + ". Check previous logs for API error.");
 
         } catch (Exception e) {
-            LOGGER.error("Error consuming welcome notification: ", e);
+            LOGGER.error("Error consuming welcome notification message: ", e);
         }
     }
 
     private boolean sendWhatsAppTextWithInstance(String phoneNumber, String message, String specificInstance) {
         try {
             String url = evolutionApiUrl + "/message/sendText/" + specificInstance;
+            LOGGER.info("Post to Evolution API URL: " + url);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -138,9 +143,17 @@ public class KafkaConsumerListener {
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
             ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
 
+            LOGGER.info("Evolution API Response Status: " + response.getStatusCode());
+            LOGGER.info("Evolution API Response Body: " + response.getBody());
+
             return response.getStatusCode().is2xxSuccessful();
         } catch (Exception e) {
-            LOGGER.error("Error sending text WhatsApp with instance " + specificInstance + ": " + e.getMessage());
+            String errorMessage = e.getMessage();
+            if (e instanceof org.springframework.web.client.HttpStatusCodeException) {
+                errorMessage = "Status: " + ((org.springframework.web.client.HttpStatusCodeException) e).getStatusCode() + 
+                               " Body: " + ((org.springframework.web.client.HttpStatusCodeException) e).getResponseBodyAsString();
+            }
+            LOGGER.error("Error sending text WhatsApp with instance " + specificInstance + ": " + errorMessage);
             return false;
         }
     }
