@@ -84,6 +84,7 @@ services:
       - SPRING_PROFILES_ACTIVE=production
     networks:
       - kafka-net
+      - app-net
     depends_on:
       - kafka
 
