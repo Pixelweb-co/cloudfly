@@ -92,8 +92,11 @@ public class CustomerController {
                 "businessType", form.getBusinessType()
             );
             String jsonMessage = objectMapper.writeValueAsString(welcomeMsg);
+            System.out.println("DEBUG: Sending welcome notification to Kafka: " + jsonMessage);
             kafkaTemplate.send("welcome-notifications", jsonMessage);
+            System.out.println("DEBUG: Welcome notification sent to Kafka topic: welcome-notifications");
         } catch (Exception e) {
+            System.err.println("DEBUG: Error sending welcome notification: " + e.getMessage());
             e.printStackTrace();
             // No bloqueamos el flujo principal si falla la notificación
         }
