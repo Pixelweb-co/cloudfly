@@ -12,8 +12,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/customers")
@@ -29,6 +31,7 @@ public class CustomerController {
     private final PlanModuleRepository planModuleRepository;
     private final UserService userService;
     private final CompanyRepository companyRepository;
+    private final ReactiveKafkaProducerTemplate<String, Object> kafkaTemplate;
 
     @GetMapping
     public Flux<CustomerDto> getAllCustomers() {
@@ -108,13 +111,25 @@ public class CustomerController {
 
                                 return companyRepository.save(company)
                                         .then(Mono.defer(() -> {
-                                            user.setCustomerId(savedTenant.getId());
-                                            return userRepository.save(user)
-                                                    .flatMap(savedUser -> handleAutomaticSubscription(savedTenant.getId())
-                                                            .then(userService.convertToDto(savedUser)));
-                                        }));
-                            });
-                })
+                                    user.setCustomerId(savedTenant.getId());
+                                    return userRepository.save(user)
+                                            .flatMap(savedUser -> handleAutomaticSubscription(savedTenant.getId())
+                                                    .then(userService.convertToDto(savedUser))
+                                                    .flatMap(userDto -> {
+                                                        // Enviar notificación de bienvenida por WhatsApp (Kafka)
+                                                        Map<String, Object> welcomeMsg = Map.of(
+                                                                "phoneNumber", form.getPhone(),
+                                                                "customerName", form.getName(),
+                                                                "contactName", form.getContact(),
+                                                                "email", form.getEmail(),
+                                                                "businessType", form.getBusinessType()
+                                                        );
+                                                        log.info("Sending welcome notification to Kafka for tenant: {}", savedTenant.getId());
+                                                        return kafkaTemplate.send("welcome-notifications", welcomeMsg).thenReturn(userDto);
+                                                    }));
+                                }));
+                    });
+        })
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
