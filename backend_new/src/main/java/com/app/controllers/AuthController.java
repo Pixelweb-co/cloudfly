@@ -80,7 +80,6 @@ public class AuthController {
                                             .user(userDto)
                                             .build());
                         })
-                        })
                         .switchIfEmpty(Mono.defer(() -> {
                             // Public registration: check if USER role is requested
                             if (registerRequest.getRoles() != null && registerRequest.getRoles().contains("USER")) {
