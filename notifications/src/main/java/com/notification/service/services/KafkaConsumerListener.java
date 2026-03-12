@@ -112,10 +112,11 @@ public class KafkaConsumerListener {
                 message.getBusinessType());
 
             // Usamos la instancia específica para notificaciones de bienvenida
-            String instanceId = "f6100096-d93d-4c0f-8d7c-d921d49717a7";
+            String instanceId = "cloudfly_chatbot1";
+            String apiKey = "54DC1F63C38C-4F66-BCA6-0EBE8E786C09";
             
             LOGGER.info("Sending welcome WhatsApp using instance: " + instanceId);
-            boolean sent = sendWhatsAppTextWithInstance(formattedPhone, welcomeCaption, instanceId);
+            boolean sent = sendWhatsAppTextWithInstance(formattedPhone, welcomeCaption, instanceId, apiKey);
 
             if (sent)
                 LOGGER.info("Welcome WhatsApp successfully sent to " + formattedPhone);
@@ -127,14 +128,14 @@ public class KafkaConsumerListener {
         }
     }
 
-    private boolean sendWhatsAppTextWithInstance(String phoneNumber, String message, String specificInstance) {
+    private boolean sendWhatsAppTextWithInstance(String phoneNumber, String message, String specificInstance, String apiKey) {
         try {
             String url = evolutionApiUrl + "/message/sendText/" + specificInstance;
             LOGGER.info("Post to Evolution API URL: " + url);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("apikey", evolutionApiKey);
+            headers.set("apikey", apiKey);
 
             Map<String, Object> body = new HashMap<>();
             body.put("number", phoneNumber);
