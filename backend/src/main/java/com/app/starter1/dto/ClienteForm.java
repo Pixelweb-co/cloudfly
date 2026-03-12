@@ -13,4 +13,5 @@ public class ClienteForm {
     private String position;
     private String status;
     private String type;
+    private String businessType;
 }
