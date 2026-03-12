@@ -1,6 +1,6 @@
 package com.app.dto;
 
-import com.app.persistence.entity.CustomerEntity;
+import com.app.persistence.entity.TenantEntity;
 import com.app.persistence.entity.RoleEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,6 +29,6 @@ public class UserDto {
 
     // Enriquecido
     private List<RoleEntity> roles;
-    private CustomerEntity customer;
+    private TenantEntity tenant;
     private boolean hasActiveSubscription;
 }
