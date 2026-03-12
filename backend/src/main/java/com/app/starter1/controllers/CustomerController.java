@@ -5,15 +5,17 @@ import com.app.starter1.persistence.entity.Customer;
 import com.app.starter1.persistence.entity.UserEntity;
 import com.app.starter1.persistence.repository.CustomerRepository;
 import com.app.starter1.persistence.repository.UserRepository;
+import com.app.starter1.persistence.services.ChatbotService;
 import com.app.starter1.persistence.services.CustomerService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +31,9 @@ public class CustomerController {
 
     @Autowired
     UserRepository userRepository;
+
+    @Autowired
+    private ChatbotService chatbotService;
 
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
@@ -82,15 +87,25 @@ public class CustomerController {
         user.setCustomer(customer);
         UserEntity userSaved = userRepository.save(user);
 
+        // Activar chatbot dedicado para el tenant e incluirlo en la notificación
+        String dedicatedInstance = "cloudfly_" + customer.getId();
+        try {
+            System.out.println("DEBUG: Activating dedicated chatbot instance: " + dedicatedInstance);
+            chatbotService.activateChatbot(customer.getId());
+        } catch (Exception e) {
+            System.err.println("DEBUG: Error activating dedicated chatbot (will use shared fallback): " + e.getMessage());
+        }
+
         // Enviar notificación de bienvenida por WhatsApp (Kafka)
         try {
-            Map<String, Object> welcomeMsg = Map.of(
-                "phoneNumber", form.getPhone(),
-                "customerName", form.getName(),
-                "contactName", form.getContact(),
-                "email", form.getEmail(),
-                "businessType", form.getBusinessType()
-            );
+            Map<String, Object> welcomeMsg = new HashMap<>();
+            welcomeMsg.put("phoneNumber", form.getPhone());
+            welcomeMsg.put("customerName", form.getName());
+            welcomeMsg.put("contactName", form.getContact());
+            welcomeMsg.put("email", form.getEmail());
+            welcomeMsg.put("businessType", form.getBusinessType());
+            welcomeMsg.put("instanceName", dedicatedInstance);
+
             String jsonMessage = objectMapper.writeValueAsString(welcomeMsg);
             System.out.println("DEBUG: Sending welcome notification to Kafka: " + jsonMessage);
             kafkaTemplate.send("welcome-notifications", jsonMessage);
