@@ -80,10 +80,8 @@ public class AuthController {
                                             .user(userDto)
                                             .build());
                         })
-                        .defaultIfEmpty(null) // Handle unauthenticated (public) case
-                        .flatMap(response -> {
-                            if (response != null) return Mono.just(response);
-                            
+                        })
+                        .switchIfEmpty(Mono.defer(() -> {
                             // Public registration: check if USER role is requested
                             if (registerRequest.getRoles() != null && registerRequest.getRoles().contains("USER")) {
                                 return Mono.just(AuthResponse.builder()
@@ -100,7 +98,7 @@ public class AuthController {
                                             .status(true)
                                             .user(userDto)
                                             .build());
-                        });
+                        }));
         }
 
         @GetMapping("/verify")
