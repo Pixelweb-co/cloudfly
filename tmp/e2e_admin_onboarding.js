@@ -143,38 +143,70 @@ async function runAdminOnboarding() {
         await waitAndType(driver, By.name('name'),         'Empresa E2E Test');
         await waitAndType(driver, By.name('nit'),          '900123456-1');
         await waitAndType(driver, By.name('phone'),        PHONE_WA);
+        // ⚠️ email es REQUERIDO por la validación Yup — sin él el form no se puede enviar
+        await waitAndType(driver, By.name('email'),        `empresa_${timestamp}@testcloudfly.com`);
         await waitAndType(driver, By.name('address'),      'Calle 123 # 45-67');
         await waitAndType(driver, By.name('contact'),      'Admin Test');
         await waitAndType(driver, By.name('position'),     'Gerente General');
 
-        // Tipo de negocio
+        // businessType es un card selector React (field.onChange), usamos JS click para asegurar
+        console.log('   Seleccionando tipo de negocio...');
         try {
-            const bizType = await driver.findElement(
+            const bizCard = await driver.findElement(
                 By.xpath("//*[contains(text(),'Salón de Belleza')]")
             );
-            await bizType.click();
+            await driver.executeScript("arguments[0].click();", bizCard);
             console.log('   ✅ Tipo de negocio seleccionado: Salón de Belleza');
-        } catch (_) {
-            console.log('   ⚠️  No se encontró el selector de tipo de negocio - continuando...');
+        } catch (e) {
+            console.log('   ⚠️  No se encontró el selector de tipo de negocio:', e.message);
         }
 
         await waitAndType(
             driver, By.name('objetoSocial'),
-            'Empresa dedicada a la prestación de servicios de belleza y bienestar personal'
+            'Empresa dedicada a la prestación de servicios de belleza y bienestar personal con atención 24h.'
         );
 
         await takeScreenshot(driver, '08_wizard_negocio_lleno', timestamp);
 
-        console.log('   🔔 Enviando datos → Backend creará Tenant y emitirá welcome-notifications → WhatsApp');
-        await waitAndClick(driver, By.css('button[type="submit"]'));
-        await driver.sleep(6000); // Esperar Kafka + Evolution API
-        await takeScreenshot(driver, '09_wizard_post_submit', timestamp);
-        console.log('   ✅ Account Setup enviado (notificación WhatsApp en camino)');
+        console.log('   🔔 Enviando datos del Negocio → POST /customers/account-setup → Kafka welcome-notifications → WhatsApp ✉️');
+        // El botón submit del FormCustomer dice "Siguiente"
+        await waitAndClick(driver, By.xpath("//button[@type='submit']"));
+        
+        // Esperar a que se procese la respuesta (Kafka + WhatsApp puede tomar 3-5 segundos)
+        await driver.sleep(6000);
+        await takeScreenshot(driver, '09_post_account_setup', timestamp);
+        console.log('   ✅ Account Setup enviado correctamente');
 
-        // ── Paso 2 & 3 son opcionales (Chatbot / Productos) ────────────
-        // El backend ya procesó el evento. Verificamos si llegamos al paso siguiente.
-        const currentUrl = await driver.getCurrentUrl();
-        console.log(`   📍 URL actual: ${currentUrl}`);
+        // ── Paso 2: Chatbot WhatsApp ────────────────────────────────────
+        console.log('   [Paso 3/4] Configuración Chatbot WhatsApp');
+        // Hay un botón "Configurar más tarde" para omitir este paso en tests
+        try {
+            const skipBtn = await driver.wait(
+                until.elementLocated(By.xpath("//*[contains(text(),'Configurar más tarde') or contains(text(),'Configurar mas tarde')]")),
+                8000
+            );
+            await driver.executeScript("arguments[0].click();", skipBtn);
+            console.log('   ✅ Chatbot omitido (Configurar más tarde) — proceso de chatbot puede activarse manualmente después');
+        } catch (_) {
+            console.log('   ℹ️  Botón "Configurar más tarde" no encontrado, avanzando...');
+        }
+
+        await driver.sleep(2000);
+        await takeScreenshot(driver, '10_post_chatbot', timestamp);
+
+        // ── Paso 3: Productos (puede tener botón Finalizar) ─────────────
+        console.log('   [Paso 4/4] Productos / Finalizar');
+        try {
+            const finishBtn = await driver.wait(
+                until.elementLocated(By.xpath("//button[contains(text(),'Finalizar')]")),
+                8000
+            );
+            await driver.executeScript("arguments[0].click();", finishBtn);
+            console.log('   ✅ Wizard finalizado');
+        } catch (_) {
+            // Si no aparece el botón, puede haber redirigido a /home directamente
+            console.log('   ℹ️  Botón Finalizar no encontrado - puede que ya redirigió a /home');
+        }
 
         // ─── FASE 5: DASHBOARD ────────────────────────────────────────────
         console.log('\n── FASE 5: DASHBOARD ─────────────────────────────────');
