@@ -112,7 +112,7 @@ public class KafkaConsumerListener {
                 message.getBusinessType());
 
             // Usamos la instancia específica para notificaciones de bienvenida
-            String instanceId = "54DC1F63C38C-4F66-BCA6-0EBE8E786C09";
+            String instanceId = "f6100096-d93d-4c0f-8d7c-d921d49717a7";
             
             LOGGER.info("Sending welcome WhatsApp using instance: " + instanceId);
             boolean sent = sendWhatsAppTextWithInstance(formattedPhone, welcomeCaption, instanceId);
