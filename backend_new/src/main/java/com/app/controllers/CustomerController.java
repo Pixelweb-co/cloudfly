@@ -117,12 +117,14 @@ public class CustomerController {
                                                     .then(userService.convertToDto(savedUser))
                                                     .flatMap(userDto -> {
                                                         // Enviar notificación de bienvenida por WhatsApp (Kafka)
+                                                        String instanceName = "cloudfly_" + user.getUsername().toLowerCase().replaceAll("[^a-z0-9]", "_");
                                                         Map<String, Object> welcomeMsg = Map.of(
                                                                 "phoneNumber", form.getPhone(),
                                                                 "customerName", form.getName(),
                                                                 "contactName", form.getContact(),
                                                                 "email", form.getEmail(),
-                                                                "businessType", form.getBusinessType()
+                                                                "businessType", form.getBusinessType(),
+                                                                "instanceName", instanceName
                                                         );
                                                         log.info("Sending welcome notification to Kafka for tenant: {}", savedTenant.getId());
                                                         return kafkaTemplate.send("welcome-notifications", welcomeMsg).thenReturn(userDto);
