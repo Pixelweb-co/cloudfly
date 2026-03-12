@@ -114,6 +114,124 @@ services:
     networks:
       - app-net
 
+  redis:
+    image: redis:latest
+    container_name: redis_server
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - app-net
+    environment:
+      REDIS_PASSWORD: Elian2020#
+  
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: always
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    environment:
+      TZ: America/Bogota
+    networks:
+      - app-net
+
+
+  postgresql:
+    image: pgvector/pgvector:pg15
+    container_name: postgres_server
+    restart: always
+    environment:
+      POSTGRES_DB: chatbotdb
+      POSTGRES_USER: chatbot_user
+      POSTGRES_PASSWORD: chatbot_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
+
+
+  # ====================
+  # EVOLUTION API (WhatsApp)
+  # ====================
+
+  evolution-api:
+    image: evoapicloud/evolution-api:latest
+    container_name: evolution_api
+    restart: always
+    ports:
+      - "8082:8080"  # Puerto para acceso local/desarrollo
+    env_file:
+      - .env
+    volumes:
+      - evolution_instances:/evolution/instances
+    networks:
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.eapi.rule=Host(`eapi.cloudfly.com.co`)"
+      - "traefik.http.routers.eapi.entrypoints=websecure"
+      - "traefik.http.routers.eapi.tls.certresolver=le"
+      - "traefik.http.services.eapi.loadbalancer.server.port=8080"
+  
+  
+  chat-socket-service:
+    build:
+      context: ./chat-socket-service
+      dockerfile: Dockerfile
+    container_name: chat_socket
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3001
+      - FRONTEND_URL=${FRONTEND_URL:-https://dashboard.cloudfly.com.co}
+      - JAVA_API_URL=${JAVA_API_URL:-https://api.cloudfly.com.co}
+      - JWT_SECRET=${JWT_SECRET}
+      - N8N_SECRET_KEY=${N8N_SECRET_KEY}
+    networks:
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chatsocket.rule=Host(`chat.cloudfly.com.co`)"
+      - "traefik.http.routers.chatsocket.entrypoints=websecure"
+      - "traefik.http.routers.chatsocket.tls.certresolver=le"
+      - "traefik.http.services.chatsocket.loadbalancer.server.port=3001"
+
+  # ====================
+  # N8N (Automatización)
+  # ====================
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8nserver.com
+    restart: always
+    environment:
+      - N8N_HOST=autobot.cloudfly.com.co
+      - N8N_PROTOCOL=https
+      - N8N_PORT=5678
+      - WEBHOOK_URL=https://autobot.cloudfly.com.co/
+      - N8N_EDITOR_BASE_URL=https://autobot.cloudfly.com.co
+      - NODE_ENV=production
+      - N8N_SECURE_COOKIE=true
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`autobot.cloudfly.com.co`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls.certresolver=le"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+
   traefik:
     image: traefik:v2.11
     container_name: traefik
@@ -143,6 +261,10 @@ services:
 volumes:
   persistent_master:
   traefik_certs:
+  postgres_data:
+  portainer_data:
+  evolution_instances:
+  n8n_data:
 
 networks:
   app-net:
