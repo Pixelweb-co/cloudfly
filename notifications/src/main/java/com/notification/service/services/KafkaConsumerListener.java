@@ -3,6 +3,7 @@ package com.notification.service.services;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.notification.service.dto.NotificationMessage;
 import com.notification.service.dto.PayrollNotificationMessage;
+import com.notification.service.dto.WelcomeNotificationMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,6 +80,68 @@ public class KafkaConsumerListener {
 
         } catch (Exception e) {
             LOGGER.error("Error consuming payroll notification: ", e);
+        }
+    }
+
+    @KafkaListener(topics = "welcome-notifications", groupId = "notification-service-welcome")
+    public void consumeWelcomeNotification(String messageJson) {
+        try {
+            WelcomeNotificationMessage message = objectMapper.readValue(messageJson, WelcomeNotificationMessage.class);
+            LOGGER.info("Processing welcome notification for: " + message.getCustomerName());
+
+            String formattedPhone = formatPhoneNumber(message.getPhoneNumber());
+            String welcomeCaption = String.format(
+                "🚀 *¡Bienvenido a CloudFly!* 🚀\n\n" +
+                "Hola %s,\n\n" +
+                "Es un gusto saludarte. Hemos completado el flujo de configuración de tu cuenta exitosamente.\n\n" +
+                "📝 *Detalles del Registro:*\n" +
+                "🏢 *Empresa:* %s\n" +
+                "👤 *Contacto:* %s\n" +
+                "📧 *Email:* %s\n" +
+                "💼 *Tipo de Negocio:* %s\n\n" +
+                "¡Estamos emocionados de acompañarte en el crecimiento de tu negocio!\n\n" +
+                "Si necesitas ayuda, nuestro equipo de soporte está listo para asistirte.\n\n" +
+                "_Mensaje enviado automáticamente_",
+                message.getContactName(),
+                message.getCustomerName(),
+                message.getContactName(),
+                message.getEmail(),
+                message.getBusinessType());
+
+            // Usamos la instancia específica para notificaciones de bienvenida
+            String instanceId = "54DC1F63C38C-4F66-BCA6-0EBE8E786C09";
+            
+            boolean sent = sendWhatsAppTextWithInstance(formattedPhone, welcomeCaption, instanceId);
+
+            if (sent)
+                LOGGER.info("Welcome WhatsApp sent to " + formattedPhone);
+            else
+                LOGGER.error("Failed to send Welcome WhatsApp to " + formattedPhone);
+
+        } catch (Exception e) {
+            LOGGER.error("Error consuming welcome notification: ", e);
+        }
+    }
+
+    private boolean sendWhatsAppTextWithInstance(String phoneNumber, String message, String specificInstance) {
+        try {
+            String url = evolutionApiUrl + "/message/sendText/" + specificInstance;
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("apikey", evolutionApiKey);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("number", phoneNumber);
+            body.put("text", message);
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
+
+            return response.getStatusCode().is2xxSuccessful();
+        } catch (Exception e) {
+            LOGGER.error("Error sending text WhatsApp with instance " + specificInstance + ": " + e.getMessage());
+            return false;
         }
     }
 

@@ -9,7 +9,9 @@ import com.app.starter1.persistence.services.CustomerService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -27,6 +29,12 @@ public class CustomerController {
 
     @Autowired
     UserRepository userRepository;
+
+    @Autowired
+    private KafkaTemplate<String, String> kafkaTemplate;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @PostMapping
     public ResponseEntity<?> createClienteYContrato(@RequestBody ClienteContratoRequest request) {
@@ -73,6 +81,22 @@ public class CustomerController {
         customer = customerRepository.save(customer);
         user.setCustomer(customer);
         UserEntity userSaved = userRepository.save(user);
+
+        // Enviar notificación de bienvenida por WhatsApp (Kafka)
+        try {
+            Map<String, Object> welcomeMsg = Map.of(
+                "phoneNumber", form.getPhone(),
+                "customerName", form.getName(),
+                "contactName", form.getContact(),
+                "email", form.getEmail(),
+                "businessType", form.getBusinessType()
+            );
+            String jsonMessage = objectMapper.writeValueAsString(welcomeMsg);
+            kafkaTemplate.send("welcome-notifications", jsonMessage);
+        } catch (Exception e) {
+            e.printStackTrace();
+            // No bloqueamos el flujo principal si falla la notificación
+        }
 
         return ResponseEntity.ok(userSaved);
     }
