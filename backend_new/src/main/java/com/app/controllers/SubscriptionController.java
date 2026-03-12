@@ -3,6 +3,9 @@ package com.app.controllers;
 import com.app.dto.SubscriptionResponse;
 import com.app.persistence.entity.SubscriptionEntity;
 import com.app.persistence.entity.SubscriptionModuleEntity;
+import com.app.persistence.entity.PlanEntity;
+import com.app.persistence.entity.TenantEntity;
+import com.app.persistence.entity.ModuleEntity;
 import com.app.persistence.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +28,7 @@ public class SubscriptionController {
     private final SubscriptionModuleRepository subscriptionModuleRepository;
     private final PlanRepository planRepository;
     private final ModuleRepository moduleRepository;
-    private final CustomerRepository customerRepository;
+    private final TenantRepository tenantRepository;
 
     @GetMapping
     public Flux<SubscriptionResponse> getAllSubscriptions() {
@@ -135,20 +138,20 @@ public class SubscriptionController {
 
     private Mono<SubscriptionResponse> mapToResponse(SubscriptionEntity entity) {
         return Mono.zip(
-                planRepository.findById(entity.getPlanId()).defaultIfEmpty(new com.app.persistence.entity.PlanEntity()),
-                customerRepository.findById(entity.getCustomerId()).defaultIfEmpty(new com.app.persistence.entity.CustomerEntity()),
+                planRepository.findById(entity.getPlanId()).defaultIfEmpty(new PlanEntity()),
+                tenantRepository.findById(entity.getCustomerId()).defaultIfEmpty(new TenantEntity()),
                 subscriptionModuleRepository.findBySubscriptionId(entity.getId())
                         .flatMap(sm -> moduleRepository.findById(sm.getModuleId()))
                         .collectList()
         ).map(tuple -> {
-            com.app.persistence.entity.PlanEntity plan = tuple.getT1();
-            com.app.persistence.entity.CustomerEntity customer = tuple.getT2();
-            List<com.app.persistence.entity.ModuleEntity> modules = tuple.getT3();
+            PlanEntity plan = tuple.getT1();
+            TenantEntity tenant = tuple.getT2();
+            List<ModuleEntity> modules = tuple.getT3();
 
             return SubscriptionResponse.builder()
                     .id(entity.getId())
                     .tenantId(entity.getCustomerId())
-                    .tenantName(customer.getName())
+                    .tenantName(tenant.getName())
                     .planId(entity.getPlanId())
                     .planName(plan.getName())
                     .billingCycle(entity.getBillingCycle())

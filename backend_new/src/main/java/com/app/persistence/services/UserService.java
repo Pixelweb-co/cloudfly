@@ -2,7 +2,7 @@ package com.app.persistence.services;
 
 import com.app.dto.AuthRegisterRequest;
 import com.app.dto.UserDto;
-import com.app.persistence.entity.CustomerEntity;
+import com.app.persistence.entity.TenantEntity;
 import com.app.persistence.entity.*;
 import com.app.persistence.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +28,7 @@ public class UserService {
         private final UserRoleRepository userRoleRepository;
         private final TenantService tenantService;
         private final PasswordEncoder passwordEncoder;
-        private final CustomerRepository customerRepository;
+        private final TenantRepository tenantRepository;
         private final ReactiveKafkaProducerTemplate<String, Object> kafkaTemplate;
         private final PlanRepository planRepository;
         private final PlanModuleRepository planModuleRepository;
@@ -135,7 +135,7 @@ public class UserService {
                                 .flatMap(roles -> {
                                         if (user.getCustomerId() != null) {
                                                 return Mono.zip(
-                                                        customerRepository.findById(user.getCustomerId()),
+                                                        tenantRepository.findById(user.getCustomerId()),
                                                         subscriptionRepository.findFirstByCustomerIdAndStatusOrderByEndDateDesc(user.getCustomerId(), "ACTIVE")
                                                                 .map(s -> true)
                                                                 .defaultIfEmpty(false)
@@ -147,7 +147,7 @@ public class UserService {
                                 });
         }
 
-        private UserDto buildUserDto(UserEntity user, List<RoleEntity> roles, CustomerEntity customer, boolean hasActiveSub) {
+        	private UserDto buildUserDto(UserEntity user, List<RoleEntity> roles, TenantEntity tenant, boolean hasActiveSub) {
                 return UserDto.builder()
                                 .id(user.getId())
                                 .nombres(user.getNombres())
@@ -162,9 +162,15 @@ public class UserService {
                                 .recoveryToken(user.getRecoveryToken())
                                 .customerId(user.getCustomerId())
                                 .roles(roles)
-                                .customer(customer)
+                                .tenant(tenant) // Corrected from .customer(customer)
                                 .hasActiveSubscription(hasActiveSub)
                                 .build();
+        }
+
+        public Mono<UserEntity> getCurrentUser() {
+                return org.springframework.security.core.context.ReactiveSecurityContextHolder.getContext()
+                                .map(org.springframework.security.core.context.SecurityContext::getAuthentication)
+                                .flatMap(auth -> findByUsername(auth.getName()));
         }
 
         public Mono<Boolean> verifyEmail(String token) {
