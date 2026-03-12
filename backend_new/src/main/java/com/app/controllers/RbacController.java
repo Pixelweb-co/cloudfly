@@ -43,15 +43,15 @@ public class RbacController {
                             .map(a -> a.replace("ROLE_", ""))
                             .collect(Collectors.toList());
 
-                    return getActiveModuleCodes(auth.getName(), roles)
+                    return getActiveModules(auth.getName(), roles)
                             .flatMap(modules -> {
-                                List<MenuItemDto> menu = generateFilteredMenu(roles, modules);
+                                List<MenuItemDto> menu = generateDynamicMenu(roles, modules);
                                 
                                 UserPermissionsDto permissionsDto = UserPermissionsDto.builder()
                                         .username(auth.getName())
                                         .roles(roles)
                                         .permissions(Set.of("dashboard.view", "customers.view", "customers.create", "settings.all"))
-                                        .modules(modules)
+                                        .modules(modules.stream().map(com.app.persistence.entity.ModuleEntity::getCode).collect(Collectors.toList()))
                                         .menu(menu)
                                         .build();
 

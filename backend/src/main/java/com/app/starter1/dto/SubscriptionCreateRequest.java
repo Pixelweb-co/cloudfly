@@ -4,6 +4,7 @@ import com.app.starter1.persistence.entity.BillingCycle;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 public record SubscriptionCreateRequest(
@@ -12,6 +13,9 @@ public record SubscriptionCreateRequest(
                 @NotNull(message = "El ID del tenant es requerido") Long tenantId,
 
                 BillingCycle billingCycle,
+
+                LocalDateTime startDate,
+                LocalDateTime endDate,
 
                 Boolean isAutoRenew,
 

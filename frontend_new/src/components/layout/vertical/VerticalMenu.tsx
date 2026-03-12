@@ -232,6 +232,41 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
         {/* Render dynamic menu from backend (Modules from subscription) */}
         {renderMenuItems(menuData)}
 
+        {/* Fallback Harcodeado para ítems críticos (Seguridad SaaS) */}
+        {(userRole === 'MANAGER' || userRole === 'ADMIN') && (
+          <>
+            <SubMenu
+              label='Administración SaaS'
+              icon={<i className='tabler-adjustments-code' />}
+            >
+              <MenuItem href='/administracion/clientes/list' icon={<i className='tabler-users' />}>
+                Clientes
+              </MenuItem>
+              <MenuItem href='/administracion/companies' icon={<i className='tabler-building' />}>
+                Compañías
+              </MenuItem>
+              <MenuItem href='/administracion/planes/list' icon={<i className='tabler-certificate' />}>
+                Planes
+              </MenuItem>
+              <MenuItem href='/administracion/suscripciones/list' icon={<i className='tabler-currency-dollar' />}>
+                Suscripciones
+              </MenuItem>
+              <MenuItem href='/administracion/modulos/list' icon={<i className='tabler-components' />}>
+                Módulos
+              </MenuItem>
+            </SubMenu>
+
+            <SubMenu
+              label='Usuarios y Roles'
+              icon={<i className='tabler-shield-lock' />}
+            >
+              <MenuItem href='/accounts/user/list' icon={<i className='tabler-user-cog' />}>
+                Gestión de Usuarios
+              </MenuItem>
+            </SubMenu>
+          </>
+        )}
+
         {/* Show error message if menu failed to load */}
         {error && (
           <MenuItem disabled icon={<i className='tabler-alert-circle' />}>

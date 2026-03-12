@@ -106,6 +106,11 @@ export const verticalMenuData = [
                 label: 'Tipos de Chatbot',
                 route: '/settings/chatbot-types/list',
                 roles: ['MANAGER', 'ADMIN']
+            },
+            {
+                label: 'Compañías',
+                route: '/administracion/companies',
+                roles: ['MANAGER', 'ADMIN']
             }
         ]
     }

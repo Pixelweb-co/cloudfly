@@ -1,0 +1,72 @@
+http:
+  routers:
+    # API Backend - HTTP (Puerto 80)
+    api-http:
+      rule: "Host(`api.cloudfly.com.co`)"
+      service: api-host
+      entryPoints:
+        - web
+
+    # API Backend - HTTPS (Puerto 443)
+    api-https:
+      rule: "Host(`api.cloudfly.com.co`)"
+      service: api-host
+      tls: {}
+      entryPoints:
+        - websecure
+
+    # Frontend Dashboard - HTTP (Puerto 80)
+    frontend-http:
+      rule: "Host(`dashboard.cloudfly.com.co`)"
+      service: frontend-host
+      entryPoints:
+        - web
+
+    # Frontend Dashboard - HTTPS (Puerto 443)
+    frontend-https:
+      rule: "Host(`dashboard.cloudfly.com.co`)"
+      service: frontend-host
+      tls: {}
+      entryPoints:
+        - websecure
+      middlewares:
+        - "forward-headers"
+
+    # Frontend Dashboard - Local (localhost)
+    frontend-local:
+      rule: "Host(`localhost`)"
+      service: frontend-host
+      entryPoints:
+        - web
+
+    # n8n - Local (n8n.localhost)
+    n8n-local:
+      rule: "Host(`n8n.localhost`)"
+      service: n8n@docker
+      entryPoints:
+        - web
+
+  middlewares:
+    forward-headers:
+      headers:
+        sslProxyHeaders:
+          X-Forwarded-Proto: "https"
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsSeconds: 315360000
+        stsIncludeSubdomains: true
+        stsPreload: true
+
+  services:
+    api-host:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:8080"
+        passHostHeader: true
+
+    frontend-host:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:3000"
+        passHostHeader: true
