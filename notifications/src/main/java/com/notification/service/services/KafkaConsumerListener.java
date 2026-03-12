@@ -111,20 +111,70 @@ public class KafkaConsumerListener {
                 message.getEmail(),
                 message.getBusinessType());
 
-            // Usamos la instancia específica para notificaciones de bienvenida
-            String instanceId = "cloudfly_chatbot1";
-            String apiKey = "54DC1F63C38C-4F66-BCA6-0EBE8E786C09";
+            // Usamos la instancia del mensaje o el fallback por defecto
+            String targetInstance = (message.getInstanceName() != null && !message.getInstanceName().isEmpty()) 
+                                    ? message.getInstanceName() : instanceName;
             
-            LOGGER.info("Sending welcome WhatsApp using instance: " + instanceId);
-            boolean sent = sendWhatsAppTextWithInstance(formattedPhone, welcomeCaption, instanceId, apiKey);
+            LOGGER.info("Sending welcome WhatsApp alert using instance: " + targetInstance);
+            
+            // Aseguramos que la instancia exista/esté activa antes de enviar
+            ensureInstanceActive(targetInstance);
+
+            boolean sent = sendWhatsAppTextWithInstance(formattedPhone, welcomeCaption, targetInstance, evolutionApiKey);
 
             if (sent)
-                LOGGER.info("Welcome WhatsApp successfully sent to " + formattedPhone);
-            else
-                LOGGER.error("Failed to send Welcome WhatsApp to " + formattedPhone + ". Check previous logs for API error.");
+                LOGGER.info("Welcome WhatsApp successfully sent to " + formattedPhone + " via " + targetInstance);
+            else {
+                LOGGER.warn("Failed to send Welcome WhatsApp to " + formattedPhone + " via " + targetInstance + ". Trying fallback instance: " + instanceName);
+                if (!targetInstance.equals(instanceName)) {
+                     sendWhatsAppTextWithInstance(formattedPhone, welcomeCaption, instanceName, evolutionApiKey);
+                }
+            }
 
         } catch (Exception e) {
             LOGGER.error("Error consuming welcome notification message: ", e);
+        }
+    }
+
+    private void ensureInstanceActive(String instance) {
+        try {
+            String statusUrl = evolutionApiUrl + "/instance/connectionState/" + instance;
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("apikey", evolutionApiKey);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            try {
+                ResponseEntity<Map> response = restTemplate.exchange(statusUrl, HttpMethod.GET, entity, Map.class);
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    LOGGER.info("Instance " + instance + " status: " + response.getBody());
+                    return;
+                }
+            } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
+                LOGGER.warn("Instance " + instance + " not found. Attempting to create it.");
+                createEvolutionInstance(instance);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error ensuring instance " + instance + " is active: " + e.getMessage());
+        }
+    }
+
+    private void createEvolutionInstance(String instance) {
+        try {
+            String createUrl = evolutionApiUrl + "/instance/create";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("apikey", evolutionApiKey);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("instanceName", instance);
+            body.put("token", evolutionApiKey);
+            body.put("qrcode", true);
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+            restTemplate.postForEntity(createUrl, request, String.class);
+            LOGGER.info("Instance " + instance + " created successfully.");
+        } catch (Exception e) {
+            LOGGER.error("Failed to create instance " + instance + ": " + e.getMessage());
         }
     }
 

@@ -15,4 +15,5 @@ public class WelcomeNotificationMessage {
     private String contactName;
     private String email;
     private String businessType;
+    private String instanceName;
 }
