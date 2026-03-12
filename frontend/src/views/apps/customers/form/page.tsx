@@ -30,9 +30,12 @@ import { userMethods } from '@/utils/userMethods'
 const schema = yup.object().shape({
   name: yup.string().required('El nombre es obligatorio'),
   nit: yup.string().required('El NIT es obligatorio'),
-  phone: yup.string().required('telefono es obligatorio'),
-  email: yup.string().email('Email inválido').required('email es obligatorio'),
-  address: yup.string().required('direccion es obligatorio'),
+  phone: yup
+    .string()
+    .required('El teléfono es obligatorio')
+    .matches(/^\d{12,15}$/, 'El número debe incluir el código de país (ej. 57) y tener entre 12 y 15 dígitos'),
+  email: yup.string().email('Email inválido').required('El email es obligatorio'),
+  address: yup.string().required('La dirección es obligatorio'),
   contact: yup.string().required('El contacto es obligatorio'),
   position: yup.string().required('El cargo es obligatorio'),
   businessType: yup.string().required('El tipo de negocio es obligatorio'),
