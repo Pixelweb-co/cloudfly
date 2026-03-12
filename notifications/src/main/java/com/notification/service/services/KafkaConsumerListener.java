@@ -137,6 +137,8 @@ public class KafkaConsumerListener {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("apikey", apiKey);
 
+            // Evolution API v2 format: { number, text }
+            // Based on https://doc.evolution-api.com/v2/api-reference/message-controller/send-text
             Map<String, Object> body = new HashMap<>();
             body.put("number", phoneNumber);
             body.put("text", message);
@@ -151,8 +153,10 @@ public class KafkaConsumerListener {
         } catch (Exception e) {
             String errorMessage = e.getMessage();
             if (e instanceof org.springframework.web.client.HttpStatusCodeException) {
-                errorMessage = "Status: " + ((org.springframework.web.client.HttpStatusCodeException) e).getStatusCode() + 
-                               " Body: " + ((org.springframework.web.client.HttpStatusCodeException) e).getResponseBodyAsString();
+                org.springframework.web.client.HttpStatusCodeException httpEx = 
+                    (org.springframework.web.client.HttpStatusCodeException) e;
+                errorMessage = "Status: " + httpEx.getStatusCode() + 
+                               " Body: " + httpEx.getResponseBodyAsString();
             }
             LOGGER.error("Error sending text WhatsApp with instance " + specificInstance + ": " + errorMessage);
             return false;
