@@ -64,8 +64,8 @@ const AccountSetup = () => {
   }
 
   const handleCustomerSuccess = (customerData: any) => {
-    // Una vez configurado el negocio, redirigir directamente al home según el nuevo flujo
-    router.push('/home')
+    // Una vez configurado el negocio, avanzar al siguiente paso (WhatsApp)
+    setActiveStep(2)
   }
 
   const renderStepContent = (step: number) => {

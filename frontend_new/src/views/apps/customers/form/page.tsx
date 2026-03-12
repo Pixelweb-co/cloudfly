@@ -103,9 +103,11 @@ return
             // Actualizar datos del usuario en localStorage (ahora tiene Customer)
             localStorage.setItem('userData', JSON.stringify(response.data))
 
-            if (onSuccess && response.data && response.data.customer) {
-                onSuccess(response.data.customer)
+            if (onSuccess) {
+                // Notificar éxito al Wizard para avanzar de step
+                onSuccess(response.data)
             } else {
+                // Fallback si se usa fuera del Wizard
                 router.push('/home')
             }
         } catch (error) {

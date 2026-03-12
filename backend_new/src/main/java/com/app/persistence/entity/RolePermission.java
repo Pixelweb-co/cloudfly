@@ -9,6 +9,9 @@ import org.springframework.data.relational.core.mapping.Table;
 @NoArgsConstructor
 @Table("role_permissions")
 public class RolePermission {
+    @Column("role_id")
     private Long roleId;
+
+    @Column("permission_id")
     private Long permissionId;
 }

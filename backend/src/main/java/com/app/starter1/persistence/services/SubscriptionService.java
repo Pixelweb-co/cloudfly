@@ -60,8 +60,8 @@ public class SubscriptionService {
                                 : BillingCycle.MONTHLY;
 
                 // Calcular fechas
-                LocalDateTime startDate = LocalDateTime.now();
-                LocalDateTime endDate = calculateEndDate(startDate, billingCycle, plan.getDurationDays());
+                LocalDateTime startDate = request.startDate() != null ? request.startDate() : LocalDateTime.now();
+                LocalDateTime endDate = request.endDate() != null ? request.endDate() : calculateEndDate(startDate, billingCycle, plan.getDurationDays());
 
                 // Obtener módulos (custom o del plan)
                 Set<RbacModule> modules = new HashSet<>();

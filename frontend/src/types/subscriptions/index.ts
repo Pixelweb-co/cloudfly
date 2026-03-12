@@ -53,6 +53,8 @@ export interface SubscriptionCreateRequest {
     planId: number
     tenantId: number
     billingCycle?: BillingCycle
+    startDate?: string
+    endDate?: string
     isAutoRenew?: boolean
 
     // Custom modules (optional)

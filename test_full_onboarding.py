@@ -4,6 +4,7 @@ import logging
 import random
 from datetime import datetime
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -22,11 +23,14 @@ MAIL_KEY_PATH = os.path.expanduser("~/.ssh/id_rsa_cloudfly")
 
 class OnboardingTest:
     def __init__(self):
-        self.options = webdriver.ChromeOptions()
-        self.options.add_argument('--start-maximized')
-        self.options.add_argument('--disable-gpu')
+        self.options = Options()
+        # self.options.add_argument("--headless") # Deshabilitado a petición del usuario
+        self.options.add_argument("--start-maximized")
+        self.options.add_argument("--no-sandbox")
+        self.options.add_argument("--disable-dev-shm-usage")
+        
         self.driver = webdriver.Chrome(options=self.options)
-        self.wait = WebDriverWait(self.driver, 30)
+        self.wait = WebDriverWait(self.driver, 60) # Aumentado por latencia visual
         self.mail_manager = MailManager(host=MAIL_HOST, port=MAIL_PORT, key_path=MAIL_KEY_PATH)
         
         # Datos dinámicos
@@ -165,6 +169,31 @@ class OnboardingTest:
         
         self.take_screenshot("wizard_step_1_filled")
         self.driver.find_element(By.XPATH, "//button[contains(text(), 'Siguiente')]").click()
+        
+        # Paso 2: Configuración WhatsApp (Interactive)
+        logger.info("Configurando WhatsApp...")
+        
+        # Clic en "Generar Código QR"
+        btn_qr = self.wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Generar Código QR')]")))
+        btn_qr.click()
+        logger.info("Clic en 'Generar Código QR' exitoso.")
+        
+        # Esperar a que el QR aparezca
+        self.wait.until(EC.presence_of_element_located((By.XPATH, "//img[@alt='WhatsApp QR Code']")))
+        self.take_screenshot("whatsapp_qr")
+        logger.info("Código QR visualizado y capturado.")
+        
+        # Clic en "Ya escaneé el código"
+        btn_confirm = self.wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Ya escaneé el código')]")))
+        btn_confirm.click()
+        logger.info("Confirmación de escaneo enviada.")
+        
+        # Esperar a que el componente de productos aparezca (Paso 3)
+        self.wait.until(EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Crear Categoría')]")))
+        logger.info("Llegada al paso de Catálogo inicial (Productos).")
+
+        # Paso 3: Productos y Redirección Final
+        self.wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Continuar')]"))).click() # Este botón suele estar en el footer si no se completan los campos
         
         logger.info("Esperando redirección final a /home...")
         time.sleep(5)
