@@ -168,9 +168,14 @@ const WhatsAppConfigForm = ({ onSuccess }: Props) => {
            <Alert severity="error" sx={{ mb: 4 }}>
               {error}
             </Alert>
-            <Button variant="contained" onClick={handleStartConnection}>
-              Reintentar
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+              <Button variant="contained" onClick={handleStartConnection}>
+                Reintentar
+              </Button>
+              <Button variant="text" color="secondary" onClick={onSuccess}>
+                Configurar más tarde
+              </Button>
+            </Box>
         </Box>
       )}
     </Box>
