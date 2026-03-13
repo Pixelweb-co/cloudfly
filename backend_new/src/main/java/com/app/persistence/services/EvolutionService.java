@@ -36,12 +36,7 @@ public class EvolutionService {
 
     public Mono<Map<String, Object>> createInstance(String instanceName) {
         String url = apiUrl + "/instance/create";
-        
-        // Log ultra-detallado solicitado por el usuario
-        log.info("🔍 [DEBUG-EVOLUTION] Tentando crear instancia: '{}'", instanceName);
-        log.info("🔍 [DEBUG-EVOLUTION] Host configurado (apiUrl): '{}' (Length: {})", apiUrl, (apiUrl != null ? apiUrl.length() : 0));
-        log.info("🔍 [DEBUG-EVOLUTION] API Key configurada (apiKey): '{}'...", (apiKey != null && apiKey.length() > 5 ? apiKey.substring(0, 5) : "NULL/SHORT"));
-        log.info("🔍 [DEBUG-EVOLUTION] URL Final construida: '{}'", url);
+        log.info("🌐 [EVOLUTION-SERVICE] Creating instance: {} at {}", instanceName, url);
 
         Map<String, Object> body = Map.of(
                 "instanceName", instanceName,
@@ -64,14 +59,8 @@ public class EvolutionService {
                         })
                 )
                 .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
-                .log("com.app.evolution.create") 
                 .doOnSuccess(res -> log.info("✅ Instance created: {}", instanceName))
-                .doOnError(err -> {
-                    log.error("❌ Error en createInstance: {}", err.getMessage());
-                    if (err instanceof org.springframework.web.reactive.function.client.WebClientRequestException) {
-                        log.error("❌ WebClientRequestException URI: {}", ((org.springframework.web.reactive.function.client.WebClientRequestException)err).getUri());
-                    }
-                });
+                .doOnError(err -> log.error("❌ Error creating instance {}: {}", instanceName, err.getMessage()));
     }
 
     public Mono<Map<String, Object>> fetchQrCode(String instanceName) {
