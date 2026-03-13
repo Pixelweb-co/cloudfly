@@ -26,12 +26,10 @@ public class EvolutionService {
     }
 
     public Mono<Map<String, Object>> createInstance(String instanceName) {
-        log.info("🌐 [EVOLUTION-SERVICE] Creating instance: {}", instanceName);
+        log.info("🌐 [EVOLUTION-SERVICE] Creating instance: {} at {}", instanceName, apiKey);
 
         Map<String, Object> body = new HashMap<>();
         body.put("instanceName", instanceName);
-        body.put("token", apiKey);
-        body.put("integration", "WHATSAPP-BAILEYS");
         body.put("qrcode", true);
 
         return webClient.post()
@@ -40,9 +38,16 @@ public class EvolutionService {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
                 .retrieve()
+                .onStatus(status -> status.isError(), response -> 
+                    response.bodyToMono(String.class)
+                        .flatMap(errorBody -> {
+                            log.error("❌ Evolution API Error ({}): {}", response.statusCode(), errorBody);
+                            return Mono.error(new RuntimeException("Evolution API Error: " + errorBody));
+                        })
+                )
                 .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
                 .doOnSuccess(res -> log.info("✅ Instance created: {}", instanceName))
-                .doOnError(err -> log.error("❌ Error creating instance: {}", err.getMessage()));
+                .doOnError(err -> log.error("❌ Error creating instance {}: {}", instanceName, err.getMessage()));
     }
 
     public Mono<Map<String, Object>> fetchQrCode(String instanceName) {
@@ -52,6 +57,13 @@ public class EvolutionService {
                 .uri("/instance/connect/" + instanceName)
                 .header("apikey", apiKey)
                 .retrieve()
+                .onStatus(status -> status.isError(), response -> 
+                    response.bodyToMono(String.class)
+                        .flatMap(errorBody -> {
+                            log.error("❌ Evolution QR Error ({}): {}", response.statusCode(), errorBody);
+                            return Mono.error(new RuntimeException("Evolution QR Error: " + errorBody));
+                        })
+                )
                 .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
                 .doOnError(err -> log.error("❌ Error fetching QR: {}", err.getMessage()));
     }
@@ -62,6 +74,6 @@ public class EvolutionService {
                 .header("apikey", apiKey)
                 .retrieve()
                 .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
-                .doOnError(err -> log.error("❌ Error checking connection: {}", err.getMessage()));
+                .doOnError(err -> log.error("❌ Error checking connection {}: {}", instanceName, err.getMessage()));
     }
 }
