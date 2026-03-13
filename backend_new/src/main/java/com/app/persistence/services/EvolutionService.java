@@ -44,12 +44,10 @@ public class EvolutionService {
         String url = apiUrl + "/instance/create";
         log.info("🌐 [EVOLUTION-SERVICE] Creating instance: {} at {}", instanceName, url);
 
-        Map<String, Object> body = Map.of(
-                "instanceName", instanceName,
-                "integration", "WHATSAPP-BAILEYS",
-                "token", apiKey,
-                "qrcode", true
-        );
+        Map<String, Object> body = new HashMap<>();
+        body.put("instanceName", instanceName);
+        body.put("token", apiKey);
+        body.put("qrcode", true);
 
         return webClient.post()
                 .uri(url)
@@ -58,14 +56,13 @@ public class EvolutionService {
                 .bodyValue(body)
                 .retrieve()
                 .onStatus(status -> status.isError(), response -> 
-                    response.bodyToMono(Map.class)
+                    response.bodyToMono(String.class)
                         .flatMap(errorBody -> {
-                            String message = errorBody != null ? (String) errorBody.get("message") : "";
-                            if (response.statusCode().value() == 400 && message != null && message.contains("already in use")) {
+                            log.error("❌ Evolution API Error ({}): {}", response.statusCode(), errorBody);
+                            if (response.statusCode().value() == 400 && errorBody != null && errorBody.contains("already in use")) {
                                 log.info("ℹ️ [EVOLUTION-SERVICE] Instance already exists: {}", instanceName);
                                 return Mono.error(new InstanceAlreadyExistsException("Instance already exists"));
                             }
-                            log.error("❌ Evolution API Error ({}): {}", response.statusCode(), errorBody);
                             return Mono.error(new RuntimeException("Evolution API Error: " + errorBody));
                         })
                 )
@@ -76,7 +73,7 @@ public class EvolutionService {
                     recoveryMap.put("instance", Map.of("instanceName", instanceName, "status", "created"));
                     return Mono.just(recoveryMap);
                 })
-                .doOnSuccess(res -> log.info("✅ Instance creation handled: {}", instanceName))
+                .doOnSuccess(res -> log.info("✅ Instance creation successfully handled for: {}", instanceName))
                 .doOnError(err -> {
                     if (!(err instanceof InstanceAlreadyExistsException)) {
                         log.error("❌ Error creating instance {}: {}", instanceName, err.getMessage());
