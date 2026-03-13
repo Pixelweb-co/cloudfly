@@ -243,7 +243,7 @@ const AccountSetup = () => {
                 variant='contained'
                 onClick={handleNext}
                 size='large'
-                className='min-w-[120px]'
+                className='min-w-[120px] next-wizard-step'
               >
                 {activeStep === steps.length - 1 ? 'Finalizar' : 'Continuar'}
               </Button>

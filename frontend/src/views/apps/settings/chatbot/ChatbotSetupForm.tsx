@@ -370,7 +370,19 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
                             />
                         </Grid>
 
-                        <Grid item xs={12}>
+                        <Grid item xs={12} className='flex gap-4'>
+                            <Button
+                                variant='outlined'
+                                fullWidth
+                                onClick={() => {
+                                    // Trigger navigation to next step in the wizard
+                                    const nextBtn = document.querySelector('button.next-wizard-step');
+                                    if (nextBtn) (nextBtn as HTMLElement).click();
+                                    else window.dispatchEvent(new CustomEvent('next-step'));
+                                }}
+                            >
+                                Omitir por ahora
+                            </Button>
                             <Button
                                 type='submit'
                                 variant='contained'
