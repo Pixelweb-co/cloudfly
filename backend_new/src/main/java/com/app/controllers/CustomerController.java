@@ -117,50 +117,51 @@ public class CustomerController {
 
                                 return companyRepository.save(company)
                                         .then(Mono.defer(() -> {
-                                    user.setCustomerId(savedTenant.getId());
-                                    return userRepository.save(user)
-                                            .flatMap(savedUser -> handleAutomaticSubscription(savedTenant.getId())
-                                                    .then(userService.convertToDto(savedUser))
-                                                    .flatMap(userDto -> {
-                                                        // Activación automática de la instancia dedicada en Evolution API
-                                                        String instanceName = "cloudfly_" + user.getUsername().toLowerCase().replaceAll("[^a-z0-9]", "_");
+                                            user.setCustomerId(savedTenant.getId());
+                                            return userRepository.save(user)
+                                                    .flatMap(savedUser -> handleAutomaticSubscription(savedTenant.getId())
+                                                            .then(userService.convertToDto(savedUser))
+                                                            .flatMap(userDto -> {
+                                                                // Activación automática de la instancia dedicada en Evolution API
+                                                                String instanceName = "cloudfly_" + user.getUsername().toLowerCase().replaceAll("[^a-z0-9]", "_");
 
-                                                        return evolutionService.createInstance(instanceName)
-                                                                .flatMap(res -> {
-                                                                    // Guardar configuración del chatbot en la DB para que el frontend la vea
-                                                                    ChatbotConfig chatbotConfig = ChatbotConfig.builder()
-                                                                            .tenantId(savedTenant.getId())
-                                                                            .instanceName(instanceName)
-                                                                            .chatbotType(ChatbotType.SALES) // Default
-                                                                            .isActive(false) // Pendiente de conexión (QR)
-                                                                            .agentName("Asistente Cloudfly")
-                                                                            .createdAt(LocalDateTime.now())
-                                                                            .updatedAt(LocalDateTime.now())
-                                                                            .build();
+                                                                // 1. Preparar configuración del chatbot
+                                                                ChatbotConfig chatbotConfig = ChatbotConfig.builder()
+                                                                        .tenantId(savedTenant.getId())
+                                                                        .instanceName(instanceName)
+                                                                        .chatbotType(ChatbotType.SALES)
+                                                                        .isActive(false)
+                                                                        .agentName("Asistente Cloudfly")
+                                                                        .createdAt(LocalDateTime.now())
+                                                                        .updatedAt(LocalDateTime.now())
+                                                                        .build();
 
-                                                                    return chatbotConfigRepository.save(chatbotConfig)
-                                                                            .then(Mono.defer(() -> {
-                                                                                // Enviar notificación de bienvenida por WhatsApp (Kafka)
-                                                                                Map<String, Object> welcomeMsg = Map.of(
-                                                                                        "phoneNumber", form.getPhone(),
-                                                                                        "customerName", form.getName(),
-                                                                                        "contactName", form.getContact(),
-                                                                                        "email", form.getEmail(),
-                                                                                        "businessType", form.getBusinessType(),
-                                                                                        "instanceName", instanceName
-                                                                                );
-                                                                                log.info("Sending welcome notification to Kafka for tenant: {}", savedTenant.getId());
-                                                                                return kafkaTemplate.send("welcome-notifications", welcomeMsg).thenReturn(userDto);
-                                                                            }));
-                                                                })
-                                                                .onErrorResume(err -> {
-                                                                    log.error("⚠️ Error creating Evolution instance during setup: {}. Continuing...", err.getMessage());
-                                                                    return Mono.just(userDto);
-                                                                });
-                                                    }));
-                                }));
-                    });
-        })
+                                                                // 2. Guardar en DB PRIMERO y luego intentar activar Evolution
+                                                                return chatbotConfigRepository.save(chatbotConfig)
+                                                                        .flatMap(savedConfig -> evolutionService.createInstance(instanceName)
+                                                                                .flatMap(res -> {
+                                                                                    // 3. Si éxito, enviar notificación
+                                                                                    Map<String, Object> welcomeMsg = Map.of(
+                                                                                            "phoneNumber", form.getPhone(),
+                                                                                            "customerName", form.getName(),
+                                                                                            "contactName", form.getContact(),
+                                                                                            "email", form.getEmail(),
+                                                                                            "businessType", form.getBusinessType(),
+                                                                                            "instanceName", instanceName
+                                                                                    );
+                                                                                    log.info("📧 [ACCOUNT-SETUP] Enviando notificación a Kafka para: {}", instanceName);
+                                                                                    return kafkaTemplate.send("welcome-notifications", welcomeMsg).then();
+                                                                                })
+                                                                                .onErrorResume(err -> {
+                                                                                    log.error("⚠️ [ACCOUNT-SETUP] Error en Evolution para {}: {}. Continuando...", instanceName, err.getMessage());
+                                                                                    return Mono.empty();
+                                                                                })
+                                                                        )
+                                                                        .thenReturn(userDto);
+                                                            }));
+                                        }));
+                            });
+                })
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
