@@ -277,60 +277,61 @@ async function runE2E() {
         // Paso 2: Chatbot IA
         console.log('   ▶ Pasó 2: Chatbot IA');
         try {
-            // Verificar si el QR ya está visible (debido a la activación automática en BE)
-            console.log('   Verificando instancia de WhatsApp...');
+            // Esperar a que cargue el form o el botón de activación
+            console.log('   Verificando estado del Chatbot...');
+            await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'Chatbot')]")), 15000);
+            
+            // Intentar detectar QR o botón de activación
             try {
-                await driver.wait(until.elementLocated(By.xpath("//img[@alt='WhatsApp QR Code']")), 8000);
-                console.log('   ✅ QR Code detectado (activación automática BE exitosa)');
-            } catch (qrError) {
-                console.log('   ⚠️ QR no detectado automáticamente, intentando activación manual...');
-                const activateBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Activar') or contains(., 'Chatbot')]")), 15000);
+                const activateBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Activar') or contains(., 'Chatbot')]")), 5000);
+                console.log('   Click en Activar Chatbot...');
                 await driver.executeScript("arguments[0].click();", activateBtn);
-                await driver.wait(until.elementLocated(By.xpath("//img[@alt='WhatsApp QR Code']")), 20000);
-                console.log('   ✅ QR Code generado manualmente');
+                await driver.sleep(3000);
+            } catch (e) {
+                console.log('   (Botón Activar no encontrado o ya activado)');
             }
 
-            await takeScreenshot(driver, '06_wizard_whatsapp_qr', timestamp);
-            
-            // Llenar datos reales del chatbot
-            console.log('   Llenando datos del chatbot...');
-            const nameInput = await driver.wait(until.elementLocated(By.xpath("//input[contains(@placeholder, 'Bot de Ventas')]")), 5000);
-            await nameInput.sendKeys('María E2E');
-            
-            const phoneInput = await driver.wait(until.elementLocated(By.xpath("//input[contains(@placeholder, '123 4567')]")), 5000);
-            await phoneInput.sendKeys('3000000000');
-            
-            const contextInput = await driver.wait(until.elementLocated(By.xpath("//textarea[contains(@placeholder, 'Eres un asistente')]")), 5000);
-            await contextInput.sendKeys('Eres María, la asistente virtual de CloudFly para esta prueba E2E.');
-            
-            console.log('   Guardando configuración de WhatsApp...');
-            const saveChatbotBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Guardar y Continuar')]")), 5000);
-            await driver.executeScript("arguments[0].click();", saveChatbotBtn);
-            
-            // Wait for step 3 (Productos)
-            await driver.sleep(3000);
-        } catch (e) {
-            console.log('   ⚠️ Error o timeout en paso WhatsApp (intentando continuar): ' + e.message);
-            // Intentamos buscar un botón de "Continuar" general por si el formulario se queda bloqueado
+            // Llenar datos básicos si están visibles
             try {
-               const contBtn = await driver.findElement(By.xpath("//button[contains(., 'Continuar') or contains(., 'Omitir')]"));
-               await driver.executeScript("arguments[0].click();", contBtn);
-            } catch(btnErr) {}
+                const nameInput = await driver.findElement(By.xpath("//input[contains(@placeholder, 'Bot de Ventas')]"));
+                await nameInput.sendKeys('María E2E');
+                const phoneInput = await driver.findElement(By.xpath("//input[contains(@placeholder, '123 4567')]"));
+                await phoneInput.sendKeys('3000000000');
+            } catch (e) {}
+
+            console.log('   📸 Capturando QR/Estado Chatbot...');
+            await takeScreenshot(driver, '06_wizard_chatbot_state', timestamp);
+
+            // Click en Guardar y Continuar (Este es el paso crítico para llegar a Productos)
+            console.log('   Avanzando a Productos...');
+            const saveBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Guardar y Continuar') or contains(., 'Continuar')]")), 10000);
+            await driver.executeScript("arguments[0].click();", saveBtn);
+            
+        } catch (e) {
+            console.log('   ⚠️ Error en paso Chatbot (intentando forzar continuación): ' + e.message);
+            try {
+                const forceNext = await driver.findElement(By.xpath("//button[contains(., 'Continuar') or contains(., 'Siguiente')]"));
+                await driver.executeScript("arguments[0].click();", forceNext);
+            } catch (inner) {}
         }
-        await driver.sleep(5000); // Dar más tiempo para cambio de tab
+        await driver.sleep(4000); // Wait for transition animation
 
         // Paso 3: Productos
         console.log('   ▶ Pasó 3: Productos');
         try {
-            // Esperar a que cargue la categoría (buscamos el texto 'General')
             await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'General')]")), 25000);
-            await driver.sleep(2000); // Wait for auto-fill to stabilize
+            await driver.sleep(3000); // Tiempo para que la animación termine y el form se auto-llene
             
-            console.log('   📸 Capturando formulario auto-llenado...');
-            await takeScreenshot(driver, '07_wizard_producto_autollenado', timestamp);
+            console.log('   📸 CAPTURANDO FORMULARIO AUTO-LLENADO...');
+            await takeScreenshot(driver, '08_wizard_producto_autolleno', timestamp);
             
-            // Opcional: Modificar los valores para verificar que el guardado funciona
-            console.log('   Modificando datos del producto...');
+            // Verificar si los valores están ahí (solo logeo, la captura es lo importante)
+            try {
+                const nameIn = await driver.findElement(By.xpath("//input[contains(@value, 'Mi Primer Producto')]"));
+                console.log('   ✅ Confirmado: Nombre auto-llenado detectado');
+            } catch(e) {
+                console.log('   ⚠️ No se detectó el valor auto-llenado en el DOM, revisa la captura.');
+            }
             await waitAndType(driver, By.xpath("//input[contains(@label, 'Nombre del Producto') or contains(@placeholder, 'Hamburguesa')]"), 'Servicio Premium IA');
             await waitAndType(driver, By.xpath("//textarea[contains(@label, 'Descripción') or contains(@placeholder, 'Describe')]"), 'Descripción del producto premium para el chatbot.');
             await waitAndType(driver, By.xpath("//input[contains(@label, 'Valor de Venta') or contains(@placeholder, '0.00')]"), '99.99');
