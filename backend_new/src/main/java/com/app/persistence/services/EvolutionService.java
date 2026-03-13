@@ -59,6 +59,7 @@ public class EvolutionService {
                         })
                 )
                 .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
+                .log("com.app.evolution.create") // DEBUG LOG
                 .doOnSuccess(res -> log.info("✅ Instance created: {}", instanceName))
                 .doOnError(err -> log.error("❌ Error creating instance {}: {}", instanceName, err.getMessage()));
     }
@@ -79,6 +80,7 @@ public class EvolutionService {
                         })
                 )
                 .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
+                .log("com.app.evolution.qr") // DEBUG LOG
                 .doOnError(err -> log.error("❌ Error fetching QR for {}: {}", instanceName, err.getMessage()));
     }
 
@@ -90,6 +92,7 @@ public class EvolutionService {
                 .retrieve()
                 .onStatus(status -> status.isError(), response -> Mono.empty())
                 .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
+                .log("com.app.evolution.status") // DEBUG LOG
                 .doOnError(err -> log.error("❌ Error checking connection for {}: {}", instanceName, err.getMessage()));
     }
 }
