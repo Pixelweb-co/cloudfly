@@ -11,6 +11,9 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "cheerio": "^1.2.0",
+    "imapflow": "^1.2.13",
+    "mailparser": "^3.9.4",
     "selenium-webdriver": "^4.41.0"
   }
 }

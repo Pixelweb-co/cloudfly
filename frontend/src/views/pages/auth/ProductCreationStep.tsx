@@ -1,20 +1,20 @@
 'use client'
 
-import React, { useState } from 'react'
-import { Box, Typography, TextField, Button, Alert, CircularProgress } from '@mui/material'
+import React, { useState, useEffect } from 'react'
+import { Box, Typography, TextField, Button, Alert, CircularProgress, Card, CardContent, InputAdornment, Grid } from '@mui/material'
 import { axiosInstance } from '@/utils/axiosInstance'
+import { userMethods } from '@/utils/userMethods'
 
 interface ProductCreationStepProps {
     onProductCreated: () => void
 }
 
 const ProductCreationStep = ({ onProductCreated }: ProductCreationStepProps) => {
-    const [subStep, setSubStep] = useState(0) // 0: category, 1: product
     const [loading, setLoading] = useState(false)
+    const [categoryLoading, setCategoryLoading] = useState(true)
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
     // Category state
-    const [categoryName, setCategoryName] = useState('')
     const [categoryId, setCategoryId] = useState<number | null>(null)
 
     // Product state
@@ -22,42 +22,38 @@ const ProductCreationStep = ({ onProductCreated }: ProductCreationStepProps) => 
     const [productDescription, setProductDescription] = useState('')
     const [productPrice, setProductPrice] = useState('')
 
-    const handleCategorySubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+    // Buscar categoría "General" al cargar
+    useEffect(() => {
+        const fetchDefaultCategory = async () => {
+            try {
+                setCategoryLoading(true)
+                const user = userMethods.getUserLogin()
+                if (!user || !user.customerId) return
 
-        if (!categoryName.trim()) {
-            setMessage({ type: 'error', text: 'Por favor ingresa el nombre de la categoría' })
-            return
+                const response = await axiosInstance.get(`/categorias/customer/${user.customerId}`)
+                const categories = response.data
+                const generalCategory = categories.find((c: any) => c.nombreCategoria === 'General')
+
+                if (generalCategory) {
+                    setCategoryId(generalCategory.id)
+                } else {
+                    // Si por alguna razón no existe, la creamos (fallback)
+                    const createResponse = await axiosInstance.post('/categorias', {
+                        nombreCategoria: 'General',
+                        description: 'Categoría por defecto',
+                        status: true
+                    })
+                    setCategoryId(createResponse.data.id)
+                }
+            } catch (error) {
+                console.error('Error fetching default category:', error)
+            } finally {
+                setCategoryLoading(false)
+            }
         }
 
-        try {
-            setLoading(true)
-            setMessage(null)
-
-            const response = await axiosInstance.post('/categorias', {
-                nombreCategoria: categoryName,
-                description: `Categoría ${categoryName}`,
-                status: true
-            })
-
-            setCategoryId(response.data.id)
-            setMessage({ type: 'success', text: 'Categoría creada exitosamente' })
-
-            // Avanzar al formulario de producto
-            setTimeout(() => {
-                setSubStep(1)
-                setMessage(null)
-            }, 800)
-        } catch (error: any) {
-            console.error('Error creating category:', error)
-            setMessage({
-                type: 'error',
-                text: error.response?.data?.message || 'Error al crear la categoría'
-            })
-        } finally {
-            setLoading(false)
-        }
-    }
+        fetchDefaultCategory()
+    }, [])
 
     const handleProductSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -71,19 +67,22 @@ const ProductCreationStep = ({ onProductCreated }: ProductCreationStepProps) => 
             setLoading(true)
             setMessage(null)
 
+            const user = userMethods.getUserLogin()
+
             await axiosInstance.post('/productos', {
                 productName: productName,
                 description: productDescription,
                 price: parseFloat(productPrice),
                 salePrice: parseFloat(productPrice),
-                categoryIds: categoryId ? [categoryId] : [],
+                categoryId: categoryId,
+                tenantId: user?.customerId,
                 productType: '0', // Producto simple
                 status: 'ACTIVE',
                 manageStock: false,
                 inventoryStatus: 'IN_STOCK'
             })
 
-            setMessage({ type: 'success', text: 'Producto creado exitosamente' })
+            setMessage({ type: 'success', text: '¡Excelente! Tu primer producto ha sido creado.' })
 
             // Llamar callback después de crear
             setTimeout(() => {
@@ -100,137 +99,150 @@ const ProductCreationStep = ({ onProductCreated }: ProductCreationStepProps) => 
         }
     }
 
-    if (subStep === 0) {
-        // Step 1: Crear categoría
+    if (categoryLoading) {
         return (
-            <Box>
-                <Typography variant='h5' className='mb-2 font-semibold text-center'>
-                    📂 Crear Categoría
-                </Typography>
-                <Typography variant='body2' className='mb-6 text-textSecondary text-center'>
-                    Primero, crea una categoría para organizar tus productos
-                </Typography>
-
-                {message && (
-                    <Alert severity={message.type} sx={{ mb: 3 }}>
-                        {message.text}
-                    </Alert>
-                )}
-
-                <form onSubmit={handleCategorySubmit}>
-                    <TextField
-                        fullWidth
-                        label='Nombre de la Categoría'
-                        value={categoryName}
-                        onChange={e => setCategoryName(e.target.value)}
-                        placeholder='Ej: Servicios, Productos, Membresías'
-                        helperText='Nombre de la categoría para agrupar tus productos'
-                        sx={{ mb: 3 }}
-                        autoFocus
-                    />
-
-                    <Button
-                        type='submit'
-                        variant='contained'
-                        size='large'
-                        fullWidth
-                        disabled={loading || !categoryName.trim()}
-                    >
-                        {loading ? (
-                            <>
-                                <CircularProgress size={20} className='mr-2' />
-                                Creando...
-                            </>
-                        ) : (
-                            'Siguiente'
-                        )}
-                    </Button>
-                </form>
+            <Box display='flex' flexDirection='column' alignItems='center' justifyContent='center' py={10}>
+                <CircularProgress size={40} />
+                <Typography sx={{ mt: 2 }} color='textSecondary'>Preparando tu catálogo...</Typography>
             </Box>
         )
     }
 
-    // Step 2: Crear producto
     return (
-        <Box>
-            <Typography variant='h5' className='mb-2 font-semibold text-center'>
-                📦 Crear Primer Producto
-            </Typography>
-            <Typography variant='body2' className='mb-2 text-textSecondary text-center'>
-                Agrega la información básica de tu producto o servicio
-            </Typography>
-            <Alert severity='info' sx={{ mb: 4 }}>
-                💡 Podrás ampliar la información (stock, imágenes, etc.) desde el menú <strong>Ventas → Inventario</strong>
-            </Alert>
+        <Box className='max-w-2xl mx-auto'>
+            <Box className='text-center mb-8'>
+                <Typography variant='h4' className='mb-2 font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent'>
+                    🚀 Casi Listos
+                </Typography>
+                <Typography variant='body1' color='textSecondary'>
+                    Crea tu primer producto para que tu asistente IA pueda empezar a vender por ti.
+                </Typography>
+            </Box>
 
-            {message && (
-                <Alert severity={message.type} sx={{ mb: 3 }}>
-                    {message.text}
-                </Alert>
-            )}
+            <Card sx={{
+                background: 'rgba(255, 255, 255, 0.7)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: 4,
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: (theme) => theme.shadows[4]
+            }}>
+                <CardContent className='p-8'>
+                    {message && (
+                        <Alert severity={message.type} sx={{ mb: 4, borderRadius: 2 }}>
+                            {message.text}
+                        </Alert>
+                    )}
 
-            <form onSubmit={handleProductSubmit}>
-                <TextField
-                    fullWidth
-                    label='Nombre del Producto/Servicio'
-                    value={productName}
-                    onChange={e => setProductName(e.target.value)}
-                    placeholder='Ej: Corte de cabello, Consulta médica'
-                    sx={{ mb: 3 }}
-                    autoFocus
-                    required
-                />
+                    <form onSubmit={handleProductSubmit}>
+                        <Grid container spacing={4}>
+                            <Grid item xs={12}>
+                                <TextField
+                                    fullWidth
+                                    label='Nombre del Producto o Servicio'
+                                    value={productName}
+                                    onChange={e => setProductName(e.target.value)}
+                                    placeholder='Ej: Hamburguesa Especial, Sesión de Spa, Suscripción Mensual'
+                                    variant='outlined'
+                                    required
+                                    autoFocus
+                                    InputProps={{
+                                        sx: { borderRadius: 3 }
+                                    }}
+                                />
+                            </Grid>
 
-                <TextField
-                    fullWidth
-                    multiline
-                    rows={3}
-                    label='Descripción'
-                    value={productDescription}
-                    onChange={e => setProductDescription(e.target.value)}
-                    placeholder='Describe brevemente tu producto o servicio'
-                    sx={{ mb: 3 }}
-                />
+                            <Grid item xs={12}>
+                                <TextField
+                                    fullWidth
+                                    multiline
+                                    rows={3}
+                                    label='Descripción para la IA'
+                                    value={productDescription}
+                                    onChange={e => setProductDescription(e.target.value)}
+                                    placeholder='Describe de qué se trata. Tu chatbot usará esto para responder a tus clientes.'
+                                    variant='outlined'
+                                    InputProps={{
+                                        sx: { borderRadius: 3 }
+                                    }}
+                                />
+                            </Grid>
 
-                <TextField
-                    fullWidth
-                    type='number'
-                    label='Valor de Venta'
-                    value={productPrice}
-                    onChange={e => setProductPrice(e.target.value)}
-                    placeholder='0.00'
-                    helperText='Precio de venta al público'
-                    sx={{ mb: 3 }}
-                    required
-                    inputProps={{ min: 0, step: '0.01' }}
-                />
+                            <Grid item xs={12} sm={6}>
+                                <TextField
+                                    fullWidth
+                                    type='number'
+                                    label='Precio de Venta'
+                                    value={productPrice}
+                                    onChange={e => setProductPrice(e.target.value)}
+                                    placeholder='0.00'
+                                    required
+                                    InputProps={{
+                                        startAdornment: <InputAdornment position='start'>$</InputAdornment>,
+                                        sx: { borderRadius: 3 },
+                                        inputProps: { min: 0, step: '0.01' }
+                                    }}
+                                />
+                            </Grid>
 
-                <Box className='flex gap-2'>
-                    <Button
-                        variant='outlined'
-                        onClick={() => setSubStep(0)}
-                        disabled={loading}
-                    >
-                        Atrás
-                    </Button>
-                    <Button
-                        type='submit'
-                        variant='contained'
-                        size='large'
-                        fullWidth
-                        disabled={loading || !productName.trim() || !productPrice}
-                    >
-                        {loading ? (
-                            <>
-                                <CircularProgress size={20} className='mr-2' />
-                                Creando...
-                            </>
-                        ) : (
-                            'Finalizar'
-                        )}
-                    </Button>
-                </Box>
-            </form>
+                            <Grid item xs={12} sm={6}>
+                                <Box sx={{
+                                    p: 2,
+                                    bgcolor: 'action.hover',
+                                    borderRadius: 3,
+                                    border: '1px dashed',
+                                    borderColor: 'divider',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    height: '100%'
+                                }}>
+                                    <Box>
+                                        <Typography variant='caption' color='text.secondary' display='block'>
+                                            📁 Categoría Automática
+                                        </Typography>
+                                        <Typography variant='body2' fontWeight={600}>
+                                            General
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Grid>
+
+                            <Grid item xs={12} className='mt-4'>
+                                <Button
+                                    type='submit'
+                                    variant='contained'
+                                    size='large'
+                                    fullWidth
+                                    disabled={loading || !productName.trim() || !productPrice}
+                                    sx={{
+                                        py: 1.5,
+                                        borderRadius: 3,
+                                        fontSize: '1.1rem',
+                                        textTransform: 'none',
+                                        boxShadow: (theme) => theme.shadows[8],
+                                        '&:hover': {
+                                            transform: 'translateY(-2px)',
+                                            boxShadow: (theme) => theme.shadows[12]
+                                        },
+                                        transition: 'all 0.3s'
+                                    }}
+                                >
+                                    {loading ? (
+                                        <Box display='flex' alignItems='center'>
+                                            <CircularProgress size={24} color='inherit' className='mr-3' />
+                                            Creando tu catálogo...
+                                        </Box>
+                                    ) : (
+                                        'Finalizar Configuración ✨'
+                                    )}
+                                </Button>
+                                <Typography variant='caption' display='block' textAlign='center' sx={{ mt: 2 }} color='text.secondary'>
+                                    ¡Al terminar, podrás acceder a tu panel de control completo!
+                                </Typography>
+                            </Grid>
+                        </Grid>
+                    </form>
+                </CardContent>
+            </Card>
         </Box>
     )
 }

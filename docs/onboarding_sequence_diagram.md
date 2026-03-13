@@ -1,8 +1,8 @@
 # Flujo de Registro, Verificación y Onboarding
 
-Este diagrama detalla la secuencia de eventos desde que un usuario se registra hasta que su cuenta y compañía por defecto son configuradas automáticamente. Se ha refinado para asegurar que el onboarding solo ocurre si el usuario no tiene un Tenant asignado.
+Este diagrama detalla la secuencia de eventos desde que un usuario se registra hasta que su cuenta y compañía por defecto son configuradas automáticamente. Se ha refinado para asegurar que el onboarding incluya la activación real de la instancia de WhatsApp y el catálogo inicial.
 
-> **Última actualización**: 2026-03-12 — Incluye flujo verificado de notificación WhatsApp vía Evolution API
+> **Última actualización**: 2026-03-12 — Incluye flujo verificado de 4 pasos con activación de instancia dedicada.
 
 ## Diagrama de Secuencia
 
@@ -49,30 +49,40 @@ sequenceDiagram
         Note over User, FE: Usuario ya configurado o Invitado
         FE-->>User: Redirección directa a /home
     else Si el Usuario es ADMIN y customerId == null
-        Note over User, FE: Fase 3: Account Setup (Onboarding Único)
+        Note over User, FE: Fase 3: Account Setup (Wizard 4 Pasos)
         User->>FE: Redirección automática a /account-setup
         
-        Note over User, FE: Configuración de Negocio
-        User->>FE: Completa datos de empresa en /account-setup
+        Note over User, FE: Paso 1: Tu Negocio
+        User->>FE: Completa datos de empresa
         FE->>BE: POST /customers/account-setup
-        BE->>DB: Crear Tenant, Company y Suscripción Gratuita
-        BE->>DB: Activar Módulos del Plan en la Suscripción
-        BE->>DB: Asociar user.customerId = tenant.id
+        BE->>DB: Crear Tenant, Company y Suscripción
+        BE->>BE: chatbotService.activateChatbot(tenantId)
+        BE->>WA: POST /instance/create (Dedicada)
         BE->>Kafka: Emitir evento 'welcome-notifications'
-        Note over Kafka,WA: notification-service en kafka-net + app-net
-        Kafka->>NS: Consumidor KafkaConsumerListener recibe mensaje
-        NS->>WA: POST /message/sendText/cloudfly_chatbot1
-        Note over NS,WA: apikey: 54DC1F63C38C-4F66-BCA6-0EBE8E786C09
-        WA-->>NS: HTTP 201 - Mensaje enviado ✅
+        Kafka->>NS: Consumidor recibe mensaje
+        NS->>WA: POST /message/sendText/{dedicated_instance}
         BE-->>FE: HTTP 200 OK (UserDto actualizado)
         
-        FE->>FE: Actualizar userData en LocalStorage (con customerId)
-        FE-->>User: Redirección automática a /home
+        Note over User, FE: Paso 2: Chatbot IA
+        FE->>BE: GET /api/chatbot/config
+        BE-->>FE: Config + QR Code (Base64)
+        FE-->>User: Mostrar QR para vincular
+        User->>FE: Configura nombre agente y guarda
+        FE->>BE: POST /api/chatbot/config
+        BE-->>FE: HTTP 200 OK
+
+        Note over User, FE: Paso 3: Productos
+        User->>FE: Crea categorías y productos iniciales
+        FE->>BE: POST /api/products
+        BE-->>FE: HTTP 201 Created
+        
+        FE->>FE: Actualizar userData
+        FE-->>User: Clic en 'Finalizar' -> Redirección a /home
     end
 
     Note over FE, BE: Carga Dashboard
     FE->>BE: GET /api/rbac/menu
-    BE->>DB: Consultar Módulos según Rol y Suscripción (si aplica)
+    BE->>DB: Consultar Módulos
     BE-->>FE: List<MenuItemDto>
     FE-->>User: Renderizar Sidebar dinámico
 ```
@@ -80,23 +90,19 @@ sequenceDiagram
 ## Detalles del Proceso
 
 1.  **Registro**: El usuario se crea en estado inactivo hasta confirmar su correo. El `customerId` es nulo inicialmente.
-2.  **Onboarding Único**: El frontend verifica el campo `customerId` del usuario autenticado. Si es nulo y el rol es `ADMIN`, redirige al wizard. Si ya tiene valor, significa que la empresa ya existe (o el usuario fue invitado a una) y se le permite ir directo al Dashboard.
-3.  **Account Setup**: En este paso se crea:
-    *   El **Customer** (Tenant principal).
-    *   La **Company** principal.
-    *   La **Suscripción** al Plan inicial.
-    *   Se actualiza el usuario con el ID del Tenant recién creado.
-4.  **Menú Dinámico**: El backend usa el `customerId` para filtrar los módulos en la tabla `modules`.
-5.  **WhatsApp de Bienvenida**: Al completar el Account Setup, el backend publica en el tópico `welcome-notifications`. El `notification-service` consume el evento y llama a `POST /message/sendText/cloudfly_chatbot1` en la Evolution API con el mensaje de bienvenida al número registrado.
+2.  **Onboarding Estándar**: El wizard de 4 pasos asegura que el cliente tenga configurado su negocio, su canal de WhatsApp y al menos un producto antes de entrar al dashboard.
+3.  **Activación de WhatsApp**: Al completar el Paso 1 (Negocio), el backend crea automáticamente una instancia dedicada en Evolution API (`cloudfly_{tenantId}`). La notificación de bienvenida se envía a través de esta nueva instancia si es posible.
+4.  **Vinculación**: En el Paso 2, el usuario ve el QR de su propia instancia para finalizar la vinculación real.
+5.  **Menú Dinámico**: El backend usa el `customerId` para filtrar los módulos.
 
 ## Notas Técnicas (Producción)
 
 | Componente | Valor |
 |---|---|
-| Evolution API instance | `cloudfly_chatbot1` |
+| Evolution API Instance Format | `cloudfly_{tenantId}` |
+| Fallback Instance | `cloudfly_chatbot1` |
 | Evolution API key | `54DC1F63C38C-4F66-BCA6-0EBE8E786C09` |
 | Kafka topic notificación bienvenida | `welcome-notifications` |
-| Kafka topic registro | `register-user` |
-| Redes Docker `notification-service` | `kafka-net` + `app-net` (requerido para alcanzar `evolution_api`) |
+| Redes Docker `notification-service` | `kafka-net` + `app-net` |
 
-> ⚠️ **Importante**: El `notification-service` **debe estar en ambas redes** (`kafka-net` para consumir Kafka y `app-net` para alcanzar el contenedor `evolution_api`). Sin `app-net`, el servicio falla silenciosamente al intentar enviar la notificación.
+> ⚠️ **Importante**: El proceso de "Omitir" ha sido deshabilitado en favor de una configuración completa y activa desde el primer día.
