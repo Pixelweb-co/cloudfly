@@ -221,11 +221,16 @@ const AccountSetup = () => {
 
           {/* Step Content */}
           <Box className='min-h-[400px]'>
-            {renderStepContent(activeStep)}
+            <Box 
+              key={activeStep} 
+              className='wizard-step-container'
+            >
+              {renderStepContent(activeStep)}
+            </Box>
           </Box>
 
           {/* Navigation Buttons */}
-          {activeStep !== 1 && activeStep !== 2 && ( // Los pasos 1 y 2 (FormCustomer y ChatbotSetupForm) tienen sus propios botones
+          {activeStep !== 1 && activeStep !== 2 && activeStep !== 3 && ( // Pasos con botones propios
             <Box className='flex justify-between mt-8'>
               <Button
                 disabled={activeStep === 0}
@@ -238,7 +243,7 @@ const AccountSetup = () => {
                 variant='contained'
                 onClick={handleNext}
                 size='large'
-                className='min-w-[120px]'
+                className='min-w-[120px] next-wizard-step'
               >
                 {activeStep === steps.length - 1 ? 'Finalizar' : 'Continuar'}
               </Button>
