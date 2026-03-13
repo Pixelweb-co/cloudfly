@@ -16,14 +16,16 @@ public class EvolutionService {
 
     private final WebClient webClient;
     private final String apiKey;
+    private final String apiUrl;
 
     public EvolutionService(
             WebClient.Builder webClientBuilder,
             @Value("${evolution.api.url}") String apiUrl,
             @Value("${evolution.api.key}") String apiKey) {
         log.info("🚀 [EVOLUTION-SERVICE] Initialized with URL: {} and Key: {}", apiUrl, apiKey);
-        this.webClient = webClientBuilder.baseUrl(apiUrl).build();
+        this.webClient = webClientBuilder.build();
         this.apiKey = apiKey;
+        this.apiUrl = apiUrl;
     }
 
     public Mono<Map<String, Object>> createInstance(String instanceName) {
@@ -34,7 +36,7 @@ public class EvolutionService {
         body.put("qrcode", true);
 
         return webClient.post()
-                .uri("/instance/create")
+                .uri(apiUrl + "/instance/create")
                 .header("apikey", apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
@@ -55,7 +57,7 @@ public class EvolutionService {
         log.info("🔲 [EVOLUTION-SERVICE] Fetching QR for: {}", instanceName);
 
         return webClient.get()
-                .uri("/instance/connect/" + instanceName)
+                .uri(apiUrl + "/instance/connect/" + instanceName)
                 .header("apikey", apiKey)
                 .retrieve()
                 .onStatus(status -> status.isError(), response -> 
@@ -71,7 +73,7 @@ public class EvolutionService {
 
     public Mono<Map<String, Object>> checkConnection(String instanceName) {
         return webClient.get()
-                .uri("/instance/connectionState/" + instanceName)
+                .uri(apiUrl + "/instance/connectionState/" + instanceName)
                 .header("apikey", apiKey)
                 .retrieve()
                 .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
