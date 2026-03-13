@@ -322,13 +322,13 @@ async function runE2E() {
         // Paso 3: Productos
         console.log('   ▶ Pasó 3: Productos');
         try {
-            // Esperar a que cargue la categoría automática
-            await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'Categoría Automática')]")), 15000);
+            // Esperar a que cargue la categoría (buscamos el texto 'General')
+            await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'General')]")), 20000);
             
             // Llenar datos del producto
-            await waitAndType(driver, By.xpath("//input[contains(@label, 'Nombre del Producto')]"), 'Servicio Premium IA');
-            await waitAndType(driver, By.xpath("//textarea[contains(@label, 'Descripción for the IA')]"), 'Descripción del producto premium para el chatbot.');
-            await waitAndType(driver, By.xpath("//input[contains(@label, 'Precio de Venta')]"), '99.99');
+            await waitAndType(driver, By.xpath("//input[contains(@label, 'Nombre del Producto') or contains(@placeholder, 'Hamburguesa')]"), 'Servicio Premium IA');
+            await waitAndType(driver, By.xpath("//textarea[contains(@label, 'Descripción') or contains(@placeholder, 'Describe')]"), 'Descripción del producto premium para el chatbot.');
+            await waitAndType(driver, By.xpath("//input[contains(@label, 'Valor de Venta') or contains(@placeholder, '0.00')]"), '99.99');
             
             await takeScreenshot(driver, '08_wizard_producto_nuevo', timestamp);
             

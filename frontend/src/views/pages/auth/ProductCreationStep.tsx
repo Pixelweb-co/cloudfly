@@ -171,7 +171,7 @@ const ProductCreationStep = ({ onProductCreated }: ProductCreationStepProps) => 
                                 <TextField
                                     fullWidth
                                     type='number'
-                                    label='Precio de Venta'
+                                    label='Valor de Venta'
                                     value={productPrice}
                                     onChange={e => setProductPrice(e.target.value)}
                                     placeholder='0.00'
