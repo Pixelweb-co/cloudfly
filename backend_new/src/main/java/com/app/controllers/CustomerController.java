@@ -135,26 +135,18 @@ public class CustomerController {
                                                                         .build();
 
                                                                 return chatbotConfigRepository.save(chatbotConfig)
-                                                                        .flatMap(savedConfig -> chatbotService.activateChatbot(savedTenant.getId())
-                                                                                .flatMap(configDto -> {
-                                                                                    userDto.setChatbotConfig(configDto);
-                                                                                    
-                                                                                    Map<String, Object> welcomeMsg = Map.of(
-                                                                                            "phoneNumber", form.getPhone(),
-                                                                                            "customerName", form.getName(),
-                                                                                            "contactName", form.getContact(),
-                                                                                            "email", form.getEmail(),
-                                                                                            "businessType", form.getBusinessType(),
-                                                                                            "instanceName", instanceName
-                                                                                    );
-                                                                                    log.info("📧 [ACCOUNT-SETUP] Sending notification for: {}", instanceName);
-                                                                                    return kafkaTemplate.send("welcome-notifications", welcomeMsg).then();
-                                                                                })
-                                                                                .onErrorResume(err -> {
-                                                                                    log.error("⚠️ [ACCOUNT-SETUP] Evolution Error for {}: {}. Continuing...", instanceName, err.getMessage());
-                                                                                    return Mono.empty();
-                                                                                })
-                                                                        )
+                                                                        .then(Mono.defer(() -> {
+                                                                            Map<String, Object> welcomeMsg = Map.of(
+                                                                                    "phoneNumber", form.getPhone(),
+                                                                                    "customerName", form.getName(),
+                                                                                    "contactName", form.getContact(),
+                                                                                    "email", form.getEmail(),
+                                                                                    "businessType", form.getBusinessType(),
+                                                                                    "instanceName", instanceName
+                                                                            );
+                                                                            log.info("📧 [ACCOUNT-SETUP] Sending notification for: {}", instanceName);
+                                                                            return kafkaTemplate.send("welcome-notifications", welcomeMsg).then();
+                                                                        }))
                                                                         .thenReturn(userDto);
                                                             }));
                                         }));
