@@ -18,9 +18,9 @@ const ProductCreationStep = ({ onProductCreated }: ProductCreationStepProps) => 
     const [categoryId, setCategoryId] = useState<number | null>(null)
 
     // Product state
-    const [productName, setProductName] = useState('')
-    const [productDescription, setProductDescription] = useState('')
-    const [productPrice, setProductPrice] = useState('')
+    const [productName, setProductName] = useState('Mi Primer Producto')
+    const [productDescription, setProductDescription] = useState('Este es un producto de ejemplo. Puedes editar su nombre, precio y descripción.')
+    const [productPrice, setProductPrice] = useState('10.00')
 
     // Buscar categoría "General" al cargar
     useEffect(() => {
