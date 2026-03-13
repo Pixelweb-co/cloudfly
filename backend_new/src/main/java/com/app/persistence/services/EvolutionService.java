@@ -46,6 +46,7 @@ public class EvolutionService {
 
         Map<String, Object> body = new HashMap<>();
         body.put("instanceName", instanceName);
+        body.put("integration", "WHATSAPP-BAILEYS");
         body.put("token", apiKey);
         body.put("qrcode", true);
 
