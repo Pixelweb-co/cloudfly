@@ -9,6 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import com.app.dto.UserDto;
 import com.app.persistence.services.UserService;
 import com.app.persistence.services.EvolutionService;
+import com.app.persistence.repository.ChatbotConfigRepository;
+import com.app.persistence.entity.ChatbotConfig;
+import com.app.persistence.entity.ChatbotType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -34,6 +37,7 @@ public class CustomerController {
     private final CompanyRepository companyRepository;
     private final ReactiveKafkaProducerTemplate<String, Object> kafkaTemplate;
     private final EvolutionService evolutionService;
+    private final ChatbotConfigRepository chatbotConfigRepository;
 
     @GetMapping
     public Flux<CustomerDto> getAllCustomers() {
@@ -123,17 +127,31 @@ public class CustomerController {
 
                                                         return evolutionService.createInstance(instanceName)
                                                                 .flatMap(res -> {
-                                                                    // Enviar notificación de bienvenida por WhatsApp (Kafka)
-                                                                    Map<String, Object> welcomeMsg = Map.of(
-                                                                            "phoneNumber", form.getPhone(),
-                                                                            "customerName", form.getName(),
-                                                                            "contactName", form.getContact(),
-                                                                            "email", form.getEmail(),
-                                                                            "businessType", form.getBusinessType(),
-                                                                            "instanceName", instanceName
-                                                                    );
-                                                                    log.info("Sending welcome notification to Kafka for tenant: {}", savedTenant.getId());
-                                                                    return kafkaTemplate.send("welcome-notifications", welcomeMsg).thenReturn(userDto);
+                                                                    // Guardar configuración del chatbot en la DB para que el frontend la vea
+                                                                    ChatbotConfig chatbotConfig = ChatbotConfig.builder()
+                                                                            .tenantId(savedTenant.getId())
+                                                                            .instanceName(instanceName)
+                                                                            .chatbotType(ChatbotType.SALES) // Default
+                                                                            .isActive(false) // Pendiente de conexión (QR)
+                                                                            .agentName("Asistente Cloudfly")
+                                                                            .createdAt(LocalDateTime.now())
+                                                                            .updatedAt(LocalDateTime.now())
+                                                                            .build();
+
+                                                                    return chatbotConfigRepository.save(chatbotConfig)
+                                                                            .then(Mono.defer(() -> {
+                                                                                // Enviar notificación de bienvenida por WhatsApp (Kafka)
+                                                                                Map<String, Object> welcomeMsg = Map.of(
+                                                                                        "phoneNumber", form.getPhone(),
+                                                                                        "customerName", form.getName(),
+                                                                                        "contactName", form.getContact(),
+                                                                                        "email", form.getEmail(),
+                                                                                        "businessType", form.getBusinessType(),
+                                                                                        "instanceName", instanceName
+                                                                                );
+                                                                                log.info("Sending welcome notification to Kafka for tenant: {}", savedTenant.getId());
+                                                                                return kafkaTemplate.send("welcome-notifications", welcomeMsg).thenReturn(userDto);
+                                                                            }));
                                                                 })
                                                                 .onErrorResume(err -> {
                                                                     log.error("⚠️ Error creating Evolution instance during setup: {}. Continuing...", err.getMessage());
