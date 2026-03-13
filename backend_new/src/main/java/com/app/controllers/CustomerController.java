@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.app.dto.UserDto;
 import com.app.persistence.services.UserService;
+import com.app.persistence.services.EvolutionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -32,6 +33,7 @@ public class CustomerController {
     private final UserService userService;
     private final CompanyRepository companyRepository;
     private final ReactiveKafkaProducerTemplate<String, Object> kafkaTemplate;
+    private final EvolutionService evolutionService;
 
     @GetMapping
     public Flux<CustomerDto> getAllCustomers() {
@@ -116,18 +118,27 @@ public class CustomerController {
                                             .flatMap(savedUser -> handleAutomaticSubscription(savedTenant.getId())
                                                     .then(userService.convertToDto(savedUser))
                                                     .flatMap(userDto -> {
-                                                        // Enviar notificación de bienvenida por WhatsApp (Kafka)
+                                                        // Activación automática de la instancia dedicada en Evolution API
                                                         String instanceName = "cloudfly_" + user.getUsername().toLowerCase().replaceAll("[^a-z0-9]", "_");
-                                                        Map<String, Object> welcomeMsg = Map.of(
-                                                                "phoneNumber", form.getPhone(),
-                                                                "customerName", form.getName(),
-                                                                "contactName", form.getContact(),
-                                                                "email", form.getEmail(),
-                                                                "businessType", form.getBusinessType(),
-                                                                "instanceName", instanceName
-                                                        );
-                                                        log.info("Sending welcome notification to Kafka for tenant: {}", savedTenant.getId());
-                                                        return kafkaTemplate.send("welcome-notifications", welcomeMsg).thenReturn(userDto);
+
+                                                        return evolutionService.createInstance(instanceName)
+                                                                .flatMap(res -> {
+                                                                    // Enviar notificación de bienvenida por WhatsApp (Kafka)
+                                                                    Map<String, Object> welcomeMsg = Map.of(
+                                                                            "phoneNumber", form.getPhone(),
+                                                                            "customerName", form.getName(),
+                                                                            "contactName", form.getContact(),
+                                                                            "email", form.getEmail(),
+                                                                            "businessType", form.getBusinessType(),
+                                                                            "instanceName", instanceName
+                                                                    );
+                                                                    log.info("Sending welcome notification to Kafka for tenant: {}", savedTenant.getId());
+                                                                    return kafkaTemplate.send("welcome-notifications", welcomeMsg).thenReturn(userDto);
+                                                                })
+                                                                .onErrorResume(err -> {
+                                                                    log.error("⚠️ Error creating Evolution instance during setup: {}. Continuing...", err.getMessage());
+                                                                    return Mono.just(userDto);
+                                                                });
                                                     }));
                                 }));
                     });
