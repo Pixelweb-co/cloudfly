@@ -10,6 +10,12 @@ import reactor.core.publisher.Mono;
 import java.util.HashMap;
 import java.util.Map;
 
+class InstanceAlreadyExistsException extends RuntimeException {
+    public InstanceAlreadyExistsException(String message) {
+        super(message);
+    }
+}
+
 @Slf4j
 @Service
 public class EvolutionService {
@@ -54,18 +60,28 @@ public class EvolutionService {
                 .onStatus(status -> status.isError(), response -> 
                     response.bodyToMono(Map.class)
                         .flatMap(errorBody -> {
-                            String message = (String) errorBody.get("message");
+                            String message = errorBody != null ? (String) errorBody.get("message") : "";
                             if (response.statusCode().value() == 400 && message != null && message.contains("already in use")) {
-                                log.info("ℹ️ [EVOLUTION-SERVICE] Instance already exists, treating as success: {}", instanceName);
-                                return Mono.empty(); // Continue to bodyToMono
+                                log.info("ℹ️ [EVOLUTION-SERVICE] Instance already exists: {}", instanceName);
+                                return Mono.error(new InstanceAlreadyExistsException("Instance already exists"));
                             }
                             log.error("❌ Evolution API Error ({}): {}", response.statusCode(), errorBody);
                             return Mono.error(new RuntimeException("Evolution API Error: " + errorBody));
                         })
                 )
                 .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
-                .doOnSuccess(res -> log.info("✅ Instance created: {}", instanceName))
-                .doOnError(err -> log.error("❌ Error creating instance {}: {}", instanceName, err.getMessage()));
+                .onErrorResume(InstanceAlreadyExistsException.class, e -> {
+                    log.info("✅ [EVOLUTION-SERVICE] Recovering from existing instance: {}", instanceName);
+                    Map<String, Object> recoveryMap = new HashMap<>();
+                    recoveryMap.put("instance", Map.of("instanceName", instanceName, "status", "created"));
+                    return Mono.just(recoveryMap);
+                })
+                .doOnSuccess(res -> log.info("✅ Instance creation handled: {}", instanceName))
+                .doOnError(err -> {
+                    if (!(err instanceof InstanceAlreadyExistsException)) {
+                        log.error("❌ Error creating instance {}: {}", instanceName, err.getMessage());
+                    }
+                });
     }
 
     public Mono<Map<String, Object>> fetchQrCode(String instanceName) {

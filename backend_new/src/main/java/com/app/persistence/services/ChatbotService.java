@@ -32,15 +32,16 @@ public class ChatbotService {
                         .flatMap(statusRes -> {
                             ChatbotConfigDTO dto = mapToDTO(config);
                             dto.setExists(true);
-                            Object state = statusRes.get("instance");
-                            if (state instanceof Map) {
-                                Map<String, Object> instance = (Map<String, Object>) state;
-                                String status = (String) instance.get("status");
-                                dto.setIsConnected("open".equals(status));
+                            Object instObj = statusRes.get("instance");
+                            if (instObj instanceof Map) {
+                                Map<String, Object> instance = (Map<String, Object>) instObj;
+                                String state = (String) instance.get("state");
+                                if (state == null) state = (String) instance.get("status");
+                                dto.setIsConnected("open".equals(state));
                             } else {
-                                // Fallback to connectionState check if needed
-                                String connectionStatus = (String) statusRes.get("status");
-                                dto.setIsConnected("open".equals(connectionStatus));
+                                String connectionState = (String) statusRes.get("state");
+                                if (connectionState == null) connectionState = (String) statusRes.get("status");
+                                dto.setIsConnected("open".equals(connectionState));
                             }
 
                             if (!dto.getIsConnected()) {
@@ -70,22 +71,25 @@ public class ChatbotService {
         log.info("🚀 [CHATBOT-SERVICE] Activating chatbot for tenant: {}", tenantId);
         return chatbotConfigRepository.findByTenantId(tenantId)
                 .flatMap(config -> evolutionService.createInstance(config.getInstanceName())
-                        .flatMap(res -> {
-                            log.info("✅ [CHATBOT-SERVICE] Instance created for tenant: {}", tenantId);
+                        .onErrorResume(err -> {
+                            if (err instanceof InstanceAlreadyExistsException || err.getMessage().contains("already exists")) {
+                                log.info("ℹ️ [CHATBOT-SERVICE] Instance already exists, continuing with update/status");
+                                return Mono.empty();
+                            }
+                            return Mono.error(err);
+                        })
+                        .then(Mono.defer(() -> {
+                            log.info("✅ [CHATBOT-SERVICE] Ensuring config is active: {}", tenantId);
                             config.setIsActive(true);
                             config.setUpdatedAt(LocalDateTime.now());
                             return chatbotConfigRepository.save(config)
-                                    .flatMap(saved -> getStatus(tenantId));
-                        })
-                        .onErrorResume(err -> {
-                            if (err.getMessage().contains("already exists")) {
-                                log.info("ℹ️ [CHATBOT-SERVICE] Instance already exists, fetching status/QR");
-                                return getStatus(tenantId);
-                            }
-                            log.error("❌ [CHATBOT-SERVICE] Error activating chatbot: {}", err.getMessage());
-                            return Mono.error(err);
-                        })
+                                    .then(getQrOnlyIfDisconnected(tenantId));
+                        }))
                 );
+    }
+
+    private Mono<ChatbotConfigDTO> getQrOnlyIfDisconnected(Long tenantId) {
+        return getStatus(tenantId);
     }
 
     public Mono<ChatbotConfigDTO> getQrCode(Long tenantId) {
