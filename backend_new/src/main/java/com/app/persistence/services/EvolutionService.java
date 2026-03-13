@@ -21,6 +21,7 @@ public class EvolutionService {
             WebClient.Builder webClientBuilder,
             @Value("${evolution.api.url}") String apiUrl,
             @Value("${evolution.api.key}") String apiKey) {
+        log.info("🚀 [EVOLUTION-SERVICE] Initialized with URL: {} and Key: {}", apiUrl, apiKey);
         this.webClient = webClientBuilder.baseUrl(apiUrl).build();
         this.apiKey = apiKey;
     }
