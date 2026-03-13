@@ -23,13 +23,15 @@ public class EvolutionService {
             @Value("${evolution.api.url}") String apiUrl,
             @Value("${evolution.api.key}") String apiKey) {
         log.info("🚀 [EVOLUTION-SERVICE] Initialized with URL: {} and Key: {}", apiUrl, apiKey);
-        this.apiUrl = apiUrl;
+        // Asegurar que apiUrl no termine en /
+        this.apiUrl = apiUrl.endsWith("/") ? apiUrl.substring(0, apiUrl.length() - 1) : apiUrl;
         this.apiKey = apiKey;
-        this.webClient = webClientBuilder.baseUrl(apiUrl).build();
+        this.webClient = webClientBuilder.build();
     }
 
     public Mono<Map<String, Object>> createInstance(String instanceName) {
-        log.info("🌐 [EVOLUTION-SERVICE] Creating instance: {}", instanceName);
+        String url = apiUrl + "/instance/create";
+        log.info("🌐 [EVOLUTION-SERVICE] Creating instance: {} at {}", instanceName, url);
 
         Map<String, Object> body = Map.of(
                 "instanceName", instanceName,
@@ -39,7 +41,7 @@ public class EvolutionService {
         );
 
         return webClient.post()
-                .uri("/instance/create")
+                .uri(url)
                 .header("apikey", apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
@@ -57,10 +59,11 @@ public class EvolutionService {
     }
 
     public Mono<Map<String, Object>> fetchQrCode(String instanceName) {
-        log.info("🔲 [EVOLUTION-SERVICE] Fetching QR for: {}", instanceName);
+        String url = apiUrl + "/instance/connect/" + instanceName;
+        log.info("🔲 [EVOLUTION-SERVICE] Fetching QR at: {}", url);
 
         return webClient.get()
-                .uri("/instance/connect/" + instanceName)
+                .uri(url)
                 .header("apikey", apiKey)
                 .retrieve()
                 .onStatus(status -> status.isError(), response -> 
@@ -75,8 +78,9 @@ public class EvolutionService {
     }
 
     public Mono<Map<String, Object>> checkConnection(String instanceName) {
+        String url = apiUrl + "/instance/connectionState/" + instanceName;
         return webClient.get()
-                .uri("/instance/connectionState/" + instanceName)
+                .uri(url)
                 .header("apikey", apiKey)
                 .retrieve()
                 .onStatus(status -> status.isError(), response -> Mono.empty())
