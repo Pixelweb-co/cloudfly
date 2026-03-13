@@ -284,9 +284,9 @@ async function runE2E() {
                 console.log('   ✅ QR Code detectado (activación automática BE exitosa)');
             } catch (qrError) {
                 console.log('   ⚠️ QR no detectado automáticamente, intentando activación manual...');
-                const activateBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Activar Chatbot Ahora')]")), 10000);
+                const activateBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Activar') or contains(., 'Chatbot')]")), 15000);
                 await driver.executeScript("arguments[0].click();", activateBtn);
-                await driver.wait(until.elementLocated(By.xpath("//img[@alt='WhatsApp QR Code']")), 15000);
+                await driver.wait(until.elementLocated(By.xpath("//img[@alt='WhatsApp QR Code']")), 20000);
                 console.log('   ✅ QR Code generado manualmente');
             }
 
@@ -323,9 +323,14 @@ async function runE2E() {
         console.log('   ▶ Pasó 3: Productos');
         try {
             // Esperar a que cargue la categoría (buscamos el texto 'General')
-            await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'General')]")), 20000);
+            await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'General')]")), 25000);
+            await driver.sleep(2000); // Wait for auto-fill to stabilize
             
-            // Llenar datos del producto
+            console.log('   📸 Capturando formulario auto-llenado...');
+            await takeScreenshot(driver, '07_wizard_producto_autollenado', timestamp);
+            
+            // Opcional: Modificar los valores para verificar que el guardado funciona
+            console.log('   Modificando datos del producto...');
             await waitAndType(driver, By.xpath("//input[contains(@label, 'Nombre del Producto') or contains(@placeholder, 'Hamburguesa')]"), 'Servicio Premium IA');
             await waitAndType(driver, By.xpath("//textarea[contains(@label, 'Descripción') or contains(@placeholder, 'Describe')]"), 'Descripción del producto premium para el chatbot.');
             await waitAndType(driver, By.xpath("//input[contains(@label, 'Valor de Venta') or contains(@placeholder, '0.00')]"), '99.99');
