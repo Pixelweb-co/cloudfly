@@ -22,10 +22,15 @@ public class EvolutionService {
             WebClient.Builder webClientBuilder,
             @Value("${evolution.api.url}") String apiUrl,
             @Value("${evolution.api.key}") String apiKey) {
-        log.info("🚀 [EVOLUTION-SERVICE] Initialized with URL: {} and Key: {}", apiUrl, apiKey);
+        // Limpiar espacios en blanco que puedan venir de variables de entorno
+        String cleanUrl = apiUrl != null ? apiUrl.trim() : "";
+        String cleanKey = apiKey != null ? apiKey.trim() : "";
+        
+        log.info("🚀 [EVOLUTION-SERVICE] Initialized. URL: '{}', Key: '{}'", cleanUrl, cleanKey);
+        
         // Asegurar que apiUrl no termine en /
-        this.apiUrl = apiUrl.endsWith("/") ? apiUrl.substring(0, apiUrl.length() - 1) : apiUrl;
-        this.apiKey = apiKey;
+        this.apiUrl = cleanUrl.endsWith("/") ? cleanUrl.substring(0, cleanUrl.length() - 1) : cleanUrl;
+        this.apiKey = cleanKey;
         this.webClient = webClientBuilder.build();
     }
 
