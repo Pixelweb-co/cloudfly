@@ -23,8 +23,13 @@ public class ChatbotController {
     private Mono<Long> getCurrentTenantId() {
         return ReactiveSecurityContextHolder.getContext()
                 .map(SecurityContext::getAuthentication)
+                .doOnNext(auth -> log.info("🔐 [CHATBOT-AUTH] Checking auth for: {}", auth != null ? auth.getName() : "NULL"))
                 .flatMap(auth -> userService.findByUsername(auth.getName()))
-                .map(user -> user.getCustomerId());
+                .map(user -> {
+                    log.info("👤 [CHATBOT-AUTH] Found user: {} with customerId: {}", user.getUsername(), user.getCustomerId());
+                    return user.getCustomerId();
+                })
+                .doOnTerminate(() -> log.info("🏁 [CHATBOT-AUTH] Tenant lookup finished"));
     }
 
     @GetMapping("/config")
