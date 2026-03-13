@@ -71,10 +71,19 @@ public class ChatbotService {
         return chatbotConfigRepository.findByTenantId(tenantId)
                 .flatMap(config -> evolutionService.createInstance(config.getInstanceName())
                         .flatMap(res -> {
+                            log.info("✅ [CHATBOT-SERVICE] Instance created for tenant: {}", tenantId);
                             config.setIsActive(true);
                             config.setUpdatedAt(LocalDateTime.now());
                             return chatbotConfigRepository.save(config)
                                     .flatMap(saved -> getStatus(tenantId));
+                        })
+                        .onErrorResume(err -> {
+                            if (err.getMessage().contains("already exists")) {
+                                log.info("ℹ️ [CHATBOT-SERVICE] Instance already exists, fetching status/QR");
+                                return getStatus(tenantId);
+                            }
+                            log.error("❌ [CHATBOT-SERVICE] Error activating chatbot: {}", err.getMessage());
+                            return Mono.error(err);
                         })
                 );
     }

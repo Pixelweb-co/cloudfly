@@ -23,22 +23,23 @@ public class EvolutionService {
             @Value("${evolution.api.url}") String apiUrl,
             @Value("${evolution.api.key}") String apiKey) {
         log.info("🚀 [EVOLUTION-SERVICE] Initialized with URL: {} and Key: {}", apiUrl, apiKey);
-        this.webClient = webClientBuilder.build();
-        this.apiKey = apiKey;
         this.apiUrl = apiUrl;
+        this.apiKey = apiKey;
+        this.webClient = webClientBuilder.baseUrl(apiUrl).build();
     }
 
     public Mono<Map<String, Object>> createInstance(String instanceName) {
-        log.info("🌐 [EVOLUTION-SERVICE] Creating instance: {} at {}", instanceName, apiKey);
+        log.info("🌐 [EVOLUTION-SERVICE] Creating instance: {}", instanceName);
 
-        Map<String, Object> body = new HashMap<>();
-        body.put("instanceName", instanceName);
-        body.put("integration", "WHATSAPP-BAILEYS");
-        body.put("token", apiKey);
-        body.put("qrcode", true);
+        Map<String, Object> body = Map.of(
+                "instanceName", instanceName,
+                "integration", "WHATSAPP-BAILEYS",
+                "token", apiKey,
+                "qrcode", true
+        );
 
         return webClient.post()
-                .uri(apiUrl + "/instance/create")
+                .uri("/instance/create")
                 .header("apikey", apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
@@ -59,7 +60,7 @@ public class EvolutionService {
         log.info("🔲 [EVOLUTION-SERVICE] Fetching QR for: {}", instanceName);
 
         return webClient.get()
-                .uri(apiUrl + "/instance/connect/" + instanceName)
+                .uri("/instance/connect/" + instanceName)
                 .header("apikey", apiKey)
                 .retrieve()
                 .onStatus(status -> status.isError(), response -> 
@@ -70,15 +71,16 @@ public class EvolutionService {
                         })
                 )
                 .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
-                .doOnError(err -> log.error("❌ Error fetching QR: {}", err.getMessage()));
+                .doOnError(err -> log.error("❌ Error fetching QR for {}: {}", instanceName, err.getMessage()));
     }
 
     public Mono<Map<String, Object>> checkConnection(String instanceName) {
         return webClient.get()
-                .uri(apiUrl + "/instance/connectionState/" + instanceName)
+                .uri("/instance/connectionState/" + instanceName)
                 .header("apikey", apiKey)
                 .retrieve()
+                .onStatus(status -> status.isError(), response -> Mono.empty())
                 .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
-                .doOnError(err -> log.error("❌ Error checking connection {}: {}", instanceName, err.getMessage()));
+                .doOnError(err -> log.error("❌ Error checking connection for {}: {}", instanceName, err.getMessage()));
     }
 }
