@@ -91,7 +91,12 @@ const WhatsAppConfigForm = ({ onSuccess }: Props) => {
             Generar Código QR
           </Button>
           <Box sx={{ mt: 4 }}>
-            <Button variant="text" color="secondary" onClick={onSuccess}>
+            <Button 
+                variant="text" 
+                color="secondary" 
+                onClick={onSuccess}
+                className="omit-chatbot-step"
+            >
                 Configurar más tarde
             </Button>
           </Box>
