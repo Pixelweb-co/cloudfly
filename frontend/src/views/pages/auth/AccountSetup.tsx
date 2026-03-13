@@ -221,7 +221,12 @@ const AccountSetup = () => {
 
           {/* Step Content */}
           <Box className='min-h-[400px]'>
-            {renderStepContent(activeStep)}
+            <Box 
+              key={activeStep} 
+              className='wizard-step-container'
+            >
+              {renderStepContent(activeStep)}
+            </Box>
           </Box>
 
           {/* Navigation Buttons */}
