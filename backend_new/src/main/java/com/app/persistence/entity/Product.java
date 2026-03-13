@@ -24,6 +24,9 @@ public class Product {
     @Column("tenant_id")
     private Long tenantId;
 
+    @Column("category_id")
+    private Long categoryId;
+
     @Column("product_name")
     private String productName;
 

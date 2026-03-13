@@ -18,6 +18,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -39,6 +40,8 @@ public class CustomerController {
     private final EvolutionService evolutionService;
     private final ChatbotConfigRepository chatbotConfigRepository;
     private final com.app.persistence.services.ChatbotService chatbotService;
+    private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
 
     @GetMapping
     public Flux<CustomerDto> getAllCustomers() {
@@ -116,40 +119,70 @@ public class CustomerController {
                                         .build();
 
                                 return companyRepository.save(company)
-                                        .then(Mono.defer(() -> {
-                                            user.setCustomerId(savedTenant.getId());
-                                            return userRepository.save(user)
-                                                    .flatMap(savedUser -> handleAutomaticSubscription(savedTenant.getId())
-                                                            .then(userService.convertToDto(savedUser))
-                                                            .flatMap(userDto -> {
-                                                                String instanceName = "cloudfly_" + user.getUsername().toLowerCase().replaceAll("[^a-z0-9]", "_");
+                                        .flatMap(savedCompany -> {
+                                            Category defaultCategory = Category.builder()
+                                                    .categoryName("General")
+                                                    .description("Categoría por defecto")
+                                                    .status(true)
+                                                    .tenantId(savedTenant.getId())
+                                                    .createdAt(LocalDateTime.now())
+                                                    .updatedAt(LocalDateTime.now())
+                                                    .build();
 
-                                                                ChatbotConfig chatbotConfig = ChatbotConfig.builder()
-                                                                        .tenantId(savedTenant.getId())
-                                                                        .instanceName(instanceName)
-                                                                        .chatbotType(ChatbotType.SALES)
-                                                                        .isActive(false)
-                                                                        .agentName("Asistente Cloudfly")
-                                                                        .createdAt(LocalDateTime.now())
-                                                                        .updatedAt(LocalDateTime.now())
-                                                                        .build();
+                                            return categoryRepository.save(defaultCategory)
+                                                    .flatMap(savedCategory -> {
+                                                        Product firstProduct = Product.builder()
+                                                                .productName("Producto de Ejemplo")
+                                                                .description("Este es tu primer producto. Puedes editarlo o eliminarlo desde el inventario.")
+                                                                .price(BigDecimal.valueOf(10000))
+                                                                .salePrice(BigDecimal.valueOf(10000))
+                                                                .productType("0")
+                                                                .status("ACTIVE")
+                                                                .tenantId(savedTenant.getId())
+                                                                .categoryId(savedCategory.getId())
+                                                                .manageStock(false)
+                                                                .inventoryStatus("IN_STOCK")
+                                                                .createdAt(LocalDateTime.now())
+                                                                .updatedAt(LocalDateTime.now())
+                                                                .build();
 
-                                                                return chatbotConfigRepository.save(chatbotConfig)
-                                                                        .then(Mono.defer(() -> {
-                                                                            Map<String, Object> welcomeMsg = Map.of(
-                                                                                    "phoneNumber", form.getPhone(),
-                                                                                    "customerName", form.getName(),
-                                                                                    "contactName", form.getContact(),
-                                                                                    "email", form.getEmail(),
-                                                                                    "businessType", form.getBusinessType(),
-                                                                                    "instanceName", instanceName
-                                                                            );
-                                                                            log.info("📧 [ACCOUNT-SETUP] Sending notification for: {}", instanceName);
-                                                                            return kafkaTemplate.send("welcome-notifications", welcomeMsg).then();
-                                                                        }))
-                                                                        .thenReturn(userDto);
-                                                            }));
-                                        }));
+                                                        return productRepository.save(firstProduct)
+                                                                .then(Mono.defer(() -> {
+                                                                    user.setCustomerId(savedTenant.getId());
+                                                                    return userRepository.save(user)
+                                                                            .flatMap(savedUser -> handleAutomaticSubscription(savedTenant.getId())
+                                                                                    .then(userService.convertToDto(savedUser))
+                                                                                    .flatMap(userDto -> {
+                                                                                        String instanceName = "cloudfly_" + user.getUsername().toLowerCase().replaceAll("[^a-z0-9]", "_");
+
+                                                                                        ChatbotConfig chatbotConfig = ChatbotConfig.builder()
+                                                                                                .tenantId(savedTenant.getId())
+                                                                                                .instanceName(instanceName)
+                                                                                                .chatbotType(ChatbotType.SALES)
+                                                                                                .isActive(false)
+                                                                                                .agentName("Asistente Cloudfly")
+                                                                                                .createdAt(LocalDateTime.now())
+                                                                                                .updatedAt(LocalDateTime.now())
+                                                                                                .build();
+
+                                                                                        return chatbotConfigRepository.save(chatbotConfig)
+                                                                                                .then(Mono.defer(() -> {
+                                                                                                    Map<String, Object> welcomeMsg = Map.of(
+                                                                                                            "phoneNumber", form.getPhone(),
+                                                                                                            "customerName", form.getName(),
+                                                                                                            "contactName", form.getContact(),
+                                                                                                            "email", form.getEmail(),
+                                                                                                            "businessType", form.getBusinessType(),
+                                                                                                            "instanceName", instanceName
+                                                                                                    );
+                                                                                                    log.info("📧 [ACCOUNT-SETUP] Sending notification for: {}", instanceName);
+                                                                                                    return kafkaTemplate.send("welcome-notifications", welcomeMsg).then();
+                                                                                                }))
+                                                                                                .thenReturn(userDto);
+                                                                                    }));
+                                                                }));
+                                                    });
+                                        });
                             });
                 })
                 .map(ResponseEntity::ok)
