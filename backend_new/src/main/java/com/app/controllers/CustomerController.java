@@ -112,6 +112,9 @@ public class CustomerController {
                                         .nit(savedTenant.getNit())
                                         .address(savedTenant.getAddress())
                                         .phone(savedTenant.getPhone())
+                                        .email(savedTenant.getEmail())
+                                        .contact(savedTenant.getContact())
+                                        .position(savedTenant.getPosition())
                                         .status(true)
                                         .isPrincipal(true)
                                         .createdAt(LocalDateTime.now())
@@ -136,7 +139,7 @@ public class CustomerController {
                                                                 .flatMap(savedUser -> handleAutomaticSubscription(savedTenant.getId())
                                                                         .then(userService.convertToDto(savedUser))
                                                                         .flatMap(userDto -> {
-                                                                            String instanceName = "cloudfly_" + user.getUsername().toLowerCase().replaceAll("[^a-z0-9]", "_");
+                                                                            String instanceName = "cloudfly_" + savedCompany.getId();
 
                                                                             ChatbotConfig chatbotConfig = ChatbotConfig.builder()
                                                                                     .tenantId(savedTenant.getId())

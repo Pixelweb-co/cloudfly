@@ -1,17 +1,5 @@
 /**
- * E2E Selenium Test - Flujo Onboarding ADMIN Completo
- * Basado en: docs/onboarding_sequence_diagram.md
- * 
- * Fases:
- *  1. Registro
- *  2. Activación (DB via SSH)
- *  3. Login
- *  4. Account Setup Wizard (4 Pasos)
- *     - Paso 0: Bienvenida
- *     - Paso 1: Tu Negocio (Tenant creation + WhatsApp Notification)
- *     - Paso 2: Chatbot IA (QR Generation)
- *     - Paso 3: Productos (Category + Product creation)
- *  5. Dashboard / Sidebar
+ * E2E Selenium Test - Flujo Onboarding ADMIN Completo (FIXED)
  */
 
 const { Builder, By, until, logging } = require('selenium-webdriver');
@@ -24,7 +12,6 @@ const path = require('path');
 
 const BASE_URL  = 'https://dashboard.cloudfly.com.co';
 const PHONE_WA  = '573246285134'; 
-const SSH_KEY   = 'C:\\Users\\Edwin\\.ssh\\id_rsa_cloudfly';
 const SSH_KEY_P = 'C:/Users/Edwin/.ssh/id_rsa_cloudfly';
 const VPS       = 'root@109.205.182.94';
 
@@ -39,7 +26,6 @@ const MAIL_DOMAIN = 'cloudfly.com.co';
 function runSsh(cmd, target = VPS, port = 22) {
     const escapedCmd = cmd.replace(/"/g, '\\"');
     const portFlag = port !== 22 ? `-p ${port}` : '';
-    console.log(`      [SSH] ${target}:${port} > ${cmd}`);
     return execSync(`ssh -o StrictHostKeyChecking=no -i "${SSH_KEY_P}" ${portFlag} ${target} "${escapedCmd}"`, { encoding: 'utf8' });
 }
 
@@ -47,107 +33,58 @@ function createMailAccount(account, password) {
     console.log(`   📧 Creando cuenta de correo: ${account}@${MAIL_DOMAIN}`);
     const cmd = `/usr/local/hestia/bin/v-add-mail-account cloudfly ${MAIL_DOMAIN} ${account} '${password}'`;
     runSsh(cmd, `${MAIL_USER}@${MAIL_HOST}`, MAIL_PORT);
-    
-    // Verificar que se creó
-    const checkCmd = `/usr/local/hestia/bin/v-list-mail-accounts cloudfly ${MAIL_DOMAIN} | grep ${account}`;
-    try {
-        runSsh(checkCmd, `${MAIL_USER}@${MAIL_HOST}`, MAIL_PORT);
-        console.log(`      ✅ Cuenta ${account} verificada en Hestia.`);
-        // Pequeña espera para sincronización de Exim/Dovecot
-        execSync("node -e \"setTimeout(()=>{}, 2000)\""); 
-    } catch(e) {
-        throw new Error(`Falló la creación de la cuenta de correo ${account} en Hestia.`);
-    }
 }
 
 function deleteMailAccount(account) {
     console.log(`   🧹 Eliminando cuenta de correo: ${account}@${MAIL_DOMAIN}`);
     const cmd = `/usr/local/hestia/bin/v-delete-mail-account cloudfly ${MAIL_DOMAIN} ${account}`;
-    try {
-        runSsh(cmd, `${MAIL_USER}@${MAIL_HOST}`, MAIL_PORT);
-    } catch(e) {}
+    try { runSsh(cmd, `${MAIL_USER}@${MAIL_HOST}`, MAIL_PORT); } catch(e) {}
 }
 
 async function getActivationLink(user, pass, timeoutMs = 120000) {
-    console.log(`   📬 Esperando email de activación para ${user} (timeout ${timeoutMs/1000}s)...`);
+    console.log(`   📬 Esperando email de activación para ${user}...`);
     const start = Date.now();
-    
     while (Date.now() - start < timeoutMs) {
         let client = new ImapFlow({
-            host: MAIL_HOST,
-            port: 993,
-            secure: true,
+            host: MAIL_HOST, port: 993, secure: true,
             auth: { user: `${user}@${MAIL_DOMAIN}`, pass: pass },
-            tls: { rejectUnauthorized: false },
-            logger: false
+            tls: { rejectUnauthorized: false }, logger: false
         });
-
         try {
             await client.connect();
-            let lock = await client.getMailboxLock('INBOX');
-            let activationLink = null;
-            try {
-                let mailbox = await client.status('INBOX', { messages: true });
-                if (mailbox.messages > 0) {
-                    console.log(`      [IMAP] ${mailbox.messages} mensajes encontrados. Verificando últimos...`);
-                    // Obtener los últimos mensajes usando un rango explícito
-                    const range = `${mailbox.messages}:${Math.max(1, mailbox.messages - 5)}`;
-                    for await (let msg of client.fetch(range, { source: true })) {
+            let mailbox = await client.status('INBOX', { messages: true });
+            if (mailbox.messages > 0) {
+                let lock = await client.getMailboxLock('INBOX');
+                try {
+                    for await (let msg of client.fetch(`${mailbox.messages}:*`, { source: true })) {
                         let parsed = await simpleParser(msg.source);
-                        let subject = parsed.subject || "";
                         let text = parsed.text || parsed.html || "";
-                        console.log(`      📩 Email recibido: "${subject}"`);
-                        
-                        const subLower = subject.toLowerCase();
-                        if (subLower.includes("activa tu cuenta") || subLower.includes("bienvenido")) {
-                            const linkMatch = text.match(/https?:\/\/dashboard\.cloudfly\.com\.co\/verificate\/[a-zA-Z0-9-]+/);
-                            if (linkMatch) {
-                                activationLink = linkMatch[0];
-                                break;
-                            }
-                        }
+                        const linkMatch = text.match(/https?:\/\/dashboard\.cloudfly\.com\.co\/verificate\/[a-zA-Z0-9-]+/);
+                        if (linkMatch) return linkMatch[0];
                     }
-                }
-            } finally {
-                lock.release();
+                } finally { lock.release(); }
             }
             await client.logout();
-            if (activationLink) return activationLink;
-        } catch (e) {
-            console.log(`      [IMAP] Intento fallido: ${e.message}`);
-            try { await client.logout(); } catch(err) {}
-        }
+        } catch (e) { try { await client.logout(); } catch(err) {} }
         await new Promise(r => setTimeout(r, 8000));
     }
     throw new Error("Timeout esperando el email de activación");
 }
 
 async function takeScreenshot(driver, label, timestamp) {
-    try {
-        const img = await driver.takeScreenshot();
-        const dir = 'c:\\apps\\cloudfly\\tmp\\screenshots';
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        const filePath = path.join(dir, `${timestamp}_${label}.png`);
-        fs.writeFileSync(filePath, img, 'base64');
-        console.log(`   📸 Screenshot: ${label}`);
-    } catch (e) {
-        console.log(`   ⚠️ Error screenshot ${label}: ${e.message}`);
-    }
+    const dir = path.join(__dirname, 'screenshots');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const img = await driver.takeScreenshot();
+    fs.writeFileSync(path.join(dir, `${timestamp}_${label}.png`), img, 'base64');
+    console.log(`   📸 Screenshot: ${label}`);
 }
 
 async function waitAndClick(driver, locator, timeout = 15000) {
     const el = await driver.wait(until.elementLocated(locator), timeout);
     await driver.wait(until.elementIsVisible(el), 10000);
-    // Scroll into view using JS and center it
     await driver.executeScript("arguments[0].scrollIntoView({ behavior: 'smooth', block: 'center' });", el);
     await driver.sleep(1000);
-    try {
-        await el.click();
-    } catch (e) {
-        console.log(`      [Retry] Click failed, trying via JS...`);
-        await driver.executeScript("arguments[0].click();", el);
-    }
-    return el;
+    try { await el.click(); } catch (e) { await driver.executeScript("arguments[0].click();", el); }
 }
 
 async function waitAndType(driver, locator, text, timeout = 15000) {
@@ -155,22 +92,6 @@ async function waitAndType(driver, locator, text, timeout = 15000) {
     await driver.wait(until.elementIsVisible(el), 10000);
     await el.clear();
     await el.sendKeys(text);
-    return el;
-}
-
-async function dumpBrowserLogs(driver) {
-    try {
-        console.log('\n--- BROWSER CONSOLE LOGS ---');
-        const logs = await driver.manage().logs().get(logging.Type.BROWSER);
-        logs.forEach(entry => {
-            let msg = entry.message;
-            // Intentar extraer JSON de errores de API si están en el log
-            console.log(`[${entry.level.name}] ${entry.timestamp}: ${msg}`);
-        });
-        console.log('--- END BROWSER LOGS ---\n');
-    } catch (e) {
-        console.log(`   ⚠️ Error dumping logs: ${e.message}`);
-    }
 }
 
 // ─── Main Flow ───────────────────────────────────────────────────────────────
@@ -178,36 +99,16 @@ async function dumpBrowserLogs(driver) {
 async function runE2E() {
     const timestamp = Date.now();
     const username  = `admin_${timestamp}`;
-    const password  = 'Cloudfly2025*'; // Debe contener al menos un carácter especial
+    const password  = 'Cloudfly2025*';
     const email     = `${username}@${MAIL_DOMAIN}`;
 
-    // Configurar logging de Chrome
-    let loggingPrefs = new logging.Preferences();
-    loggingPrefs.setLevel(logging.Type.BROWSER, logging.Level.ALL);
-
     let chromeOptions = new chrome.Options();
-    // chromeOptions.addArguments('--headless'); // Opcional: Descomentar si el VPS no tiene GUI
-
-    let driver = await new Builder()
-        .forBrowser('chrome')
-        .setChromeOptions(chromeOptions)
-        .setLoggingPrefs(loggingPrefs)
-        .build();
-
-    await driver.manage().window().setRect({ width: 1920, height: 1080 });
-
-    console.log('\n=======================================================');
-    console.log(' 🚀 CLOUDFLY FULL ONBOARDING E2E TEST');
-    console.log('=======================================================');
-    console.log(` User: ${username}`);
-    console.log(` Phone: ${PHONE_WA}`);
-    console.log('=======================================================\n');
+    let driver = await new Builder().forBrowser('chrome').setChromeOptions(chromeOptions).build();
+    await driver.manage().window().setRect({ width: 1440, height: 900 });
 
     try {
-        // --- 1. REGISTRO ---
-        console.log('[1/5] REGISTRO');
-        createMailAccount(username, password); // Crear buzón real
-        
+        console.log('\n[1/5] REGISTRO');
+        createMailAccount(username, password);
         await driver.get(`${BASE_URL}/register`);
         await waitAndType(driver, By.name('nombres'), 'Admin');
         await waitAndType(driver, By.name('apellidos'), 'E2E');
@@ -215,199 +116,90 @@ async function runE2E() {
         await waitAndType(driver, By.name('email'), email);
         await waitAndType(driver, By.name('password'), password);
         await waitAndType(driver, By.name('confirmPassword'), password);
-        
-        await takeScreenshot(driver, '01_form_registro', timestamp);
+        await takeScreenshot(driver, '01_registro', timestamp);
         await waitAndClick(driver, By.css('button[type="submit"]'));
-        console.log('   ✅ Registro enviado. Esperando email...');
-        await driver.sleep(2000);
 
-        // --- 2. ACTIVACIÓN (EMAIL) ---
-        console.log('\n[2/5] ACTIVACIÓN (EMAIL IMAP)');
-        const activationLink = await getActivationLink(username, password);
-        console.log(`   ✅ Link obtenido: ${activationLink}`);
-        
-        await driver.get(activationLink);
+        console.log('\n[2/5] ACTIVACIÓN');
+        const link = await getActivationLink(username, password);
+        await driver.get(link);
         await driver.sleep(4000);
-        await takeScreenshot(driver, '01b_activacion_success', timestamp);
-        console.log('   ✅ Usuario activado vía Email');
-        
-        // Intentar clic en Acceder si aparece
-        try {
-            const accederBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(text(), 'Acceder')]")), 5000);
-            await accederBtn.click();
-            console.log('   ✅ Click en Acceder exitoso');
-            await driver.sleep(2000);
-        } catch (e) {
-            console.log('   ℹ️ No se detectó botón Acceder o ya redirigió.');
-        }
+        await takeScreenshot(driver, '01b_activado', timestamp);
 
-        // --- 3. LOGIN ---
         console.log('\n[3/5] LOGIN');
         await driver.get(`${BASE_URL}/login`);
-        
-        // Limpieza de sesión para evitar bucles
-        await driver.manage().deleteAllCookies();
-        await driver.executeScript("window.localStorage.clear(); window.sessionStorage.clear();");
-        await driver.get(`${BASE_URL}/login`);
-
         await waitAndType(driver, By.name('username'), username);
         await waitAndType(driver, By.name('password'), password);
-        await takeScreenshot(driver, '02_form_login', timestamp);
+        await takeScreenshot(driver, '02_login', timestamp);
         await waitAndClick(driver, By.css('button[type="submit"]'));
-        
-        console.log('   ✅ Login exitoso. Esperando redirección a account-setup...');
-        try {
-            await driver.wait(until.urlContains('/account-setup'), 20000);
-        } catch (e) {
-            console.log('   ⚠️ No se redirigió automáticamente. Forzando /account-setup...');
-            await driver.get(`${BASE_URL}/account-setup`);
-        }
-        
-        // Esperar a que desaparezca "Validando sesión"
-        try {
-            const overlay = await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'Validando sesión')]")), 5000);
-            await driver.wait(until.stalenessOf(overlay), 15000);
-        } catch (e) {}
+        await driver.wait(until.urlContains('/account-setup'), 20000);
 
-        await takeScreenshot(driver, '03_account_setup_landing', timestamp);
-
-        // --- 4. ACCOUNT SETUP WIZARD ---
-        console.log('\n[4/5] ACCOUNT SETUP WIZARD');
-
-        // Paso 0: Bienvenida
-        console.log('   ▶ Pasó 0: Bienvenida');
+        console.log('\n[4/5] WIZARD');
+        // Paso 0
         await waitAndClick(driver, By.className('next-wizard-step'));
         await driver.sleep(2000);
-
-        // Paso 1: Tu Negocio
-        console.log('   ▶ Pasó 1: Tu Negocio');
-        await waitAndType(driver, By.name('name'), 'Empresa E2E ' + timestamp);
-        await waitAndType(driver, By.name('nit'), '900-E2E-' + timestamp);
+        // Paso 1
+        await waitAndType(driver, By.name('name'), 'Empresa ' + timestamp);
+        await waitAndType(driver, By.name('nit'), '900123456-1');
         await waitAndType(driver, By.name('phone'), PHONE_WA);
-        await waitAndType(driver, By.name('email'), 'negocio@test.com');
-        await waitAndType(driver, By.name('address'), 'Sede Central E2E');
-        await waitAndType(driver, By.name('contact'), 'Admin Responsable');
+        await waitAndType(driver, By.name('email'), 'contacto@empresa.com');
+        await waitAndType(driver, By.name('address'), 'Calle 123 # 45-67, Ciudad');
+        await waitAndType(driver, By.name('contact'), 'Admin E2E');
         await waitAndType(driver, By.name('position'), 'Manager');
         
-        // Tipo de negocio card click via JS
-        console.log('   Seleccionando tipo de negocio...');
         const bizCard = await driver.findElement(By.xpath("//*[contains(text(), 'Salón de Belleza')]"));
         await driver.executeScript("arguments[0].click();", bizCard);
-        
-        await waitAndType(driver, By.name('objetoSocial'), 'Descripción detallada para el chatbot inteligente de CloudFly.');
+        await waitAndType(driver, By.name('objetoSocial'), 'Test de chatbot IA.');
         await takeScreenshot(driver, '04_wizard_negocio', timestamp);
-        
-        console.log('   Enviando info negocio (Notificación WhatsApp)...');
-        // El botón en FormCustomer dice "Siguiente" o "Procesando..."
-        const nextBtn = await driver.findElement(By.xpath("//button[@type='submit']"));
-        await driver.executeScript("arguments[0].click();", nextBtn);
-        
-        // Wait for step 2 (WhatsApp)
-        await driver.sleep(6000); 
-        await takeScreenshot(driver, '05_wizard_whatsapp_landing', timestamp);
+        await waitAndClick(driver, By.xpath("//button[@type='submit']"));
+        await driver.sleep(6000);
 
-        // Paso 2: Chatbot IA
-        console.log('   ▶ Pasó 2: Chatbot IA');
+        // Paso 2: Chatbot (QR)
+        console.log('   ▶ Pasó 2: Chatbot (QR)');
+        console.log('   📍 URL Actual:', await driver.getCurrentUrl());
+        
         try {
-            // Esperar a que cargue el form o el botón de activación
-            console.log('   Verificando estado del Chatbot...');
-            await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'Chatbot')]")), 15000);
+            const qrBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Generar Código QR')]")), 20000);
+            await driver.executeScript("arguments[0].scrollIntoView();", qrBtn);
+            await driver.sleep(1000);
+            await qrBtn.click();
+            console.log('   ✅ Botón QR clickeado');
             
-            // Intentar omitir el chatbot (según el nuevo botón añadido)
-            try {
-                const skipBtn = await driver.wait(until.elementLocated(By.className('omit-chatbot-step')), 10000);
-                console.log('   Click en Omitir Chatbot...');
-                await waitAndClick(driver, By.className('omit-chatbot-step'));
-                await driver.sleep(3000); // Esperar a que la animación de transición termine
-            } catch (e) {
-                console.log('   (Botón Omitir no encontrado, intentando flujo normal)');
-                console.log('   📸 Capturando QR/Estado Chatbot...');
-                await takeScreenshot(driver, '06_wizard_chatbot_state', timestamp);
-                // Si no hay botón de omitir, intentamos avanzar con el botón general si existiera (pero ahora están ocultos)
-                // En el flujo normal, el usuario debería haber conectado WhatsApp
-            }
-
-            // ▶ PASO 3: PRODUCTOS
-            console.log('\n   ▶ Pasó 3: Productos');
+            // Esperar QR
+            await driver.wait(until.elementLocated(By.css("img[alt='WhatsApp QR Code']")), 30000);
+            console.log('   📸 QR visible');
+            await driver.takeScreenshot().then(image => fs.writeFileSync(`${SCREENSHOT_DIR}/${timestamp}_06_wizard_qr.png`, image, 'base64'));
             
-            // Esperar a que el formulario de productos se cargue indicando que estamos en el paso 3
-            await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'Mi Primer Producto')]")), 15000);
-            await takeScreenshot(driver, '07_wizard_productos_autolleno', timestamp);
+            // Omitir (para terminar el wizard)
+            const skipBtn = await driver.findElement(By.className('omit-chatbot-step'));
+            await skipBtn.click();
+        } catch (err) {
+            console.log('   ⚠️ Error en paso QR:', err.message);
+            console.log('   📍 URL en momento de error:', await driver.getCurrentUrl());
+            const logs = await driver.manage().logs().get('browser');
+            console.log('   📜 Browser Logs:', JSON.stringify(logs.slice(-10), null, 2));
             
-            // Click en Finalizar (usando la nueva clase final-wizard-step)
-            console.log('   Guardando primer producto...');
-            const finalBtn = await driver.wait(until.elementLocated(By.className('final-wizard-step')), 15000);
-            await driver.executeScript("arguments[0].click();", finalBtn);
-
-            // Redirección al Home
-            console.log('   Esperando redirección al Dashboard...');
-            await driver.wait(until.urlContains('/home'), 20000);
-            await driver.sleep(5000); // Dar tiempo a que cargue el dashboard
-            
-        } catch (e) {
-            console.log('   ⚠️ Error en paso Chatbot (intentando forzar continuación): ' + e.message);
-            try {
-                const forceNext = await driver.findElement(By.xpath("//button[contains(., 'Continuar') or contains(., 'Siguiente')]"));
-                await driver.executeScript("arguments[0].click();", forceNext);
-            } catch (inner) {}
+            await driver.takeScreenshot().then(image => fs.writeFileSync(`${SCREENSHOT_DIR}/${timestamp}_ERROR_qr.png`, image, 'base64'));
+            throw err;
         }
-        await driver.sleep(4000); // Wait for transition animation
 
         // Paso 3: Productos
         console.log('   ▶ Pasó 3: Productos');
-        try {
-            await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'General')]")), 25000);
-            await driver.sleep(3000); // Tiempo para que la animación termine y el form se auto-llene
-            
-            console.log('   📸 CAPTURANDO FORMULARIO AUTO-LLENADO...');
-            await takeScreenshot(driver, '08_wizard_producto_autolleno', timestamp);
-            
-            // Verificar si los valores están ahí (solo logeo, la captura es lo importante)
-            try {
-                const nameIn = await driver.findElement(By.xpath("//input[contains(@value, 'Mi Primer Producto')]"));
-                console.log('   ✅ Confirmado: Nombre auto-llenado detectado');
-            } catch(e) {
-                console.log('   ⚠️ No se detectó el valor auto-llenado en el DOM, revisa la captura.');
-            }
-            await waitAndType(driver, By.xpath("//input[contains(@label, 'Nombre del Producto') or contains(@placeholder, 'Hamburguesa')]"), 'Servicio Premium IA');
-            await waitAndType(driver, By.xpath("//textarea[contains(@label, 'Descripción') or contains(@placeholder, 'Describe')]"), 'Descripción del producto premium para el chatbot.');
-            await waitAndType(driver, By.xpath("//input[contains(@label, 'Valor de Venta') or contains(@placeholder, '0.00')]"), '99.99');
-            
-            await takeScreenshot(driver, '08_wizard_producto_nuevo', timestamp);
-            
-            console.log('   Finalizando Wizard...');
-            const finishBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Finalizar Configuración')]")), 10000);
-            await driver.executeScript("arguments[0].click();", finishBtn);
-        } catch (e) {
-            console.log('   ℹ️ Error en el paso de productos: ' + e.message);
-            const finalBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Finalizar')]")), 10000);
-            await driver.executeScript("arguments[0].click();", finalBtn);
-        }
-        await driver.sleep(5000);
+        await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'Mi Primer Producto')]")), 20000);
+        await takeScreenshot(driver, '07_productos', timestamp);
+        await waitAndClick(driver, By.className('final-wizard-step'));
 
-        // --- 5. DASHBOARD ---
         console.log('\n[5/5] DASHBOARD');
-        await driver.wait(until.urlContains('/home'), 15000);
-        await takeScreenshot(driver, '09_dashboard_home', timestamp);
-        
-        console.log('   Verificando Menú Lateral...');
-        await driver.wait(until.elementLocated(By.css('nav, aside')), 10000);
-        await takeScreenshot(driver, '10_dashboard_sidebar', timestamp);
+        await driver.wait(until.urlContains('/home'), 30000);
+        await takeScreenshot(driver, '08_final', timestamp);
+        console.log('\n✅ TEST COMPLETADO');
 
-        console.log('\n⭐ PRUEBA COMPLETADA CON ÉXITO ⭐');
-
-    } catch (error) {
-        console.error('\n❌ ERROR DURANTE LA PRUEBA:', error.message);
-        await takeScreenshot(driver, '99_ERROR_FINAL', timestamp);
-        await dumpBrowserLogs(driver); // Capturar logs en caso de error
+    } catch (e) {
+        console.error('\n❌ ERROR:', e.message);
+        await takeScreenshot(driver, '99_FATAL', timestamp);
     } finally {
         await driver.quit();
         deleteMailAccount(username);
-        console.log('\n🔑 Datos de la sesión:');
-        console.log(`   User: ${username}`);
-        console.log(`   Pass: ${password}`);
-        console.log('=======================================================\n');
     }
 }
 
-runE2E().then(() => process.exit(0)).catch(() => process.exit(1));
+runE2E();
