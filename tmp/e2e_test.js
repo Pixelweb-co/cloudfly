@@ -317,25 +317,32 @@ async function runE2E() {
             try {
                 const skipBtn = await driver.wait(until.elementLocated(By.className('omit-chatbot-step')), 10000);
                 console.log('   Click en Omitir Chatbot...');
-                await driver.executeScript("arguments[0].click();", skipBtn);
-                await driver.sleep(3000);
+                await waitAndClick(driver, By.className('omit-chatbot-step'));
+                await driver.sleep(3000); // Esperar a que la animación de transición termine
             } catch (e) {
                 console.log('   (Botón Omitir no encontrado, intentando flujo normal)');
-                // Intentar detectar QR o botón de activación como fallback
-                try {
-                    const activateBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Activar') or contains(., 'Chatbot')]")), 5000);
-                    await driver.executeScript("arguments[0].click();", activateBtn);
-                    await driver.sleep(3000);
-                } catch (e2) {}
+                console.log('   📸 Capturando QR/Estado Chatbot...');
+                await takeScreenshot(driver, '06_wizard_chatbot_state', timestamp);
+                // Si no hay botón de omitir, intentamos avanzar con el botón general si existiera (pero ahora están ocultos)
+                // En el flujo normal, el usuario debería haber conectado WhatsApp
             }
 
-            console.log('   📸 Capturando QR/Estado Chatbot...');
-            await takeScreenshot(driver, '06_wizard_chatbot_state', timestamp);
+            // ▶ PASO 3: PRODUCTOS
+            console.log('\n   ▶ Pasó 3: Productos');
+            
+            // Esperar a que el formulario de productos se cargue indicando que estamos en el paso 3
+            await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'Mi Primer Producto')]")), 15000);
+            await takeScreenshot(driver, '07_wizard_productos_autolleno', timestamp);
+            
+            // Click en Finalizar (usando la nueva clase final-wizard-step)
+            console.log('   Guardando primer producto...');
+            const finalBtn = await driver.wait(until.elementLocated(By.className('final-wizard-step')), 15000);
+            await driver.executeScript("arguments[0].click();", finalBtn);
 
-            // Click en Guardar y Continuar (Este es el paso crítico para llegar a Productos)
-            console.log('   Avanzando a Productos...');
-            const saveBtn = await driver.wait(until.elementLocated(By.className('next-wizard-step')), 10000);
-            await driver.executeScript("arguments[0].click();", saveBtn);
+            // Redirección al Home
+            console.log('   Esperando redirección al Dashboard...');
+            await driver.wait(until.urlContains('/home'), 20000);
+            await driver.sleep(5000); // Dar tiempo a que cargue el dashboard
             
         } catch (e) {
             console.log('   ⚠️ Error en paso Chatbot (intentando forzar continuación): ' + e.message);

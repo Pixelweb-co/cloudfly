@@ -226,6 +226,7 @@ const ProductCreationStep = ({ onProductCreated }: ProductCreationStepProps) => 
                                     size='large'
                                     fullWidth
                                     disabled={loading || !productName.trim() || !productPrice}
+                                    className='final-wizard-step'
                                     sx={{
                                         py: 1.5,
                                         borderRadius: 3,
@@ -238,15 +239,9 @@ const ProductCreationStep = ({ onProductCreated }: ProductCreationStepProps) => 
                                         },
                                         transition: 'all 0.3s'
                                     }}
+                                    startIcon={loading ? <CircularProgress size={20} color='inherit' /> : null}
                                 >
-                                    {loading ? (
-                                        <Box display='flex' alignItems='center'>
-                                            <CircularProgress size={24} color='inherit' className='mr-3' />
-                                            Creando tu catálogo...
-                                        </Box>
-                                    ) : (
-                                        'Finalizar Configuración ✨'
-                                    )}
+                                    {loading ? 'Guardando...' : 'Finalizar Configuración ✨'}
                                 </Button>
                                 <Typography variant='caption' display='block' textAlign='center' sx={{ mt: 2 }} color='text.secondary'>
                                     ¡Al terminar, podrás acceder a tu panel de control completo!
