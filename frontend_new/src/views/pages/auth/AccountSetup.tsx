@@ -48,14 +48,19 @@ const steps = [
 
 const AccountSetup = () => {
   const [activeStep, setActiveStep] = useState(0)
+  const [isTransitioning, setIsTransitioning] = useState(false)
   const router = useRouter()
 
   const handleNext = () => {
+    if (isTransitioning) return;
+    
+    setIsTransitioning(true);
+    setTimeout(() => setIsTransitioning(false), 1000); // 1s cooldown
+
     if (activeStep === steps.length - 1) {
-      // Finalizar wizard
       router.push('/home')
     } else {
-      setActiveStep(prevActiveStep => prevActiveStep + 1)
+      setActiveStep(activeStep + 1)
     }
   }
 

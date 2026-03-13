@@ -127,7 +127,12 @@ const WhatsAppConfigForm = ({ onSuccess }: Props) => {
             boxShadow: 3,
             mb: 4
           }}>
-            <img src={qrCode} alt="WhatsApp QR Code" style={{ width: 256, height: 256 }} />
+            <img 
+              src={qrCode} 
+              alt="WhatsApp QR Code" 
+              className="whatsapp-qr-code" 
+              style={{ width: 256, height: 256 }} 
+            />
           </Box>
 
           {error && (

@@ -60,8 +60,9 @@ public class EvolutionService {
                     response.bodyToMono(String.class)
                         .flatMap(errorBody -> {
                             log.error("❌ Evolution API Error ({}): {}", response.statusCode(), errorBody);
-                            if (response.statusCode().value() == 400 && errorBody != null && errorBody.contains("already in use")) {
-                                log.info("ℹ️ [EVOLUTION-SERVICE] Instance already exists: {}", instanceName);
+                            // Versiones nuevas de Evolution API pueden devolver el error en diferentes formatos
+                            if (response.statusCode().value() == 400 && errorBody != null && (errorBody.contains("already in use") || errorBody.contains("already exists"))) {
+                                log.info("ℹ️ [EVOLUTION-SERVICE] Instance already exists: {}. Triggering recovery.", instanceName);
                                 return Mono.error(new InstanceAlreadyExistsException("Instance already exists"));
                             }
                             return Mono.error(new RuntimeException("Evolution API Error: " + errorBody));
@@ -69,10 +70,19 @@ public class EvolutionService {
                 )
                 .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
                 .onErrorResume(InstanceAlreadyExistsException.class, e -> {
-                    log.info("✅ [EVOLUTION-SERVICE] Recovering from existing instance: {}", instanceName);
-                    Map<String, Object> recoveryMap = new HashMap<>();
-                    recoveryMap.put("instance", Map.of("instanceName", instanceName, "status", "created"));
-                    return Mono.just(recoveryMap);
+                    log.info("📡 [EVOLUTION-SERVICE] Recovering instance {} by fetching current QR.", instanceName);
+                    // Si ya existe la instancia, intentamos obtener el QR de conexión inmediatamente para no romper el wizard
+                    return fetchQrCode(instanceName)
+                        .map(qrMap -> {
+                            Map<String, Object> recovery = new HashMap<>(qrMap);
+                            recovery.put("recovered", true);
+                            recovery.put("instance", Map.of("instanceName", instanceName, "status", "recovered"));
+                            return recovery;
+                        })
+                        .onErrorResume(err -> {
+                            log.error("❌ Failed to recover QR for existing instance: {}", err.getMessage());
+                            return Mono.just(Map.of("instance", Map.of("instanceName", instanceName, "status", "error_recovery")));
+                        });
                 })
                 .doOnSuccess(res -> log.info("✅ Instance creation successfully handled for: {}", instanceName))
                 .doOnError(err -> {
