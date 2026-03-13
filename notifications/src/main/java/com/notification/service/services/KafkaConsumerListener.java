@@ -26,7 +26,7 @@ public class KafkaConsumerListener {
     @Autowired
     private EmailService emailService;
 
-    @Value("${evolution.api.url:http://evolution_api:8080}")
+    @Value("${evolution.api.url:http://evolution-api:8080}")
     private String evolutionApiUrl;
 
     @Value("${evolution.api.key:B6D711FCDE4D4FD5936544120E713976}")
@@ -115,10 +115,8 @@ public class KafkaConsumerListener {
             String targetInstance = (message.getInstanceName() != null && !message.getInstanceName().isEmpty()) 
                                     ? message.getInstanceName() : instanceName;
             
-            LOGGER.info("Sending welcome WhatsApp alert using instance: " + targetInstance);
-            
-            // Aseguramos que la instancia exista/esté activa antes de enviar
-            ensureInstanceActive(targetInstance);
+            // La instancia debe haber sido creada manualmente por el usuario
+            // No intentamos asegurar/crear aquí para cumplir con el flujo manual
 
             boolean sent = sendWhatsAppTextWithInstance(formattedPhone, welcomeCaption, targetInstance, evolutionApiKey);
 
