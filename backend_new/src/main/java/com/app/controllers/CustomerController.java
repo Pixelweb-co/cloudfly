@@ -38,6 +38,7 @@ public class CustomerController {
     private final ReactiveKafkaProducerTemplate<String, Object> kafkaTemplate;
     private final EvolutionService evolutionService;
     private final ChatbotConfigRepository chatbotConfigRepository;
+    private final com.app.persistence.services.ChatbotService chatbotService;
 
     @GetMapping
     public Flux<CustomerDto> getAllCustomers() {
@@ -81,7 +82,7 @@ public class CustomerController {
                     AccountSetupRequest.ClienteForm form = request.getForm();
 
                     TenantEntity tenant = TenantEntity.builder()
-                            .id(user.getCustomerId()) // Usar ID existente si hay uno
+                            .id(user.getCustomerId())
                             .name(form.getName())
                             .nit(form.getNit())
                             .phone(form.getPhone())
@@ -94,15 +95,14 @@ public class CustomerController {
                             .businessType(form.getBusinessType())
                             .businessDescription(form.getObjetoSocial())
                             .isMasterTenant(true)
-                            .esEmisorFE(false) // Por defecto false hasta configurar resolución
-                            .esEmisorPrincipal(true) // Primera compañía del tenant
+                            .esEmisorFE(false)
+                            .esEmisorPrincipal(true)
                             .createdAt(LocalDateTime.now())
                             .updatedAt(LocalDateTime.now())
                             .build();
 
                     return tenantRepository.save(tenant)
                             .flatMap(savedTenant -> {
-                                // Crear la compañía principal basada en el tenant
                                 CompanyEntity company = CompanyEntity.builder()
                                         .tenantId(savedTenant.getId())
                                         .name(savedTenant.getName())
@@ -122,10 +122,8 @@ public class CustomerController {
                                                     .flatMap(savedUser -> handleAutomaticSubscription(savedTenant.getId())
                                                             .then(userService.convertToDto(savedUser))
                                                             .flatMap(userDto -> {
-                                                                // Activación automática de la instancia dedicada en Evolution API
                                                                 String instanceName = "cloudfly_" + user.getUsername().toLowerCase().replaceAll("[^a-z0-9]", "_");
 
-                                                                // 1. Preparar configuración del chatbot
                                                                 ChatbotConfig chatbotConfig = ChatbotConfig.builder()
                                                                         .tenantId(savedTenant.getId())
                                                                         .instanceName(instanceName)
@@ -136,11 +134,11 @@ public class CustomerController {
                                                                         .updatedAt(LocalDateTime.now())
                                                                         .build();
 
-                                                                // 2. Guardar en DB PRIMERO y luego intentar activar Evolution
                                                                 return chatbotConfigRepository.save(chatbotConfig)
-                                                                        .flatMap(savedConfig -> evolutionService.createInstance(instanceName)
-                                                                                .flatMap(res -> {
-                                                                                    // 3. Si éxito, enviar notificación
+                                                                        .flatMap(savedConfig -> chatbotService.activateChatbot(savedTenant.getId())
+                                                                                .flatMap(configDto -> {
+                                                                                    userDto.setChatbotConfig(configDto);
+                                                                                    
                                                                                     Map<String, Object> welcomeMsg = Map.of(
                                                                                             "phoneNumber", form.getPhone(),
                                                                                             "customerName", form.getName(),
@@ -149,11 +147,11 @@ public class CustomerController {
                                                                                             "businessType", form.getBusinessType(),
                                                                                             "instanceName", instanceName
                                                                                     );
-                                                                                    log.info("📧 [ACCOUNT-SETUP] Enviando notificación a Kafka para: {}", instanceName);
+                                                                                    log.info("📧 [ACCOUNT-SETUP] Sending notification for: {}", instanceName);
                                                                                     return kafkaTemplate.send("welcome-notifications", welcomeMsg).then();
                                                                                 })
                                                                                 .onErrorResume(err -> {
-                                                                                    log.error("⚠️ [ACCOUNT-SETUP] Error en Evolution para {}: {}. Continuando...", instanceName, err.getMessage());
+                                                                                    log.error("⚠️ [ACCOUNT-SETUP] Evolution Error for {}: {}. Continuing...", instanceName, err.getMessage());
                                                                                     return Mono.empty();
                                                                                 })
                                                                         )

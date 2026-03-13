@@ -52,8 +52,13 @@ public class EvolutionService {
                 .bodyValue(body)
                 .retrieve()
                 .onStatus(status -> status.isError(), response -> 
-                    response.bodyToMono(String.class)
+                    response.bodyToMono(Map.class)
                         .flatMap(errorBody -> {
+                            String message = (String) errorBody.get("message");
+                            if (response.statusCode().value() == 400 && message != null && message.contains("already in use")) {
+                                log.info("ℹ️ [EVOLUTION-SERVICE] Instance already exists, treating as success: {}", instanceName);
+                                return Mono.empty(); // Continue to bodyToMono
+                            }
                             log.error("❌ Evolution API Error ({}): {}", response.statusCode(), errorBody);
                             return Mono.error(new RuntimeException("Evolution API Error: " + errorBody));
                         })
