@@ -40,56 +40,60 @@ public class EvolutionService {
         this.webClient = webClientBuilder.build();
     }
 
-    public Mono<Map<String, Object>> createInstance(String instanceName) {
-        String url = apiUrl + "/instance/create";
-        log.info("🌐 [EVOLUTION-SERVICE] Creating instance: {} at {}", instanceName, url);
-
-        Map<String, Object> body = new HashMap<>();
-        body.put("instanceName", instanceName);
-        body.put("integration", "WHATSAPP-BAILEYS");
-        body.put("token", apiKey);
-        body.put("qrcode", true);
-
-        return webClient.post()
+    public Mono<Boolean> instanceExists(String instanceName) {
+        String url = apiUrl + "/instance/connectionState/" + instanceName;
+        log.info("🔍 [EVOLUTION-SERVICE] Checking existence: {}", instanceName);
+        return webClient.get()
                 .uri(url)
                 .header("apikey", apiKey)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(body)
-                .retrieve()
-                .onStatus(status -> status.isError(), response -> 
-                    response.bodyToMono(String.class)
-                        .flatMap(errorBody -> {
-                            log.error("❌ Evolution API Error ({}): {}", response.statusCode(), errorBody);
-                            // Versiones nuevas de Evolution API pueden devolver el error en diferentes formatos
-                            if (response.statusCode().value() == 400 && errorBody != null && (errorBody.contains("already in use") || errorBody.contains("already exists"))) {
-                                log.info("ℹ️ [EVOLUTION-SERVICE] Instance already exists: {}. Triggering recovery.", instanceName);
-                                return Mono.error(new InstanceAlreadyExistsException("Instance already exists"));
-                            }
-                            return Mono.error(new RuntimeException("Evolution API Error: " + errorBody));
-                        })
-                )
-                .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
-                .onErrorResume(InstanceAlreadyExistsException.class, e -> {
-                    log.info("📡 [EVOLUTION-SERVICE] Recovering instance {} by fetching current QR.", instanceName);
-                    // Si ya existe la instancia, intentamos obtener el QR de conexión inmediatamente para no romper el wizard
+                .exchangeToMono(response -> {
+                    boolean exists = response.statusCode().is2xxSuccessful();
+                    log.info("📊 [EVOLUTION-SERVICE] Instance {} exists: {}", instanceName, exists);
+                    return Mono.just(exists);
+                })
+                .onErrorReturn(false);
+    }
+
+    public Mono<Map<String, Object>> createInstance(String instanceName) {
+        return instanceExists(instanceName)
+            .flatMap(exists -> {
+                if (exists) {
+                    log.info("📡 [EVOLUTION-SERVICE] Instance {} already exists. Fetching QR code.", instanceName);
                     return fetchQrCode(instanceName)
                         .map(qrMap -> {
                             Map<String, Object> recovery = new HashMap<>(qrMap);
                             recovery.put("recovered", true);
                             recovery.put("instance", Map.of("instanceName", instanceName, "status", "recovered"));
                             return recovery;
-                        })
-                        .onErrorResume(err -> {
-                            log.error("❌ Failed to recover QR for existing instance: {}", err.getMessage());
-                            return Mono.just(Map.of("instance", Map.of("instanceName", instanceName, "status", "error_recovery")));
                         });
-                })
-                .doOnSuccess(res -> log.info("✅ Instance creation successfully handled for: {}", instanceName))
-                .doOnError(err -> {
-                    if (!(err instanceof InstanceAlreadyExistsException)) {
-                        log.error("❌ Error creating instance {}: {}", instanceName, err.getMessage());
-                    }
-                });
+                } else {
+                    String url = apiUrl + "/instance/create";
+                    log.info("🌐 [EVOLUTION-SERVICE] Creating new instance: {} at {}", instanceName, url);
+
+                    Map<String, Object> body = new HashMap<>();
+                    body.put("instanceName", instanceName);
+                    body.put("integration", "WHATSAPP-BAILEYS");
+                    body.put("token", apiKey);
+                    body.put("qrcode", true);
+
+                    return webClient.post()
+                            .uri(url)
+                            .header("apikey", apiKey)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .bodyValue(body)
+                            .retrieve()
+                            .onStatus(status -> status.isError(), response -> 
+                                response.bodyToMono(String.class)
+                                    .flatMap(errorBody -> {
+                                        log.error("❌ Evolution API Error ({}): {}", response.statusCode(), errorBody);
+                                        return Mono.error(new RuntimeException("Evolution API Error: " + errorBody));
+                                    })
+                            )
+                            .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
+                            .doOnSuccess(res -> log.info("✅ Instance creation successful for: {}", instanceName));
+                }
+            })
+            .doOnError(err -> log.error("❌ Error handling instance {}: {}", instanceName, err.getMessage()));
     }
 
     public Mono<Map<String, Object>> fetchQrCode(String instanceName) {
@@ -122,5 +126,46 @@ public class EvolutionService {
                 .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
                 .log("com.app.evolution.status") // DEBUG LOG
                 .doOnError(err -> log.error("❌ Error checking connection for {}: {}", instanceName, err.getMessage()));
+    }
+
+    public Mono<Boolean> checkHealth() {
+        String url = apiUrl + "/instance/health";
+        log.info("🏥 [EVOLUTION-SERVICE] Checking API Health at: {}", url);
+        return webClient.get()
+                .uri(url)
+                .header("apikey", apiKey)
+                .retrieve()
+                .toBodilessEntity()
+                .map(response -> response.getStatusCode().is2xxSuccessful())
+                .onErrorReturn(false);
+    }
+
+    public Mono<Boolean> isOnWhatsApp(String instanceName, String phoneNumber) {
+        String cleanNumber = phoneNumber.replaceAll("[^0-9]", "");
+        String url = apiUrl + "/chat/whatsappNumbers/" + (instanceName != null ? instanceName : "cloudfly_chatbot1");
+        
+        Map<String, Object> body = new HashMap<>();
+        body.put("numbers", new String[]{cleanNumber});
+
+        log.info("🔍 [EVOLUTION-SERVICE] Checking if {} is on WhatsApp using instance {}", cleanNumber, instanceName);
+
+        return webClient.post()
+                .uri(url)
+                .header("apikey", apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(new org.springframework.core.ParameterizedTypeReference<java.util.List<Map<String, Object>>>() {})
+                .map(list -> {
+                    if (list != null && !list.isEmpty()) {
+                        Map<String, Object> result = list.get(0);
+                        return Boolean.TRUE.equals(result.get("exists"));
+                    }
+                    return false;
+                })
+                .onErrorResume(err -> {
+                    log.warn("⚠️ [EVOLUTION-SERVICE] Error checking WhatsApp number {}: {}", cleanNumber, err.getMessage());
+                    return Mono.just(false);
+                });
     }
 }
