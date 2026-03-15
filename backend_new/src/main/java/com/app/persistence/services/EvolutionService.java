@@ -129,11 +129,10 @@ public class EvolutionService {
     }
 
     public Mono<Boolean> checkHealth() {
-        String url = apiUrl + "/instance/fetchInstances";
-        log.info("🏥 [EVOLUTION-SERVICE] Checking API Health (via fetchInstances) at: {}", url);
+        String url = apiUrl + "/"; // Root provides welcome message and 200 OK
+        log.info("🏥 [EVOLUTION-SERVICE] Checking API Health at: {}", url);
         return webClient.get()
                 .uri(url)
-                .header("apikey", apiKey)
                 .retrieve()
                 .toBodilessEntity()
                 .map(response -> response.getStatusCode().is2xxSuccessful())
