@@ -21,6 +21,9 @@ const MAIL_PORT = 10622;
 const MAIL_USER = 'root';
 const MAIL_DOMAIN = 'cloudfly.com.co';
 
+const SCREENSHOT_DIR = path.join(__dirname, 'screenshots');
+if (!fs.existsSync(SCREENSHOT_DIR)) fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function runSsh(cmd, target = VPS, port = 22) {
@@ -165,12 +168,19 @@ async function runE2E() {
             console.log('   ✅ Botón QR clickeado');
             
             // Esperar QR
-            await driver.wait(until.elementLocated(By.css("img[alt='WhatsApp QR Code']")), 30000);
-            console.log('   📸 QR visible');
-            await driver.takeScreenshot().then(image => fs.writeFileSync(`${SCREENSHOT_DIR}/${timestamp}_06_wizard_qr.png`, image, 'base64'));
+            await driver.wait(until.elementLocated(By.css("img[alt='WhatsApp QR Code']")), 60000);
+            console.log('   📸 QR visible. ESPERANDO 120 SEGUNDOS PARA ESCANEO MANUAL...');
+            await driver.sleep(5000); // Dar tiempo a renderizar
             
+            const qrImg = await driver.takeScreenshot();
+            fs.writeFileSync(path.join(SCREENSHOT_DIR, `${timestamp}_06_wizard_qr.png`), qrImg, 'base64');
+            
+            // Pausa larga para el usuario
+            await driver.sleep(120000); 
+            console.log('   ⏰ Tiempo de escaneo finalizado.');
+
             // Omitir (para terminar el wizard)
-            const skipBtn = await driver.findElement(By.className('omit-chatbot-step'));
+            const skipBtn = await driver.wait(until.elementLocated(By.className('omit-chatbot-step')), 10000);
             await skipBtn.click();
         } catch (err) {
             console.log('   ⚠️ Error en paso QR:', err.message);
