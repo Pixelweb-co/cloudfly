@@ -135,7 +135,9 @@ public class EvolutionService {
                 .uri(url)
                 .retrieve()
                 .toBodilessEntity()
+                .timeout(java.time.Duration.ofSeconds(7))
                 .map(response -> response.getStatusCode().is2xxSuccessful())
+                .doOnError(err -> log.error("❌ [EVOLUTION-SERVICE] Health check failed for URL {}: {}", url, err.getMessage()))
                 .onErrorReturn(false);
     }
 
