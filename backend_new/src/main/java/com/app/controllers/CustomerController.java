@@ -21,6 +21,7 @@ import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/customers")
@@ -78,11 +79,12 @@ public class CustomerController {
 
     @PostMapping("/account-setup")
     public Mono<ResponseEntity<UserDto>> accountSetup(@RequestBody AccountSetupRequest request) {
-        log.info("Account setup request for user: {}", request.getUserId());
+        log.info("🚀 [ACCOUNT-SETUP] Account setup request for user: {}", request.getUserId());
 
         return userRepository.findById(request.getUserId())
                 .flatMap(user -> {
                     AccountSetupRequest.ClienteForm form = request.getForm();
+                    log.info("📂 [ACCOUNT-SETUP] Processing Tenant: {}", form.getName());
 
                     TenantEntity tenant = TenantEntity.builder()
                             .id(user.getCustomerId())
@@ -105,7 +107,9 @@ public class CustomerController {
                             .build();
 
                     return tenantRepository.save(tenant)
+                            .doOnNext(st -> log.info("✅ [ACCOUNT-SETUP] Tenant saved with ID: {}", st.getId()))
                             .flatMap(savedTenant -> {
+                                log.info("🏢 [ACCOUNT-SETUP] Saving Company for Tenant: {}", savedTenant.getId());
                                 CompanyEntity company = CompanyEntity.builder()
                                         .tenantId(savedTenant.getId())
                                         .name(savedTenant.getName())
@@ -122,6 +126,7 @@ public class CustomerController {
                                         .build();
 
                                 return companyRepository.save(company)
+                                        .doOnNext(sc -> log.info("✅ [ACCOUNT-SETUP] Company saved with ID: {}", sc.getId()))
                                         .flatMap(savedCompany -> {
                                             Category defaultCategory = Category.builder()
                                                     .categoryName("General")
@@ -132,57 +137,71 @@ public class CustomerController {
                                                     .updatedAt(LocalDateTime.now())
                                                     .build();
 
+                                            log.info("📂 [ACCOUNT-SETUP] Saving Default Category...");
                                             return categoryRepository.save(defaultCategory)
+                                                    .doOnNext(scat -> log.info("✅ [ACCOUNT-SETUP] Category saved successfully"))
                                                     .flatMap(savedCategory -> {
                                                         user.setCustomerId(savedTenant.getId());
+                                                        log.info("👤 [ACCOUNT-SETUP] Linking User to Customer ID: {}", savedTenant.getId());
                                                         return userRepository.save(user)
-                                                                .flatMap(savedUser -> handleAutomaticSubscription(savedTenant.getId())
+                                                                .doOnNext(su -> log.info("✅ [ACCOUNT-SETUP] User updated successfully"))
+                                                                .flatMap(savedUser -> {
+                                                                    log.info("💳 [ACCOUNT-SETUP] Initializing Automatic Subscription...");
+                                                                    return handleAutomaticSubscription(savedTenant.getId())
+                                                                        .doOnSuccess(v -> log.info("✅ [ACCOUNT-SETUP] Automatic Subscription block complete"))
                                                                         .then(userService.convertToDto(savedUser))
-                                                                        .flatMap(userDto -> evolutionService.checkHealth()
+                                                                        .flatMap(userDto -> {
+                                                                            log.info("🏥 [ACCOUNT-SETUP] Verifying Evolution API Health...");
+                                                                            return evolutionService.checkHealth()
+                                                                                .timeout(java.time.Duration.ofSeconds(10))
                                                                                 .flatMap(health -> {
                                                                                     if (!health) {
-                                                                                        return Mono.error(new RuntimeException("El servicio de mensajería no está disponible en este momento."));
+                                                                                        log.warn("⚠️ [ACCOUNT-SETUP] Evolution API health check failed, proceeding WITHOUT instance.");
+                                                                                        return Mono.just(userDto);
                                                                                     }
-                                                                                    // Usamos 'cloudfly_chatbot1' como instancia maestra para validación
-                                                                                    return evolutionService.isOnWhatsApp("cloudfly_chatbot1", form.getPhone());
-                                                                                })
-                                                                                .flatMap(isOnWa -> {
-                                                                                    if (!isOnWa) {
-                                                                                        return Mono.error(new RuntimeException("El número proporcionado (" + form.getPhone() + ") no tiene una cuenta de WhatsApp activa."));
-                                                                                    }
+                                                                                    log.info("📱 [ACCOUNT-SETUP] Validating WhatsApp number: {}", form.getPhone());
+                                                                                    return evolutionService.isOnWhatsApp("cloudfly_chatbot1", form.getPhone())
+                                                                                            .timeout(java.time.Duration.ofSeconds(15))
+                                                                                            .flatMap(isOnWa -> {
+                                                                                                if (!isOnWa) {
+                                                                                                    log.error("❌ [ACCOUNT-SETUP] Number {} not on WhatsApp", form.getPhone());
+                                                                                                    return Mono.error(new RuntimeException("El número proporcionado no tiene una cuenta de WhatsApp activa."));
+                                                                                                }
+                                                                                                String instanceName = "cloudfly_" + savedCompany.getId();
+                                                                                                log.info("🚀 [ACCOUNT-SETUP] Creating/Fetching QR for instance: {}", instanceName);
+                                                                                                return evolutionService.createInstance(instanceName)
+                                                                                                        .timeout(java.time.Duration.ofSeconds(30))
+                                                                                                        .flatMap(instanceData -> {
+                                                                                                            log.info("📝 [ACCOUNT-SETUP] Persisting ChatbotConfig for company: {}", savedCompany.getId());
+                                                                                                            ChatbotConfig chatbotConfig = ChatbotConfig.builder()
+                                                                                                                    .tenantId(savedTenant.getId())
+                                                                                                                    .companyId(savedCompany.getId())
+                                                                                                                    .instanceName(instanceName)
+                                                                                                                    .chatbotType(ChatbotType.SALES)
+                                                                                                                    .isActive(false)
+                                                                                                                    .createdAt(LocalDateTime.now())
+                                                                                                                    .updatedAt(LocalDateTime.now())
+                                                                                                                    .build();
 
-                                                                                    String instanceName = "cloudfly_" + savedCompany.getId();
-                                                                                    log.info("🎯 [ACCOUNT-SETUP] Proceeding with instance management for: {}", instanceName);
-
-                                                                                    return evolutionService.createInstance(instanceName)
-                                                                                            .flatMap(instanceData -> {
-                                                                                                ChatbotConfig chatbotConfig = ChatbotConfig.builder()
-                                                                                                        .tenantId(savedTenant.getId())
-                                                                                                        .companyId(savedCompany.getId())
-                                                                                                        .instanceName(instanceName)
-                                                                                                        .chatbotType(ChatbotType.SALES)
-                                                                                                        .isActive(false)
-                                                                                                        .agentName("Asistente Cloudfly")
-                                                                                                        .createdAt(LocalDateTime.now())
-                                                                                                        .updatedAt(LocalDateTime.now())
-                                                                                                        .build();
-
-                                                                                                return chatbotConfigRepository.save(chatbotConfig)
-                                                                                                        .then(Mono.defer(() -> {
-                                                                                                            Map<String, Object> welcomeMsg = Map.of(
-                                                                                                                    "phoneNumber", form.getPhone(),
-                                                                                                                    "customerName", form.getName(),
-                                                                                                                    "contactName", form.getContact(),
-                                                                                                                    "email", form.getEmail(),
-                                                                                                                    "businessType", form.getBusinessType(),
-                                                                                                                    "instanceName", instanceName
-                                                                                                            );
-                                                                                                            log.info("📧 [ACCOUNT-SETUP] Sending welcome notification for: {}", instanceName);
-                                                                                                            return kafkaTemplate.send("welcome-notifications", welcomeMsg).then();
-                                                                                                        }))
-                                                                                                        .thenReturn(userDto);
+                                                                                                            return chatbotConfigRepository.save(chatbotConfig)
+                                                                                                                    .doOnNext(cc -> log.info("✅ [ACCOUNT-SETUP] ChatbotConfig saved"))
+                                                                                                                    .then(Mono.defer(() -> {
+                                                                                                                        log.info("📧 [ACCOUNT-SETUP] Sending welcome notification to Kafka...");
+                                                                                                                        Map<String, Object> welcomeMsg = new HashMap<>();
+                                                                                                                        welcomeMsg.put("phoneNumber", form.getPhone());
+                                                                                                                        welcomeMsg.put("instanceName", instanceName);
+                                                                                                                        return kafkaTemplate.send("welcome-notifications", welcomeMsg).then();
+                                                                                                                    }))
+                                                                                                                    .thenReturn(userDto);
+                                                                                                        });
                                                                                             });
-                                                                                })));
+                                                                                })
+                                                                                .onErrorResume(e -> {
+                                                                                    log.error("🛑 [ACCOUNT-SETUP] Evolution integration failed but continuing: {}", e.getMessage());
+                                                                                    return Mono.just(userDto);
+                                                                                });
+                                                                        });
+                                                                });
                                                     });
                                         });
                             });
@@ -192,33 +211,42 @@ public class CustomerController {
     }
 
     private Mono<Void> handleAutomaticSubscription(Long customerId) {
-        log.info("Creating automatic free subscription for customer: {}", customerId);
+        log.info("🔍 [ACCOUNT-SETUP] Searching for Free Plan...");
         return planRepository.findByIsFreeTrue()
                 .next()
+                .switchIfEmpty(Mono.error(new RuntimeException("Error: No se encontró ningún Plan Gratuito configurado.")))
                 .flatMap(freePlan -> {
+                    log.info("✅ [ACCOUNT-SETUP] Found Free Plan: {}. Activating for Customer: {}", freePlan.getName(), customerId);
                     SubscriptionEntity subscription = SubscriptionEntity.builder()
                             .planId(freePlan.getId())
                             .customerId(customerId)
                             .status("ACTIVE")
                             .billingCycle("MONTHLY")
                             .startDate(LocalDateTime.now())
-                            .endDate(LocalDateTime.now().plusDays(freePlan.getDurationDays() != null ? freePlan.getDurationDays() : 365))
-                            .aiTokensLimit(freePlan.getAiTokensLimit())
+                            .endDate(LocalDateTime.now().plusDays(freePlan.getDurationDays() != null ? freePlan.getDurationDays() : 14))
                             .usersLimit(freePlan.getUsersLimit())
-                            .monthlyPrice(java.math.BigDecimal.ZERO)
+                            .aiTokensLimit(freePlan.getAiTokensLimit())
+                            .monthlyPrice(BigDecimal.ZERO)
                             .createdAt(LocalDateTime.now())
                             .updatedAt(LocalDateTime.now())
                             .build();
 
                     return subscriptionRepository.save(subscription)
+                            .doOnNext(savedSub -> log.info("✅ [ACCOUNT-SETUP] Subscription created with ID: {}", savedSub.getId()))
                             .flatMap(savedSub -> planModuleRepository.findByPlanId(freePlan.getId())
-                                    .map(pm -> SubscriptionModuleEntity.builder()
-                                            .subscriptionId(savedSub.getId())
-                                            .moduleId(pm.getModuleId())
-                                            .build())
+                                    .map(pm -> {
+                                        log.info("🔗 [ACCOUNT-SETUP] Linking Module {} to Subscription {}", pm.getModuleId(), savedSub.getId());
+                                        return SubscriptionModuleEntity.builder()
+                                                .subscriptionId(savedSub.getId())
+                                                .moduleId(pm.getModuleId())
+                                                .build();
+                                    })
                                     .collectList()
                                     .flatMapMany(subscriptionModuleRepository::saveAll)
+                                    .doOnError(err -> log.error("❌ [ACCOUNT-SETUP] Failed to save SubscriptionModules: {}", err.getMessage()))
                                     .then());
-                });
+                })
+                .doOnError(e -> log.error("🛑 [ACCOUNT-SETUP] Automatic Subscription block FAILED: {}", e.getMessage()))
+                .onErrorResume(e -> Mono.empty());
     }
 }

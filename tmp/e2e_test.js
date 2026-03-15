@@ -178,10 +178,18 @@ async function runE2E() {
             // Pausa larga para el usuario
             await driver.sleep(120000); 
             console.log('   ⏰ Tiempo de escaneo finalizado.');
+            await takeScreenshot(driver, '06b_post_escaneo', timestamp);
 
-            // Omitir (para terminar el wizard)
-            const skipBtn = await driver.wait(until.elementLocated(By.className('omit-chatbot-step')), 10000);
-            await skipBtn.click();
+            // Intentar continuar (Siguiente) - El botón debería estar habilitado tras la vinculación
+            try {
+                const nextBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Siguiente')]")), 15000);
+                await nextBtn.click();
+                console.log('   ✅ Botón Siguiente clickeado tras escaneo');
+            } catch (errStep) {
+                console.log('   ⚠️ No se encontró botón Siguiente, intentando omitir para continuar el wizard...');
+                const skipBtn = await driver.wait(until.elementLocated(By.className('omit-chatbot-step')), 10000);
+                await skipBtn.click();
+            }
         } catch (err) {
             console.log('   ⚠️ Error en paso QR:', err.message);
             console.log('   📍 URL en momento de error:', await driver.getCurrentUrl());
