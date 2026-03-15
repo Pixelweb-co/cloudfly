@@ -39,6 +39,10 @@ public class EvolutionApiService {
         body.put("token", apiKey); // Token de la instancia
         body.put("integration", "WHATSAPP-BAILEYS");
         body.put("qrcode", true);
+        // Incluir webhook si fue provisto
+        if (webhookUrl != null && !webhookUrl.isBlank()) {
+            body.put("webhook", webhookUrl);
+        }
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
         log.info("📤 [EVOLUTION-API] Sending POST request...");
