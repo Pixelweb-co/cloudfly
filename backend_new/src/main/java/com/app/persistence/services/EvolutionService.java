@@ -129,8 +129,8 @@ public class EvolutionService {
     }
 
     public Mono<Boolean> checkHealth() {
-        String url = apiUrl + "/instance/health";
-        log.info("🏥 [EVOLUTION-SERVICE] Checking API Health at: {}", url);
+        String url = apiUrl + "/instance/fetchInstances";
+        log.info("🏥 [EVOLUTION-SERVICE] Checking API Health (via fetchInstances) at: {}", url);
         return webClient.get()
                 .uri(url)
                 .header("apikey", apiKey)
