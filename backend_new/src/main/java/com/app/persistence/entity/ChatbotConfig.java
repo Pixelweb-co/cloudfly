@@ -25,6 +25,9 @@ public class ChatbotConfig {
     @Column("tenant_id")
     private Long tenantId;
 
+    @Column("company_id")
+    private Long companyId;
+
     @Column("instance_name")
     private String instanceName;
 

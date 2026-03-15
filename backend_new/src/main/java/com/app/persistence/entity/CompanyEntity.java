@@ -30,6 +30,12 @@ public class CompanyEntity {
     private String address;
 
     private String phone;
+    
+    private String email;
+    
+    private String contact;
+    
+    private String position;
 
     @Column("logo_url")
     private String logoUrl;

@@ -138,34 +138,51 @@ public class CustomerController {
                                                         return userRepository.save(user)
                                                                 .flatMap(savedUser -> handleAutomaticSubscription(savedTenant.getId())
                                                                         .then(userService.convertToDto(savedUser))
-                                                                        .flatMap(userDto -> {
-                                                                            String instanceName = "cloudfly_" + savedCompany.getId();
+                                                                        .flatMap(userDto -> evolutionService.checkHealth()
+                                                                                .flatMap(health -> {
+                                                                                    if (!health) {
+                                                                                        return Mono.error(new RuntimeException("El servicio de mensajería no está disponible en este momento."));
+                                                                                    }
+                                                                                    // Usamos 'cloudfly_chatbot1' como instancia maestra para validación
+                                                                                    return evolutionService.isOnWhatsApp("cloudfly_chatbot1", form.getPhone());
+                                                                                })
+                                                                                .flatMap(isOnWa -> {
+                                                                                    if (!isOnWa) {
+                                                                                        return Mono.error(new RuntimeException("El número proporcionado (" + form.getPhone() + ") no tiene una cuenta de WhatsApp activa."));
+                                                                                    }
 
-                                                                            ChatbotConfig chatbotConfig = ChatbotConfig.builder()
-                                                                                    .tenantId(savedTenant.getId())
-                                                                                    .instanceName(instanceName)
-                                                                                    .chatbotType(ChatbotType.SALES)
-                                                                                    .isActive(false)
-                                                                                    .agentName("Asistente Cloudfly")
-                                                                                    .createdAt(LocalDateTime.now())
-                                                                                    .updatedAt(LocalDateTime.now())
-                                                                                    .build();
+                                                                                    String instanceName = "cloudfly_" + savedCompany.getId();
+                                                                                    log.info("🎯 [ACCOUNT-SETUP] Proceeding with instance management for: {}", instanceName);
 
-                                                                            return chatbotConfigRepository.save(chatbotConfig)
-                                                                                    .then(Mono.defer(() -> {
-                                                                                        Map<String, Object> welcomeMsg = Map.of(
-                                                                                                "phoneNumber", form.getPhone(),
-                                                                                                "customerName", form.getName(),
-                                                                                                "contactName", form.getContact(),
-                                                                                                "email", form.getEmail(),
-                                                                                                "businessType", form.getBusinessType(),
-                                                                                                "instanceName", instanceName
-                                                                                        );
-                                                                                        log.info("📧 [ACCOUNT-SETUP] Sending notification for: {}", instanceName);
-                                                                                        return kafkaTemplate.send("welcome-notifications", welcomeMsg).then();
-                                                                                    }))
-                                                                                    .thenReturn(userDto);
-                                                                        }));
+                                                                                    return evolutionService.createInstance(instanceName)
+                                                                                            .flatMap(instanceData -> {
+                                                                                                ChatbotConfig chatbotConfig = ChatbotConfig.builder()
+                                                                                                        .tenantId(savedTenant.getId())
+                                                                                                        .companyId(savedCompany.getId())
+                                                                                                        .instanceName(instanceName)
+                                                                                                        .chatbotType(ChatbotType.SALES)
+                                                                                                        .isActive(false)
+                                                                                                        .agentName("Asistente Cloudfly")
+                                                                                                        .createdAt(LocalDateTime.now())
+                                                                                                        .updatedAt(LocalDateTime.now())
+                                                                                                        .build();
+
+                                                                                                return chatbotConfigRepository.save(chatbotConfig)
+                                                                                                        .then(Mono.defer(() -> {
+                                                                                                            Map<String, Object> welcomeMsg = Map.of(
+                                                                                                                    "phoneNumber", form.getPhone(),
+                                                                                                                    "customerName", form.getName(),
+                                                                                                                    "contactName", form.getContact(),
+                                                                                                                    "email", form.getEmail(),
+                                                                                                                    "businessType", form.getBusinessType(),
+                                                                                                                    "instanceName", instanceName
+                                                                                                            );
+                                                                                                            log.info("📧 [ACCOUNT-SETUP] Sending welcome notification for: {}", instanceName);
+                                                                                                            return kafkaTemplate.send("welcome-notifications", welcomeMsg).then();
+                                                                                                        }))
+                                                                                                        .thenReturn(userDto);
+                                                                                            });
+                                                                                })));
                                                     });
                                         });
                             });
