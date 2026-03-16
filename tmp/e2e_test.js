@@ -169,14 +169,14 @@ async function runE2E() {
             
             // Esperar QR
             await driver.wait(until.elementLocated(By.css("img[alt='WhatsApp QR Code']")), 60000);
-            console.log('   📸 QR visible. ESPERANDO 120 SEGUNDOS PARA ESCANEO MANUAL...');
+            console.log('   📸 QR visible. ESPERANDO 180 SEGUNDOS PARA ESCANEO MANUAL...');
             await driver.sleep(5000); // Dar tiempo a renderizar
             
             const qrImg = await driver.takeScreenshot();
             fs.writeFileSync(path.join(SCREENSHOT_DIR, `${timestamp}_06_wizard_qr.png`), qrImg, 'base64');
             
             // Pausa larga para el usuario
-            await driver.sleep(120000); 
+            await driver.sleep(180000); 
             console.log('   ⏰ Tiempo de escaneo finalizado.');
             await takeScreenshot(driver, '06b_post_escaneo', timestamp);
 

@@ -79,25 +79,31 @@ public class RbacController {
     }
 
     private Mono<List<ModuleEntity>> getActiveModules(String username, List<String> roles) {
-        boolean isManager = roles.stream().anyMatch(r -> r.equals("MANAGER") || r.equals("SUPERADMIN"));
+        boolean isPowerful = roles.stream().anyMatch(r -> r.equals("MANAGER") || r.equals("SUPERADMIN"));
         
-        if (isManager) {
-            log.info("User {} is MANAGER/SUPERADMIN - Granting all modules", username);
-            return moduleRepository.findAll()
-                    .collectList();
+        if (isPowerful) {
+            log.info("👑 [RBAC] User {} is MANAGER/SUPERADMIN - Granting all modules.", username);
+            return moduleRepository.findAll().collectList();
         }
 
         return userRepository.findByUsername(username)
                 .flatMap(user -> {
-                    if (user.getCustomerId() == null) {
-                        return Mono.just(new ArrayList<ModuleEntity>());
+                    Long customerId = user.getCustomerId();
+                    if (customerId != null) {
+                        log.info("🏢 [RBAC] User {} associated with customer {}. Checking for active subscription...", username, customerId);
+                        return subscriptionRepository.findFirstByCustomerIdAndStatusOrderByEndDateDesc(customerId, "ACTIVE")
+                                .flatMap(sub -> {
+                                    log.info("📄 [RBAC] Found active subscription {} for customer {}", sub.getId(), customerId);
+                                    return subscriptionModuleRepository.findBySubscriptionId(sub.getId())
+                                            .filter(sm -> sm.getModuleId() != null)
+                                            .flatMap(sm -> moduleRepository.findById(sm.getModuleId()))
+                                            .collectList();
+                                })
+                                .doOnNext(modules -> log.info("✅ [RBAC] Granting {} modules to user {}", modules.size(), username))
+                                .defaultIfEmpty(new ArrayList<>());
                     }
-                    return subscriptionRepository.findFirstByCustomerIdAndStatusOrderByEndDateDesc(user.getCustomerId(), "ACTIVE")
-                            .flatMap(sub -> subscriptionModuleRepository.findBySubscriptionId(sub.getId())
-                                    .filter(sm -> sm.getModuleId() != null)
-                                    .flatMap(sm -> moduleRepository.findById(sm.getModuleId()))
-                                    .collectList())
-                            .defaultIfEmpty(new ArrayList<>());
+                    log.warn("⚠️ [RBAC] User {} has no customerId. Empty menu.", username);
+                    return Mono.just(new ArrayList<ModuleEntity>());
                 })
                 .defaultIfEmpty(new ArrayList<>());
     }

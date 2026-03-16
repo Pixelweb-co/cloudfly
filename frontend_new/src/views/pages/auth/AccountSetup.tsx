@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 // MUI Imports
@@ -22,6 +22,31 @@ import AuthIllustrationWrapperCustomer from './AuthIllustrationWrapperCustomer'
 import FormCustomer from '@/views/apps/customers/form/page'
 import WhatsAppConfigForm from '@/views/apps/comunicaciones/canales/whatsapp/WhatsAppConfigForm'
 import ProductCreationStep from './ProductCreationStep'
+
+// Custom Step Icon Component extracted to avoid re-creation on each render
+const CustomStepIcon = (props: { active: boolean; completed: boolean; icon: string; index: number }) => {
+  const { active, completed, icon, index } = props
+
+  return (
+    <Box
+      sx={{
+        width: 40,
+        height: 40,
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: active || completed ? 'primary.main' : 'action.hover',
+        color: active || completed ? 'primary.contrastText' : 'text.secondary',
+        fontSize: '1.25rem',
+        fontWeight: 'bold',
+        transition: 'all 0.3s'
+      }}
+    >
+      {completed ? '✓' : icon}
+    </Box>
+  )
+}
 
 const steps = [
   {
@@ -49,7 +74,12 @@ const steps = [
 const AccountSetup = () => {
   const [activeStep, setActiveStep] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const handleNext = () => {
     if (isTransitioning) return;
@@ -194,23 +224,12 @@ const AccountSetup = () => {
               <Step key={step.title}>
                 <StepLabel
                   StepIconComponent={() => (
-                    <Box
-                      sx={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: activeStep >= index ? 'primary.main' : 'action.hover',
-                        color: activeStep >= index ? 'primary.contrastText' : 'text.secondary',
-                        fontSize: '1.25rem',
-                        fontWeight: 'bold',
-                        transition: 'all 0.3s'
-                      }}
-                    >
-                      {activeStep > index ? '✓' : step.icon}
-                    </Box>
+                    <CustomStepIcon 
+                      active={activeStep === index} 
+                      completed={activeStep > index} 
+                      icon={step.icon} 
+                      index={index} 
+                    />
                   )}
                 >
                   <Typography variant='body2' className='font-semibold'>
@@ -226,12 +245,14 @@ const AccountSetup = () => {
 
           {/* Step Content */}
           <Box className='min-h-[400px]'>
-            <Box 
-              key={activeStep} 
-              className='wizard-step-container'
-            >
-              {renderStepContent(activeStep)}
-            </Box>
+            {isMounted && (
+              <Box 
+                key={activeStep} 
+                className='wizard-step-container'
+              >
+                {renderStepContent(activeStep)}
+              </Box>
+            )}
           </Box>
 
           {/* Navigation Buttons */}
