@@ -22,6 +22,7 @@ import AuthIllustrationWrapperCustomer from './AuthIllustrationWrapperCustomer'
 import FormCustomer from '@/views/apps/customers/form/page'
 import WhatsAppConfigForm from '@/views/apps/comunicaciones/canales/whatsapp/WhatsAppConfigForm'
 import ProductCreationStep from './ProductCreationStep'
+import { userMethods } from '@/utils/userMethods'
 
 // Custom Step Icon Component extracted to avoid re-creation on each render
 const CustomStepIcon = (props: { active: boolean; completed: boolean; icon: string; index: number }) => {
@@ -79,7 +80,44 @@ const AccountSetup = () => {
 
   useEffect(() => {
     setIsMounted(true)
+    
+    // Resume logic from localStorage
+    const savedStep = localStorage.getItem('account_setup_step')
+    const user = userMethods.getUserLogin()
+    
+    if (savedStep) {
+      const stepInt = parseInt(savedStep, 10)
+      
+      // Smart skip: If we have customerId but are in step 0 or 1, go to step 2
+      if (user?.customerId && stepInt < 2) {
+        setActiveStep(2)
+        localStorage.setItem('account_setup_step', '2')
+      } else {
+        setActiveStep(stepInt)
+      }
+    } else if (user?.customerId) {
+        // Fallback if no step saved but has customer
+        setActiveStep(2)
+        localStorage.setItem('account_setup_step', '2')
+    }
   }, [])
+
+  // Sync step to localStorage
+  useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem('account_setup_step', activeStep.toString())
+    }
+  }, [activeStep, isMounted])
+
+  const handleStepComplete = () => {
+    // Check if it was the last step
+    if (activeStep === steps.length - 1) {
+      localStorage.removeItem('account_setup_step')
+      router.push('/home')
+    } else {
+      handleNext()
+    }
+  }
 
   const handleNext = () => {
     if (isTransitioning) return;
