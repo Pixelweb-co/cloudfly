@@ -107,12 +107,7 @@ public class UserService {
                                         return subscriptionRepository.save(subscription)
                                                         .flatMap(savedSub -> planModuleRepository
                                                                         .findByPlanId(freePlan.getId())
-                                                                        .map(pm -> SubscriptionModuleEntity.builder()
-                                                                                        .subscriptionId(savedSub.getId())
-                                                                                        .moduleId(pm.getModuleId())
-                                                                                        .build())
-                                                                        .collectList()
-                                                                        .flatMapMany(subscriptionModuleRepository::saveAll)
+                                                                        .flatMap(pm -> subscriptionModuleRepository.insertModule(savedSub.getId(), pm.getModuleId()))
                                                                         .then());
                                 });
         }
