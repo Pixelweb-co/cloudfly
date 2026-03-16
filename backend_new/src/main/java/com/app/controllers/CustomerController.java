@@ -237,16 +237,10 @@ public class CustomerController {
                     return subscriptionRepository.save(subscription)
                             .doOnNext(savedSub -> log.info("✅ [ACCOUNT-SETUP] Subscription created with ID: {}", savedSub.getId()))
                             .flatMap(savedSub -> planModuleRepository.findByPlanId(freePlan.getId())
-                                    .map(pm -> {
+                                    .flatMap(pm -> {
                                         log.info("🔗 [ACCOUNT-SETUP] Linking Module {} to Subscription {}", pm.getModuleId(), savedSub.getId());
-                                        return SubscriptionModuleEntity.builder()
-                                                .subscriptionId(savedSub.getId())
-                                                .moduleId(pm.getModuleId())
-                                                .build();
+                                        return subscriptionModuleRepository.insertModule(savedSub.getId(), pm.getModuleId());
                                     })
-                                    .collectList()
-                                    .flatMapMany(subscriptionModuleRepository::saveAll)
-                                    .doOnError(err -> log.error("❌ [ACCOUNT-SETUP] Failed to save SubscriptionModules: {}", err.getMessage()))
                                     .then());
                 })
                 .doOnError(e -> log.error("🛑 [ACCOUNT-SETUP] Automatic Subscription block FAILED: {}", e.getMessage()))

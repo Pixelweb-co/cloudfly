@@ -75,17 +75,11 @@ public class SubscriptionController {
                                                     .subscriptionId(savedSub.getId())
                                                     .moduleId(pm.getModuleId())
                                                     .build())
-                                            .collectList()
-                                            .flatMapMany(subscriptionModuleRepository::saveAll)
+                                            .flatMap(pm -> subscriptionModuleRepository.insertModule(savedSub.getId(), pm.getModuleId()))
                                             .then(Mono.just(savedSub));
                                 } else {
-                                    List<SubscriptionModuleEntity> modules = request.getModuleIds().stream()
-                                            .map(mid -> SubscriptionModuleEntity.builder()
-                                                    .subscriptionId(savedSub.getId())
-                                                    .moduleId(mid)
-                                                    .build())
-                                            .collect(Collectors.toList());
-                                    return subscriptionModuleRepository.saveAll(modules)
+                                    return Flux.fromIterable(request.getModuleIds())
+                                            .flatMap(mid -> subscriptionModuleRepository.insertModule(savedSub.getId(), mid))
                                             .then(Mono.just(savedSub));
                                 }
                             });
@@ -110,17 +104,10 @@ public class SubscriptionController {
                     return subscriptionRepository.save(existing);
                 })
                 .flatMap(savedSub -> {
-                    if (request.getModuleIds() != null) {
                         return subscriptionModuleRepository.deleteBySubscriptionId(id)
                                 .thenMany(Flux.fromIterable(request.getModuleIds()))
-                                .map(mid -> SubscriptionModuleEntity.builder()
-                                        .subscriptionId(id)
-                                        .moduleId(mid)
-                                        .build())
-                                .collectList()
-                                .flatMapMany(subscriptionModuleRepository::saveAll)
+                                .flatMap(mid -> subscriptionModuleRepository.insertModule(id, mid))
                                 .then(Mono.just(savedSub));
-                    }
                     return Mono.just(savedSub);
                 })
                 .flatMap(this::mapToResponse)
