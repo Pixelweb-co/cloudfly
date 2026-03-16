@@ -104,10 +104,12 @@ public class SubscriptionController {
                     return subscriptionRepository.save(existing);
                 })
                 .flatMap(savedSub -> {
+                    if (request.getModuleIds() != null) {
                         return subscriptionModuleRepository.deleteBySubscriptionId(id)
                                 .thenMany(Flux.fromIterable(request.getModuleIds()))
                                 .flatMap(mid -> subscriptionModuleRepository.insertModule(id, mid))
                                 .then(Mono.just(savedSub));
+                    }
                     return Mono.just(savedSub);
                 })
                 .flatMap(this::mapToResponse)
