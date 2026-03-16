@@ -128,81 +128,84 @@ public class CustomerController {
                                 return companyRepository.save(company)
                                         .doOnNext(sc -> log.info("✅ [ACCOUNT-SETUP] Company saved with ID: {}", sc.getId()))
                                         .flatMap(savedCompany -> {
-                                            Category defaultCategory = Category.builder()
-                                                    .categoryName("General")
-                                                    .description("Categoría por defecto")
-                                                    .status(true)
-                                                    .tenantId(savedTenant.getId())
-                                                    .createdAt(LocalDateTime.now())
-                                                    .updatedAt(LocalDateTime.now())
-                                                    .build();
+                                            user.setCustomerId(savedTenant.getId());
+                                            log.info("👤 [ACCOUNT-SETUP] Linking User to Customer ID: {}", savedTenant.getId());
+                                            return userRepository.save(user)
+                                                .doOnNext(su -> log.info("✅ [ACCOUNT-SETUP] User updated successfully"))
+                                                .flatMap(savedUser -> {
+                                                    log.info("🏥 [ACCOUNT-SETUP] Verifying Evolution API Health...");
+                                                    return evolutionService.checkHealth()
+                                                        .timeout(java.time.Duration.ofSeconds(10))
+                                                        .flatMap(health -> {
+                                                            Mono<UserDto> baseFlow = userService.convertToDto(savedUser);
+                                                            Mono<UserDto> whatsappFlow;
 
-                                            log.info("📂 [ACCOUNT-SETUP] Saving Default Category...");
-                                            return categoryRepository.save(defaultCategory)
-                                                    .doOnNext(scat -> log.info("✅ [ACCOUNT-SETUP] Category saved successfully"))
-                                                    .flatMap(savedCategory -> {
-                                                        user.setCustomerId(savedTenant.getId());
-                                                        log.info("👤 [ACCOUNT-SETUP] Linking User to Customer ID: {}", savedTenant.getId());
-                                                        return userRepository.save(user)
-                                                                .doOnNext(su -> log.info("✅ [ACCOUNT-SETUP] User updated successfully"))
-                                                                .flatMap(savedUser -> {
-                                                                    log.info("💳 [ACCOUNT-SETUP] Initializing Automatic Subscription...");
-                                                                    return handleAutomaticSubscription(savedTenant.getId())
+                                                            if (!health) {
+                                                                log.warn("⚠️ [ACCOUNT-SETUP] Evolution API health check failed, skipping WA for now.");
+                                                                whatsappFlow = baseFlow;
+                                                            } else {
+                                                                log.info("📱 [ACCOUNT-SETUP] Validating WhatsApp number: {}", form.getPhone());
+                                                                whatsappFlow = evolutionService.isOnWhatsApp("cloudfly_chatbot1", form.getPhone())
+                                                                    .timeout(java.time.Duration.ofSeconds(15))
+                                                                    .flatMap(isOnWa -> {
+                                                                        if (!isOnWa) {
+                                                                            log.error("❌ [ACCOUNT-SETUP] Number {} not on WhatsApp", form.getPhone());
+                                                                            return Mono.error(new RuntimeException("El número proporcionado no tiene una cuenta de WhatsApp activa."));
+                                                                        }
+                                                                        String instanceName = "cloudfly_" + savedCompany.getId();
+                                                                        log.info("🚀 [ACCOUNT-SETUP] Creating/Fetching QR for instance: {}", instanceName);
+                                                                        return evolutionService.createInstance(instanceName)
+                                                                            .timeout(java.time.Duration.ofSeconds(30))
+                                                                            .flatMap(instanceData -> {
+                                                                                log.info("📝 [ACCOUNT-SETUP] Persisting ChatbotConfig for company: {}", savedCompany.getId());
+                                                                                ChatbotConfig chatbotConfig = ChatbotConfig.builder()
+                                                                                        .tenantId(savedTenant.getId())
+                                                                                        .companyId(savedCompany.getId())
+                                                                                        .instanceName(instanceName)
+                                                                                        .chatbotType(ChatbotType.SALES)
+                                                                                        .isActive(false)
+                                                                                        .createdAt(LocalDateTime.now())
+                                                                                        .updatedAt(LocalDateTime.now())
+                                                                                        .build();
+
+                                                                                return chatbotConfigRepository.save(chatbotConfig)
+                                                                                        .doOnNext(cc -> log.info("✅ [ACCOUNT-SETUP] ChatbotConfig saved"))
+                                                                                        .then(Mono.defer(() -> {
+                                                                                            log.info("📧 [ACCOUNT-SETUP] Sending welcome notification to Kafka...");
+                                                                                            Map<String, Object> welcomeMsg = new HashMap<>();
+                                                                                            welcomeMsg.put("phoneNumber", form.getPhone());
+                                                                                            welcomeMsg.put("instanceName", instanceName);
+                                                                                            return kafkaTemplate.send("welcome-notifications", welcomeMsg).then();
+                                                                                        }))
+                                                                                        .then(baseFlow);
+                                                                            });
+                                                                    });
+                                                            }
+
+                                                            return whatsappFlow
+                                                                .onErrorResume(e -> {
+                                                                    log.error("🛑 [ACCOUNT-SETUP] Evolution integration failed but continuing: {}", e.getMessage());
+                                                                    return baseFlow;
+                                                                })
+                                                                .flatMap(userDto -> {
+                                                                    Category defaultCategory = Category.builder()
+                                                                        .categoryName("General")
+                                                                        .description("Categoría por defecto")
+                                                                        .status(true)
+                                                                        .tenantId(savedTenant.getId())
+                                                                        .createdAt(LocalDateTime.now())
+                                                                        .updatedAt(LocalDateTime.now())
+                                                                        .build();
+
+                                                                    log.info("📂 [ACCOUNT-SETUP] Finalizing setup: Saving Default Category...");
+                                                                    return categoryRepository.save(defaultCategory)
+                                                                        .doOnNext(scat -> log.info("✅ [ACCOUNT-SETUP] Category saved successfully"))
+                                                                        .then(handleAutomaticSubscription(savedTenant.getId()))
                                                                         .doOnSuccess(v -> log.info("✅ [ACCOUNT-SETUP] Automatic Subscription block complete"))
-                                                                        .then(userService.convertToDto(savedUser))
-                                                                        .flatMap(userDto -> {
-                                                                            log.info("🏥 [ACCOUNT-SETUP] Verifying Evolution API Health...");
-                                                                            return evolutionService.checkHealth()
-                                                                                .timeout(java.time.Duration.ofSeconds(10))
-                                                                                .flatMap(health -> {
-                                                                                    if (!health) {
-                                                                                        log.warn("⚠️ [ACCOUNT-SETUP] Evolution API health check failed, proceeding WITHOUT instance.");
-                                                                                        return Mono.just(userDto);
-                                                                                    }
-                                                                                    log.info("📱 [ACCOUNT-SETUP] Validating WhatsApp number: {}", form.getPhone());
-                                                                                    return evolutionService.isOnWhatsApp("cloudfly_chatbot1", form.getPhone())
-                                                                                            .timeout(java.time.Duration.ofSeconds(15))
-                                                                                            .flatMap(isOnWa -> {
-                                                                                                if (!isOnWa) {
-                                                                                                    log.error("❌ [ACCOUNT-SETUP] Number {} not on WhatsApp", form.getPhone());
-                                                                                                    return Mono.error(new RuntimeException("El número proporcionado no tiene una cuenta de WhatsApp activa."));
-                                                                                                }
-                                                                                                String instanceName = "cloudfly_" + savedCompany.getId();
-                                                                                                log.info("🚀 [ACCOUNT-SETUP] Creating/Fetching QR for instance: {}", instanceName);
-                                                                                                return evolutionService.createInstance(instanceName)
-                                                                                                        .timeout(java.time.Duration.ofSeconds(30))
-                                                                                                        .flatMap(instanceData -> {
-                                                                                                            log.info("📝 [ACCOUNT-SETUP] Persisting ChatbotConfig for company: {}", savedCompany.getId());
-                                                                                                            ChatbotConfig chatbotConfig = ChatbotConfig.builder()
-                                                                                                                    .tenantId(savedTenant.getId())
-                                                                                                                    .companyId(savedCompany.getId())
-                                                                                                                    .instanceName(instanceName)
-                                                                                                                    .chatbotType(ChatbotType.SALES)
-                                                                                                                    .isActive(false)
-                                                                                                                    .createdAt(LocalDateTime.now())
-                                                                                                                    .updatedAt(LocalDateTime.now())
-                                                                                                                    .build();
-
-                                                                                                            return chatbotConfigRepository.save(chatbotConfig)
-                                                                                                                    .doOnNext(cc -> log.info("✅ [ACCOUNT-SETUP] ChatbotConfig saved"))
-                                                                                                                    .then(Mono.defer(() -> {
-                                                                                                                        log.info("📧 [ACCOUNT-SETUP] Sending welcome notification to Kafka...");
-                                                                                                                        Map<String, Object> welcomeMsg = new HashMap<>();
-                                                                                                                        welcomeMsg.put("phoneNumber", form.getPhone());
-                                                                                                                        welcomeMsg.put("instanceName", instanceName);
-                                                                                                                        return kafkaTemplate.send("welcome-notifications", welcomeMsg).then();
-                                                                                                                    }))
-                                                                                                                    .thenReturn(userDto);
-                                                                                                        });
-                                                                                            });
-                                                                                })
-                                                                                .onErrorResume(e -> {
-                                                                                    log.error("🛑 [ACCOUNT-SETUP] Evolution integration failed but continuing: {}", e.getMessage());
-                                                                                    return Mono.just(userDto);
-                                                                                });
-                                                                        });
+                                                                        .thenReturn(userDto);
                                                                 });
-                                                    });
+                                                        });
+                                                });
                                         });
                             });
                 })
