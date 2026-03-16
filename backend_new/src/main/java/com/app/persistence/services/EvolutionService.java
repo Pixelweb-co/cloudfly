@@ -132,7 +132,7 @@ public class EvolutionService {
         String url = apiUrl + "/";
         log.info("🏥 [EVOLUTION-SERVICE] Checking API Health at: {}", url);
         return webClient.get()
-                .uri(url)
+                .uri(java.net.URI.create(url))
                 .retrieve()
                 .toBodilessEntity()
                 .timeout(java.time.Duration.ofSeconds(7))
