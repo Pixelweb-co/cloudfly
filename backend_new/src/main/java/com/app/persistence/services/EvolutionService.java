@@ -129,7 +129,7 @@ public class EvolutionService {
     }
 
     public Mono<Boolean> checkHealth() {
-        String url = apiUrl + "/"; // Root provides welcome message and 200 OK
+        String url = apiUrl + "/";
         log.info("🏥 [EVOLUTION-SERVICE] Checking API Health at: {}", url);
         return webClient.get()
                 .uri(url)
