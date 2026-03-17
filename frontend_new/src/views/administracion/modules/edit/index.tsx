@@ -18,6 +18,10 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
 import { toast } from 'react-hot-toast'
 
+import CustomTextField from '@core/components/mui/TextField'
+import { moduleService } from '@/services/modules/moduleService'
+import type { ModuleCreateRequest } from '@/types/modules'
+
 // Esquema de validación con Yup
 const schema = yup.object().shape({
     name: yup.string().required('El nombre es requerido'),
