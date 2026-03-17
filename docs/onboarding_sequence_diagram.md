@@ -51,33 +51,43 @@ sequenceDiagram
     else Si el Usuario es ADMIN y customerId == null
         Note over User, FE: Fase 3: Account Setup (Wizard 4 Pasos)
         User->>FE: Redirección automática a /account-setup
+        FE->>FE: Cargar activeStep desde LocalStorage
         
         Note over User, FE: Paso 1: Tu Negocio
         User->>FE: Completa datos de empresa
         FE->>BE: POST /customers/account-setup
         BE->>DB: Crear Tenant, Company y Suscripción
-        BE->>BE: chatbotService.activateChatbot(tenantId)
-        BE->>WA: POST /instance/create (Dedicada)
-        BE->>Kafka: Emitir evento 'welcome-notifications'
-        Kafka->>NS: Consumidor recibe mensaje
-        NS->>WA: POST /message/sendText/{dedicated_instance}
         BE-->>FE: HTTP 200 OK (UserDto actualizado)
+        FE->>FE: Guardar activeStep=1 y userData en LocalStorage
         
-        Note over User, FE: Paso 2: Chatbot IA
-        FE->>BE: GET /api/chatbot/config
-        BE-->>FE: Config + QR Code (Base64)
-        FE-->>User: Mostrar QR para vincular
-        User->>FE: Configura nombre agente y guarda
-        FE->>BE: POST /api/chatbot/config
-        BE-->>FE: HTTP 200 OK
+        Note over User, FE: Paso 2: Chatbot IA (QR WhatsApp)
+        FE->>BE: GET /api/evolution/status/{instance}
+        alt Si estado es "open" (Ya conectado tras F5)
+            BE-->>FE: Status OK
+            FE->>FE: Auto-skip al siguiente paso
+        else Si no está conectado
+            FE->>BE: POST /api/evolution/instance/{instance}
+            BE->>WA: Crear/Recuperar Instancia
+            BE-->>FE: Status OK
+            FE->>BE: GET /api/evolution/qr/{instance}
+            BE-->>FE: QR Code (Base64)
+            FE-->>User: Mostrar QR para vincular
+            User->>WA: Escanear QR con teléfono
+            WA->>BE: Notificar Conexión (Webhook)
+            User->>FE: Clic en "Ya escaneé"
+            FE->>BE: GET /api/evolution/status/{instance}
+            BE-->>FE: Status: Connected
+        end
+        FE->>FE: Guardar activeStep=2 en LocalStorage
 
-        Note over User, FE: Paso 3: Productos
+        Note over User, FE: Paso 3: Categorías y Productos
         User->>FE: Crea categorías y productos iniciales
         FE->>BE: POST /api/products
         BE-->>FE: HTTP 201 Created
+        FE->>FE: Guardar activeStep=3 en LocalStorage
         
-        FE->>FE: Actualizar userData
         FE-->>User: Clic en 'Finalizar' -> Redirección a /home
+        FE->>FE: Limpiar LocalStorage (account_setup_step)
     end
 
     Note over FE, BE: Carga Dashboard

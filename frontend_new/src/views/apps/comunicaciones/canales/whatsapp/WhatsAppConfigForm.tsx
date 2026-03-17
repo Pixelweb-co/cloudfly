@@ -20,9 +20,28 @@ const WhatsAppConfigForm = ({ onSuccess }: Props) => {
   useEffect(() => {
     const user = userMethods.getUserLogin()
     if (user && user.username) {
-      setInstanceName(`cloudfly_${user.username.toLowerCase().replace(/[^a-z0-9]/g, '_')}`)
+      const name = `cloudfly_${user.username.toLowerCase().replace(/[^a-z0-9]/g, '_')}`
+      setInstanceName(name)
+      checkInitialStatus(name)
     }
   }, [])
+
+  const checkInitialStatus = async (name: string) => {
+    try {
+      setLoading(true)
+      const res = await axiosInstance.get(`/api/evolution/status/${name}`)
+      if (res.data && res.data.instance && res.data.instance.state === 'open') {
+        setStatus('connected')
+        setTimeout(() => {
+          onSuccess()
+        }, 1000)
+      }
+    } catch (err) {
+      console.log('Instance not yet created or connected')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleStartConnection = async () => {
     try {
