@@ -119,8 +119,8 @@ export const AuthManager = {
 
       if (!token) {
         console.error('Token no encontrado')
-        
-return false
+
+        return false
       }
 
       const decodedToken: any = jwtDecode(token)
@@ -129,15 +129,15 @@ return false
 
       if (expirationDate < currentDate) {
         console.error('Token expirado')
-        
-return false
+
+        return false
       }
 
       return true
     } catch (error) {
       console.error('Error durante la validación del token:', error)
-      
-return false
+
+      return false
     }
   },
 

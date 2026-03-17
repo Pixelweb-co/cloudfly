@@ -80,14 +80,14 @@ const AccountSetup = () => {
 
   useEffect(() => {
     setIsMounted(true)
-    
+
     // Resume logic from localStorage
     const savedStep = localStorage.getItem('account_setup_step')
     const user = userMethods.getUserLogin()
-    
+
     if (savedStep) {
       const stepInt = parseInt(savedStep, 10)
-      
+
       // Smart skip: If we have customerId but are in step 0 or 1, go to step 2
       if (user?.customerId && stepInt < 2) {
         setActiveStep(2)
@@ -96,9 +96,9 @@ const AccountSetup = () => {
         setActiveStep(stepInt)
       }
     } else if (user?.customerId) {
-        // Fallback if no step saved but has customer
-        setActiveStep(2)
-        localStorage.setItem('account_setup_step', '2')
+      // Fallback if no step saved but has customer
+      setActiveStep(2)
+      localStorage.setItem('account_setup_step', '2')
     }
   }, [])
 
@@ -121,7 +121,7 @@ const AccountSetup = () => {
 
   const handleNext = () => {
     if (isTransitioning) return;
-    
+
     setIsTransitioning(true);
     setTimeout(() => setIsTransitioning(false), 1000); // 1s cooldown
 
@@ -262,11 +262,11 @@ const AccountSetup = () => {
               <Step key={step.title}>
                 <StepLabel
                   StepIconComponent={() => (
-                    <CustomStepIcon 
-                      active={activeStep === index} 
-                      completed={activeStep > index} 
-                      icon={step.icon} 
-                      index={index} 
+                    <CustomStepIcon
+                      active={activeStep === index}
+                      completed={activeStep > index}
+                      icon={step.icon}
+                      index={index}
                     />
                   )}
                 >
@@ -284,8 +284,8 @@ const AccountSetup = () => {
           {/* Step Content */}
           <Box className='min-h-[400px]'>
             {isMounted && (
-              <Box 
-                key={activeStep} 
+              <Box
+                key={activeStep}
                 className='wizard-step-container'
               >
                 {renderStepContent(activeStep)}

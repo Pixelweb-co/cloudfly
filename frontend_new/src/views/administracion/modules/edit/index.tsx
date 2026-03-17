@@ -13,37 +13,32 @@ import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useFieldArray } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
+import * as yup from 'yup'
 import { toast } from 'react-hot-toast'
-import MenuItem from '@mui/material/MenuItem'
-import Select from '@mui/material/Select'
-import InputLabel from '@mui/material/InputLabel'
-import FormControl from '@mui/material/FormControl'
 
-import { moduleService } from '@/services/modules/moduleService'
-import type { ModuleCreateRequest, MenuItem as MenuItemType } from '@/types/modules'
-import CustomTextField from '@core/components/mui/TextField'
+// Esquema de validación con Yup
+const schema = yup.object().shape({
+    name: yup.string().required('El nombre es requerido'),
+    code: yup.string()
+        .required('El código es requerido')
+        .matches(/^[A-Z0-9_]+$/, 'Solo mayúsculas, números y guiones bajos'),
+    description: yup.string(),
+    icon: yup.string().required('Debe seleccionar un icono'),
+    menuPath: yup.string().required('La ruta principal es requerida'),
+    displayOrder: yup.number().typeError('Debe ser un número').min(0, 'No puede ser negativo'),
+    menuItemsList: yup.array().of(
+        yup.object().shape({
+            name: yup.string().required('Nombre del item requerido'),
+            path: yup.string().required('La ruta es requerida')
+        })
+    )
+})
 
-// Lista de iconos Tabler disponibles
-const iconList = [
-    'tabler-shopping-cart',
-    'tabler-users',
-    'tabler-file-invoice',
-    'tabler-package',
-    'tabler-shopping-bag',
-    'tabler-chart-bar',
-    'tabler-settings',
-    'tabler-home',
-    'tabler-building-store',
-    'tabler-truck-delivery',
-    'tabler-currency-dollar',
-    'tabler-report-analytics',
-    'tabler-user-check',
-    'tabler-calendar-event',
-    'tabler-file-text',
-    'tabler-box',
-    'tabler-device-analytics'
-]
+interface FormType extends Omit<ModuleCreateRequest, 'menuItems'> {
+    menuItemsList: { name: string; path: string }[]
+}
 
 const EditModuleView = () => {
     const router = useRouter()
@@ -52,15 +47,16 @@ const EditModuleView = () => {
 
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
-    const [menuItems, setMenuItems] = useState<MenuItemType[]>([])
 
     const {
         control,
         handleSubmit,
         formState: { errors },
         reset,
-        watch
-    } = useForm<ModuleCreateRequest>({
+        watch,
+        setValue
+    } = useForm<FormType>({
+        resolver: yupResolver(schema) as any,
         defaultValues: {
             name: '',
             code: '',
@@ -68,8 +64,13 @@ const EditModuleView = () => {
             icon: '',
             menuPath: '',
             displayOrder: 0,
-            menuItems: undefined
+            menuItemsList: []
         }
+    })
+
+    const { fields, append, remove } = useFieldArray({
+        control,
+        name: 'menuItemsList'
     })
 
     const selectedIcon = watch('icon')
@@ -80,15 +81,11 @@ const EditModuleView = () => {
                 setIsLoading(true)
                 const moduleData = await moduleService.getModuleById(moduleId)
 
-                // Parse menuItems if exists
-                let parsedMenuItems: MenuItemType[] = []
+                let parsedMenuItems: { name: string; path: string }[] = []
 
                 if (moduleData.menuItems) {
                     try {
                         const rawItems = JSON.parse(moduleData.menuItems)
-
-
-                        // Map DB format (label, href) to Frontend format (name, path)
                         parsedMenuItems = rawItems.map((item: any) => ({
                             name: item.label || item.name || '',
                             path: item.href || item.path || ''
@@ -98,8 +95,6 @@ const EditModuleView = () => {
                     }
                 }
 
-                setMenuItems(parsedMenuItems)
-
                 reset({
                     name: moduleData.name,
                     code: moduleData.code,
@@ -107,7 +102,7 @@ const EditModuleView = () => {
                     icon: moduleData.icon || '',
                     menuPath: moduleData.menuPath || '',
                     displayOrder: moduleData.displayOrder,
-                    menuItems: moduleData.menuItems || undefined
+                    menuItemsList: parsedMenuItems
                 })
             } catch (error) {
                 console.error('Error fetching module:', error)
@@ -120,26 +115,25 @@ const EditModuleView = () => {
         fetchModule()
     }, [moduleId, reset])
 
-    const onSubmit = async (formData: ModuleCreateRequest) => {
+    const onSubmit = async (formData: FormType) => {
         try {
             setIsSubmitting(true)
 
-            // Serialize menuItems to JSON (converting name->label, path->href)
-            const filteredMenuItems = menuItems.filter(item => item.name.trim() !== '' && item.path.trim() !== '')
-
-            const dbMenuItems = filteredMenuItems.map(item => ({
+            // Serialize menuItemsList to JSON string (label/href format for backend)
+            const dbMenuItems = formData.menuItemsList.map(item => ({
                 label: item.name,
                 href: item.path
             }))
 
             const menuItemsJson = dbMenuItems.length > 0 ? JSON.stringify(dbMenuItems) : undefined
 
-            const payload: ModuleCreateRequest = {
-                ...formData,
-                menuItems: menuItemsJson
-            }
+            const { menuItemsList, ...rest } = formData
 
-            await moduleService.updateModule(moduleId, payload)
+            await moduleService.updateModule(moduleId, {
+                ...rest,
+                menuItems: menuItemsJson
+            })
+
             toast.success('Módulo actualizado exitosamente')
             router.push('/administracion/modules')
         } catch (error) {
@@ -148,21 +142,6 @@ const EditModuleView = () => {
         } finally {
             setIsSubmitting(false)
         }
-    }
-
-    const handleAddMenuItem = () => {
-        setMenuItems([...menuItems, { name: '', path: '' }])
-    }
-
-    const handleRemoveMenuItem = (index: number) => {
-        setMenuItems(menuItems.filter((_, i) => i !== index))
-    }
-
-    const handleMenuItemChange = (index: number, field: 'name' | 'path', value: string) => {
-        const updatedItems = [...menuItems]
-
-        updatedItems[index][field] = value
-        setMenuItems(updatedItems)
     }
 
     if (isLoading) {
@@ -196,9 +175,10 @@ const EditModuleView = () => {
 
             <form onSubmit={handleSubmit(onSubmit)}>
                 <Grid container spacing={6}>
-                    {/* Información Básica */}
+                    {/* Columna Izquierda */}
                     <Grid item xs={12} md={8}>
-                        <Card>
+                        {/* Información Básica */}
+                        <Card className='mb-6'>
                             <CardHeader
                                 title='Información del Módulo'
                                 titleTypographyProps={{ variant: 'h6' }}
@@ -209,7 +189,6 @@ const EditModuleView = () => {
                                         <Controller
                                             name='name'
                                             control={control}
-                                            rules={{ required: 'El nombre es requerido' }}
                                             render={({ field }) => (
                                                 <CustomTextField
                                                     {...field}
@@ -226,15 +205,15 @@ const EditModuleView = () => {
                                         <Controller
                                             name='code'
                                             control={control}
-                                            rules={{ required: 'El código es requerido' }}
                                             render={({ field }) => (
                                                 <CustomTextField
                                                     {...field}
                                                     fullWidth
-                                                    label='Código'
+                                                    label='Código Único'
                                                     placeholder='VENTAS'
                                                     error={!!errors.code}
                                                     helperText={errors.code?.message}
+                                                    onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                                                 />
                                             )}
                                         />
@@ -251,12 +230,14 @@ const EditModuleView = () => {
                                                     multiline
                                                     rows={3}
                                                     label='Descripción'
+                                                    error={!!errors.description}
+                                                    helperText={errors.description?.message}
                                                 />
                                             )}
                                         />
                                     </Grid>
 
-                                    <Grid item xs={12} sm={6}>
+                                    <Grid item xs={12} sm={8}>
                                         <Controller
                                             name='menuPath'
                                             control={control}
@@ -266,12 +247,14 @@ const EditModuleView = () => {
                                                     fullWidth
                                                     label='Ruta del Menú'
                                                     placeholder='/ventas'
+                                                    error={!!errors.menuPath}
+                                                    helperText={errors.menuPath?.message}
                                                 />
                                             )}
                                         />
                                     </Grid>
 
-                                    <Grid item xs={12} sm={6}>
+                                    <Grid item xs={12} sm={4}>
                                         <Controller
                                             name='displayOrder'
                                             control={control}
@@ -280,7 +263,9 @@ const EditModuleView = () => {
                                                     {...field}
                                                     fullWidth
                                                     type='number'
-                                                    label='Orden de Visualización'
+                                                    label='Orden'
+                                                    error={!!errors.displayOrder}
+                                                    helperText={errors.displayOrder?.message}
                                                     InputProps={{ inputProps: { min: 0 } }}
                                                 />
                                             )}
@@ -291,64 +276,83 @@ const EditModuleView = () => {
                         </Card>
 
                         {/* Items del Menú */}
-                        <Card className='mt-6'>
+                        <Card>
                             <CardHeader
                                 title='Items del Menú'
                                 subheader='Agrega sub-items para este módulo (opcional)'
                                 titleTypographyProps={{ variant: 'h6' }}
-                            />
-                            <CardContent>
-                                {menuItems.length === 0 ? (
-                                    <Box className='text-center py-4'>
-                                        <Typography variant='body2' color='text.secondary'>
-                                            No hay items agregados
-                                        </Typography>
-                                    </Box>
-                                ) : (
-                                    <Grid container spacing={3}>
-                                        {menuItems.map((item, index) => (
-                                            <React.Fragment key={index}>
-                                                <Grid item xs={12} sm={5}>
-                                                    <CustomTextField
-                                                        fullWidth
-                                                        label='Nombre del Item'
-                                                        value={item.name}
-                                                        onChange={(e) => handleMenuItemChange(index, 'name', e.target.value)}
-                                                        placeholder='Ej: Facturación'
-                                                    />
-                                                </Grid>
-                                                <Grid item xs={12} sm={6}>
-                                                    <CustomTextField
-                                                        fullWidth
-                                                        label='Ruta'
-                                                        value={item.path}
-                                                        onChange={(e) => handleMenuItemChange(index, 'path', e.target.value)}
-                                                        placeholder='/ventas/facturas'
-                                                    />
-                                                </Grid>
-                                                <Grid item xs={12} sm={1} className='flex items-center'>
-                                                    <IconButton
-                                                        color='error'
-                                                        onClick={() => handleRemoveMenuItem(index)}
-                                                        size='small'
-                                                    >
-                                                        <i className='tabler-trash' />
-                                                    </IconButton>
-                                                </Grid>
-                                            </React.Fragment>
-                                        ))}
-                                    </Grid>
-                                )}
-                                <Box className='mt-4'>
+                                action={
                                     <Button
-                                        variant='outlined'
-                                        startIcon={<i className='tabler-plus' />}
-                                        onClick={handleAddMenuItem}
+                                        variant='contained'
                                         size='small'
+                                        startIcon={<i className='tabler-plus' />}
+                                        onClick={() => append({ name: '', path: '' })}
                                     >
                                         Agregar Item
                                     </Button>
-                                </Box>
+                                }
+                            />
+                            <CardContent>
+                                {fields.length === 0 ? (
+                                    <Box className='p-6 text-center border-2 border-dashed rounded-lg'>
+                                        <Typography variant='body2' color='text.secondary'>
+                                            No hay items agregados. Haz clic en "Agregar Item" para comenzar.
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    <div className='flex flex-col gap-4'>
+                                        {fields.map((item, index) => (
+                                            <Box key={item.id} className='p-4 border rounded-lg'>
+                                                <div className='flex items-start gap-4'>
+                                                    <div className='flex-1'>
+                                                        <Grid container spacing={3}>
+                                                            <Grid item xs={12} sm={6}>
+                                                                <Controller
+                                                                    name={`menuItemsList.${index}.name`}
+                                                                    control={control}
+                                                                    render={({ field }) => (
+                                                                        <CustomTextField
+                                                                            {...field}
+                                                                            fullWidth
+                                                                            size='small'
+                                                                            label='Nombre del Item'
+                                                                            error={!!errors.menuItemsList?.[index]?.name}
+                                                                            helperText={errors.menuItemsList?.[index]?.name?.message}
+                                                                        />
+                                                                    )}
+                                                                />
+                                                            </Grid>
+                                                            <Grid item xs={12} sm={6}>
+                                                                <Controller
+                                                                    name={`menuItemsList.${index}.path`}
+                                                                    control={control}
+                                                                    render={({ field }) => (
+                                                                        <CustomTextField
+                                                                            {...field}
+                                                                            fullWidth
+                                                                            size='small'
+                                                                            label='Ruta'
+                                                                            error={!!errors.menuItemsList?.[index]?.path}
+                                                                            helperText={errors.menuItemsList?.[index]?.path?.message}
+                                                                        />
+                                                                    )}
+                                                                />
+                                                            </Grid>
+                                                        </Grid>
+                                                    </div>
+                                                    <IconButton
+                                                        color='error'
+                                                        onClick={() => remove(index)}
+                                                        size='small'
+                                                        className='mt-6'
+                                                    >
+                                                        <i className='tabler-trash' />
+                                                    </IconButton>
+                                                </div>
+                                            </Box>
+                                        ))}
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </Grid>
@@ -361,50 +365,37 @@ const EditModuleView = () => {
                                 titleTypographyProps={{ variant: 'h6' }}
                             />
                             <CardContent>
-                                <Controller
-                                    name='icon'
-                                    control={control}
-                                    render={({ field }) => (
-                                        <FormControl fullWidth>
-                                            <InputLabel id='icon-select-label'>Seleccionar Icono</InputLabel>
-                                            <Select
-                                                {...field}
-                                                labelId='icon-select-label'
-                                                label='Seleccionar Icono'
-                                                renderValue={(value) => (
-                                                    <Box className='flex items-center gap-2'>
-                                                        {value && <i className={`${value} text-xl`} />}
-                                                        <span>{value || 'Sin icono'}</span>
-                                                    </Box>
-                                                )}
-                                            >
-                                                <MenuItem value=''>
-                                                    <Box className='flex items-center gap-2'>
-                                                        <span>Sin icono</span>
-                                                    </Box>
-                                                </MenuItem>
-                                                {iconList.map((icon) => (
-                                                    <MenuItem key={icon} value={icon}>
-                                                        <Box className='flex items-center gap-2'>
-                                                            <i className={`${icon} text-xl`} />
-                                                            <span>{icon}</span>
-                                                        </Box>
-                                                    </MenuItem>
-                                                ))}
-                                            </Select>
-                                        </FormControl>
-                                    )}
-                                />
-
                                 {/* Preview del icono */}
                                 {selectedIcon && (
-                                    <Box className='mt-6 p-6 bg-backgroundPaper rounded text-center'>
-                                        <Typography variant='caption' color='text.secondary' className='block mb-2'>
-                                            Vista Previa
+                                    <Box className='mb-4 p-6 border-2 border-dashed rounded-lg flex flex-col items-center justify-center bg-actionHover'>
+                                        <i className={`${selectedIcon} text-6xl text-primary mb-2`} />
+                                        <Typography variant='caption' color='text.secondary'>
+                                            {selectedIcon}
                                         </Typography>
-                                        <i className={`${selectedIcon} text-6xl text-primary`} />
                                     </Box>
                                 )}
+
+                                <Typography variant='caption' color='error' className='block mb-2'>
+                                    {errors.icon?.message}
+                                </Typography>
+
+                                <Box className='mt-4'>
+                                    <Controller
+                                        name='icon'
+                                        control={control}
+                                        render={({ field }) => (
+                                            <CustomTextField
+                                                {...field}
+                                                fullWidth
+                                                size='small'
+                                                label='Ingresa clase del icono (Tabler)'
+                                                placeholder='tabler-smart-home'
+                                                error={!!errors.icon}
+                                                helperText={errors.icon?.message}
+                                            />
+                                        )}
+                                    />
+                                </Box>
                             </CardContent>
                         </Card>
                     </Grid>

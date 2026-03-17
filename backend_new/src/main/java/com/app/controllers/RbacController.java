@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -171,6 +172,7 @@ public class RbacController {
     }
 
     @PostMapping("/modules")
+    @PreAuthorize("hasRole('MANAGER')")
     public Mono<ResponseEntity<ModuleDto>> createModule(@RequestBody ModuleDto request) {
         log.info("POST /api/rbac/modules - Creating module {}", request.getCode());
         ModuleEntity entity = mapToEntity(request);
@@ -181,6 +183,7 @@ public class RbacController {
     }
 
     @PutMapping("/modules/{id}")
+    @PreAuthorize("hasRole('MANAGER')")
     public Mono<ResponseEntity<ModuleDto>> updateModule(@PathVariable Long id, @RequestBody ModuleDto request) {
         log.info("PUT /api/rbac/modules/{} - Updating module", id);
         return moduleRepository.findById(id).flatMap(existing -> {
@@ -198,6 +201,7 @@ public class RbacController {
     }
 
     @DeleteMapping("/modules/{id}")
+    @PreAuthorize("hasRole('MANAGER')")
     public Mono<ResponseEntity<Void>> deleteModule(@PathVariable Long id) {
         log.info("DELETE /api/rbac/modules/{} - Deleting module", id);
         return moduleRepository.deleteById(id).then(Mono.just(ResponseEntity.noContent().build()));
