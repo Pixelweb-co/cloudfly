@@ -19,24 +19,21 @@ public class MarketingService {
     private final CampaignAdRepository adRepository;
 
     public Flux<MarketingCampaignEntity> getCampaigns(Long companyId, Long tenantId) {
-        // return campaignRepository.findByCompanyIdAndTenantId(companyId, tenantId);
-        return Flux.empty();
+        return campaignRepository.findByCompanyIdAndTenantId(companyId, tenantId);
     }
 
     public Mono<MarketingCampaignEntity> createCampaign(MarketingCampaignEntity campaign, Long companyId, Long tenantId) {
-        // campaign.setCompanyId(companyId);
-        // campaign.setTenantId(tenantId);
-        // campaign.setCreatedAt(LocalDateTime.now());
-        // campaign.setUpdatedAt(LocalDateTime.now());
-        // if (campaign.getStatus() == null) campaign.setStatus("DRAFT");
-        // return campaignRepository.save(campaign);
-        return Mono.just(campaign);
+        campaign.setCompanyId(companyId);
+        campaign.setTenantId(tenantId);
+        campaign.setCreatedAt(LocalDateTime.now());
+        campaign.setUpdatedAt(LocalDateTime.now());
+        if (campaign.getStatus() == null) campaign.setStatus("DRAFT");
+        return campaignRepository.save(campaign);
     }
 
     public Mono<MarketingCampaignEntity> getCampaignById(Long id, Long companyId, Long tenantId) {
-        // return campaignRepository.findById(id)
-        //         .filter(c -> c.getCompanyId().equals(companyId) && c.getTenantId().equals(tenantId));
-        return Mono.empty();
+        return campaignRepository.findById(id)
+                .filter(c -> c.getCompanyId().equals(companyId) && c.getTenantId().equals(tenantId));
     }
 
     public Flux<CampaignAdEntity> getAdsByCampaign(Long campaignId, Long companyId) {

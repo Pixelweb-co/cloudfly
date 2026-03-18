@@ -22,27 +22,24 @@ public class MarketingController {
     @GetMapping
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
     public Flux<MarketingCampaignEntity> getCampaigns(Authentication authentication) {
-        // Long tenantId = getTenantId(authentication);
-        // Long companyId = getCompanyId(authentication);
-        // return marketingService.getCampaigns(companyId, tenantId);
-        return Flux.empty();
+        Long tenantId = getTenantId(authentication);
+        Long companyId = getCompanyId(authentication);
+        return marketingService.getCampaigns(companyId, tenantId);
     }
 
     @PostMapping
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN')")
     public Mono<MarketingCampaignEntity> createCampaign(@RequestBody MarketingCampaignEntity campaign, Authentication authentication) {
-        // Long tenantId = getTenantId(authentication);
-        // Long companyId = getCompanyId(authentication);
-        // return marketingService.createCampaign(campaign, companyId, tenantId);
-        return Mono.just(campaign);
+        Long tenantId = getTenantId(authentication);
+        Long companyId = getCompanyId(authentication);
+        return marketingService.createCampaign(campaign, companyId, tenantId);
     }
 
     @GetMapping("/{id}")
     public Mono<MarketingCampaignEntity> getCampaignById(@PathVariable Long id, Authentication authentication) {
-        // Long tenantId = getTenantId(authentication);
-        // Long companyId = getCompanyId(authentication);
-        // return marketingService.getCampaignById(id, companyId, tenantId);
-        return Mono.empty();
+        Long tenantId = getTenantId(authentication);
+        Long companyId = getCompanyId(authentication);
+        return marketingService.getCampaignById(id, companyId, tenantId);
     }
 
     @GetMapping("/{id}/ads")
