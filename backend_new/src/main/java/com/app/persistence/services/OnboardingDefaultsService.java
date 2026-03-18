@@ -43,7 +43,8 @@ public class OnboardingDefaultsService {
                             .createdAt(LocalDateTime.now())
                             .build();
 
-                    return marketingCampaignRepository.save(campaign)
+                    // return marketingCampaignRepository.save(campaign)
+                    return Mono.just(campaign)
                             .flatMap(savedCampaign -> {
                                 log.info("✅ Marketing Campaign created: {}. Creating Channel...", savedCampaign.getName());
                                 
