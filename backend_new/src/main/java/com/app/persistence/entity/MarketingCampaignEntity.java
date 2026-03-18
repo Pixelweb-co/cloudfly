@@ -12,6 +12,8 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@Getter
+@Setter
 @Table("marketing_campaigns")
 public class MarketingCampaignEntity {
 
