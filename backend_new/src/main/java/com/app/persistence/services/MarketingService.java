@@ -19,7 +19,7 @@ public class MarketingService {
     private final CampaignAdRepository adRepository;
 
     public Flux<MarketingCampaignEntity> getCampaigns(Long companyId, Long tenantId) {
-        return campaignRepository.findByCompanyIdAndTenantId(companyId, tenantId);
+        return campaignRepository.queryByCompanyAndTenant(companyId, tenantId);
     }
 
     public Mono<MarketingCampaignEntity> createCampaign(MarketingCampaignEntity campaign, Long companyId, Long tenantId) {
