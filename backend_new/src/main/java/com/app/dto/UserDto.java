@@ -28,6 +28,7 @@ public class UserDto {
     private Long customerId;
 
     // Enriquecido
+    private Long activeCompanyId;
     private List<RoleEntity> roles;
     private TenantEntity tenant;
     private boolean hasActiveSubscription;

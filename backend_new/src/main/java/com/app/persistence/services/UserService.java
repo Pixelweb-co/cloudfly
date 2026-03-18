@@ -133,16 +133,21 @@ public class UserService {
                                                         tenantRepository.findById(user.getCustomerId()),
                                                         subscriptionRepository.findFirstByCustomerIdAndStatusOrderByEndDateDesc(user.getCustomerId(), "ACTIVE")
                                                                 .map(s -> true)
-                                                                .defaultIfEmpty(false)
-                                                ).map(tuple -> buildUserDto(user, roles, tuple.getT1(), (Boolean) tuple.getT2()))
-                                                .defaultIfEmpty(buildUserDto(user, roles, null, false));
+                                                                .defaultIfEmpty(false),
+                                                        companyRepository.findByTenantId(user.getCustomerId())
+                                                                .filter(CompanyEntity::getIsPrincipal)
+                                                                .next()
+                                                                .map(CompanyEntity::getId)
+                                                                .defaultIfEmpty(0L)
+                                                ).map(tuple -> buildUserDto(user, roles, tuple.getT1(), (Boolean) tuple.getT2(), (Long) tuple.getT3()))
+                                                .defaultIfEmpty(buildUserDto(user, roles, null, false, 0L));
                                         } else {
-                                                return Mono.just(buildUserDto(user, roles, null, false));
+                                                return Mono.just(buildUserDto(user, roles, null, false, 0L));
                                         }
                                 });
         }
 
-        	private UserDto buildUserDto(UserEntity user, List<RoleEntity> roles, TenantEntity tenant, boolean hasActiveSub) {
+        private UserDto buildUserDto(UserEntity user, List<RoleEntity> roles, TenantEntity tenant, boolean hasActiveSub, Long activeCompanyId) {
                 return UserDto.builder()
                                 .id(user.getId())
                                 .nombres(user.getNombres())
@@ -156,6 +161,7 @@ public class UserService {
                                 .verificationToken(user.getVerificationToken())
                                 .recoveryToken(user.getRecoveryToken())
                                 .customerId(user.getCustomerId())
+                                .activeCompanyId(activeCompanyId != 0L ? activeCompanyId : null)
                                 .roles(roles)
                                 .tenant(tenant) // Corrected from .customer(customer)
                                 .hasActiveSubscription(hasActiveSub)

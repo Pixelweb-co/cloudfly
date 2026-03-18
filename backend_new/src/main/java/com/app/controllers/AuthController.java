@@ -40,7 +40,7 @@ public class AuthController {
                                 .flatMap(auth -> userService.findByUsername(loginRequest.getUsername())
                                                 .flatMap(user -> userService.convertToDto(user))
                                                 .map(userDto -> {
-                                                        String token = jwtProvider.createToken(auth);
+                                                        String token = jwtProvider.createToken(auth, userDto.getCustomerId(), userDto.getActiveCompanyId());
                                                         return AuthResponse.builder()
                                                                         .username(auth.getName())
                                                                         .message("Login exitoso")
