@@ -2,9 +2,11 @@ package com.app.config;
 
 import com.app.util.JwtProvider;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.app.dto.UserDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -36,14 +38,26 @@ public class JwtAuthenticationFilter implements WebFilter {
         try {
             DecodedJWT decodedJWT = jwtProvider.validateToken(token);
             String username = jwtProvider.extractUsername(decodedJWT);
-            String authoritiesStr = decodedJWT.getClaim("authorities").asString();
+            
+            com.auth0.jwt.interfaces.Claim authoritiesClaim = decodedJWT.getClaim("authorities");
+            String authoritiesStr = !authoritiesClaim.isMissing() ? authoritiesClaim.asString() : "";
 
             List<SimpleGrantedAuthority> authorities = Arrays.stream(authoritiesStr.split(","))
+                    .filter(s -> !s.isEmpty())
                     .map(SimpleGrantedAuthority::new)
                     .collect(Collectors.toList());
 
+            Long customerId = decodedJWT.getClaim("customer_id").asLong();
+            Long companyId = decodedJWT.getClaim("company_id").asLong();
+
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(username, null,
                     authorities);
+            
+            // Adjuntar los IDs en los detalles para uso posterior
+            java.util.Map<String, Object> details = new java.util.HashMap<>();
+            details.put("customer_id", customerId);
+            details.put("company_id", companyId);
+            auth.setDetails(details);
 
             return chain.filter(exchange)
                     .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth));

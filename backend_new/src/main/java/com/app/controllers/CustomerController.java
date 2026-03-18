@@ -43,6 +43,7 @@ public class CustomerController {
     private final com.app.persistence.services.ChatbotService chatbotService;
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
+    private final com.app.persistence.services.OnboardingDefaultsService onboardingDefaultsService;
 
     @GetMapping
     public Flux<CustomerDto> getAllCustomers() {
@@ -170,6 +171,7 @@ public class CustomerController {
 
                                                                                 return chatbotConfigRepository.save(chatbotConfig)
                                                                                         .doOnNext(cc -> log.info("✅ [ACCOUNT-SETUP] ChatbotConfig saved"))
+                                                                                        .flatMap(sc -> onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), instanceName))
                                                                                         .then(Mono.defer(() -> {
                                                                                             log.info("📧 [ACCOUNT-SETUP] Sending welcome notification to Kafka...");
                                                                                             Map<String, Object> welcomeMsg = new HashMap<>();
@@ -200,6 +202,7 @@ public class CustomerController {
                                                                     log.info("📂 [ACCOUNT-SETUP] Finalizing setup: Saving Default Category...");
                                                                     return categoryRepository.save(defaultCategory)
                                                                         .doOnNext(scat -> log.info("✅ [ACCOUNT-SETUP] Category saved successfully"))
+                                                                        .then(onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), "evolution_manual")) // Fallback if WA was skipped
                                                                         .then(handleAutomaticSubscription(savedTenant.getId()))
                                                                         .doOnSuccess(v -> log.info("✅ [ACCOUNT-SETUP] Automatic Subscription block complete"))
                                                                         .thenReturn(userDto);

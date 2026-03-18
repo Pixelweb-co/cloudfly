@@ -35,6 +35,10 @@
         "href": "/marketing/campanas"
       },
       {
+        "label": "Canales",
+        "href": "/marketing/canales"
+      },
+      {
         "label": "Contactos",
         "href": "/marketing/contacts/list"
       }

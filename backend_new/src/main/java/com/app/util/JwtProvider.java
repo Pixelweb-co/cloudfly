@@ -25,7 +25,7 @@ public class JwtProvider {
     @Value("${jwt.expiration:86400000}")
     private long expiration;
 
-    public String createToken(Authentication authentication) {
+    public String createToken(Authentication authentication, Long customerId, Long companyId) {
         Algorithm algorithm = Algorithm.HMAC256(secretKey);
 
         String username = authentication.getName();
@@ -37,6 +37,8 @@ public class JwtProvider {
                 .withIssuer(issuer)
                 .withSubject(username)
                 .withClaim("authorities", authorities)
+                .withClaim("customer_id", customerId)
+                .withClaim("company_id", companyId)
                 .withIssuedAt(new Date())
                 .withExpiresAt(new Date(System.currentTimeMillis() + expiration))
                 .withJWTId(UUID.randomUUID().toString())

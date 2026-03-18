@@ -110,6 +110,8 @@ export const authOptions: NextAuthOptions = {
           token.enabled = u.user.enabled
           token.verificationToken = u.user.verificationToken
           token.userCapabilities = u.user.userCapabilities
+          token.customerId = u.user.customerId
+          token.activeCompanyId = u.user.activeCompanyId
         } else {
           token.id = u.id
           token.role = u.role
@@ -117,6 +119,8 @@ export const authOptions: NextAuthOptions = {
           token.enabled = u.enabled
           token.verificationToken = u.verificationToken
           token.userCapabilities = u.userCapabilities
+          token.customerId = u.customerId
+          token.activeCompanyId = u.activeCompanyId
         }
       }
 
@@ -133,6 +137,8 @@ export const authOptions: NextAuthOptions = {
           ; (session as any).user.enabled = token.enabled
           ; (session as any).user.verificationToken = token.verificationToken
           ; (session as any).user.userCapabilities = token.userCapabilities
+          ; (session as any).user.customerId = token.customerId
+          ; (session as any).user.activeCompanyId = token.activeCompanyId
       }
 
 
