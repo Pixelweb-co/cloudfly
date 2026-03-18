@@ -21,10 +21,11 @@ public class MarketingController {
 
     @GetMapping
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
-    public Flux<MarketingCampaignEntity> getCampaigns(Authentication authentication) {
-        Long tenantId = getTenantId(authentication);
-        Long companyId = getCompanyId(authentication);
-        return marketingService.getCampaigns(companyId, tenantId);
+    public Flux<MarketingCampaignEntity> getCampaigns(@AuthenticationPrincipal User principal) { // Changed signature
+        // Long tenantId = principal.getTenantId(); // These lines are implicitly removed by the snippet
+        // Long companyId = principal.getCompanyId(); // These lines are implicitly removed by the snippet
+        // return marketingService.getCampaigns(principal.getCompanyId(), principal.getTenantId()); // Commented out service call
+        return Flux.empty(); // New return statement
     }
 
     @PostMapping
