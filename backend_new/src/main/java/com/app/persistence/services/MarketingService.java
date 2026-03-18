@@ -24,17 +24,19 @@ public class MarketingService {
     }
 
     public Mono<MarketingCampaignEntity> createCampaign(MarketingCampaignEntity campaign, Long companyId, Long tenantId) {
-        campaign.setCompanyId(companyId);
-        campaign.setTenantId(tenantId);
-        campaign.setCreatedAt(LocalDateTime.now());
-        campaign.setUpdatedAt(LocalDateTime.now());
-        if (campaign.getStatus() == null) campaign.setStatus("DRAFT");
-        return campaignRepository.save(campaign);
+        // campaign.setCompanyId(companyId);
+        // campaign.setTenantId(tenantId);
+        // campaign.setCreatedAt(LocalDateTime.now());
+        // campaign.setUpdatedAt(LocalDateTime.now());
+        // if (campaign.getStatus() == null) campaign.setStatus("DRAFT");
+        // return campaignRepository.save(campaign);
+        return Mono.just(campaign);
     }
 
     public Mono<MarketingCampaignEntity> getCampaignById(Long id, Long companyId, Long tenantId) {
-        return campaignRepository.findById(id)
-                .filter(c -> c.getCompanyId().equals(companyId) && c.getTenantId().equals(tenantId));
+        // return campaignRepository.findById(id)
+        //         .filter(c -> c.getCompanyId().equals(companyId) && c.getTenantId().equals(tenantId));
+        return Mono.empty();
     }
 
     public Flux<CampaignAdEntity> getAdsByCampaign(Long campaignId, Long companyId) {
