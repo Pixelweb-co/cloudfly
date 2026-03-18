@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import lombok.*;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -64,6 +65,7 @@ public class PlanController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('MANAGER')")
     public Mono<ResponseEntity<PlanDto>> createPlan(@RequestBody PlanDto planDto) {
         log.info("Creando plan: {}", planDto.getName());
         PlanEntity entity = mapToEntity(planDto);
@@ -87,7 +89,18 @@ public class PlanController {
                 .map(ResponseEntity::ok);
     }
 
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('MANAGER')")
+    public Mono<ResponseEntity<PlanDto>> getPlanById(@PathVariable Long id) {
+        log.info("Obteniendo plan por ID: {}", id);
+        return planRepository.findById(id)
+                .flatMap(this::mapToDto)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('MANAGER')")
     public Mono<ResponseEntity<PlanDto>> updatePlan(@PathVariable Long id, @RequestBody PlanDto planDto) {
         log.info("Actualizando plan {}: {}", id, planDto.getName());
         return planRepository.findById(id)
@@ -113,6 +126,7 @@ public class PlanController {
     }
 
     @PatchMapping("/{id}/toggle-status")
+    @PreAuthorize("hasRole('MANAGER')")
     public Mono<ResponseEntity<PlanDto>> togglePlanStatus(@PathVariable Long id) {
         log.info("Cambiando estado del plan: {}", id);
         return planRepository.findById(id)
@@ -123,6 +137,16 @@ public class PlanController {
                 })
                 .flatMap(this::mapToDto)
                 .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('MANAGER')")
+    public Mono<ResponseEntity<Void>> deletePlan(@PathVariable Long id) {
+        log.info("Eliminando plan: {}", id);
+        return planModuleRepository.deleteByPlanId(id)
+                .then(planRepository.deleteById(id))
+                .then(Mono.just(ResponseEntity.noContent().<Void>build()))
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 

@@ -22,13 +22,29 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 
 import { useForm, Controller } from 'react-hook-form'
-
+import { yupResolver } from '@hookform/resolvers/yup'
+import * as yup from 'yup'
 import { toast } from 'react-hot-toast'
 
 import CustomTextField from '@core/components/mui/TextField'
 import type { PlanValues } from '@/types/plans'
 import { planService } from '@/services/plans/planService'
 import { rbacService } from '@/services/rbac/rbacService'
+
+const schema = yup.object().shape({
+    name: yup.string().required('El nombre es requerido').min(3, 'Mínimo 3 caracteres'),
+    description: yup.string().required('La descripción es requerida'),
+    price: yup.number().typeError('Debe ser un número').required('El precio es requerido').min(0, 'No puede ser negativo'),
+    durationDays: yup.number().typeError('Debe ser un número').required('La duración es requerida').min(1, 'Mínimo 1 día'),
+    isFree: yup.boolean(),
+    aiTokensLimit: yup.number().nullable().transform((v) => (v === '' || isNaN(v) ? null : v)),
+    electronicDocsLimit: yup.number().nullable().transform((v) => (v === '' || isNaN(v) ? null : v)),
+    usersLimit: yup.number().nullable().min(1, 'Mínimo 1 usuario').transform((v) => (v === '' || isNaN(v) ? null : v)),
+    allowOverage: yup.boolean(),
+    aiOveragePricePer1k: yup.number().nullable().transform((v) => (v === '' || isNaN(v) ? null : v)),
+    docOveragePriceUnit: yup.number().nullable().transform((v) => (v === '' || isNaN(v) ? null : v)),
+    moduleIds: yup.array().of(yup.number()).min(1, 'Selecciona al menos un módulo')
+})
 
 const NewPlanView = () => {
     const router = useRouter()
@@ -44,6 +60,7 @@ const NewPlanView = () => {
         watch,
         setValue
     } = useForm<PlanValues>({
+        resolver: yupResolver(schema) as any,
         defaultValues: {
             name: '',
             description: '',
@@ -52,7 +69,7 @@ const NewPlanView = () => {
             isFree: false,
             aiTokensLimit: undefined,
             electronicDocsLimit: undefined,
-            usersLimit: undefined,
+            usersLimit: 1,
             allowOverage: false,
             aiOveragePricePer1k: undefined,
             docOveragePriceUnit: undefined,
