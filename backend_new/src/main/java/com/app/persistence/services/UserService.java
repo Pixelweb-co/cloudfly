@@ -34,6 +34,7 @@ public class UserService {
         private final PlanModuleRepository planModuleRepository;
         private final SubscriptionRepository subscriptionRepository;
         private final SubscriptionModuleRepository subscriptionModuleRepository;
+        private final CompanyRepository companyRepository;
 
         @Transactional
         public Mono<UserEntity> registerUser(AuthRegisterRequest request) {
