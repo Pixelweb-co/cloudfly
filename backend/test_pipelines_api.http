@@ -1,0 +1,110 @@
+### Marketing Pipelines API Tests
+### Usar con la extensión REST Client en VSCode / Cursor
+
+@baseUrl = http://localhost:8080/api
+@token = {{login.response.body.token}}
+
+### 0. Login (Ajusta credenciales según corresponda)
+# @name login
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin@cloudfly.com",
+  "password": "password"
+}
+
+### 1. Crear un nuevo Pipeline Base
+# @name createPipeline
+POST {{baseUrl}}/pipelines
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Embudo de Ventas Q3",
+  "description": "Pipeline principal para ventas de software",
+  "type": "SALES",
+  "color": "#3B82F6",
+  "icon": "tabler-currency-dollar",
+  "isDefault": true,
+  "stages": [
+    {
+      "name": "Nuevo Lead",
+      "description": "Contacto recién ingresado",
+      "color": "#9CA3AF",
+      "position": 0,
+      "isInitial": true,
+      "isFinal": false,
+      "outcome": "OPEN"
+    },
+    {
+      "name": "En Negociación",
+      "description": "Propuesta enviada",
+      "color": "#F59E0B",
+      "position": 1,
+      "isInitial": false,
+      "isFinal": false,
+      "outcome": "OPEN"
+    },
+    {
+      "name": "Ganado",
+      "description": "Venta cerrada",
+      "color": "#10B981",
+      "position": 2,
+      "isInitial": false,
+      "isFinal": true,
+      "outcome": "WON"
+    }
+  ]
+}
+
+### Extraer ID del Pipeline recién creado
+@pipelineId = {{createPipeline.response.body.id}}
+@stageId = {{createPipeline.response.body.stages[1].id}}
+
+### 2. Obtener todos los Pipelines
+GET {{baseUrl}}/pipelines
+Authorization: Bearer {{token}}
+
+### 3. Obtener un Pipeline por ID
+GET {{baseUrl}}/pipelines/{{pipelineId}}
+Authorization: Bearer {{token}}
+
+### 4. Obtener Data Kanban del Pipeline
+GET {{baseUrl}}/pipelines/{{pipelineId}}/kanban
+Authorization: Bearer {{token}}
+
+### 5. Actualizar un Stage específico
+PUT {{baseUrl}}/pipelines/stages/{{stageId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Negociación Avanzada",
+  "color": "#D97706"
+}
+
+### 6. Asignar una conversación al Pipeline
+# Asume que existe una conversación con ID "conv-123"
+POST {{baseUrl}}/conversations/conv-123/pipeline/assign/{{pipelineId}}/{{stageId}}
+Authorization: Bearer {{token}}
+
+### 7. Mover la conversación de Stage
+PATCH {{baseUrl}}/conversations/conv-123/pipeline/move
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "contactId": 1,
+  "conversationId": "conv-123",
+  "toStageId": {{stageId}},
+  "reason": "El cliente avanzó en la negociación"
+}
+
+### 8. Obtener Estado actual de la Conversación
+GET {{baseUrl}}/conversations/conv-123/pipeline
+Authorization: Bearer {{token}}
+
+### 9. Eliminar Pipeline (Soft delete)
+DELETE {{baseUrl}}/pipelines/{{pipelineId}}
+Authorization: Bearer {{token}}
