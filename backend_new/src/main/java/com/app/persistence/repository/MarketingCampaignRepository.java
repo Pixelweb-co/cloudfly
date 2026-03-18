@@ -4,7 +4,13 @@ import com.app.persistence.entity.MarketingCampaignEntity;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import reactor.core.publisher.Flux;
 
+import org.springframework.data.r2dbc.repository.Query;
+
 public interface MarketingCampaignRepository extends ReactiveCrudRepository<MarketingCampaignEntity, Long> {
-    // Flux<MarketingCampaignEntity> findByCompanyIdAndTenantId(Long companyId, Long tenantId);
-    // Flux<MarketingCampaignEntity> findByTenantId(Long tenantId);
+    
+    @Query("SELECT * FROM marketing_campaigns WHERE company_id = :companyId AND tenant_id = :tenantId")
+    Flux<MarketingCampaignEntity> findByCompanyIdAndTenantId(Long companyId, Long tenantId);
+    
+    @Query("SELECT * FROM marketing_campaigns WHERE tenant_id = :tenantId")
+    Flux<MarketingCampaignEntity> findByTenantId(Long tenantId);
 }
