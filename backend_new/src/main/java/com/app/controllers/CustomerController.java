@@ -41,7 +41,7 @@ public class CustomerController {
     private final ReactiveKafkaProducerTemplate<String, Object> kafkaTemplate;
     private final EvolutionService evolutionService;
     private final ChannelConfigRepository channelConfigRepository;
-    private final ChannelConfigService channelConfigService;;
+    private final ChannelConfigService channelConfigService;
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final com.app.persistence.services.OnboardingDefaultsService onboardingDefaultsService;
@@ -220,9 +220,6 @@ public class CustomerController {
                 .updatedAt(LocalDateTime.now())
                 .build();
         log.info("📂 [ACCOUNT-SETUP] Saving Default Category for tenant: {}", tenantId);
-        return categoryRepository.save(defaultCategory).then();
-    }
-aultIfEmpty(ResponseEntity.notFound().build());
     }
 
     private Mono<Void> handleAutomaticSubscription(Long customerId) {
