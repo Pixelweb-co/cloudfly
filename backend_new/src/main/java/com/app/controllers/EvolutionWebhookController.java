@@ -101,7 +101,7 @@ public class EvolutionWebhookController {
                                                             log.info("🆕 [EVOLUTION-WEBHOOK] Creating new pipeline state for conversation: {}", conversationId);
                                                             
                                                             // Find campaign and its pipeline
-                                                            return campaignRepository.findByTenantId(channel.getTenantId())
+                                                            return campaignRepository.queryByTenant(channel.getTenantId())
                                                                     .filter(c -> "ACTIVE".equals(c.getStatus()))
                                                                     .next()
                                                                     .flatMap(campaign -> {
