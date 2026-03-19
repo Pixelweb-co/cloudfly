@@ -33,15 +33,14 @@ public class OnboardingDefaultsService {
                 .flatMap(pipeline -> {
                     log.info("✅ Pipeline created: {}. Creating Marketing Campaign...", pipeline.getName());
                     
-                    MarketingCampaignEntity campaign = MarketingCampaignEntity.builder()
-                            .tenantId(tenantId)
-                            .companyId(companyId)
-                            .name("Atención Clientes")
-                            .description("Campaña predeterminada para el canal de WhatsApp.")
-                            .status("ACTIVE")
-                            .targetPipelineId(pipeline.getId())
-                            .createdAt(LocalDateTime.now())
-                            .build();
+                    MarketingCampaignEntity campaign = new MarketingCampaignEntity();
+                    campaign.setTenantId(tenantId);
+                    campaign.setCompanyId(companyId);
+                    campaign.setName("Atención Clientes");
+                    campaign.setDescription("Campaña predeterminada para el canal de WhatsApp.");
+                    campaign.setStatus("ACTIVE");
+                    campaign.setTargetPipelineId(pipeline.getId());
+                    campaign.setCreatedAt(LocalDateTime.now());
 
                     return marketingCampaignRepository.save(campaign)
                             .flatMap(savedCampaign -> {
