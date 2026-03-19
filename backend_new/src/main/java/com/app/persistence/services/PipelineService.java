@@ -25,7 +25,7 @@ public class PipelineService {
         log.info("🛠️ Creating default pipeline for tenant: {}", tenantId);
         
         PipelineEntity pipeline = PipelineEntity.builder()
-                .tenant_id(tenantId)
+                .tenantId(tenantId)
                 .name("Atención a Clientes")
                 .description("Pipeline base para la gestión de prospectos y clientes.")
                 .type("MARKETING")

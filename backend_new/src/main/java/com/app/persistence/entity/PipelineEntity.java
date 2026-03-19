@@ -17,7 +17,7 @@ public class PipelineEntity {
     private Long id;
 
     @Column("tenant_id")
-    private Long tenant_id;
+    private Long tenantId;
 
     private String name;
     private String description;
