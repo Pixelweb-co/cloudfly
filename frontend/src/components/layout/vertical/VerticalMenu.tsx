@@ -227,41 +227,6 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
         {/* Render dynamic menu from backend */}
         {renderMenuItems(menuData)}
 
-        {/* Hardcoded items for ADMIN, SUPERADMIN and MANAGER */}
-        {(userRole === 'ADMIN' || userRole === 'SUPERADMIN' || userRole === 'MANAGER') && (
-          <>
-            <MenuItem href='/hr/employees' icon={<i className='tabler-users' />}>
-              Usuarios
-            </MenuItem>
-            <MenuItem href='/accounts/roles/list' icon={<i className='tabler-lock' />}>
-              Roles
-            </MenuItem>
-
-          </>
-        )}
-
-        {/* Hardcoded item for SUPERADMIN or MANAGER */}
-        {(userRole === 'SUPERADMIN' || userRole === 'MANAGER') && (
-          <>
-            <MenuItem href='/administracion/clientes/list' icon={<i className='tabler-credit-card' />}>
-              Clientes
-            </MenuItem>
-
-            <MenuItem href='/administracion/planes' icon={<i className='tabler-credit-card' />}>
-              Planes
-            </MenuItem>
-            <MenuItem href='/administracion/modules' icon={<i className='tabler-box' />}>
-              Módulos
-            </MenuItem>
-            <MenuItem href='/administracion/suscripciones' icon={<i className='tabler-package' />}>
-              Suscripciones
-            </MenuItem>
-            <MenuItem href='/administracion/consumo' icon={<i className='tabler-chart-pie' />}>
-              Dashboard Consumo
-            </MenuItem>
-          </>
-        )}
-
         {/* Show error message if menu failed to load */}
         {error && (
           <MenuItem disabled icon={<i className='tabler-alert-circle' />}>
