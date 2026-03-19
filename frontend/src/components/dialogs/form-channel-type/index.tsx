@@ -15,18 +15,18 @@ import {
 } from '@mui/material'
 import { toast } from 'react-toastify'
 import { axiosInstance } from '@/utils/axiosInstance'
-import type { ChatbotTypeConfig } from '@/types/apps/chatbotTypes'
+import type { ChannelTypeConfig } from '@/types/apps/channelConfigTypes'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 
-interface ChatbotTypeFormProps {
+interface ChannelTypeFormProps {
     open: boolean
     onClose: () => void
-    rowSelect: ChatbotTypeConfig | null
+    rowSelect: ChannelTypeConfig | null
 }
 
-const ChatbotTypeForm = ({ open, onClose, rowSelect }: ChatbotTypeFormProps) => {
-    const [formData, setFormData] = useState<ChatbotTypeConfig>({
+const ChannelTypeForm = ({ open, onClose, rowSelect }: ChannelTypeFormProps) => {
+    const [formData, setFormData] = useState<ChannelTypeConfig>({
         typeName: '',
         description: '',
         webhookUrl: '',
@@ -48,7 +48,7 @@ const ChatbotTypeForm = ({ open, onClose, rowSelect }: ChatbotTypeFormProps) => 
         }
     }, [rowSelect])
 
-    const handleChange = (field: keyof ChatbotTypeConfig, value: any) => {
+    const handleChange = (field: keyof ChannelTypeConfig, value: any) => {
         setFormData(prev => ({
             ...prev,
             [field]: value
@@ -72,7 +72,7 @@ const ChatbotTypeForm = ({ open, onClose, rowSelect }: ChatbotTypeFormProps) => 
             if (formData.id) {
                 // Actualizar
                 await axiosInstance.put(
-                    `${API_BASE_URL}/chatbot-types/${formData.id}`,
+                    `${API_BASE_URL}/api/channel-types/${formData.id}`,
                     formData,
                     {
                         headers: {
@@ -81,11 +81,11 @@ const ChatbotTypeForm = ({ open, onClose, rowSelect }: ChatbotTypeFormProps) => 
                         }
                     }
                 )
-                toast.success('Tipo de chatbot actualizado correctamente')
+                toast.success('Tipo de canal actualizado correctamente')
             } else {
                 // Crear
                 await axiosInstance.post(
-                    `${API_BASE_URL}/chatbot-types`,
+                    `${API_BASE_URL}/api/channel-types`,
                     formData,
                     {
                         headers: {
@@ -94,13 +94,13 @@ const ChatbotTypeForm = ({ open, onClose, rowSelect }: ChatbotTypeFormProps) => 
                         }
                     }
                 )
-                toast.success('Tipo de chatbot creado correctamente')
+                toast.success('Tipo de canal creado correctamente')
             }
 
             onClose()
         } catch (error: any) {
             console.error('Error al guardar:', error)
-            setError(error.response?.data?.message || 'Error al guardar el tipo de chatbot')
+            setError(error.response?.data?.message || 'Error al guardar el tipo de canal')
         } finally {
             setLoading(false)
         }
@@ -109,7 +109,7 @@ const ChatbotTypeForm = ({ open, onClose, rowSelect }: ChatbotTypeFormProps) => 
     return (
         <Dialog open={open} onClose={onClose} maxWidth='md' fullWidth>
             <DialogTitle>
-                {formData.id ? 'Editar Tipo de Chatbot' : 'Nuevo Tipo de Chatbot'}
+                {formData.id ? 'Editar Tipo de Canal' : 'Nuevo Tipo de Canal'}
             </DialogTitle>
             <DialogContent>
                 <Grid container spacing={3} sx={{ mt: 1 }}>
@@ -150,7 +150,7 @@ const ChatbotTypeForm = ({ open, onClose, rowSelect }: ChatbotTypeFormProps) => 
                             onChange={e => handleChange('description', e.target.value)}
                             multiline
                             rows={3}
-                            placeholder='Describe este tipo de chatbot...'
+                            placeholder='Describe este tipo de canal...'
                         />
                     </Grid>
 
@@ -162,7 +162,7 @@ const ChatbotTypeForm = ({ open, onClose, rowSelect }: ChatbotTypeFormProps) => 
                             onChange={e => handleChange('webhookUrl', e.target.value)}
                             placeholder='https://autobot.cloudfly.com.co/webhook/...'
                             required
-                            helperText='Esta URL será asignada automáticamente cuando un tenant seleccione este tipo de chatbot'
+                            helperText='Esta URL será asignada automáticamente cuando un tenant seleccione este tipo de canal'
                         />
                     </Grid>
                 </Grid>
@@ -179,4 +179,4 @@ const ChatbotTypeForm = ({ open, onClose, rowSelect }: ChatbotTypeFormProps) => 
     )
 }
 
-export default ChatbotTypeForm
+export default ChannelTypeForm

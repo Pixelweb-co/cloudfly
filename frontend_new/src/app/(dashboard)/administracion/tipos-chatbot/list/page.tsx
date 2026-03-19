@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { LinearProgress } from '@mui/material'
 
 import { axiosInstance } from '@/utils/axiosInstance'
-import ChatbotTypeList from '@/views/administracion/chatbot-types/list'
+import ChannelTypeList from '@/views/administracion/chatbot-types/list'
 
 // Mock data generator for fallback
 const getMockData = () => {
@@ -27,8 +27,8 @@ const getMockData = () => {
     ]
 }
 
-const ChatbotTypeListApp = () => {
-    const [chatbotTypeData, setChatbotTypeData] = useState<any[]>([])
+const ChannelTypeListApp = () => {
+    const [channelTypeData, setChannelTypeData] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [reload, setReload] = useState(false)
@@ -37,12 +37,12 @@ const ChatbotTypeListApp = () => {
         setLoading(true)
 
         try {
-            const res = await axiosInstance.get('/chatbot-types')
+            const res = await axiosInstance.get('/api/channel-types')
 
-            setChatbotTypeData(res.data)
+            setChannelTypeData(res.data)
         } catch (error: any) {
-            console.warn('Error fetching Chatbot Types data, using mock:', error)
-            setChatbotTypeData(getMockData())
+            console.warn('Error fetching Channel Types data, using mock:', error)
+            setChannelTypeData(getMockData())
         } finally {
             setLoading(false)
         }
@@ -61,7 +61,7 @@ const ChatbotTypeListApp = () => {
 
     if (loading) return <LinearProgress color='info' />
 
-    return <ChatbotTypeList chatbotTypeData={chatbotTypeData} reload={() => setReload(true)} />
+    return <ChannelTypeList channelTypeData={channelTypeData} reload={() => setReload(true)} />
 }
 
-export default ChatbotTypeListApp
+export default ChannelTypeListApp

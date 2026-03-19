@@ -1,0 +1,30 @@
+{
+  "name": "cloudfly",
+  "version": "1.0.0",
+  "description": "<div align=\"center\">",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pixelweb-co/cloudfly.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Pixelweb-co/cloudfly/issues"
+  },
+  "homepage": "https://github.com/Pixelweb-co/cloudfly#readme",
+  "dependencies": {
+    "imapflow": "^1.2.15",
+    "mailparser": "^3.9.4",
+    "selenium-webdriver": "^4.41.0"
+  }
+}

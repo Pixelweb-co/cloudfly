@@ -8,12 +8,12 @@
     },
     "children": [
       {
-        "label": "Chatbot IA WhatsApp",
-        "href": "/settings/chatbot"
+        "label": "Configuración Canal",
+        "href": "/settings/channel-config"
       },
       {
-        "label": "Tipos de Chatbot",
-        "href": "/settings/chatbot-types/list",
+        "label": "Tipos de Canales",
+        "href": "/settings/channel-types/list",
         "excludedRoles": [
           "VENDEDOR",
           "CONTABILIDAD",
@@ -193,8 +193,8 @@
         "href": "/administracion/clientes/list"
       },
       {
-        "label": "Tipos de Chatbot",
-        "href": "/settings/chatbot-types/list"
+        "label": "Tipos de Canales",
+        "href": "/settings/channel-types/list"
       }
     ]
   }

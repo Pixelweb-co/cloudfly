@@ -9,9 +9,10 @@ import lombok.extern.slf4j.Slf4j;
 import com.app.dto.UserDto;
 import com.app.persistence.services.UserService;
 import com.app.persistence.services.EvolutionService;
-import com.app.persistence.repository.ChatbotConfigRepository;
-import com.app.persistence.entity.ChatbotConfig;
-import com.app.persistence.entity.ChatbotType;
+import com.app.persistence.repository.ChannelConfigRepository;
+import com.app.persistence.entity.ChannelConfig;
+import com.app.persistence.entity.ChannelType;
+import com.app.persistence.services.ChannelConfigService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -39,8 +40,8 @@ public class CustomerController {
     private final CompanyRepository companyRepository;
     private final ReactiveKafkaProducerTemplate<String, Object> kafkaTemplate;
     private final EvolutionService evolutionService;
-    private final ChatbotConfigRepository chatbotConfigRepository;
-    private final com.app.persistence.services.ChatbotService chatbotService;
+    private final ChannelConfigRepository channelConfigRepository;
+    private final ChannelConfigService channelConfigService;;
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final com.app.persistence.services.OnboardingDefaultsService onboardingDefaultsService;
@@ -87,8 +88,10 @@ public class CustomerController {
                     AccountSetupRequest.ClienteForm form = request.getForm();
                     log.info("📂 [ACCOUNT-SETUP] Processing Tenant: {}", form.getName());
 
+                    // Si el usuario ya tiene un customerId, lo usamos para el TenantEntity para que sea un UPDATE
+                    // Si es NULL, R2DBC hará un INSERT.
                     TenantEntity tenant = TenantEntity.builder()
-                            .id(user.getCustomerId())
+                            .id(user.getCustomerId()) 
                             .name(form.getName())
                             .nit(form.getNit())
                             .phone(form.getPhone())
@@ -96,14 +99,14 @@ public class CustomerController {
                             .address(form.getAddress())
                             .contact(form.getContact())
                             .position(form.getPosition())
-                            .type(form.getType())
-                            .status(Boolean.parseBoolean(form.getStatus()))
+                            .type(form.getType() != null ? form.getType() : "Juridica")
+                            .status(form.getStatus() != null ? Boolean.parseBoolean(form.getStatus()) : true)
                             .businessType(form.getBusinessType())
                             .businessDescription(form.getObjetoSocial())
                             .isMasterTenant(true)
                             .esEmisorFE(false)
                             .esEmisorPrincipal(true)
-                            .createdAt(LocalDateTime.now())
+                            .createdAt(user.getCustomerId() == null ? LocalDateTime.now() : null) // Solo si es nuevo
                             .updatedAt(LocalDateTime.now())
                             .build();
 
@@ -139,39 +142,47 @@ public class CustomerController {
                                                         .timeout(java.time.Duration.ofSeconds(10))
                                                         .flatMap(health -> {
                                                             Mono<UserDto> baseFlow = userService.convertToDto(savedUser);
-                                                            Mono<UserDto> whatsappFlow;
-
+                                                            
                                                             if (!health) {
-                                                                log.warn("⚠️ [ACCOUNT-SETUP] Evolution API health check failed, skipping WA for now.");
-                                                                whatsappFlow = baseFlow;
+                                                                log.warn("⚠️ [ACCOUNT-SETUP] Evolution API health check failed, creating defaults with fallback name.");
+                                                                return onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), "evolution_offline")
+                                                                        .then(createDefaultCategory(savedTenant.getId()))
+                                                                        .then(handleAutomaticSubscription(savedTenant.getId()))
+                                                                        .then(baseFlow);
                                                             } else {
                                                                 log.info("📱 [ACCOUNT-SETUP] Validating WhatsApp number: {}", form.getPhone());
-                                                                whatsappFlow = evolutionService.isOnWhatsApp("cloudfly_chatbot1", form.getPhone())
+                                                                return evolutionService.isOnWhatsApp("cloudfly_chatbot1", form.getPhone())
                                                                     .timeout(java.time.Duration.ofSeconds(15))
                                                                     .flatMap(isOnWa -> {
                                                                         if (!isOnWa) {
-                                                                            log.error("❌ [ACCOUNT-SETUP] Number {} not on WhatsApp", form.getPhone());
-                                                                            return Mono.error(new RuntimeException("El número proporcionado no tiene una cuenta de WhatsApp activa."));
+                                                                            log.warn("❌ [ACCOUNT-SETUP] Number {} not on WhatsApp, continuing without WA instance.", form.getPhone());
+                                                                            return onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), "evolution_no_wa")
+                                                                                    .then(createDefaultCategory(savedTenant.getId()))
+                                                                                    .then(handleAutomaticSubscription(savedTenant.getId()))
+                                                                                    .then(baseFlow);
                                                                         }
+                                                                        
                                                                         String instanceName = "cloudfly_" + savedCompany.getId();
                                                                         log.info("🚀 [ACCOUNT-SETUP] Creating/Fetching QR for instance: {}", instanceName);
                                                                         return evolutionService.createInstance(instanceName)
                                                                             .timeout(java.time.Duration.ofSeconds(30))
                                                                             .flatMap(instanceData -> {
-                                                                                log.info("📝 [ACCOUNT-SETUP] Persisting ChatbotConfig for company: {}", savedCompany.getId());
-                                                                                ChatbotConfig chatbotConfig = ChatbotConfig.builder()
+                                                                                log.info("📝 [ACCOUNT-SETUP] Persisting ChannelConfig for company: {}", savedCompany.getId());
+                                                                                ChannelConfig channelConfig = ChannelConfig.builder()
                                                                                         .tenantId(savedTenant.getId())
                                                                                         .companyId(savedCompany.getId())
                                                                                         .instanceName(instanceName)
-                                                                                        .chatbotType(ChatbotType.SALES)
+                                                                                        .channelType(ChannelType.AI)
                                                                                         .isActive(false)
                                                                                         .createdAt(LocalDateTime.now())
                                                                                         .updatedAt(LocalDateTime.now())
                                                                                         .build();
 
-                                                                                return chatbotConfigRepository.save(chatbotConfig)
-                                                                                        .doOnNext(cc -> log.info("✅ [ACCOUNT-SETUP] ChatbotConfig saved"))
-                                                                                        .flatMap(sc -> onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), instanceName))
+                                                                                return channelConfigRepository.save(channelConfig)
+                                                                                        .doOnNext(cc -> log.info("✅ [ACCOUNT-SETUP] ChannelConfig saved"))
+                                                                                        .then(onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), instanceName))
+                                                                                        .then(createDefaultCategory(savedTenant.getId()))
+                                                                                        .then(handleAutomaticSubscription(savedTenant.getId()))
                                                                                         .then(Mono.defer(() -> {
                                                                                             log.info("📧 [ACCOUNT-SETUP] Sending welcome notification to Kafka...");
                                                                                             Map<String, Object> welcomeMsg = new HashMap<>();
@@ -181,32 +192,15 @@ public class CustomerController {
                                                                                         }))
                                                                                         .then(baseFlow);
                                                                             });
+                                                                    })
+                                                                    .onErrorResume(e -> {
+                                                                        log.error("🛑 [ACCOUNT-SETUP] WhatsApp flow failed: {}. Falling back to basic setup.", e.getMessage());
+                                                                        return onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), "evolution_error")
+                                                                                .then(createDefaultCategory(savedTenant.getId()))
+                                                                                .then(handleAutomaticSubscription(savedTenant.getId()))
+                                                                                .then(baseFlow);
                                                                     });
                                                             }
-
-                                                            return whatsappFlow
-                                                                .onErrorResume(e -> {
-                                                                    log.error("🛑 [ACCOUNT-SETUP] Evolution integration failed but continuing: {}", e.getMessage());
-                                                                    return baseFlow;
-                                                                })
-                                                                .flatMap(userDto -> {
-                                                                    Category defaultCategory = Category.builder()
-                                                                        .categoryName("General")
-                                                                        .description("Categoría por defecto")
-                                                                        .status(true)
-                                                                        .tenantId(savedTenant.getId())
-                                                                        .createdAt(LocalDateTime.now())
-                                                                        .updatedAt(LocalDateTime.now())
-                                                                        .build();
-
-                                                                    log.info("📂 [ACCOUNT-SETUP] Finalizing setup: Saving Default Category...");
-                                                                    return categoryRepository.save(defaultCategory)
-                                                                        .doOnNext(scat -> log.info("✅ [ACCOUNT-SETUP] Category saved successfully"))
-                                                                        .then(onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), "evolution_manual")) // Fallback if WA was skipped
-                                                                        .then(handleAutomaticSubscription(savedTenant.getId()))
-                                                                        .doOnSuccess(v -> log.info("✅ [ACCOUNT-SETUP] Automatic Subscription block complete"))
-                                                                        .thenReturn(userDto);
-                                                                });
                                                         });
                                                 });
                                         });
@@ -214,6 +208,21 @@ public class CustomerController {
                 })
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    private Mono<Void> createDefaultCategory(Long tenantId) {
+        Category defaultCategory = Category.builder()
+                .categoryName("General")
+                .description("Categoría por defecto")
+                .status(true)
+                .tenantId(tenantId)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+        log.info("📂 [ACCOUNT-SETUP] Saving Default Category for tenant: {}", tenantId);
+        return categoryRepository.save(defaultCategory).then();
+    }
+aultIfEmpty(ResponseEntity.notFound().build());
     }
 
     private Mono<Void> handleAutomaticSubscription(Long customerId) {

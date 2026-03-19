@@ -34,8 +34,8 @@ import type { RankingInfo } from '@tanstack/match-sorter-utils'
 import { Chip, Tooltip } from '@mui/material'
 
 import TablePaginationComponent from '@/components/TablePaginationComponent' // Fixed import
-import type { ChatbotTypeConfig } from '@/types/chatbotTypes' // Fixed import
-import ChatbotTypeForm from '@/components/dialogs/form-chatbot-type' // Fixed import
+import type { ChannelTypeConfig } from '@/types/chatbotTypes' // Fixed import
+import ChannelTypeForm from '@/components/dialogs/form-chatbot-type' // Fixed import
 import CustomTextField from '@core/components/mui/TextField'
 import tableStyles from '@core/styles/table.module.css'
 import { userMethods } from '@/utils/userMethods'
@@ -51,7 +51,7 @@ declare module '@tanstack/table-core' {
     }
 }
 
-type ChatbotTypeConfigWithAction = ChatbotTypeConfig & {
+type ChannelTypeConfigWithAction = ChannelTypeConfig & {
     action?: string
 }
 
@@ -92,9 +92,9 @@ const DebouncedInput = ({
     return <CustomTextField {...props} value={value} onChange={e => setValue(e.target.value)} />
 }
 
-const columnHelper = createColumnHelper<ChatbotTypeConfigWithAction>()
+const columnHelper = createColumnHelper<ChannelTypeConfigWithAction>()
 
-const ChatbotTypesListTable = ({ reload, tableData }: any) => {
+const ChannelTypesListTable = ({ reload, tableData }: any) => {
     const [rowSelection, setRowSelection] = useState({})
     const [data, setData] = useState(tableData?.sort((a: any, b: any) => b.id - a.id) || [])
     const [filteredData, setFilteredData] = useState(data)
@@ -105,21 +105,21 @@ const ChatbotTypesListTable = ({ reload, tableData }: any) => {
     const router = useRouter()
 
     const deleteItem = async (id: any) => {
-        if (!confirm('¿Estás seguro de eliminar este tipo de chatbot?')) return
+        if (!confirm('¿Estás seguro de eliminar este tipo de canal?')) return
 
         try {
-            await axiosInstance.delete(`/chatbot-types/${id}`)
-            toast.success('Tipo de chatbot eliminado correctamente')
+            await axiosInstance.delete(`/api/channel-types/${id}`)
+            toast.success('Tipo de canal eliminado correctamente')
             reload(true)
         } catch (error: any) {
             console.log('Error al eliminar:', error)
-            setErrorDeleteItem(error.response?.data?.message || 'Error al eliminar el tipo de chatbot')
+            setErrorDeleteItem(error.response?.data?.message || 'Error al eliminar el tipo de canal')
         }
     }
 
     const toggleStatus = async (id: number) => {
         try {
-            await axiosInstance.patch(`/chatbot-types/${id}/toggle-status`)
+            await axiosInstance.patch(`/api/channel-types/${id}/toggle-status`)
             toast.success('Estado actualizado correctamente')
             reload(true)
         } catch (error: any) {
@@ -128,7 +128,7 @@ const ChatbotTypesListTable = ({ reload, tableData }: any) => {
         }
     }
 
-    const columns = useMemo<ColumnDef<ChatbotTypeConfigWithAction, any>[]>(
+    const columns = useMemo<ColumnDef<ChannelTypeConfigWithAction, any>[]>(
         () => [
             {
                 id: 'select',
@@ -224,7 +224,7 @@ const ChatbotTypesListTable = ({ reload, tableData }: any) => {
     }, [tableData])
 
     const table = useReactTable({
-        data: filteredData as ChatbotTypeConfig[],
+        data: filteredData as ChannelTypeConfig[],
         columns,
         filterFns: {
             fuzzy: fuzzyFilter
@@ -254,7 +254,7 @@ const ChatbotTypesListTable = ({ reload, tableData }: any) => {
     return (
         <>
             <Card>
-                <CardHeader title='Tipos de Chatbot' className='pbe-4' />
+                <CardHeader title='Tipos de Canal' className='pbe-4' />
                 <div className='flex justify-between flex-col items-start md:flex-row md:items-center p-6 border-bs gap-4'>
                     <CustomTextField
                         select
@@ -363,7 +363,7 @@ const ChatbotTypesListTable = ({ reload, tableData }: any) => {
             </Card>
 
             {loadForm && (
-                <ChatbotTypeForm
+                <ChannelTypeForm
                     open={loadForm}
                     onClose={() => {
                         setLoadForm(false)
@@ -376,7 +376,7 @@ const ChatbotTypesListTable = ({ reload, tableData }: any) => {
 
             {errorDeleteItem && (
                 <ErrorDialog
-                    entitYName='Eliminar tipo de chatbot'
+                    entitYName='Eliminar tipo de canal'
                     open={errorDeleteItem}
                     error={errorDeleteItem}
                     setOpen={setErrorDeleteItem}
@@ -386,4 +386,4 @@ const ChatbotTypesListTable = ({ reload, tableData }: any) => {
     )
 }
 
-export default ChatbotTypesListTable
+export default ChannelTypesListTable

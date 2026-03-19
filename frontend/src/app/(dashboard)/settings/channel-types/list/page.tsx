@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react'
 import { LinearProgress } from '@mui/material'
 import { axiosInstance } from '@/utils/axiosInstance'
-import ChatbotTypeList from '@views/apps/settings/chatbot-types/list'
+import ChannelTypeList from '@views/apps/settings/channel-types/list'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 
-const ChatbotTypeListApp = () => {
-    const [chatbotTypeData, setChatbotTypeData] = useState<any[]>([])
+const ChannelTypeListApp = () => {
+    const [channelTypeData, setChannelTypeData] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [reload, setReload] = useState(false)
@@ -23,9 +23,9 @@ const ChatbotTypeListApp = () => {
         try {
             const token = localStorage.getItem('AuthToken')
 
-            const chatbot_types_url = `${API_BASE_URL}/chatbot-types`
+            const channel_types_url = `${API_BASE_URL}/api/channel-types`
 
-            const res = await axiosInstance.get(chatbot_types_url, {
+            const res = await axiosInstance.get(channel_types_url, {
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`
@@ -33,11 +33,11 @@ const ChatbotTypeListApp = () => {
             })
 
             setLoading(false)
-            setChatbotTypeData(res.data)
+            setChannelTypeData(res.data)
 
             return res.data
         } catch (error) {
-            console.error('Error fetching Chatbot Types data:', error)
+            console.error('Error fetching Channel Types data:', error)
             setLoading(false)
             throw error
         }
@@ -52,7 +52,7 @@ const ChatbotTypeListApp = () => {
 
     if (error) return window.location.href = '/login'
 
-    return <ChatbotTypeList chatbotTypeData={chatbotTypeData} reload={() => setReload(true)} />
+    return <ChannelTypeList tableData={channelTypeData} reload={() => setReload(true)} />
 }
 
-export default ChatbotTypeListApp
+export default ChannelTypeListApp

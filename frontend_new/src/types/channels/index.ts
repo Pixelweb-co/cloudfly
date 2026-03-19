@@ -48,7 +48,7 @@ export interface ChannelCreateRequest {
     configuration?: string
 }
 
-export interface ChatbotConfig {
+export interface ChannelConfig {
     phoneNumber: string
     agentName: string
     context: string

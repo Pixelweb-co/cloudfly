@@ -1,10 +1,10 @@
-export type ChatbotType = 'SALES' | 'SUPPORT' | 'SCHEDULING' | 'SUBSCRIPTIONS'
+export type ChannelConfigType = 'SALES' | 'SUPPORT' | 'SCHEDULING' | 'SUBSCRIPTIONS' | 'AI' | 'FLOW'
 
-export interface ChatbotConfig {
+export interface ChannelConfig {
     id?: number
     tenantId?: number
     instanceName: string
-    chatbotType: ChatbotType
+    channelType: ChannelConfigType
     isActive: boolean
     n8nWebhookUrl: string
     context: string
@@ -14,7 +14,7 @@ export interface ChatbotConfig {
     qrCode?: string
 }
 
-export interface ChatbotTypeConfig {
+export interface ChannelTypeConfig {
     id?: number
     typeName: string
     description: string
