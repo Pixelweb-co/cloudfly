@@ -20,20 +20,20 @@ import {
     Divider,
     Box
 } from '@mui/material'
-import { ChatbotConfig, ChatbotType, ChatbotTypeConfig } from '@/types/apps/chatbotTypes'
+import { ChannelConfig, ChannelConfigType, ChannelTypeConfig } from '@/types/apps/channelConfigTypes'
 import { axiosInstance } from '@/utils/axiosInstance'
 
-const ChatbotSettings = () => {
+const ChannelSettings = () => {
     const [loading, setLoading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [activating, setActivating] = useState(false)
     const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
     const [qrCode, setQrCode] = useState<string | null>(null)
-    const [chatbotTypes, setChatbotTypes] = useState<ChatbotTypeConfig[]>([])
+    const [channelTypes, setChannelTypes] = useState<ChannelTypeConfig[]>([])
 
-    const [config, setConfig] = useState<ChatbotConfig>({
+    const [config, setConfig] = useState<ChannelConfig>({
         instanceName: '',
-        chatbotType: 'SALES',
+        channelType: 'SALES',
         isActive: false,
         n8nWebhookUrl: '',
         context: '',
@@ -43,13 +43,13 @@ const ChatbotSettings = () => {
 
     useEffect(() => {
         fetchConfig()
-        fetchChatbotTypes()
+        fetchChannelTypes()
     }, [])
 
     const fetchConfig = async () => {
         try {
             setLoading(true)
-            const response = await axiosInstance.get('/api/chatbot/config')
+            const response = await axiosInstance.get('/api/channel-config/config')
             if (response.data && response.data.id) {
                 setConfig(response.data)
                 if (response.data.qrCode) {
@@ -59,7 +59,7 @@ const ChatbotSettings = () => {
                 // No configuration exists yet - use defaults
                 setConfig({
                     instanceName: '',
-                    chatbotType: 'SALES',
+                    channelType: 'SALES',
                     isActive: false,
                     n8nWebhookUrl: '',
                     context: '',
@@ -68,11 +68,11 @@ const ChatbotSettings = () => {
                 })
             }
         } catch (error) {
-            console.error('Error fetching chatbot config:', error)
+            console.error('Error fetching channel config:', error)
             // On error, also set defaults so UI renders
             setConfig({
                 instanceName: '',
-                chatbotType: 'SALES',
+                channelType: 'SALES',
                 isActive: false,
                 n8nWebhookUrl: '',
                 context: '',
@@ -84,23 +84,23 @@ const ChatbotSettings = () => {
         }
     }
 
-    const fetchChatbotTypes = async () => {
+    const fetchChannelTypes = async () => {
         try {
-            const response = await axiosInstance.get('/chatbot-types/active')
-            setChatbotTypes(response.data)
+            const response = await axiosInstance.get('/api/channel-types/active')
+            setChannelTypes(response.data)
         } catch (error) {
-            console.error('Error fetching chatbot types:', error)
+            console.error('Error fetching channel types:', error)
         }
     }
 
-    const handleChatbotTypeChange = (newType: ChatbotType) => {
-        // Find the corresponding chatbot type config
-        const typeConfig = chatbotTypes.find(t => t.typeName === newType)
+    const handleChannelTypeChange = (newType: ChannelConfigType) => {
+        // Find the corresponding channel type config
+        const typeConfig = channelTypes.find(t => t.typeName === newType)
 
         // Update both the type and the webhook URL
         setConfig(prev => ({
             ...prev,
-            chatbotType: newType,
+            channelType: newType,
             n8nWebhookUrl: typeConfig?.webhookUrl || prev.n8nWebhookUrl
         }))
     }
@@ -109,7 +109,7 @@ const ChatbotSettings = () => {
         try {
             setActivating(true)
             setMessage(null)
-            const response = await axiosInstance.post('/api/chatbot/activate')
+            const response = await axiosInstance.post('/api/channel-config/activate')
             setConfig(response.data)
             if (response.data.qrCode) {
                 setQrCode(response.data.qrCode)
@@ -118,8 +118,8 @@ const ChatbotSettings = () => {
                 setMessage({ type: 'success', text: 'Instancia creada correctamente. Verifica la conexión.' })
             }
         } catch (error) {
-            console.error('Error activating chatbot:', error)
-            setMessage({ type: 'error', text: 'Error al activar el chatbot' })
+            console.error('Error activating channel:', error)
+            setMessage({ type: 'error', text: 'Error al activar el canal' })
         } finally {
             setActivating(false)
         }
@@ -128,7 +128,7 @@ const ChatbotSettings = () => {
     const handleCheckQr = async () => {
         try {
             setLoading(true)
-            const response = await axiosInstance.get('/api/chatbot/qr')
+            const response = await axiosInstance.get('/api/channel-config/qr')
             if (response.data) {
                 setConfig(response.data)
                 if (response.data.qrCode) {
@@ -151,7 +151,7 @@ const ChatbotSettings = () => {
         try {
             setSaving(true)
             setMessage(null)
-            const response = await axiosInstance.post('/api/chatbot/config', config)
+            const response = await axiosInstance.post('/api/channel-config/config', config)
             setConfig(response.data)
             setMessage({ type: 'success', text: 'Configuración guardada correctamente' })
         } catch (error) {
@@ -163,18 +163,18 @@ const ChatbotSettings = () => {
     }
 
     const handleLogout = async () => {
-        if (!confirm('¿Estás seguro de que quieres desconectar el chatbot?')) return
+        if (!confirm('¿Estás seguro de que quieres desconectar el canal?')) return
 
         try {
             setLoading(true)
             setMessage(null)
-            const response = await axiosInstance.post('/api/chatbot/logout')
+            const response = await axiosInstance.post('/api/channel-config/logout')
             setConfig(response.data)
             setQrCode(null)
-            setMessage({ type: 'success', text: 'Chatbot desconectado exitosamente' })
+            setMessage({ type: 'success', text: 'Canal desconectado exitosamente' })
         } catch (error) {
-            console.error('Error disconnecting chatbot:', error)
-            setMessage({ type: 'error', text: 'Error al desconectar el chatbot' })
+            console.error('Error disconnecting channel:', error)
+            setMessage({ type: 'error', text: 'Error al desconectar el canal' })
         } finally {
             setLoading(false)
         }
@@ -184,34 +184,34 @@ const ChatbotSettings = () => {
         try {
             setLoading(true)
             setMessage(null)
-            const response = await axiosInstance.post('/api/chatbot/restart')
+            const response = await axiosInstance.post('/api/channel-config/restart')
             setConfig(response.data)
             if (response.data.qrCode) {
                 setQrCode(response.data.qrCode)
-                setMessage({ type: 'info', text: 'Chatbot reiniciado. Escanea el nuevo código QR' })
+                setMessage({ type: 'info', text: 'Canal reiniciado. Escanea el nuevo código QR' })
             } else {
-                setMessage({ type: 'success', text: 'Chatbot reiniciado exitosamente' })
+                setMessage({ type: 'success', text: 'Canal reiniciado exitosamente' })
             }
         } catch (error) {
-            console.error('Error restarting chatbot:', error)
-            setMessage({ type: 'error', text: 'Error al reiniciar el chatbot' })
+            console.error('Error restarting channel:', error)
+            setMessage({ type: 'error', text: 'Error al reiniciar el canal' })
         } finally {
             setLoading(false)
         }
     }
 
     const handleDelete = async () => {
-        if (!confirm('¿Estás seguro de que quieres ELIMINAR la instancia del chatbot? Esta acción no se puede deshacer.')) return
+        if (!confirm('¿Estás seguro de que quieres ELIMINAR la instancia del canal? Esta acción no se puede deshacer.')) return
 
         try {
             setLoading(true)
             setMessage(null)
-            await axiosInstance.delete('/api/chatbot')
+            await axiosInstance.delete('/api/channel-config')
             setConfig({
                 id: undefined,
                 tenantId: undefined,
                 instanceName: '',
-                chatbotType: 'SALES',
+                channelType: 'SALES',
                 isActive: false,
                 n8nWebhookUrl: '',
                 context: '',
@@ -222,7 +222,7 @@ const ChatbotSettings = () => {
             setMessage({ type: 'success', text: 'Instancia eliminada exitosamente' })
             fetchConfig() // Refresh
         } catch (error) {
-            console.error('Error deleting chatbot:', error)
+            console.error('Error deleting channel:', error)
             setMessage({ type: 'error', text: 'Error al eliminar la instancia' })
         } finally {
             setLoading(false)
@@ -242,7 +242,7 @@ const ChatbotSettings = () => {
             <Grid item xs={12}>
                 <Card>
                     <CardHeader
-                        title='Configuración de Chatbot IA'
+                        title='Configuración de Canales IA'
                         subheader='Gestiona tu asistente virtual inteligente'
                         action={
                             config.id ? (
@@ -267,7 +267,7 @@ const ChatbotSettings = () => {
                         {!config.id ? (
                             <Box sx={{ textAlign: 'center', py: 5 }}>
                                 <Typography variant='h5' sx={{ mb: 3 }}>
-                                    Activa tu Chatbot IA para comenzar
+                                    Activa tu Canal de Comunicación IA para comenzar
                                 </Typography>
                                 <Typography variant='body1' sx={{ mb: 4, color: 'text.secondary' }}>
                                     Al activar, se creará una instancia dedicada para tu negocio y podrás conectar tu WhatsApp.
@@ -278,7 +278,7 @@ const ChatbotSettings = () => {
                                     onClick={handleActivate}
                                     disabled={activating}
                                 >
-                                    {activating ? <CircularProgress size={24} /> : 'Activar Chatbot Ahora'}
+                                    {activating ? <CircularProgress size={24} /> : 'Activar Canal Ahora'}
                                 </Button>
                             </Box>
                         ) : (
@@ -312,7 +312,7 @@ const ChatbotSettings = () => {
                                                             onChange={e => setConfig({ ...config, isActive: e.target.checked })}
                                                         />
                                                     }
-                                                    label={config.isActive ? 'Chatbot Habilitado' : 'Chatbot Deshabilitado'}
+                                                    label={config.isActive ? 'Canal Habilitado' : 'Canal Deshabilitado'}
                                                 />
                                             </Grid>
 
@@ -328,13 +328,13 @@ const ChatbotSettings = () => {
 
                                             <Grid item xs={12} sm={6}>
                                                 <FormControl fullWidth>
-                                                    <InputLabel>Tipo de Chatbot</InputLabel>
+                                                    <InputLabel>Tipo de Canal</InputLabel>
                                                     <Select
-                                                        value={config.chatbotType}
-                                                        label='Tipo de Chatbot'
-                                                        onChange={e => handleChatbotTypeChange(e.target.value as ChatbotType)}
+                                                        value={config.channelType}
+                                                        label='Tipo de Canal'
+                                                        onChange={e => handleChannelTypeChange(e.target.value as ChannelConfigType)}
                                                     >
-                                                        {chatbotTypes.map(type => (
+                                                        {channelTypes.map(type => (
                                                             <MenuItem key={type.id} value={type.typeName}>
                                                                 {type.description || type.typeName}
                                                             </MenuItem>
@@ -418,4 +418,4 @@ const ChatbotSettings = () => {
     )
 }
 
-export default ChatbotSettings
+export default ChannelSettings

@@ -1,8 +1,9 @@
 package com.app.persistence.services;
 
-import com.app.dto.ChatbotConfigDTO;
-import com.app.persistence.entity.ChatbotConfig;
-import com.app.persistence.repository.ChatbotConfigRepository;
+import com.app.dto.ChannelConfigDTO;
+import com.app.persistence.entity.ChannelConfig;
+import com.app.persistence.entity.ChannelType;
+import com.app.persistence.repository.ChannelConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,23 +15,23 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ChatbotService {
+public class ChannelConfigService {
 
-    private final ChatbotConfigRepository chatbotConfigRepository;
+    private final ChannelConfigRepository channelConfigRepository;
     private final EvolutionService evolutionService;
 
-    public Mono<ChatbotConfigDTO> getConfigByTenant(Long tenantId) {
-        log.info("📋 [CHATBOT-SERVICE] Getting config for tenantId: {}", tenantId);
-        return chatbotConfigRepository.findByTenantId(tenantId)
+    public Mono<ChannelConfigDTO> getConfigByTenant(Long tenantId) {
+        log.info("📋 [CHANNEL-CONFIG-SERVICE] Getting config for tenantId: {}", tenantId);
+        return channelConfigRepository.findByTenantId(tenantId)
                 .map(this::mapToDTO);
     }
 
-    public Mono<ChatbotConfigDTO> getStatus(Long tenantId) {
-        log.info("📊 [CHATBOT-SERVICE] Getting status for tenantId: {}", tenantId);
-        return chatbotConfigRepository.findByTenantId(tenantId)
+    public Mono<ChannelConfigDTO> getStatus(Long tenantId) {
+        log.info("📊 [CHANNEL-CONFIG-SERVICE] Getting status for tenantId: {}", tenantId);
+        return channelConfigRepository.findByTenantId(tenantId)
                 .flatMap(config -> evolutionService.checkConnection(config.getInstanceName())
                         .flatMap(statusRes -> {
-                            ChatbotConfigDTO dto = mapToDTO(config);
+                            ChannelConfigDTO dto = mapToDTO(config);
                             dto.setExists(true);
                             Object instObj = statusRes.get("instance");
                             if (instObj instanceof Map) {
@@ -58,45 +59,45 @@ public class ChatbotService {
                         })
                         .onErrorResume(e -> {
                             log.warn("⚠️ Instance not found in Evolution: {}", config.getInstanceName());
-                            ChatbotConfigDTO dto = mapToDTO(config);
+                            ChannelConfigDTO dto = mapToDTO(config);
                             dto.setExists(false);
                             dto.setIsConnected(false);
                             return Mono.just(dto);
                         })
                 )
-                .switchIfEmpty(Mono.just(ChatbotConfigDTO.builder().exists(false).isConnected(false).build()));
+                .switchIfEmpty(Mono.just(ChannelConfigDTO.builder().exists(false).isConnected(false).build()));
     }
 
-    public Mono<ChatbotConfigDTO> activateChatbot(Long tenantId) {
-        log.info("🚀 [CHATBOT-SERVICE] Activating chatbot for tenant: {}", tenantId);
-        return chatbotConfigRepository.findByTenantId(tenantId)
+    public Mono<ChannelConfigDTO> activateChatbot(Long tenantId) {
+        log.info("🚀 [CHANNEL-CONFIG-SERVICE] Activating channel for tenant: {}", tenantId);
+        return channelConfigRepository.findByTenantId(tenantId)
                 .flatMap(config -> evolutionService.createInstance(config.getInstanceName())
                         .onErrorResume(err -> {
-                            if (err instanceof InstanceAlreadyExistsException || err.getMessage().contains("already exists")) {
-                                log.info("ℹ️ [CHATBOT-SERVICE] Instance already exists, continuing with update/status");
+                            if (err.getMessage().contains("already exists")) {
+                                log.info("ℹ️ [CHANNEL-CONFIG-SERVICE] Instance already exists, continuing with update/status");
                                 return Mono.empty();
                             }
                             return Mono.error(err);
                         })
                         .then(Mono.defer(() -> {
-                            log.info("✅ [CHATBOT-SERVICE] Ensuring config is active: {}", tenantId);
+                            log.info("✅ [CHANNEL-CONFIG-SERVICE] Ensuring config is active: {}", tenantId);
                             config.setIsActive(true);
                             config.setUpdatedAt(LocalDateTime.now());
-                            return chatbotConfigRepository.save(config)
+                            return channelConfigRepository.save(config)
                                     .then(getQrOnlyIfDisconnected(tenantId));
                         }))
                 );
     }
 
-    private Mono<ChatbotConfigDTO> getQrOnlyIfDisconnected(Long tenantId) {
+    private Mono<ChannelConfigDTO> getQrOnlyIfDisconnected(Long tenantId) {
         return getStatus(tenantId);
     }
 
-    public Mono<ChatbotConfigDTO> getQrCode(Long tenantId) {
-        return chatbotConfigRepository.findByTenantId(tenantId)
+    public Mono<ChannelConfigDTO> getQrCode(Long tenantId) {
+        return channelConfigRepository.findByTenantId(tenantId)
                 .flatMap(config -> evolutionService.fetchQrCode(config.getInstanceName())
                         .map(qrRes -> {
-                            ChatbotConfigDTO dto = mapToDTO(config);
+                            ChannelConfigDTO dto = mapToDTO(config);
                             if (qrRes != null && qrRes.containsKey("base64")) {
                                 dto.setQrCode((String) qrRes.get("base64"));
                             }
@@ -105,12 +106,12 @@ public class ChatbotService {
                 );
     }
 
-    private ChatbotConfigDTO mapToDTO(ChatbotConfig entity) {
-        return ChatbotConfigDTO.builder()
+    private ChannelConfigDTO mapToDTO(ChannelConfig entity) {
+        return ChannelConfigDTO.builder()
                 .id(entity.getId())
                 .tenantId(entity.getTenantId())
                 .instanceName(entity.getInstanceName())
-                .chatbotType(entity.getChatbotType())
+                .channelType(entity.getChannelType())
                 .isActive(entity.getIsActive())
                 .n8nWebhookUrl(entity.getN8nWebhookUrl())
                 .context(entity.getContext())

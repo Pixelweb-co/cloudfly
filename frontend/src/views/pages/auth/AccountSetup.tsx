@@ -20,7 +20,7 @@ import Logo from '@components/layout/shared/Logo'
 import Link from '@components/Link'
 import AuthIllustrationWrapperCustomer from './AuthIllustrationWrapperCustomer'
 import FormCustomer from '@/views/apps/customers/form/page'
-import ChatbotSetupForm from '@/views/apps/settings/chatbot/ChatbotSetupForm'
+import ChannelConfigSetupForm from '@/views/apps/settings/channel-config/ChannelConfigSetupForm'
 import ProductCreationStep from './ProductCreationStep'
 
 const steps = [
@@ -160,7 +160,7 @@ const AccountSetup = () => {
             <Typography variant='body2' className='mb-6 text-textSecondary text-center'>
               Conecta tu número de WhatsApp Business y personaliza tu asistente IA
             </Typography>
-            <ChatbotSetupForm onSuccess={handleNext} />
+            <ChannelConfigSetupForm onSuccess={handleNext} />
           </Box>
         )
 

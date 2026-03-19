@@ -16,16 +16,16 @@ import {
     CircularProgress,
     Box
 } from '@mui/material'
-import { ChatbotConfig, ChatbotType, ChatbotTypeConfig } from '@/types/apps/chatbotTypes'
+import { ChannelConfig, ChannelConfigType, ChannelTypeConfig } from '@/types/apps/channelConfigTypes'
 import { axiosInstance } from '@/utils/axiosInstance'
 import { userMethods } from '@/utils/userMethods'
 
-interface ChatbotSetupFormProps {
+interface ChannelConfigSetupFormProps {
     onSuccess?: () => void
 }
 
-// Mapeo de tipos de negocio a tipos de chatbot
-const BUSINESS_TYPE_TO_CHATBOT: Record<string, ChatbotType> = {
+// Mapeo de tipos de negocio a tipos de configuración de canal
+const BUSINESS_TYPE_TO_CHANNEL: Record<string, ChannelConfigType> = {
     'beauty_salon': 'SCHEDULING',
     'medical_clinic': 'SCHEDULING',
     'dental_clinic': 'SCHEDULING',
@@ -63,21 +63,21 @@ const SPANISH_SPEAKING_COUNTRIES = [
     { code: '+505', name: 'Nicaragua', flag: '🇳🇮' }
 ]
 
-const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
+const ChannelConfigSetupForm = ({ onSuccess }: ChannelConfigSetupFormProps) => {
     const [loading, setLoading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [activating, setActivating] = useState(false)
     const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
     const [qrCode, setQrCode] = useState<string | null>(null)
-    const [chatbotTypes, setChatbotTypes] = useState<ChatbotTypeConfig[]>([])
+    const [channelTypes, setChannelTypes] = useState<ChannelTypeConfig[]>([])
 
     // Estados para número de WhatsApp separado
     const [countryCode, setCountryCode] = useState('+57') // Colombia por defecto
     const [localPhoneNumber, setLocalPhoneNumber] = useState('')
 
-    const [config, setConfig] = useState<ChatbotConfig>({
+    const [config, setConfig] = useState<ChannelConfig>({
         instanceName: '',
-        chatbotType: 'SALES',
+        channelType: 'SALES',
         isActive: true, // Activo por defecto
         n8nWebhookUrl: '',
         context: '',
@@ -87,8 +87,8 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
 
     useEffect(() => {
         fetchConfig()
-        fetchChatbotTypes()
-        setInitialChatbotType()
+        fetchChannelTypes()
+        setInitialChannelType()
     }, [])
 
     // Auto-verificar cada 5 segundos si hay QR code visible
@@ -99,7 +99,7 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
         if (qrCode && !config.isActive) {
             intervalId = setInterval(async () => {
                 try {
-                    const response = await axiosInstance.get('/api/chatbot/qr')
+                    const response = await axiosInstance.get('/api/channel-config/qr')
                     if (response.data) {
                         setConfig(response.data)
 
@@ -129,13 +129,13 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
         }
     }, [qrCode, config.isActive]) // Re-ejecutar cuando cambie qrCode o isActive
 
-    // Establecer tipo de chatbot basado en el tipo de negocio del customer
-    const setInitialChatbotType = () => {
+    // Establecer tipo de configuración basada en el tipo de negocio del customer
+    const setInitialChannelType = () => {
         const user = userMethods.getUserLogin()
         if (user && user.customer && user.customer.businessType) {
-            const chatbotType = BUSINESS_TYPE_TO_CHATBOT[user.customer.businessType]
-            if (chatbotType) {
-                setConfig(prev => ({ ...prev, chatbotType }))
+            const channelType = BUSINESS_TYPE_TO_CHANNEL[user.customer.businessType]
+            if (channelType) {
+                setConfig(prev => ({ ...prev, channelType }))
             }
         }
     }
@@ -143,7 +143,7 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
     const fetchConfig = async () => {
         try {
             setLoading(true)
-            const response = await axiosInstance.get('/api/chatbot/config')
+            const response = await axiosInstance.get('/api/channel-config/config')
             if (response.data && response.data.id) {
                 setConfig(response.data)
                 if (response.data.qrCode) {
@@ -151,26 +151,26 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
                 }
             }
         } catch (error) {
-            console.error('Error fetching chatbot config:', error)
+            console.error('Error fetching channel config:', error)
         } finally {
             setLoading(false)
         }
     }
 
-    const fetchChatbotTypes = async () => {
+    const fetchChannelTypes = async () => {
         try {
-            const response = await axiosInstance.get('/chatbot-types/active')
-            setChatbotTypes(response.data)
+            const response = await axiosInstance.get('/api/channel-types/active')
+            setChannelTypes(response.data)
         } catch (error) {
-            console.error('Error fetching chatbot types:', error)
+            console.error('Error fetching channel types:', error)
         }
     }
 
-    const handleChatbotTypeChange = (newType: ChatbotType) => {
-        const typeConfig = chatbotTypes.find(t => t.typeName === newType)
+    const handleChannelTypeChange = (newType: ChannelConfigType) => {
+        const typeConfig = channelTypes.find(t => t.typeName === newType)
         setConfig(prev => ({
             ...prev,
-            chatbotType: newType,
+            channelType: newType,
             n8nWebhookUrl: typeConfig?.webhookUrl || prev.n8nWebhookUrl
         }))
     }
@@ -179,7 +179,7 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
         try {
             setActivating(true)
             setMessage(null)
-            const response = await axiosInstance.post('/api/chatbot/activate')
+            const response = await axiosInstance.post('/api/channel-config/activate')
             setConfig(response.data)
             if (response.data.qrCode) {
                 setQrCode(response.data.qrCode)
@@ -188,8 +188,8 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
                 setMessage({ type: 'success', text: 'Instancia creada correctamente' })
             }
         } catch (error) {
-            console.error('Error activating chatbot:', error)
-            setMessage({ type: 'error', text: 'Error al activar el chatbot' })
+            console.error('Error activating channel:', error)
+            setMessage({ type: 'error', text: 'Error al activar el canal' })
         } finally {
             setActivating(false)
         }
@@ -198,7 +198,7 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
     const handleCheckQr = async () => {
         try {
             setLoading(true)
-            const response = await axiosInstance.get('/api/chatbot/qr')
+            const response = await axiosInstance.get('/api/channel-config/qr')
             if (response.data) {
                 setConfig(response.data)
                 if (response.data.qrCode) {
@@ -231,7 +231,7 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
                 phoneNumber: fullPhoneNumber
             }
 
-            const response = await axiosInstance.post('/api/chatbot/config', configToSave)
+            const response = await axiosInstance.post('/api/channel-config/config', configToSave)
             setConfig(response.data)
             setMessage({ type: 'success', text: 'Configuración guardada correctamente' })
 
@@ -240,7 +240,7 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
                 if (onSuccess) onSuccess()
             }, 1000)
         } catch (error) {
-            console.error('Error saving config:', error)
+            console.error('Error saving channel config:', error)
             setMessage({ type: 'error', text: 'Error al guardar la configuración' })
         } finally {
             setSaving(false)
@@ -267,7 +267,7 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
                 <Box sx={{ textAlign: 'center', py: 5 }}>
                     <Typography fontSize='4rem' className='mb-4'>🤖</Typography>
                     <Typography variant='h5' sx={{ mb: 3 }}>
-                        Activa tu Chatbot IA
+                        Activa tu Canal de Comunicación IA
                     </Typography>
                     <Typography variant='body1' sx={{ mb: 4, color: 'text.secondary' }}>
                         Se creará una instancia dedicada para tu WhatsApp Business
@@ -279,7 +279,7 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
                         disabled={activating}
                         startIcon={activating ? <CircularProgress size={20} /> : undefined}
                     >
-                        {activating ? 'Activando...' : 'Activar Chatbot Ahora'}
+                        {activating ? 'Activando...' : 'Activar Canal Ahora'}
                     </Button>
                 </Box>
             ) : (
@@ -311,11 +311,6 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
                             </Grid>
                         )}
 
-                        {/* Campos ocultos pero con valores automáticos */}
-                        {/* isActive: true por defecto */}
-                        {/* instanceName: generado automáticamente */}
-                        {/* chatbotType: seleccionado según tipo de negocio */}
-
                         <Grid item xs={12} sm={6}>
                             <TextField
                                 fullWidth
@@ -323,7 +318,7 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
                                 value={config.agentName || ''}
                                 onChange={e => setConfig({ ...config, agentName: e.target.value })}
                                 placeholder='Ej: María, Bot de Ventas'
-                                helperText='Nombre con el que se presentará el chatbot'
+                                helperText='Nombre con el que se presentará el asistente'
                             />
                         </Grid>
 
@@ -400,4 +395,4 @@ const ChatbotSetupForm = ({ onSuccess }: ChatbotSetupFormProps) => {
     )
 }
 
-export default ChatbotSetupForm
+export default ChannelConfigSetupForm

@@ -7,13 +7,13 @@ export const verticalMenuData = [
         roles: ['SUPERADMIN', 'ADMIN', 'USER'],
         children: [
             {
-                label: 'Chatbot IA WhatsApp',
-                route: '/settings/chatbot',
+                label: 'Configuración Canal',
+                route: '/settings/channel-config',
                 roles: ['SUPERADMIN', 'ADMIN']
             },
             {
-                label: 'Tipos de Chatbot',
-                route: '/settings/chatbot-types/list',
+                label: 'Tipos de Canales',
+                route: '/settings/channel-types/list',
                 roles: ['SUPERADMIN']
             },
             {
@@ -103,8 +103,8 @@ export const verticalMenuData = [
                 roles: ['SUPERADMIN', 'ADMIN']
             },
             {
-                label: 'Tipos de Chatbot',
-                route: '/settings/chatbot-types/list',
+                label: 'Tipos de Canales',
+                route: '/settings/channel-types/list',
                 roles: ['SUPERADMIN', 'ADMIN']
             }
         ]

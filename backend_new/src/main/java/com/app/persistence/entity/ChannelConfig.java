@@ -12,12 +12,12 @@ import org.springframework.data.relational.core.mapping.Column;
 
 import java.time.LocalDateTime;
 
-@Table("chatbot_configs")
+@Table("channel_configs")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatbotConfig {
+public class ChannelConfig {
 
     @Id
     private Long id;
@@ -31,8 +31,8 @@ public class ChatbotConfig {
     @Column("instance_name")
     private String instanceName;
 
-    @Column("chatbot_type")
-    private ChatbotType chatbotType;
+    @Column("channel_type")
+    private ChannelType channelType;
 
     @Column("is_active")
     private Boolean isActive;

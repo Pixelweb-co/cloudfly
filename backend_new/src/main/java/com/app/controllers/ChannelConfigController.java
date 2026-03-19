@@ -1,7 +1,7 @@
 package com.app.controllers;
 
-import com.app.dto.ChatbotConfigDTO;
-import com.app.persistence.services.ChatbotService;
+import com.app.dto.ChannelConfigDTO;
+import com.app.persistence.services.ChannelConfigService;
 import com.app.persistence.services.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,52 +13,52 @@ import reactor.core.publisher.Mono;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/chatbot")
+@RequestMapping("/api/channel-config")
 @RequiredArgsConstructor
-public class ChatbotController {
+public class ChannelConfigController {
 
-    private final ChatbotService chatbotService;
+    private final ChannelConfigService channelConfigService;
     private final UserService userService;
 
     private Mono<Long> getCurrentTenantId() {
         return ReactiveSecurityContextHolder.getContext()
                 .map(SecurityContext::getAuthentication)
-                .doOnNext(auth -> log.info("🔐 [CHATBOT-AUTH] Checking auth for: {}", auth != null ? auth.getName() : "NULL"))
+                .doOnNext(auth -> log.info("🔐 [CHANNEL-CONFIG-AUTH] Checking auth for: {}", auth != null ? auth.getName() : "NULL"))
                 .flatMap(auth -> userService.findByUsername(auth.getName()))
                 .map(user -> {
-                    log.info("👤 [CHATBOT-AUTH] Found user: {} with customerId: {}", user.getUsername(), user.getCustomerId());
+                    log.info("👤 [CHANNEL-CONFIG-AUTH] Found user: {} with customerId: {}", user.getUsername(), user.getCustomerId());
                     return user.getCustomerId();
                 })
-                .doOnTerminate(() -> log.info("🏁 [CHATBOT-AUTH] Tenant lookup finished"));
+                .doOnTerminate(() -> log.info("🏁 [CHANNEL-CONFIG-AUTH] Tenant lookup finished"));
     }
 
     @GetMapping("/config")
-    public Mono<ResponseEntity<ChatbotConfigDTO>> getConfig() {
+    public Mono<ResponseEntity<ChannelConfigDTO>> getConfig() {
         return getCurrentTenantId()
                 .flatMap(tenantId -> {
-                    log.info("📋 [CHATBOT] Getting config for tenantId: {}", tenantId);
-                    return chatbotService.getConfigByTenant(tenantId);
+                    log.info("📋 [CHANNEL-CONFIG] Getting config for tenantId: {}", tenantId);
+                    return channelConfigService.getConfigByTenant(tenantId);
                 })
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/qr")
-    public Mono<ResponseEntity<ChatbotConfigDTO>> getQrCode() {
+    @GetMapping("/status")
+    public Mono<ResponseEntity<ChannelConfigDTO>> getStatus() {
         return getCurrentTenantId()
                 .flatMap(tenantId -> {
-                    log.info("🔲 [CHATBOT] Getting status/QR for tenantId: {}", tenantId);
-                    return chatbotService.getStatus(tenantId);
+                    log.info("📊 [CHANNEL-CONFIG] Getting status for tenantId: {}", tenantId);
+                    return channelConfigService.getStatus(tenantId);
                 })
                 .map(ResponseEntity::ok);
     }
 
     @PostMapping("/activate")
-    public Mono<ResponseEntity<ChatbotConfigDTO>> activateChatbot() {
+    public Mono<ResponseEntity<ChannelConfigDTO>> activateChannel() {
         return getCurrentTenantId()
                 .flatMap(tenantId -> {
-                    log.info("🚀 [CHATBOT] Activating chatbot for tenantId: {}", tenantId);
-                    return chatbotService.activateChatbot(tenantId);
+                    log.info("🚀 [CHANNEL-CONFIG] Activating channel for tenantId: {}", tenantId);
+                    return channelConfigService.activateChatbot(tenantId);
                 })
                 .map(ResponseEntity::ok);
     }

@@ -1,8 +1,10 @@
 package com.app.persistence.entity;
 
-public enum ChatbotType {
+public enum ChannelType {
     SALES,
     SUPPORT,
     SCHEDULING,
-    SUBSCRIPTIONS
+    SUBSCRIPTIONS,
+    AI,
+    FLOW
 }

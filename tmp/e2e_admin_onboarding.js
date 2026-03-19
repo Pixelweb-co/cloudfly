@@ -13,6 +13,7 @@
 
 const { Builder, By, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
+const logging = require('selenium-webdriver/lib/logging');
 const { execSync } = require('child_process');
 
 const BASE_URL  = 'https://dashboard.cloudfly.com.co';
@@ -25,7 +26,8 @@ const DB_NAME   = 'cloud_master';
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function runSsh(cmd) {
-    execSync(`ssh -i "${SSH_KEY}" ${VPS} "${cmd}"`, { stdio: 'inherit' });
+    const escapedCmd = cmd.replace(/"/g, '\\"');
+    execSync(`ssh -o StrictHostKeyChecking=no -i "${SSH_KEY}" ${VPS} "${escapedCmd}"`, { stdio: 'inherit' });
 }
 
 function activateUser(username) {
@@ -57,6 +59,17 @@ async function waitAndType(driver, locator, text, timeout = 10000) {
     return el;
 }
 
+async function printBrowserLogs(driver) {
+    try {
+        const logs = await driver.manage().logs().get(logging.Type.BROWSER);
+        logs.forEach(log => {
+            console.log(`   🌐 [BROWSER] ${log.level.name}: ${log.message}`);
+        });
+    } catch (e) {
+        // console.warn('No se pudieron obtener los logs del navegador');
+    }
+}
+
 // ─── main ────────────────────────────────────────────────────────────────────
 
 async function runAdminOnboarding() {
@@ -65,12 +78,14 @@ async function runAdminOnboarding() {
     const password  = 'Password123!';
     const email     = `${username}@testcloudfly.com`;
 
+    const options = new chrome.Options();
+    const prefs = new logging.Preferences();
+    prefs.setLevel(logging.Type.BROWSER, logging.Level.ALL);
+    options.setLoggingPrefs(prefs);
+
     let driver = await new Builder()
         .forBrowser('chrome')
-        .setChromeOptions(
-            new chrome.Options()
-                // .headless()       // descomenta para correr sin ventana
-        )
+        .setChromeOptions(options)
         .build();
 
     console.log('\n═══════════════════════════════════════════════════════');
@@ -99,6 +114,7 @@ async function runAdminOnboarding() {
         await takeScreenshot(driver, '02_registro_lleno', timestamp);
         await waitAndClick(driver, By.css('button[type="submit"]'));
         console.log('   ✅ Formulario de registro enviado');
+        await printBrowserLogs(driver);
 
         // Esperar confirmación (cualquier cambio de pantalla)
         await driver.sleep(3000);
@@ -118,6 +134,7 @@ async function runAdminOnboarding() {
         await waitAndType(driver, By.name('username'), username);
         await waitAndType(driver, By.name('password'), password);
         await waitAndClick(driver, By.css('button[type="submit"]'));
+        await printBrowserLogs(driver);
 
         console.log('   ✅ Credenciales enviadas. Esperando redirección a /account-setup...');
         await driver.wait(until.urlContains('/account-setup'), 20000);
@@ -134,6 +151,7 @@ async function runAdminOnboarding() {
         await takeScreenshot(driver, '06_wizard_bienvenida', timestamp);
         await waitAndClick(driver, By.xpath("//button[contains(text(),'Continuar')]"));
         console.log('   ✅ Avanzado al paso: Tu Negocio');
+        await printBrowserLogs(driver);
 
         // ── Paso 1: Información del Negocio ────────────────────────────
         console.log('   [Paso 2/4] Información del Negocio');
@@ -141,7 +159,8 @@ async function runAdminOnboarding() {
         await takeScreenshot(driver, '07_wizard_negocio', timestamp);
 
         await waitAndType(driver, By.name('name'),         'Empresa E2E Test');
-        await waitAndType(driver, By.name('nit'),          '900123456-1');
+        const nit = '900' + timestamp.toString().slice(-6);
+        await waitAndType(driver, By.name('nit'),          nit);
         await waitAndType(driver, By.name('phone'),        PHONE_WA);
         // ⚠️ email es REQUERIDO por la validación Yup — sin él el form no se puede enviar
         await waitAndType(driver, By.name('email'),        `empresa_${timestamp}@testcloudfly.com`);
@@ -171,6 +190,7 @@ async function runAdminOnboarding() {
         console.log('   🔔 Enviando datos del Negocio → POST /customers/account-setup → Kafka welcome-notifications → WhatsApp ✉️');
         // El botón submit del FormCustomer dice "Siguiente"
         await waitAndClick(driver, By.xpath("//button[@type='submit']"));
+        await printBrowserLogs(driver);
         
         // Esperar a que se procese la respuesta (Kafka + WhatsApp puede tomar 3-5 segundos)
         await driver.sleep(6000);
@@ -203,6 +223,7 @@ async function runAdminOnboarding() {
             );
             await driver.executeScript("arguments[0].click();", finishBtn);
             console.log('   ✅ Wizard finalizado');
+            await printBrowserLogs(driver);
         } catch (_) {
             // Si no aparece el botón, puede haber redirigido a /home directamente
             console.log('   ℹ️  Botón Finalizar no encontrado - puede que ya redirigió a /home');
@@ -211,9 +232,11 @@ async function runAdminOnboarding() {
         // ─── FASE 5: DASHBOARD ────────────────────────────────────────────
         console.log('\n── FASE 5: DASHBOARD ─────────────────────────────────');
         // Navegar a /home si aún no redirigió automáticamente
+        const currentUrl = await driver.getCurrentUrl();
         if (!currentUrl.includes('/home')) {
             await driver.get(`${BASE_URL}/home`);
         }
+        await printBrowserLogs(driver);
 
         await driver.sleep(3000);
         await takeScreenshot(driver, '10_dashboard_home', timestamp);

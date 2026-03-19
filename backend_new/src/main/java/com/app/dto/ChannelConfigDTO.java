@@ -1,6 +1,6 @@
 package com.app.dto;
 
-import com.app.persistence.entity.ChatbotType;
+import com.app.persistence.entity.ChannelType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,11 +12,11 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatbotConfigDTO {
+public class ChannelConfigDTO {
     private Long id;
     private Long tenantId;
     private String instanceName;
-    private ChatbotType chatbotType;
+    private ChannelType channelType;
     private Boolean isActive;
     private String n8nWebhookUrl;
     private String context;

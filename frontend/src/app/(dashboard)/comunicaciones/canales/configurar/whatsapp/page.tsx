@@ -22,7 +22,7 @@ import {
     Divider
 } from '@mui/material'
 import { axiosInstance } from '@/utils/axiosInstance'
-import type { ChatbotConfig } from '@/types/channels'
+import type { ChannelConfig } from '@/types/channels'
 import {
     WhatsApp,
     ArrowBack,
@@ -74,7 +74,7 @@ const ConfigureWhatsAppPage = () => {
 
             intervalId = setInterval(async () => {
                 try {
-                    const response = await axiosInstance.get('/api/chatbot/status')
+                    const response = await axiosInstance.get('/api/channel-config/status')
 
                     if (response.data) {
                         const { isConnected: connected, qrCode: newQr } = response.data
@@ -114,7 +114,7 @@ const ConfigureWhatsAppPage = () => {
     useEffect(() => {
         const checkInitialStatus = async () => {
             try {
-                const response = await axiosInstance.get('/api/chatbot/status')
+                const response = await axiosInstance.get('/api/channel-config/status')
 
                 if (response.data) {
                     const { exists, isConnected: connected, qrCode: existingQr, phoneNumber } = response.data
@@ -163,7 +163,7 @@ const ConfigureWhatsAppPage = () => {
             setMessage(null)
 
             // Primero verificar si ya existe una instancia
-            const checkResponse = await axiosInstance.get('/api/chatbot/status')
+            const checkResponse = await axiosInstance.get('/api/channel-config/status')
 
             if (checkResponse.data) {
                 const { exists, isConnected: connected, qrCode: existingQr } = checkResponse.data
@@ -186,7 +186,7 @@ const ConfigureWhatsAppPage = () => {
                         })
                     } else {
                         // Existe pero sin QR, solicitar nuevo QR
-                        const qrResponse = await axiosInstance.get('/api/chatbot/qr')
+                        const qrResponse = await axiosInstance.get('/api/channel-config/qr')
                         if (qrResponse.data?.qrCode) {
                             setQrCode(qrResponse.data.qrCode)
                             setMessage({
@@ -197,7 +197,7 @@ const ConfigureWhatsAppPage = () => {
                     }
                 } else {
                     // No existe instancia, crear una nueva
-                    const response = await axiosInstance.post('/api/chatbot/activate')
+                    const response = await axiosInstance.post('/api/channel-config/activate')
 
                     if (response.data?.qrCode) {
                         setQrCode(response.data.qrCode)
@@ -230,7 +230,7 @@ const ConfigureWhatsAppPage = () => {
     const handleCheckQr = async (): Promise<void> => {
         try {
             setLoading(true)
-            const response = await axiosInstance.get('/api/chatbot/qr')
+            const response = await axiosInstance.get('/api/channel-config/qr')
 
             if (response.data) {
                 if (response.data.qrCode) {
@@ -268,7 +268,7 @@ const ConfigureWhatsAppPage = () => {
                 isActive: isConnected
             }
 
-            await axiosInstance.post('/api/chatbot/config', chatbotPayload)
+            await axiosInstance.post('/api/channel-config/config', chatbotPayload)
 
             // 2. Crear/actualizar registro en channels
             const channelPayload = {

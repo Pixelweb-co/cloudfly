@@ -32,5 +32,5 @@ public class UserDto {
     private List<RoleEntity> roles;
     private TenantEntity tenant;
     private boolean hasActiveSubscription;
-    private ChatbotConfigDTO chatbotConfig;
+    private ChannelConfigDTO channelConfig;
 }
