@@ -220,6 +220,7 @@ public class CustomerController {
                 .updatedAt(LocalDateTime.now())
                 .build();
         log.info("📂 [ACCOUNT-SETUP] Saving Default Category for tenant: {}", tenantId);
+        return categoryRepository.save(defaultCategory).then();
     }
 
     private Mono<Void> handleAutomaticSubscription(Long customerId) {

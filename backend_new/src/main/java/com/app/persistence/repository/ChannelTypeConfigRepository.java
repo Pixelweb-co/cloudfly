@@ -1,11 +1,11 @@
 package com.app.persistence.repository;
 
 import com.app.persistence.entity.ChannelTypeConfig;
-import org.springframework.data.repository.reactive.ReactiveSortingRepository;
+import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public interface ChannelTypeConfigRepository extends ReactiveSortingRepository<ChannelTypeConfig, Long> {
+public interface ChannelTypeConfigRepository extends ReactiveCrudRepository<ChannelTypeConfig, Long> {
 
     Flux<ChannelTypeConfig> findByStatus(Boolean status);
 
