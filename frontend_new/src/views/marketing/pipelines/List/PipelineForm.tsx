@@ -132,7 +132,6 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Props)
   }
 
   return (
-  return (
     <Dialog 
       open={open} 
       onClose={handleClose} 
