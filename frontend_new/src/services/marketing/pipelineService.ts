@@ -1,5 +1,5 @@
 import { axiosInstance } from '@/utils/axiosInstance'
-import type { Pipeline, CreatePipelineDto } from '@/types/marketing/pipelineTypes'
+import type { Pipeline, CreatePipelineDto, PipelineKanbanCard, MoveConversationDto } from '@/types/marketing/pipelineTypes'
 
 export const pipelineService = {
   getAllPipelines: async (): Promise<Pipeline[]> => {
@@ -34,5 +34,19 @@ export const pipelineService = {
     const response = await axiosInstance.patch(`/api/pipelines/${id}/toggle-status`)
     
     return response.data
+  },
+
+  getKanbanData: async (id: number): Promise<Record<string, PipelineKanbanCard[]>> => {
+    const response = await axiosInstance.get(`/api/pipelines/${id}/kanban`)
+    
+    return response.data
+  },
+
+  moveConversation: async (id: string, data: MoveConversationDto): Promise<void> => {
+    await axiosInstance.post('/api/pipelines/move-conversation', data)
+  },
+
+  assignConversationToPipeline: async (conversationId: string, pipelineId: number, stageId: number): Promise<void> => {
+    await axiosInstance.post(`/api/pipelines/${pipelineId}/assign-conversation`, { conversationId, stageId })
   }
 }

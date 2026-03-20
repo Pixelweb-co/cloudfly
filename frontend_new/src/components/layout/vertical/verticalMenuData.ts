@@ -24,7 +24,7 @@ export const verticalMenuData = [
         ]
     },
     {
-        label: 'Marqueting',
+        label: 'Marketing',
         icon: 'megaphone',
         route: '#',
         roles: ['MANAGER', 'ADMIN', 'USER'],
@@ -35,8 +35,23 @@ export const verticalMenuData = [
                 roles: ['MANAGER', 'ADMIN', 'USER']
             },
             {
+                label: 'Canales',
+                route: '/marketing/canales',
+                roles: ['MANAGER', 'ADMIN', 'USER']
+            },
+            {
                 label: 'Contactos',
                 route: '/marketing/contacts/list',
+                roles: ['MANAGER', 'ADMIN', 'USER']
+            },
+            {
+                label: 'Pipelines (Lista)',
+                route: '/marketing/pipelines/list',
+                roles: ['MANAGER', 'ADMIN', 'USER']
+            },
+            {
+                label: 'Pipelines (Kanban)',
+                route: '/marketing/pipelines/kanban',
                 roles: ['MANAGER', 'ADMIN', 'USER']
             }
         ]

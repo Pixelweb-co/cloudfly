@@ -41,6 +41,14 @@
       {
         "label": "Contactos",
         "href": "/marketing/contacts/list"
+      },
+      {
+        "label": "Pipelines (Lista)",
+        "href": "/marketing/pipelines/list"
+      },
+      {
+        "label": "Pipelines (Kanban)",
+        "href": "/marketing/pipelines/kanban"
       }
     ]
   },
