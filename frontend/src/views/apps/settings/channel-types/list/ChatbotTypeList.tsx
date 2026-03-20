@@ -90,7 +90,7 @@ const DebouncedInput = ({
 
 const columnHelper = createColumnHelper<ChannelTypeConfigWithAction>()
 
-const ChatbotTypeList = ({ reload, tableData }: any) => {
+export default function ChatbotTypeList({ reload, tableData }: any) {
     const [rowSelection, setRowSelection] = useState({})
     const [data, setData] = useState(tableData.sort((a: any, b: any) => b.id - a.id))
     const [filteredData, setFilteredData] = useState(data)
@@ -382,4 +382,3 @@ const ChatbotTypeList = ({ reload, tableData }: any) => {
     )
 }
 
-export default ChatbotTypeList
