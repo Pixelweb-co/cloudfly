@@ -17,8 +17,10 @@ export interface ChannelConfig {
 export interface ChannelTypeConfig {
     id?: number
     typeName: string
+    name?: string
     description: string
     webhookUrl: string
+    webhook_url?: string
     status: boolean
     createdAt?: string
     updatedAt?: string

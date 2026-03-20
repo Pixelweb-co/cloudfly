@@ -30,8 +30,10 @@ interface ChannelTypeFormProps {
 const ChannelTypeForm = ({ open, onClose, rowSelect }: ChannelTypeFormProps) => {
     const [formData, setFormData] = useState<ChannelTypeConfig>({
         typeName: '',
+        name: '',
         description: '',
         webhookUrl: '',
+        webhook_url: '',
         status: true
     })
 
@@ -40,32 +42,51 @@ const ChannelTypeForm = ({ open, onClose, rowSelect }: ChannelTypeFormProps) => 
 
     useEffect(() => {
         if (rowSelect && rowSelect.id) {
-            setFormData(rowSelect)
+            setFormData({
+                ...rowSelect,
+                name: rowSelect.name || rowSelect.typeName,
+                webhook_url: rowSelect.webhook_url || rowSelect.webhookUrl
+            })
         } else {
             setFormData({
                 typeName: '',
+                name: '',
                 description: '',
                 webhookUrl: '',
+                webhook_url: '',
                 status: true
             })
         }
     }, [rowSelect])
 
     const handleChange = (field: keyof ChannelTypeConfig, value: any) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: value
-        }))
+        setFormData(prev => {
+            const newState = { ...prev, [field]: value }
+
+            // Sincronizar campos para compatibilidad
+            if (field === 'name') newState.typeName = value
+            if (field === 'typeName') newState.name = value
+            if (field === 'webhook_url') newState.webhookUrl = value
+            if (field === 'webhookUrl') newState.webhook_url = value
+
+            return newState
+        })
     }
 
     const handleSubmit = async () => {
         setError(null)
 
         // Validación
-        if (!formData.typeName || !formData.webhookUrl) {
-            setError('El nombre del tipo y la URL del webhook son obligatorios')
-            
-return
+        if (!formData.name && !formData.typeName) {
+            setError('El nombre del agente es obligatorio')
+
+            return
+        }
+
+        if (!formData.webhook_url && !formData.webhookUrl) {
+            setError('La URL del webhook es obligatoria')
+
+            return
         }
 
         setLoading(true)
@@ -77,20 +98,20 @@ return
                     `/api/channel-types/${formData.id}`,
                     formData
                 )
-                toast.success('Tipo de canal actualizado correctamente')
+                toast.success('Agente actualizado correctamente')
             } else {
                 // Crear
                 await axiosInstance.post(
                     `/api/channel-types`,
                     formData
                 )
-                toast.success('Tipo de canal creado correctamente')
+                toast.success('Agente creado correctamente')
             }
 
             onClose()
         } catch (error: any) {
             console.error('Error al guardar:', error)
-            setError(error.response?.data?.message || 'Error al guardar el tipo de canal')
+            setError(error.response?.data?.message || 'Error al guardar el agente')
         } finally {
             setLoading(false)
         }
@@ -99,7 +120,7 @@ return
     return (
         <Dialog open={open} onClose={onClose} maxWidth='md' fullWidth>
             <DialogTitle>
-                {formData.id ? 'Editar Tipo de Canal' : 'Nuevo Tipo de Canal'}
+                {formData.id ? 'Editar Agente AI' : 'Nuevo Agente AI'}
             </DialogTitle>
             <DialogContent>
                 <Grid container spacing={3} sx={{ mt: 1 }}>
@@ -112,10 +133,10 @@ return
                     <Grid item xs={12} sm={6}>
                         <TextField
                             fullWidth
-                            label='Nombre del Tipo'
-                            value={formData.typeName}
-                            onChange={e => handleChange('typeName', e.target.value)}
-                            placeholder='SALES, SUPPORT, SCHEDULING'
+                            label='Nombre del Agente'
+                            value={formData.name || formData.typeName}
+                            onChange={e => handleChange('name', e.target.value)}
+                            placeholder='Ej: Asistente de Ventas'
                             required
                         />
                     </Grid>
@@ -148,11 +169,11 @@ return
                         <TextField
                             fullWidth
                             label='URL del Webhook n8n'
-                            value={formData.webhookUrl}
-                            onChange={e => handleChange('webhookUrl', e.target.value)}
+                            value={formData.webhook_url || formData.webhookUrl}
+                            onChange={e => handleChange('webhook_url', e.target.value)}
                             placeholder='https://autobot.cloudfly.com.co/webhook/...'
                             required
-                            helperText='Esta URL será asignada automáticamente cuando un tenant seleccione este tipo de canal'
+                            helperText='Esta URL procesará los mensajes enviados a través de los canales asignados a este agente'
                         />
                     </Grid>
                 </Grid>
