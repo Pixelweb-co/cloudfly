@@ -21,7 +21,7 @@ import { format } from 'date-fns'
 import { pipelineService } from '@/services/marketing/pipelineService'
 import { Pipeline } from '@/types/marketing/pipelineTypes'
 import { useRouter } from 'next/navigation'
-import PipelineFormDialog from './PipelineFormDialog'
+import PipelineForm from './PipelineForm'
 
 export default function PipelineListTable() {
   const [pipelines, setPipelines] = useState<Pipeline[]>([])
@@ -171,10 +171,10 @@ export default function PipelineListTable() {
         </Table>
       </TableContainer>
 
-      <PipelineFormDialog 
+      <PipelineForm 
         open={isDialogOpen} 
-        onClose={() => setIsDialogOpen(false)} 
-        pipeline={selectedPipeline}
+        handleClose={() => setIsDialogOpen(false)} 
+        selectedPipeline={selectedPipeline}
         onSuccess={loadPipelines}
       />
     </Card>

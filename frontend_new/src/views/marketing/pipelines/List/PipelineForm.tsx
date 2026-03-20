@@ -19,10 +19,11 @@ import { useTheme } from '@mui/material/styles'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { toast } from 'react-hot-toast'
 import { Icon } from '@iconify/react'
-import { IconButton, Typography, Divider, Box, alpha } from '@mui/material'
+import { IconButton, Typography, Divider, Box, alpha, Popover } from '@mui/material'
 import * as yup from 'yup'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { motion, AnimatePresence } from 'framer-motion'
+import { HexColorPicker } from 'react-colorful'
 
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
@@ -58,6 +59,7 @@ type PipelineFormData = yup.InferType<typeof validationSchema>
 
 const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Props) => {
   const [loading, setLoading] = useState(false)
+  const [anchorEl, setAnchorEl] = useState<{ [key: string]: HTMLButtonElement | null }>({})
   const theme = useTheme()
 
   const {
@@ -219,13 +221,35 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Props)
                 name='color'
                 control={control}
                 render={({ field }) => (
-                  <CustomTextField
-                    {...field}
-                    fullWidth
-                    type='color'
-                    label='Color Identificador'
-                    id='pipeline-color'
-                  />
+                  <Box>
+                    <CustomTextField
+                      {...field}
+                      fullWidth
+                      label='Color Identificador'
+                      id='pipeline-color'
+                      InputProps={{
+                        startAdornment: (
+                          <IconButton
+                            size='small'
+                            onClick={(e) => setAnchorEl({ ...anchorEl, main: e.currentTarget })}
+                            sx={{ mr: 2, p: 0 }}
+                          >
+                            <Box sx={{ width: 24, height: 24, borderRadius: '4px', bgcolor: field.value }} />
+                          </IconButton>
+                        )
+                      }}
+                    />
+                    <Popover
+                      open={Boolean(anchorEl.main)}
+                      anchorEl={anchorEl.main}
+                      onClose={() => setAnchorEl({ ...anchorEl, main: null })}
+                      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                    >
+                      <Box sx={{ p: 4 }}>
+                        <HexColorPicker color={field.value} onChange={field.onChange} />
+                      </Box>
+                    </Popover>
+                  </Box>
                 )}
               />
             </Grid>
@@ -277,18 +301,24 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Props)
                             name={`stages.${index}.color`}
                             control={control}
                             render={({ field: colorField }) => (
-                              <Box sx={{ 
-                                position: 'relative', 
-                                '& input::-webkit-color-swatch-wrapper': { p: 0 },
-                                '& input::-webkit-color-swatch': { border: 'none', borderRadius: '8px' }
-                              }}>
-                                <CustomTextField
-                                  {...colorField}
-                                  fullWidth
+                              <Box>
+                                <IconButton
                                   size='small'
-                                  type='color'
-                                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px', overflow: 'hidden' } }}
-                                />
+                                  onClick={(e) => setAnchorEl({ ...anchorEl, [`stage-${index}`]: e.currentTarget })}
+                                  sx={{ p: 0 }}
+                                >
+                                  <Box sx={{ width: 32, height: 32, borderRadius: '8px', bgcolor: colorField.value, border: `1px solid ${theme.palette.divider}` }} />
+                                </IconButton>
+                                <Popover
+                                  open={Boolean(anchorEl[`stage-${index}`])}
+                                  anchorEl={anchorEl[`stage-${index}`]}
+                                  onClose={() => setAnchorEl({ ...anchorEl, [`stage-${index}`]: null })}
+                                  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                                >
+                                  <Box sx={{ p: 4 }}>
+                                    <HexColorPicker color={colorField.value} onChange={colorField.onChange} />
+                                  </Box>
+                                </Popover>
                               </Box>
                             )}
                           />
