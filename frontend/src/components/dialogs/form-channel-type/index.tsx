@@ -25,11 +25,13 @@ interface ChannelTypeFormProps {
     rowSelect: ChannelTypeConfig | null
 }
 
-const ChannelTypeForm = ({ open, onClose, rowSelect }: ChannelTypeFormProps) => {
+const ChatbotTypeForm = ({ open, onClose, rowSelect }: ChannelTypeFormProps) => {
     const [formData, setFormData] = useState<ChannelTypeConfig>({
         typeName: '',
+        name: '',
         description: '',
         webhookUrl: '',
+        webhook_url: '',
         status: true
     })
     const [loading, setLoading] = useState(false)
@@ -37,30 +39,43 @@ const ChannelTypeForm = ({ open, onClose, rowSelect }: ChannelTypeFormProps) => 
 
     useEffect(() => {
         if (rowSelect && rowSelect.id) {
-            setFormData(rowSelect)
+            setFormData({
+                ...rowSelect,
+                name: rowSelect.name || rowSelect.typeName,
+                webhook_url: rowSelect.webhook_url || rowSelect.webhookUrl
+            })
         } else {
             setFormData({
                 typeName: '',
+                name: '',
                 description: '',
                 webhookUrl: '',
+                webhook_url: '',
                 status: true
             })
         }
     }, [rowSelect])
 
     const handleChange = (field: keyof ChannelTypeConfig, value: any) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: value
-        }))
+        setFormData(prev => {
+            const updated = { ...prev, [field]: value };
+            
+            // Sincronizar alias
+            if (field === 'name') updated.typeName = value;
+            if (field === 'typeName') updated.name = value;
+            if (field === 'webhook_url') updated.webhookUrl = value;
+            if (field === 'webhookUrl') updated.webhook_url = value;
+            
+            return updated;
+        })
     }
 
     const handleSubmit = async () => {
         setError(null)
 
         // Validación
-        if (!formData.typeName || !formData.webhookUrl) {
-            setError('El nombre del tipo y la URL del webhook son obligatorios')
+        if ((!formData.typeName && !formData.name) || (!formData.webhookUrl && !formData.webhook_url)) {
+            setError('El nombre y la URL del webhook son obligatorios')
             return
         }
 
@@ -81,7 +96,7 @@ const ChannelTypeForm = ({ open, onClose, rowSelect }: ChannelTypeFormProps) => 
                         }
                     }
                 )
-                toast.success('Tipo de canal actualizado correctamente')
+                toast.success('Agente actualizado correctamente')
             } else {
                 // Crear
                 await axiosInstance.post(
@@ -94,13 +109,13 @@ const ChannelTypeForm = ({ open, onClose, rowSelect }: ChannelTypeFormProps) => 
                         }
                     }
                 )
-                toast.success('Tipo de canal creado correctamente')
+                toast.success('Agente creado correctamente')
             }
 
             onClose()
         } catch (error: any) {
             console.error('Error al guardar:', error)
-            setError(error.response?.data?.message || 'Error al guardar el tipo de canal')
+            setError(error.response?.data?.message || 'Error al guardar el agente')
         } finally {
             setLoading(false)
         }
@@ -109,7 +124,7 @@ const ChannelTypeForm = ({ open, onClose, rowSelect }: ChannelTypeFormProps) => 
     return (
         <Dialog open={open} onClose={onClose} maxWidth='md' fullWidth>
             <DialogTitle>
-                {formData.id ? 'Editar Tipo de Canal' : 'Nuevo Tipo de Canal'}
+                {formData.id ? 'Editar Agente (Chatbot)' : 'Nuevo Agente (Chatbot)'}
             </DialogTitle>
             <DialogContent>
                 <Grid container spacing={3} sx={{ mt: 1 }}>
@@ -122,10 +137,10 @@ const ChannelTypeForm = ({ open, onClose, rowSelect }: ChannelTypeFormProps) => 
                     <Grid item xs={12} sm={6}>
                         <TextField
                             fullWidth
-                            label='Nombre del Tipo'
-                            value={formData.typeName}
-                            onChange={e => handleChange('typeName', e.target.value)}
-                            placeholder='SALES, SUPPORT, SCHEDULING'
+                            label='Nombre del Agente'
+                            value={formData.name || formData.typeName}
+                            onChange={e => handleChange('name', e.target.value)}
+                            placeholder='Ej: Ventas, Soporte, IA'
                             required
                         />
                     </Grid>
@@ -150,19 +165,19 @@ const ChannelTypeForm = ({ open, onClose, rowSelect }: ChannelTypeFormProps) => 
                             onChange={e => handleChange('description', e.target.value)}
                             multiline
                             rows={3}
-                            placeholder='Describe este tipo de canal...'
+                            placeholder='Describe la función de este agente...'
                         />
                     </Grid>
 
                     <Grid item xs={12}>
                         <TextField
                             fullWidth
-                            label='URL del Webhook n8n'
-                            value={formData.webhookUrl}
-                            onChange={e => handleChange('webhookUrl', e.target.value)}
+                            label='URL del Webhook (n8n/Automation)'
+                            value={formData.webhook_url || formData.webhookUrl}
+                            onChange={e => handleChange('webhook_url', e.target.value)}
                             placeholder='https://autobot.cloudfly.com.co/webhook/...'
                             required
-                            helperText='Esta URL será asignada automáticamente cuando un tenant seleccione este tipo de canal'
+                            helperText='Esta URL procesará los mensajes entrantes asignados a este agente'
                         />
                     </Grid>
                 </Grid>
@@ -179,4 +194,4 @@ const ChannelTypeForm = ({ open, onClose, rowSelect }: ChannelTypeFormProps) => 
     )
 }
 
-export default ChannelTypeForm
+export default ChatbotTypeForm

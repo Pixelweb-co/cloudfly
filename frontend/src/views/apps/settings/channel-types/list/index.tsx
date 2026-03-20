@@ -4,13 +4,13 @@
 import Grid from '@mui/material/Grid'
 
 // Component Imports
-import ChannelTypesListTable from './ChannelTypesListTable'
+import ChatbotTypeList from './ChatbotTypeList'
 
 const ChannelTypeList = ({ tableData, reload }: any) => {
     return (
         <Grid container spacing={6}>
             <Grid item xs={12}>
-                <ChannelTypesListTable tableData={tableData} reload={reload} />
+                <ChatbotTypeList tableData={tableData} reload={reload} />
             </Grid>
         </Grid>
     )

@@ -90,7 +90,7 @@ const DebouncedInput = ({
 
 const columnHelper = createColumnHelper<ChannelTypeConfigWithAction>()
 
-const ChannelTypesListTable = ({ reload, tableData }: any) => {
+const ChatbotTypeList = ({ reload, tableData }: any) => {
     const [rowSelection, setRowSelection] = useState({})
     const [data, setData] = useState(tableData.sort((a: any, b: any) => b.id - a.id))
     const [filteredData, setFilteredData] = useState(data)
@@ -101,15 +101,15 @@ const ChannelTypesListTable = ({ reload, tableData }: any) => {
     const router = useRouter()
 
     const deleteItem = async (id: any) => {
-        if (!confirm('¿Estás seguro de eliminar este tipo de canal?')) return
+        if (!confirm('¿Estás seguro de eliminar este agente/chatbot?')) return
 
         try {
             await axiosInstance.delete(`${API_BASE_URL}/api/channel-types/${id}`)
-            toast.success('Tipo de canal eliminado correctamente')
+            toast.success('Agente eliminado correctamente')
             reload(true)
         } catch (error: any) {
             console.log('Error al eliminar:', error)
-            setErrorDeleteItem(error.response?.data?.message || 'Error al eliminar el tipo de canal')
+            setErrorDeleteItem(error.response?.data?.message || 'Error al eliminar el agente')
         }
     }
 
@@ -149,11 +149,11 @@ const ChannelTypesListTable = ({ reload, tableData }: any) => {
                 )
             },
 
-            columnHelper.accessor('typeName', {
-                header: 'Tipo',
+            columnHelper.accessor('typeName' as any, {
+                header: 'Nombre del Agente',
                 cell: ({ row }) => (
                     <Typography color='text.primary' className='font-medium'>
-                        {row.original.typeName}
+                        {row.original.name || row.original.typeName}
                     </Typography>
                 )
             }),
@@ -248,7 +248,7 @@ const ChannelTypesListTable = ({ reload, tableData }: any) => {
     return (
         <>
             <Card>
-                <CardHeader title='Tipos de Canales' className='pbe-4' />
+                <CardHeader title='Tipos de Chatbot (Agentes)' className='pbe-4' />
                 <div className='flex justify-between flex-col items-start md:flex-row md:items-center p-6 border-bs gap-4'>
                     <CustomTextField
                         select
@@ -275,8 +275,10 @@ const ChannelTypesListTable = ({ reload, tableData }: any) => {
                                     setLoadForm(true)
                                     setSelectedRow({
                                         id: undefined,
+                                        name: '',
                                         typeName: '',
                                         description: '',
+                                        webhook_url: '',
                                         webhookUrl: '',
                                         status: true
                                     })
@@ -285,7 +287,7 @@ const ChannelTypesListTable = ({ reload, tableData }: any) => {
                                 startIcon={<i className='tabler-plus' />}
                                 className='max-sm:is-full'
                             >
-                                Agregar Tipo
+                                Agregar Agente
                             </Button>
                         )}
                     </div>
@@ -370,7 +372,7 @@ const ChannelTypesListTable = ({ reload, tableData }: any) => {
 
             {errorDeleteItem && (
                 <ErrorDialog
-                    entitYName='Eliminar tipo de canal'
+                    entitYName='Eliminar chatbot'
                     open={errorDeleteItem}
                     error={errorDeleteItem}
                     setOpen={setErrorDeleteItem}
@@ -380,4 +382,4 @@ const ChannelTypesListTable = ({ reload, tableData }: any) => {
     )
 }
 
-export default ChannelTypesListTable
+export default ChatbotTypeList
