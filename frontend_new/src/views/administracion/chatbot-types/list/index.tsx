@@ -16,4 +16,4 @@ const ChannelTypeList = ({ channelTypeData, reload }: any) => {
     )
 }
 
-export default ChatbotTypeList
+export default ChannelTypeList

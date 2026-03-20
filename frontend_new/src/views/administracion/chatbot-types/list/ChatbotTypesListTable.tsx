@@ -105,15 +105,15 @@ const ChannelTypesListTable = ({ reload, tableData }: any) => {
     const router = useRouter()
 
     const deleteItem = async (id: any) => {
-        if (!confirm('¿Estás seguro de eliminar este tipo de canal?')) return
+        if (!confirm('¿Estás seguro de eliminar este agente/chatbot?')) return
 
         try {
             await axiosInstance.delete(`/api/channel-types/${id}`)
-            toast.success('Tipo de canal eliminado correctamente')
+            toast.success('Agente eliminado correctamente')
             reload(true)
         } catch (error: any) {
             console.log('Error al eliminar:', error)
-            setErrorDeleteItem(error.response?.data?.message || 'Error al eliminar el tipo de canal')
+            setErrorDeleteItem(error.response?.data?.message || 'Error al eliminar el agente')
         }
     }
 
@@ -153,11 +153,11 @@ const ChannelTypesListTable = ({ reload, tableData }: any) => {
                 )
             },
 
-            columnHelper.accessor('typeName', {
-                header: 'Tipo',
+            columnHelper.accessor('typeName' as any, {
+                header: 'Nombre del Agente',
                 cell: ({ row }) => (
                     <Typography color='text.primary' className='font-medium'>
-                        {row.original.typeName}
+                        {row.original.name || row.original.typeName}
                     </Typography>
                 )
             }),
@@ -254,7 +254,7 @@ const ChannelTypesListTable = ({ reload, tableData }: any) => {
     return (
         <>
             <Card>
-                <CardHeader title='Tipos de Canal' className='pbe-4' />
+                <CardHeader title='Tipos de Chatbot (Agentes)' className='pbe-4' />
                 <div className='flex justify-between flex-col items-start md:flex-row md:items-center p-6 border-bs gap-4'>
                     <CustomTextField
                         select
@@ -291,7 +291,7 @@ const ChannelTypesListTable = ({ reload, tableData }: any) => {
                                 startIcon={<i className='tabler-plus' />}
                                 className='max-sm:is-full'
                             >
-                                Agregar Tipo
+                                Agregar Agente
                             </Button>
                         )}
                     </div>
@@ -376,7 +376,7 @@ const ChannelTypesListTable = ({ reload, tableData }: any) => {
 
             {errorDeleteItem && (
                 <ErrorDialog
-                    entitYName='Eliminar tipo de canal'
+                    entitYName='Eliminar chatbot'
                     open={errorDeleteItem}
                     error={errorDeleteItem}
                     setOpen={setErrorDeleteItem}
