@@ -19,7 +19,7 @@ import {
   IconButton
 } from '@mui/material'
 import { pipelineService } from '@/services/marketing/pipelineService'
-import { getInitials } from '@/@core/utils/get-initials'
+import { getInitials } from '@/utils/getInitials'
 import QuickContactForm from './QuickContactForm'
 import { Icon } from '@iconify/react'
 
