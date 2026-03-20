@@ -1,7 +1,6 @@
-// This page was previously "Tipos de Chatbot" and is now "Tipos de Canal"
-// Maintained for backward compatibility 
-import ChannelTypesListTable from '@/views/apps/settings/channel-types/list/ChannelTypesListTable'
+// This page manages the AI Agents (Chatbot Types)
+import ChatbotTypeList from '@/views/apps/settings/channel-types/list/ChatbotTypeList'
 
 export default function TiposChatbotListPage() {
-  return <ChannelTypesListTable />
+  return <ChatbotTypeList tableData={[]} reload={() => {}} />
 }
