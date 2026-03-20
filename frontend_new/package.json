@@ -30,6 +30,7 @@
     "@fullcalendar/react": "6.1.15",
     "@fullcalendar/timegrid": "6.1.15",
     "@hookform/resolvers": "3.9.0",
+    "@iconify/react": "^6.0.2",
     "@mui/icons-material": "^6.2.0",
     "@mui/lab": "5.0.0-alpha.172",
     "@mui/material": "^6.2.0",
