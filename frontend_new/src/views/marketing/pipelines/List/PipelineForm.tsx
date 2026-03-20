@@ -16,8 +16,10 @@ import MenuItem from '@mui/material/MenuItem'
 import { useTheme } from '@mui/material/styles'
 
 // Third-party Imports
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { toast } from 'react-hot-toast'
+import { Icon } from '@iconify/react'
+import { IconButton, Typography, Divider } from '@mui/material'
 
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
@@ -42,15 +44,25 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Props)
     handleSubmit,
     reset,
     formState: { errors }
-  } = useForm({
+  } = useForm<CreatePipelineDto>({
     defaultValues: {
       name: '',
       description: '',
       color: '#6366F1',
       type: 'SALES',
       isActive: true,
-      isDefault: false
+      isDefault: false,
+      stages: [
+        { name: 'Lead', color: '#9CA3AF', order: 0 },
+        { name: 'En Proceso', color: '#3B82F6', order: 1 },
+        { name: 'Cerrado', color: '#10B981', order: 2 }
+      ]
     }
+  })
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'stages'
   })
 
   useEffect(() => {
@@ -170,29 +182,58 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Props)
                 )}
               />
             </Grid>
-            <Grid item xs={6}>
-              <Controller
-                name='isActive'
-                control={control}
-                render={({ field }) => (
-                  <FormControlLabel
-                    control={<Switch {...field} checked={field.value} onChange={e => field.onChange(e.target.checked)} id='pipeline-active' />}
-                    label='Activo'
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <Controller
-                name='isDefault'
-                control={control}
-                render={({ field }) => (
-                  <FormControlLabel
-                    control={<Switch {...field} checked={field.value} onChange={e => field.onChange(e.target.checked)} id='pipeline-default' />}
-                    label='Por defecto'
-                  />
-                )}
-              />
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <div className='flex items-center justify-between mb-2'>
+                <Typography variant='h6'>Etapas del Embudo</Typography>
+                <Button 
+                  size='small' 
+                  startIcon={<Icon icon='tabler:plus' />} 
+                  onClick={() => append({ name: '', color: '#9CA3AF', order: fields.length })}
+                  id='add-stage-btn'
+                >
+                  Agregar Etapa
+                </Button>
+              </div>
+              {fields.map((field, index) => (
+                <Grid container spacing={2} key={field.id} sx={{ mb: 2, alignItems: 'center' }}>
+                  <Grid item xs={8}>
+                    <Controller
+                      name={`stages.${index}.name`}
+                      control={control}
+                      rules={{ required: 'Obligatorio' }}
+                      render={({ field: stageField }) => (
+                        <CustomTextField
+                          {...stageField}
+                          fullWidth
+                          size='small'
+                          placeholder='Nombre de la etapa'
+                          error={!!(errors as any).stages?.[index]?.name}
+                        />
+                      )}
+                    />
+                  </Grid>
+                  <Grid item xs={2}>
+                    <Controller
+                      name={`stages.${index}.color`}
+                      control={control}
+                      render={({ field: colorField }) => (
+                        <CustomTextField
+                          {...colorField}
+                          fullWidth
+                          size='small'
+                          type='color'
+                        />
+                      )}
+                    />
+                  </Grid>
+                  <Grid item xs={2}>
+                    <IconButton color='error' onClick={() => remove(index)} disabled={fields.length <= 1}>
+                      <Icon icon='tabler:trash' />
+                    </IconButton>
+                  </Grid>
+                </Grid>
+              ))}
             </Grid>
           </Grid>
         </DialogContent>
