@@ -9,8 +9,8 @@ import {
   Chip
 } from '@mui/material'
 import type { PipelineKanbanCard as PipelineKanbanCardType } from '@/types/marketing/pipelineTypes'
-import { getInitials } from '@/@core/utils/get-initials'
-import CustomIcon from '@core/components/CustomIcon'
+import { getInitials } from '@/utils/getInitials'
+import { Icon } from '@iconify/react'
 
 interface Props {
   card: PipelineKanbanCardType
@@ -74,9 +74,9 @@ export default function PipelineKanbanCard({
             {isUpdating ? (
               <CircularProgress size={20} />
             ) : isError ? (
-              <CustomIcon icon="tabler:alert-circle" color="error" />
+              <Icon icon="tabler:alert-circle" color="error" />
             ) : (
-              <CustomIcon icon="tabler:dots-vertical" />
+              <Icon icon="tabler:dots-vertical" />
             )}
           </Box>
         </Box>
