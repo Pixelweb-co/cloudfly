@@ -1,90 +1,31 @@
-export type PipelineType = 'MARKETING' | 'SALES' | 'SUPPORT' | 'CUSTOM'
-export type PipelineStageOutcome = 'WON' | 'LOST' | 'OPEN'
-export type ConversationPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
-
-export interface PipelineStage {
+export interface Stage {
     id: number
     name: string
-    description?: string
-    color: string
-    position: number
-    isInitial: boolean
-    isFinal: boolean
-    outcome: PipelineStageOutcome
-    timeoutHours?: number
+    color?: string
+    order: number
+    pipelineId: number
 }
 
 export interface Pipeline {
     id: number
     name: string
     description?: string
-    type: PipelineType
-    color: string
-    icon?: string
+    color?: string
+    type: string
     isActive: boolean
     isDefault: boolean
-    displayOrder: number
-    stages: PipelineStage[]
+    customerId: number
+    companyId: number
     createdAt: string
+    updatedAt: string
+    stages?: Stage[]
 }
 
-export interface ConversationPipelineState {
-    id: number
-    conversationId: string
-    contactId?: number
-    pipelineId: number
-    pipelineName: string
-    currentStageId: number
-    currentStageName: string
-    stageColor: string
-    priority: ConversationPriority
-    enteredStageAt: string
-    isActive: boolean
-}
-
-export interface PipelineCreateRequest {
+export interface CreatePipelineDto {
     name: string
     description?: string
-    type: PipelineType
-    color: string
-    icon?: string
-    isDefault: boolean
-    displayOrder?: number
-    stages: PipelineStageCreateRequest[]
-}
-
-export interface PipelineStageCreateRequest {
-    name: string
-    description?: string
-    color: string
-    position: number
-    isInitial: boolean
-    isFinal: boolean
-    outcome: PipelineStageOutcome
-    timeoutHours?: number
-}
-
-export interface MoveConversationRequest {
-    contactId?: number
-    conversationId?: string
-    toStageId: number
-    reason?: string
-}
-
-export interface PipelineKanbanCard {
-    contactId?: number
-    name: string
-    avatarUrl?: string
-    conversationId: string
-    stage: string
-    priority: ConversationPriority
-}
-
-export type PipelineKanbanData = Record<string, PipelineKanbanCard[]>
-
-export interface PipelineMetrics {
-    totalPipelines: number
-    activePipelines: number
-    defaultPipelines: number
-    totalConversations: number
+    color?: string
+    type: string
+    isActive?: boolean
+    isDefault?: boolean
 }
