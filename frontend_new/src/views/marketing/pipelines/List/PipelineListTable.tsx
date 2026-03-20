@@ -1,307 +1,182 @@
 'use client'
 
-// React Imports
-import { useEffect, useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-
-// MUI Imports
-import Card from '@mui/material/Card'
-import CardHeader from '@mui/material/CardHeader'
-import Button from '@mui/material/Button'
-import Typography from '@mui/material/Typography'
-import IconButton from '@mui/material/IconButton'
-import Switch from '@mui/material/Switch'
-import TablePagination from '@mui/material/TablePagination'
-import MenuItem from '@mui/material/MenuItem'
-import Box from '@mui/material/Box'
-import Chip from '@mui/material/Chip'
-
-// Third-party Imports
-import classnames from 'classnames'
+import React, { useState, useEffect } from 'react'
 import {
-    createColumnHelper,
-    flexRender,
-    getCoreRowModel,
-    useReactTable,
-    getFilteredRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
-    type ColumnDef,
-    type FilterFn
-} from '@tanstack/react-table'
-import { rankItem } from '@tanstack/match-sorter-utils'
-import { toast } from 'react-hot-toast'
+  Box,
+  Card,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+  Chip,
+  IconButton,
+  Button,
+  LinearProgress
+} from '@mui/material'
+import { Icon } from '@iconify/react'
 import { format } from 'date-fns'
-
-// Component Imports
-import CustomTextField from '@core/components/mui/TextField'
-import TablePaginationComponent from '@/components/TablePaginationComponent'
-import ConfirmDialog from '@/components/dialogs/ConfirmDialog'
-import PipelineForm from './PipelineForm'
-
-// Style Imports
-import tableStyles from '@core/styles/table.module.css'
-
-// Type & Service Imports
-import type { Pipeline } from '@/types/marketing/pipelineTypes'
 import { pipelineService } from '@/services/marketing/pipelineService'
+import { Pipeline } from '@/types/marketing/pipelineTypes'
+import { useRouter } from 'next/navigation'
+import PipelineFormDialog from './PipelineFormDialog'
 
-const fuzzyFilter: FilterFn<any> = (row, columnId, value, addMeta) => {
-    const itemRank = rankItem(row.getValue(columnId), value)
-    addMeta({ itemRank })
-    return itemRank.passed
-}
+export default function PipelineListTable() {
+  const [pipelines, setPipelines] = useState<Pipeline[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  
+  const router = useRouter()
 
-const columnHelper = createColumnHelper<Pipeline>()
+  useEffect(() => {
+    loadPipelines()
+  }, [])
 
-const PipelineListTable = () => {
-    const router = useRouter()
-
-    const [data, setData] = useState<Pipeline[]>([])
-    const [globalFilter, setGlobalFilter] = useState('')
-    const [isLoading, setIsLoading] = useState(true)
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-    const [pipelineToDelete, setPipelineToDelete] = useState<number | null>(null)
-    const [formOpen, setFormOpen] = useState(false)
-    const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null)
-
-    const fetchData = async () => {
-        try {
-            setIsLoading(true)
-            const pipelines = await pipelineService.getAllPipelines()
-            setData(pipelines)
-        } catch (error) {
-            console.error('Error fetching pipelines:', error)
-            toast.error('Error al cargar pipelines')
-        } finally {
-            setIsLoading(false)
-        }
+  const loadPipelines = async () => {
+    try {
+      setLoading(true)
+      const data = await pipelineService.getAllPipelines()
+      setPipelines(data)
+    } catch (e) {
+      console.error('Error al cargar pipelines:', e)
+    } finally {
+      setLoading(false)
     }
+  }
 
-    useEffect(() => {
-        fetchData()
-    }, [])
+  const handleEdit = (pipeline: Pipeline) => {
+    setSelectedPipeline(pipeline)
+    setIsDialogOpen(true)
+  }
 
-    const handleDeleteClick = (id: number) => {
-        setPipelineToDelete(id)
-        setDeleteDialogOpen(true)
+  const handleAdd = () => {
+    setSelectedPipeline(null)
+    setIsDialogOpen(true)
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('¿Seguro de eliminar este pipeline?')) return
+    try {
+      await pipelineService.deletePipeline(id)
+      await loadPipelines()
+    } catch (e) {
+      console.error('Error al eliminar pipeline:', e)
     }
+  }
 
-    const handleDeleteConfirm = async () => {
-        if (pipelineToDelete === null) return
-        try {
-            await pipelineService.deletePipeline(pipelineToDelete)
-            toast.success('Pipeline eliminado exitosamente')
-            setDeleteDialogOpen(false)
-            setPipelineToDelete(null)
-            fetchData()
-        } catch (error) {
-            console.error('Error deleting pipeline:', error)
-            toast.error('Error al eliminar pipeline')
-            setDeleteDialogOpen(false)
-        }
-    }
-
-    const handleToggleStatus = async (id: number) => {
-        try {
-            await pipelineService.toggleStatus(id)
-            toast.success('Estado actualizado')
-            fetchData()
-        } catch (error) {
-            console.error('Error toggling status:', error)
-            toast.error('Error al actualizar estado')
-        }
-    }
-
-    const handleEdit = (pipeline: Pipeline) => {
-        setSelectedPipeline(pipeline)
-        setFormOpen(true)
-    }
-
-    const handleCreate = () => {
-        setSelectedPipeline(null)
-        setFormOpen(true)
-    }
-
-    const columns = useMemo<ColumnDef<Pipeline, any>[]>(
-        () => [
-            columnHelper.accessor('name', {
-                header: 'Nombre',
-                cell: ({ row }) => (
-                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: row.original.color || '#6366F1' }} />
-                            <Typography color='text.primary' className='font-medium'>
-                                {row.original.name}
-                            </Typography>
-                            {row.original.isDefault && <Chip label='Default' size='small' color='primary' variant='outlined' />}
-                        </Box>
-                        <Typography variant='body2' color='text.secondary' className='truncate max-w-xs'>
-                            {row.original.description}
+  return (
+    <Card>
+      <Box sx={{ p: 5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h5">Embudos de Marketing</Typography>
+        <Button 
+          variant="contained" 
+          onClick={handleAdd} 
+          startIcon={<Icon icon="tabler:plus" />}
+        >
+          Nuevo Embudo
+        </Button>
+      </Box>
+      
+      {loading && <LinearProgress />}
+      
+      <TableContainer>
+        <Table sx={{ minWidth: 650 }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>Nombre</TableCell>
+              <TableCell>Tipo</TableCell>
+              <TableCell>Etapas</TableCell>
+              <TableCell>Estado</TableCell>
+              <TableCell>Creado</TableCell>
+              <TableCell align="right">Acciones</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {!loading && pipelines.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 10 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    No hay embudos registrados
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              pipelines.map((pipeline) => (
+                <TableRow key={pipeline.id} hover>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: pipeline.color || 'primary.main' }} />
+                      <Box>
+                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                          {pipeline.name}
                         </Typography>
+                        {pipeline.isDefault && (
+                          <Chip label="Por Defecto" size="small" color="primary" variant="outlined" sx={{ height: 20 }} />
+                        )}
+                      </Box>
                     </Box>
-                )
-            }),
-            columnHelper.accessor('type', {
-                header: 'Tipo',
-                cell: ({ row }) => <Typography>{row.original.type}</Typography>
-            }),
-            columnHelper.accessor('isActive', {
-                header: 'Estado',
-                cell: ({ row }) => (
-                    <Switch
-                        checked={row.original.isActive}
-                        onChange={() => handleToggleStatus(row.original.id)}
-                    />
-                )
-            }),
-            columnHelper.accessor('createdAt', {
-                header: 'Creado',
-                cell: ({ row }) => <Typography>{format(new Date(row.original.createdAt), 'dd/MM/yyyy')}</Typography>
-            }),
-            columnHelper.display({
-                id: 'actions',
-                header: 'Acciones',
-                cell: ({ row }) => (
-                    <div className='flex items-center'>
-                        <IconButton onClick={() => router.push(`/marketing/pipelines/kanban?id=${row.original.id}`)} title='Ver Kanban'>
-                            <i className='tabler-layout-kanban text-textSecondary' />
-                        </IconButton>
-                        <IconButton onClick={() => handleEdit(row.original)} title='Editar'>
-                            <i className='tabler-edit text-textSecondary' />
-                        </IconButton>
-                        <IconButton onClick={() => handleDeleteClick(row.original.id)} title='Eliminar'>
-                            <i className='tabler-trash text-textSecondary' />
-                        </IconButton>
-                    </div>
-                )
-            })
-        ],
-        []
-    )
-
-    const table = useReactTable({
-        data,
-        columns,
-        filterFns: { fuzzy: fuzzyFilter },
-        state: { globalFilter },
-        getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
-        onGlobalFilterChange: setGlobalFilter,
-        globalFilterFn: fuzzyFilter,
-        initialState: { pagination: { pageSize: 10 } }
-    })
-
-    return (
-        <Card>
-            <CardHeader title='Embudos (Pipelines) de Marketing' className='pbe-4' />
-            <div className='flex justify-between flex-col items-start md:flex-row md:items-center p-6 border-bs gap-4'>
-                <CustomTextField
-                    select
-                    value={table.getState().pagination.pageSize}
-                    onChange={e => table.setPageSize(Number(e.target.value))}
-                    className='max-sm:is-full sm:is-[70px]'
-                >
-                    <MenuItem value='10'>10</MenuItem>
-                    <MenuItem value='25'>25</MenuItem>
-                    <MenuItem value='50'>50</MenuItem>
-                </CustomTextField>
-                <div className='flex flex-col sm:flex-row max-sm:is-full items-start sm:items-center gap-4'>
-                    <CustomTextField
-                        value={globalFilter ?? ''}
-                        onChange={e => setGlobalFilter(e.target.value)}
-                        placeholder='Buscar...'
-                        className='max-sm:is-full'
-                    />
-                    <Button
-                        variant='contained'
-                        startIcon={<i className='tabler-plus' />}
-                        onClick={handleCreate}
-                        className='max-sm:is-full'
-                    >
-                        Nuevo Embudo
-                    </Button>
-                </div>
-            </div>
-            <div className='overflow-x-auto'>
-                <table className={tableStyles.table}>
-                    <thead>
-                        {table.getHeaderGroups().map(headerGroup => (
-                            <tr key={headerGroup.id}>
-                                {headerGroup.headers.map(header => (
-                                    <th key={header.id}>
-                                        {header.isPlaceholder ? null : (
-                                            <div
-                                                className={classnames({
-                                                    'flex items-center': header.column.getIsSorted(),
-                                                    'cursor-pointer select-none': header.column.getCanSort()
-                                                })}
-                                                onClick={header.column.getToggleSortingHandler()}
-                                            >
-                                                {flexRender(header.column.columnDef.header, header.getContext())}
-                                                {{
-                                                    asc: <i className='tabler-chevron-up text-xl' />,
-                                                    desc: <i className='tabler-chevron-down text-xl' />
-                                                }[header.column.getIsSorted() as 'asc' | 'desc'] ?? null}
-                                            </div>
-                                        )}
-                                    </th>
-                                ))}
-                            </tr>
-                        ))}
-                    </thead>
-                    {table.getFilteredRowModel().rows.length === 0 ? (
-                        <tbody>
-                            <tr>
-                                <td colSpan={table.getVisibleFlatColumns().length} className='text-center p-4'>
-                                    {isLoading ? 'Cargando...' : 'No se encontraron embudos'}
-                                </td>
-                            </tr>
-                        </tbody>
-                    ) : (
-                        <tbody>
-                            {table.getRowModel().rows.map(row => (
-                                <tr key={row.id}>
-                                    {row.getVisibleCells().map(cell => (
-                                        <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
+                    {pipeline.description && (
+                      <Typography variant="caption" color="text.disabled">
+                        {pipeline.description}
+                      </Typography>
                     )}
-                </table>
-            </div>
-            <TablePagination
-                component={() => <TablePaginationComponent table={table} />}
-                count={table.getFilteredRowModel().rows.length}
-                rowsPerPage={table.getState().pagination.pageSize}
-                page={table.getState().pagination.pageIndex}
-                onPageChange={(_, page) => table.setPageIndex(page)}
-            />
-
-            <ConfirmDialog
-                open={deleteDialogOpen}
-                title='Eliminar Pipeline'
-                message='¿Estás seguro de que deseas eliminar este embudo? Esta acción no se puede deshacer.'
-                confirmText='Eliminar'
-                cancelText='Cancelar'
-                confirmColor='error'
-                onConfirm={handleDeleteConfirm}
-                onCancel={() => setDeleteDialogOpen(false)}
-            />
-
-            {formOpen && (
-                <PipelineForm
-                    open={formOpen}
-                    handleClose={() => setFormOpen(false)}
-                    selectedPipeline={selectedPipeline}
-                    onSuccess={fetchData}
-                />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                        {pipeline.type.toLowerCase()}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip 
+                        label={`${pipeline.stages?.length || 0} etapas`} 
+                        size="small" 
+                        variant="tonal" 
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={pipeline.isActive ? 'Activo' : 'Inactivo'} 
+                      color={pipeline.isActive ? 'success' : 'secondary'} 
+                      size="small" 
+                      variant="tonal"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                        {format(new Date(pipeline.createdAt), 'dd/MM/yyyy')}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton 
+                        onClick={() => router.push(`/marketing/pipelines/kanban?id=${pipeline.id}`)} 
+                        color="primary" 
+                        title="Ver Kanban"
+                    >
+                      <Icon icon="tabler:layout-kanban" />
+                    </IconButton>
+                    <IconButton onClick={() => handleEdit(pipeline)} color="info" title="Editar">
+                      <Icon icon="tabler:edit" />
+                    </IconButton>
+                    <IconButton onClick={() => handleDelete(pipeline.id)} color="error" title="Eliminar">
+                      <Icon icon="tabler:trash" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))
             )}
-        </Card>
-    )
-}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-export default PipelineListTable
+      <PipelineFormDialog 
+        open={isDialogOpen} 
+        onClose={() => setIsDialogOpen(false)} 
+        pipeline={selectedPipeline}
+        onSuccess={loadPipelines}
+      />
+    </Card>
+  )
+}
