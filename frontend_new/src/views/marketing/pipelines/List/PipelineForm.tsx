@@ -19,7 +19,10 @@ import { useTheme } from '@mui/material/styles'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { toast } from 'react-hot-toast'
 import { Icon } from '@iconify/react'
-import { IconButton, Typography, Divider } from '@mui/material'
+import { IconButton, Typography, Divider, Box, alpha } from '@mui/material'
+import * as yup from 'yup'
+import { yupResolver } from '@hookform/resolvers/yup'
+import { motion, AnimatePresence } from 'framer-motion'
 
 // Component Imports
 import CustomTextField from '@core/components/mui/TextField'
@@ -35,6 +38,24 @@ interface Props {
   onSuccess: () => void
 }
 
+const validationSchema = yup.object().shape({
+  name: yup.string().required('El nombre del embudo es obligatorio').min(3, 'Mínimo 3 caracteres'),
+  description: yup.string().optional(),
+  type: yup.string().required('El tipo es obligatorio'),
+  color: yup.string().required('El color es obligatorio'),
+  isActive: yup.boolean().required(),
+  isDefault: yup.boolean().required(),
+  stages: yup.array().of(
+    yup.object().shape({
+      name: yup.string().required('Nombre de etapa requerido'),
+      color: yup.string().required(),
+      order: yup.number().required()
+    })
+  ).min(1, 'Debe haber al menos una etapa')
+})
+
+type PipelineFormData = yup.InferType<typeof validationSchema>
+
 const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Props) => {
   const [loading, setLoading] = useState(false)
   const theme = useTheme()
@@ -44,7 +65,8 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Props)
     handleSubmit,
     reset,
     formState: { errors }
-  } = useForm<CreatePipelineDto>({
+  } = useForm<PipelineFormData>({
+    resolver: yupResolver(validationSchema) as any,
     defaultValues: {
       name: '',
       description: '',
@@ -108,8 +130,25 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Props)
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth='sm' fullWidth>
-      <DialogTitle>{selectedPipeline ? 'Editar Embudo' : 'Nuevo Embudo'}</DialogTitle>
+  return (
+    <Dialog 
+      open={open} 
+      onClose={handleClose} 
+      maxWidth='sm' 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: '20px',
+          background: alpha(theme.palette.background.paper, 0.8),
+          backdropFilter: 'blur(12px)',
+          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)'
+        }
+      }}
+    >
+      <DialogTitle sx={{ fontWeight: 700, p: 6, pb: 2 }}>
+        {selectedPipeline ? 'Editar Embudo' : 'Nuevo Embudo'}
+      </DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
           <Grid container spacing={5}>
@@ -117,7 +156,6 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Props)
               <Controller
                 name='name'
                 control={control}
-                rules={{ required: 'El nombre es obligatorio' }}
                 render={({ field }) => (
                   <CustomTextField
                     {...field}
@@ -127,6 +165,15 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Props)
                     error={!!errors.name}
                     helperText={errors.name?.message}
                     id='pipeline-name'
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '12px',
+                        transition: 'all 0.3s ease-in-out',
+                        '&:hover': {
+                          boxShadow: `0 0 10px ${alpha(theme.palette.primary.main, 0.2)}`
+                        }
+                      }
+                    }}
                   />
                 )}
               />
@@ -184,64 +231,104 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Props)
             </Grid>
             <Grid item xs={12}>
               <Divider sx={{ my: 2 }} />
-              <div className='flex items-center justify-between mb-2'>
-                <Typography variant='h6'>Etapas del Embudo</Typography>
+              <div className='flex items-center justify-between mb-4'>
+                <Typography variant='h6' sx={{ fontWeight: 600 }}>Etapas del Embudo</Typography>
                 <Button 
                   size='small' 
+                  variant='tonal'
                   startIcon={<Icon icon='tabler:plus' />} 
                   onClick={() => append({ name: '', color: '#9CA3AF', order: fields.length })}
                   id='add-stage-btn'
+                  sx={{ borderRadius: '8px' }}
                 >
                   Agregar Etapa
                 </Button>
               </div>
-              {fields.map((field, index) => (
-                <Grid container spacing={2} key={field.id} sx={{ mb: 2, alignItems: 'center' }}>
-                  <Grid item xs={8}>
-                    <Controller
-                      name={`stages.${index}.name`}
-                      control={control}
-                      rules={{ required: 'Obligatorio' }}
-                      render={({ field: stageField }) => (
-                        <CustomTextField
-                          {...stageField}
-                          fullWidth
-                          size='small'
-                          placeholder='Nombre de la etapa'
-                          error={!!(errors as any).stages?.[index]?.name}
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={2}>
-                    <Controller
-                      name={`stages.${index}.color`}
-                      control={control}
-                      render={({ field: colorField }) => (
-                        <CustomTextField
-                          {...colorField}
-                          fullWidth
-                          size='small'
-                          type='color'
-                        />
-                      )}
-                    />
-                  </Grid>
-                  <Grid item xs={2}>
-                    <IconButton color='error' onClick={() => remove(index)} disabled={fields.length <= 1}>
-                      <Icon icon='tabler:trash' />
-                    </IconButton>
-                  </Grid>
-                </Grid>
-              ))}
+              <Box sx={{ minHeight: 100 }}>
+                <AnimatePresence>
+                  {fields.map((field, index) => (
+                    <motion.div
+                      key={field.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Grid container spacing={4} sx={{ mb: 4, alignItems: 'center' }}>
+                        <Grid item xs={8}>
+                          <Controller
+                            name={`stages.${index}.name`}
+                            control={control}
+                            render={({ field: stageField }) => (
+                              <CustomTextField
+                                {...stageField}
+                                fullWidth
+                                size='small'
+                                placeholder='Nombre de la etapa'
+                                error={!!errors.stages?.[index]?.name}
+                                helperText={errors.stages?.[index]?.name?.message}
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                              />
+                            )}
+                          />
+                        </Grid>
+                        <Grid item xs={2}>
+                          <Controller
+                            name={`stages.${index}.color`}
+                            control={control}
+                            render={({ field: colorField }) => (
+                              <Box sx={{ 
+                                position: 'relative', 
+                                '& input::-webkit-color-swatch-wrapper': { p: 0 },
+                                '& input::-webkit-color-swatch': { border: 'none', borderRadius: '8px' }
+                              }}>
+                                <CustomTextField
+                                  {...colorField}
+                                  fullWidth
+                                  size='small'
+                                  type='color'
+                                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px', overflow: 'hidden' } }}
+                                />
+                              </Box>
+                            )}
+                          />
+                        </Grid>
+                        <Grid item xs={2}>
+                          <IconButton 
+                            color='error' 
+                            onClick={() => remove(index)} 
+                            disabled={fields.length <= 1}
+                            sx={{ backgroundColor: alpha(theme.palette.error.main, 0.08), '&:hover': { backgroundColor: alpha(theme.palette.error.main, 0.15) } }}
+                          >
+                            <Icon icon='tabler:trash' />
+                          </IconButton>
+                        </Grid>
+                      </Grid>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </Box>
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} variant='outlined' color='secondary'>
+        <DialogActions sx={{ p: 6, pt: 2 }}>
+          <Button onClick={handleClose} variant='outlined' color='secondary' sx={{ borderRadius: '10px' }}>
             Cancelar
           </Button>
-          <Button type='submit' variant='contained' disabled={loading} id='pipeline-submit'>
+          <Button 
+            type='submit' 
+            variant='contained' 
+            disabled={loading} 
+            id='pipeline-submit'
+            sx={{ 
+              borderRadius: '10px',
+              background: `linear-gradient(270deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.light} 100%)`,
+              '&:hover': {
+                background: `linear-gradient(270deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+                boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.4)}`
+              }
+            }}
+          >
             {loading ? 'Guardando...' : 'Guardar'}
           </Button>
         </DialogActions>
