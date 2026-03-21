@@ -3,16 +3,18 @@ package com.app.controllers;
 import com.app.dto.PipelineCreateRequest;
 import com.app.dto.PipelineDto;
 import com.app.persistence.services.PipelineService;
+import com.app.persistence.services.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.Map;
-
+@Slf4j
 @RestController
 @RequestMapping("/api/pipelines")
 @RequiredArgsConstructor
@@ -20,57 +22,55 @@ import java.util.Map;
 public class PipelineController {
 
     private final PipelineService pipelineService;
+    private final UserService userService;
+
+    private Mono<Long> getCurrentTenantId() {
+        return ReactiveSecurityContextHolder.getContext()
+                .map(SecurityContext::getAuthentication)
+                .flatMap(auth -> userService.findByUsername(auth.getName()))
+                .map(user -> user.getCustomerId());
+    }
+
+    private Mono<com.app.persistence.entity.UserEntity> getCurrentUser() {
+        return ReactiveSecurityContextHolder.getContext()
+                .map(SecurityContext::getAuthentication)
+                .flatMap(auth -> userService.findByUsername(auth.getName()));
+    }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
-    public Flux<PipelineDto> getAllPipelines(Authentication authentication) {
-        Long tenantId = getTenantId(authentication);
-        return pipelineService.getAllPipelines(tenantId);
+    public Flux<PipelineDto> getAllPipelines() {
+        return getCurrentTenantId()
+                .flatMapMany(pipelineService::getAllPipelines);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
-    public Mono<PipelineDto> getPipelineById(@PathVariable Long id, Authentication authentication) {
-        Long tenantId = getTenantId(authentication);
-        return pipelineService.getPipelineById(tenantId, id);
+    public Mono<PipelineDto> getPipelineById(@PathVariable Long id) {
+        return getCurrentTenantId()
+                .flatMap(tenantId -> pipelineService.getPipelineById(tenantId, id));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN')")
-    public Mono<PipelineDto> createPipeline(@RequestBody PipelineCreateRequest request, Authentication authentication) {
-        Long tenantId = getTenantId(authentication);
-        Long userId = 1L; // Mock for now, similar to legacy
-        return pipelineService.createPipeline(tenantId, userId, request);
+    public Mono<PipelineDto> createPipeline(@RequestBody PipelineCreateRequest request) {
+        return getCurrentUser()
+                .flatMap(user -> pipelineService.createPipeline(user.getCustomerId(), user.getId(), request));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN')")
-    public Mono<PipelineDto> updatePipeline(@PathVariable Long id, @RequestBody PipelineCreateRequest request, Authentication authentication) {
-        Long tenantId = getTenantId(authentication);
-        return pipelineService.updatePipeline(tenantId, id, request);
+    public Mono<PipelineDto> updatePipeline(@PathVariable Long id, @RequestBody PipelineCreateRequest request) {
+        return getCurrentTenantId()
+                .flatMap(tenantId -> pipelineService.updatePipeline(tenantId, id, request));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN')")
-    public Mono<Void> deletePipeline(@PathVariable Long id, Authentication authentication) {
-        Long tenantId = getTenantId(authentication);
-        return pipelineService.deletePipeline(tenantId, id);
-    }
-
-    private Long getTenantId(Authentication authentication) {
-        if (authentication == null) return 1L;
-        Object details = authentication.getDetails();
-        if (details instanceof Map) {
-            Map<String, Object> detailsMap = (Map<String, Object>) details;
-            if (detailsMap.containsKey("customer_id")) {
-                Object customerId = detailsMap.get("customer_id");
-                if (customerId instanceof Number) {
-                    return ((Number) customerId).longValue();
-                }
-            }
-        }
-        return 1L;
+    public Mono<Void> deletePipeline(@PathVariable Long id) {
+        return getCurrentTenantId()
+                .flatMap(tenantId -> pipelineService.deletePipeline(tenantId, id));
     }
 }
