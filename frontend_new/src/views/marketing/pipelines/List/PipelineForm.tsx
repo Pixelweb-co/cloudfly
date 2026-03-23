@@ -26,7 +26,7 @@ import { HexColorPicker } from 'react-colorful'
 import { motion, AnimatePresence } from 'framer-motion'
 import axiosInstance from '@/utils/axiosInstance'
 import CustomTextField from '@core/components/mui/TextField'
-import Icon from '@core/components/icon'
+import { Icon } from '@iconify/react'
 import toast from 'react-hot-toast'
 import React from 'react'
 
