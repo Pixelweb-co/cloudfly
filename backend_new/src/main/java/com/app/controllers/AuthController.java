@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -32,7 +32,7 @@ public class AuthController {
         private final JwtProvider jwtProvider;
         private final UserService userService;
 
-        @PostMapping("/login")
+        @PostMapping({"/login", "/auth/login"})
         public Mono<AuthResponse> login(@RequestBody @Valid LoginRequest loginRequest) {
                 return authenticationManager.authenticate(
                                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
@@ -137,5 +137,27 @@ public class AuthController {
                                                 .message(available ? "Correo electrónico disponible"
                                                                 : "El correo electrónico ya está en uso")
                                                 .build());
+        }
+
+        @PostMapping({"/forgot-password", "/auth/forgot-password"})
+        public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestBody Map<String, String> request) {
+                return userService.forgotPassword(request.get("email"))
+                                .then(Mono.just(org.springframework.http.ResponseEntity.ok("Correo de restablecimiento enviado.")))
+                                .onErrorResume(e -> Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage())));
+        }
+
+        @PostMapping({"/reset-password" , "/auth/reset-password"})
+        public Mono<org.springframework.http.ResponseEntity<String>> resetPassword(@RequestBody Map<String, String> request) {
+                return userService.resetPassword(request.get("token"), request.get("newPassword"))
+                                .then(Mono.just(org.springframework.http.ResponseEntity.ok("Contraseña restablecida exitosamente.")))
+                                .onErrorResume(e -> Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage())));
+        }
+
+        @GetMapping({"/session", "/auth/session"})
+        public Mono<org.springframework.http.ResponseEntity<UserDto>> getSession() {
+                return userService.getCurrentUser()
+                                .flatMap(user -> userService.convertToDto(user))
+                                .map(org.springframework.http.ResponseEntity::ok)
+                                .defaultIfEmpty(org.springframework.http.ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
         }
 }

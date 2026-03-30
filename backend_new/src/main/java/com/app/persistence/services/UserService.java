@@ -192,6 +192,34 @@ public class UserService {
         }
 
         public Mono<UserEntity> findByUsername(String username) {
-                return userRepository.findByUsername(username);
-        }
+        return userRepository.findByUsername(username);
+    }
+
+    public Mono<Void> forgotPassword(String email) {
+        return userRepository.findByEmail(email)
+                .flatMap(user -> {
+                    user.setRecoveryToken(UUID.randomUUID().toString());
+                    return userRepository.save(user)
+                            .flatMap(savedUser -> {
+                                String resetLink = "https://dashboard.cloudfly.com.co/reset-password/" + savedUser.getRecoveryToken();
+                                return kafkaTemplate.send("email-notifications", Map.of(
+                                        "to", savedUser.getEmail(),
+                                        "subject", "🔐 Recuperación de Contraseña - CloudFly",
+                                        "body", resetLink,
+                                        "type", "recover-password",
+                                        "username", savedUser.getUsername()
+                                )).then();
+                            });
+                });
+    }
+
+    public Mono<Void> resetPassword(String token, String newPassword) {
+        return userRepository.findByRecoveryToken(token)
+                .switchIfEmpty(Mono.error(new RuntimeException("Token inválido o expirado.")))
+                .flatMap(user -> {
+                    user.setPassword(passwordEncoder.encode(newPassword));
+                    user.setRecoveryToken(null);
+                    return userRepository.save(user).then();
+                });
+    }
 }

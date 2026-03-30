@@ -28,7 +28,17 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/auth/**").permitAll()
+                        .pathMatchers(
+                                "/auth/**", 
+                                "/login", 
+                                "/register", 
+                                "/verify", 
+                                "/forgot-password", 
+                                "/reset-password",
+                                "/validate-account",
+                                "/validate-username",
+                                "/validate-email"
+                        ).permitAll()
                         .pathMatchers("/productos/**").authenticated()
                         .anyExchange().authenticated())
                 .addFilterAt(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)
