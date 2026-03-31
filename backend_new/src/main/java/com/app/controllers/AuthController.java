@@ -150,33 +150,35 @@ public class AuthController {
         }
 
         @PostMapping({"/forgot-password", "/auth/forgot-password"})
-        public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestBody Map<String, String> request) {
-                String email = request.get("email");
-                log.info("📧 Password recovery requested for: {}", email);
-                if (email == null) {
+        public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestBody com.app.dto.ForgotPasswordRequest request) {
+                log.info("📧 [AUTH-CONTROLLER] Method START: forgotPassword - Email: {}", request != null ? request.getEmail() : "NULL");
+                if (request == null || request.getEmail() == null) {
                         return Mono.just(org.springframework.http.ResponseEntity.badRequest().body("Email no proporcionado."));
                 }
-                return userService.forgotPassword(email)
+                return userService.forgotPassword(request.getEmail())
                                 .then(Mono.defer(() -> {
-                                        log.info("✅ Password recovery process completed for: {}", email);
+                                        log.info("✅ [AUTH-CONTROLLER] Method SUCCESS: forgotPassword - Email: {}", request.getEmail());
                                         return Mono.just(org.springframework.http.ResponseEntity.ok("Correo de restablecimiento enviado."));
                                 }))
                                 .onErrorResume(e -> {
-                                        log.error("❌ Exception in forgotPassword: {}", e.getMessage(), e);
+                                        log.error("❌ [AUTH-CONTROLLER] Method ERROR: forgotPassword - Error: {}", e.getMessage());
                                         return Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage()));
                                 });
         }
 
         @PostMapping({"/reset-password", "/auth/reset-password"})
-        public Mono<org.springframework.http.ResponseEntity<String>> resetPassword(@RequestBody Map<String, String> request) {
-                log.info("🔑 Password reset attempt for token: {}", request.get("token"));
-                return userService.resetPassword(request.get("token"), request.get("newPassword"))
+        public Mono<org.springframework.http.ResponseEntity<String>> resetPassword(@RequestBody com.app.dto.ResetPasswordRequest request) {
+                log.info("🔑 [AUTH-CONTROLLER] Method START: resetPassword - Token: {}", request != null ? request.getToken() : "NULL");
+                if (request == null || request.getToken() == null || request.getNewPassword() == null) {
+                        return Mono.just(org.springframework.http.ResponseEntity.badRequest().body("Token o contraseña no proporcionados."));
+                }
+                return userService.resetPassword(request.getToken(), request.getNewPassword())
                                 .then(Mono.defer(() -> {
-                                        log.info("✅ Password reset successful for token: {}", request.get("token"));
+                                        log.info("✅ [AUTH-CONTROLLER] Method SUCCESS: resetPassword - Token: {}", request.getToken());
                                         return Mono.just(org.springframework.http.ResponseEntity.ok("Contraseña restablecida exitosamente."));
                                 }))
                                 .onErrorResume(e -> {
-                                        log.error("❌ Exception in resetPassword: {}", e.getMessage(), e);
+                                        log.error("❌ [AUTH-CONTROLLER] Method ERROR: resetPassword - Error: {}", e.getMessage());
                                         return Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage()));
                                 });
         }
