@@ -33,6 +33,15 @@ public class SecurityConfig {
     }
 
     @Bean
+    public org.springframework.security.authentication.ReactiveAuthenticationManager authenticationManager(org.springframework.security.core.userdetails.ReactiveUserDetailsService userDetailsService,
+            org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
+        log.info("🛡️ [SECURITY-CONFIG] Initializing ReactiveAuthenticationManager...");
+        org.springframework.security.authentication.UserDetailsRepositoryReactiveAuthenticationManager authManager = new org.springframework.security.authentication.UserDetailsRepositoryReactiveAuthenticationManager(userDetailsService);
+        authManager.setPasswordEncoder(passwordEncoder);
+        return authManager;
+    }
+
+    @Bean
     public org.springframework.security.crypto.password.PasswordEncoder passwordEncoder() {
         return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
     }
