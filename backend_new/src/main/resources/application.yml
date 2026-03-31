@@ -19,8 +19,10 @@ server:
 logging:
   level:
     root: INFO
+    com.app: DEBUG
     org.springframework.data.r2dbc: DEBUG
     io.asyncer.r2dbc.mysql: DEBUG
+    org.springframework.security: DEBUG
 
 jwt:
   secret: ${JWT_SECRET:cloudfly-production-secret-998877}
