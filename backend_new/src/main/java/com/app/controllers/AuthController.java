@@ -150,14 +150,14 @@ public class AuthController {
         }
 
         @PostMapping({"/forgot-password", "/auth/forgot-password"})
-        public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestParam String email) {
-                log.info("📧 [AUTH-CONTROLLER] Method START: forgotPassword (RequestParam) - Email: {}", email);
-                if (email == null || email.isEmpty()) {
+        public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestBody com.app.dto.ForgotPasswordRequest request) {
+                log.info("📧 [AUTH-CONTROLLER] Method START: forgotPassword (@RequestBody) - Email: {}", request != null ? request.getEmail() : "NULL");
+                if (request == null || request.getEmail() == null) {
                         return Mono.just(org.springframework.http.ResponseEntity.badRequest().body("Email no proporcionado."));
                 }
-                return userService.forgotPassword(email)
+                return userService.forgotPassword(request.getEmail())
                                 .then(Mono.defer(() -> {
-                                        log.info("✅ [AUTH-CONTROLLER] Method SUCCESS: forgotPassword - Email: {}", email);
+                                        log.info("✅ [AUTH-CONTROLLER] Method SUCCESS: forgotPassword - Email: {}", request.getEmail());
                                         return Mono.just(org.springframework.http.ResponseEntity.ok("Correo de restablecimiento enviado."));
                                 }))
                                 .onErrorResume(e -> {

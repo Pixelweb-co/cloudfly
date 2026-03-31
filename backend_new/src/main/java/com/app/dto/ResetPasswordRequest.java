@@ -1,7 +1,11 @@
 package com.app.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class ResetPasswordRequest {
+    @JsonProperty("token")
     private String token;
+    @JsonProperty("newPassword")
     private String newPassword;
 
     public ResetPasswordRequest() {}
