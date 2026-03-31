@@ -5,7 +5,8 @@ import com.app.dto.UserDto;
 import com.app.persistence.entity.TenantEntity;
 import com.app.persistence.entity.*;
 import com.app.persistence.repository.*;
-import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,9 +21,9 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class UserService {
 
+        private static final Logger log = LoggerFactory.getLogger(UserService.class);
         private final UserRepository userRepository;
         private final RoleRepository roleRepository;
         private final UserRoleRepository userRoleRepository;
@@ -35,6 +36,32 @@ public class UserService {
         private final SubscriptionRepository subscriptionRepository;
         private final SubscriptionModuleRepository subscriptionModuleRepository;
         private final CompanyRepository companyRepository;
+
+        public UserService(UserRepository userRepository, 
+                           RoleRepository roleRepository, 
+                           UserRoleRepository userRoleRepository, 
+                           TenantService tenantService, 
+                           PasswordEncoder passwordEncoder, 
+                           TenantRepository tenantRepository, 
+                           ReactiveKafkaProducerTemplate<String, Object> kafkaTemplate, 
+                           PlanRepository planRepository, 
+                           PlanModuleRepository planModuleRepository, 
+                           SubscriptionRepository subscriptionRepository, 
+                           SubscriptionModuleRepository subscriptionModuleRepository, 
+                           CompanyRepository companyRepository) {
+                this.userRepository = userRepository;
+                this.roleRepository = roleRepository;
+                this.userRoleRepository = userRoleRepository;
+                this.tenantService = tenantService;
+                this.passwordEncoder = passwordEncoder;
+                this.tenantRepository = tenantRepository;
+                this.kafkaTemplate = kafkaTemplate;
+                this.planRepository = planRepository;
+                this.planModuleRepository = planModuleRepository;
+                this.subscriptionRepository = subscriptionRepository;
+                this.subscriptionModuleRepository = subscriptionModuleRepository;
+                this.companyRepository = companyRepository;
+        }
 
         @Transactional
         public Mono<UserEntity> registerUser(AuthRegisterRequest request) {
@@ -121,8 +148,7 @@ public class UserService {
                                 .subscribe(
                                                 result -> {
                                                 },
-                                                error -> System.err.println(
-                                                                "Error enviando a Kafka: " + error.getMessage()));
+                                                error -> log.error("Error enviando a Kafka: {}", error.getMessage()));
         }
 
         public Mono<UserDto> convertToDto(UserEntity user) {
@@ -164,7 +190,7 @@ public class UserService {
                                 .customerId(user.getCustomerId())
                                 .activeCompanyId(activeCompanyId != 0L ? activeCompanyId : null)
                                 .roles(roles)
-                                .tenant(tenant) // Corrected from .customer(customer)
+                                .tenant(tenant)
                                 .hasActiveSubscription(hasActiveSub)
                                 .build();
         }
