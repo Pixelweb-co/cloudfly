@@ -164,16 +164,18 @@ public class AuthController {
                 if (email == null && payload != null) {
                         email = payload.get("email");
                 }
-
-                System.out.println("🚀 [STDOUT] [AUTH-CONTROLLER] Received email: " + email + " (From Param: " + emailParam + ", From Body: " + (payload != null) + ")");
                 
-                if (email == null) {
+                final String finalEmail = email;
+
+                System.out.println("🚀 [STDOUT] [AUTH-CONTROLLER] Received email: " + finalEmail + " (From Param: " + emailParam + ", From Body: " + (payload != null) + ")");
+                
+                if (finalEmail == null) {
                         return Mono.just(org.springframework.http.ResponseEntity.badRequest().body("Email no proporcionado."));
                 }
 
-                return userService.forgotPassword(email)
+                return userService.forgotPassword(finalEmail)
                                 .then(Mono.defer(() -> {
-                                        System.out.println("✅ [STDOUT] [AUTH-CONTROLLER] SUCCESS for " + email);
+                                        System.out.println("✅ [STDOUT] [AUTH-CONTROLLER] SUCCESS for " + finalEmail);
                                         return Mono.just(org.springframework.http.ResponseEntity.ok("Correo de restablecimiento enviado."));
                                 }))
                                 .onErrorResume(e -> {
