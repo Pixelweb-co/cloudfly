@@ -156,11 +156,12 @@ public class AuthController {
         }
 
         @PostMapping("/forgot-password")
-        public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestParam(name = "email", required = false) String email) {
-                System.out.println("🚀 [STDOUT] [AUTH-CONTROLLER] Received email via @RequestParam: " + email);
+        public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestBody java.util.Map<String, String> payload) {
+                System.out.println("🚀 [STDOUT] [AUTH-CONTROLLER] Received JSON Payload: " + payload);
+                String email = payload != null ? payload.get("email") : null;
                 
                 if (email == null) {
-                        return Mono.just(org.springframework.http.ResponseEntity.badRequest().body("Parámetro 'email' no proporcionado. Use /auth/forgot-password?email=..."));
+                        return Mono.just(org.springframework.http.ResponseEntity.badRequest().body("Email no encontrado en el JSON."));
                 }
 
                 return userService.forgotPassword(email)
