@@ -50,4 +50,8 @@ public class CompanyEntity {
 
     @Column("updated_at")
     private LocalDateTime updatedAt;
+
+    // Explicit getters for VPS build
+    public Long getId() { return id; }
+    public Boolean getIsPrincipal() { return isPrincipal; }
 }
