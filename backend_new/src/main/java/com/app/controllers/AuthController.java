@@ -150,19 +150,21 @@ public class AuthController {
         }
 
         @PostMapping({"/forgot-password", "/auth/forgot-password"})
-        public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestBody com.app.dto.ForgotPasswordRequest request) {
-                System.out.println("🚀 [STDOUT] [AUTH-CONTROLLER] Entered forgotPassword - Request: " + (request != null ? request.getEmail() : "NULL"));
-                log.info("📧 [AUTH-CONTROLLER] forgotPassword - Email: {}", request != null ? request.getEmail() : "NULL");
-                if (request == null || request.getEmail() == null) {
-                        return Mono.just(org.springframework.http.ResponseEntity.badRequest().body("Email no proporcionado."));
+        public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestBody java.util.Map<String, String> payload) {
+                System.out.println("🚀 [STDOUT] [AUTH-CONTROLLER] Received Payload Map: " + payload);
+                String email = payload != null ? payload.get("email") : null;
+                
+                if (email == null) {
+                        return Mono.just(org.springframework.http.ResponseEntity.badRequest().body("Email no encontrado en el mapa: " + payload));
                 }
-                return userService.forgotPassword(request.getEmail())
+
+                return userService.forgotPassword(email)
                                 .then(Mono.defer(() -> {
-                                        log.info("✅ [AUTH-CONTROLLER] forgotPassword SUCCESS - Email: {}", request.getEmail());
+                                        System.out.println("✅ [STDOUT] [AUTH-CONTROLLER] SUCCESS for " + email);
                                         return Mono.just(org.springframework.http.ResponseEntity.ok("Correo de restablecimiento enviado."));
                                 }))
                                 .onErrorResume(e -> {
-                                        log.error("❌ [AUTH-CONTROLLER] forgotPassword ERROR: {}", e.getMessage());
+                                        System.out.println("❌ [STDOUT] [AUTH-CONTROLLER] ERROR: " + e.getMessage());
                                         return Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage()));
                                 });
         }
