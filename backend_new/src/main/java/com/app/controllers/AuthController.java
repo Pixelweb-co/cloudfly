@@ -141,16 +141,67 @@ public class AuthController {
 
         @PostMapping({"/forgot-password", "/auth/forgot-password"})
         public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestBody Map<String, String> request) {
-                return userService.forgotPassword(request.get("email"))
-                                .then(Mono.just(org.springframework.http.ResponseEntity.ok("Correo de restablecimiento enviado.")))
-                                .onErrorResume(e -> Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage())));
+                String email = request.get("email");
+                log.info("📧 Password recovery requested for: {}", email);
+                if (email == null) {
+                        return Mono.just(org.springframework.http.ResponseEntity.badRequest().body("Email no proporcionado."));
+                }
+                return userService.forgotPassword(email)
+                                .then(Mono.defer(() -> {
+                                        log.info("✅ Password recovery process completed (Success or silent empty) for: {}", email);
+                                        return Mono.just(org.springframework.http.ResponseEntity.ok("Correo de restablecimiento enviado."));
+                                }))
+                                .onErrorResume(e -> {
+                                        log.error("❌ Exception in forgotPassword: {}", e.getMessage(), e);
+                                        return Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage()));
+                                });
         }
 
-        @PostMapping({"/reset-password" , "/auth/reset-password"})
+        @PostMapping({"/reset-password", "/auth/reset-password"})
         public Mono<org.springframework.http.ResponseEntity<String>> resetPassword(@RequestBody Map<String, String> request) {
+                log.info("🔑 Password reset attempt for token: {}", request.get("token"));
                 return userService.resetPassword(request.get("token"), request.get("newPassword"))
-                                .then(Mono.just(org.springframework.http.ResponseEntity.ok("Contraseña restablecida exitosamente.")))
-                                .onErrorResume(e -> Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage())));
+                                .then(Mono.defer(() -> {
+                                        log.info("✅ Password reset successful for token: {}", request.get("token"));
+                                        return Mono.just(org.springframework.http.ResponseEntity.ok("Contraseña restablecida exitosamente."));
+                                }))
+                                .onErrorResume(e -> {
+                                        log.error("❌ Exception in resetPassword: {}", e.getMessage(), e);
+                                        return Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage()));
+                                });
+        }
+
+        @PostMapping({"/validate-username", "/auth/validate-username"})
+        public Mono<org.springframework.http.ResponseEntity<Map<String, Boolean>>> validateUsername(@RequestBody Map<String, String> request) {
+                return userService.checkUsernameAvailability(request.get("username"))
+                                .map(isAvailable -> org.springframework.http.ResponseEntity.ok(Map.of("isAvailable", isAvailable)));
+        }
+
+        @PostMapping({"/validate-email", "/auth/validate-email"})
+        public Mono<org.springframework.http.ResponseEntity<Map<String, Boolean>>> validateEmail(@RequestBody Map<String, String> request) {
+                return userService.checkEmailAvailability(request.get("email"))
+                                .map(isAvailable -> org.springframework.http.ResponseEntity.ok(Map.of("isAvailable", isAvailable)));
+        }
+
+        @PostMapping({"/validate-account", "/auth/validate-account"})
+        public Mono<org.springframework.http.ResponseEntity<Map<String, String>>> validateAccount(@RequestBody Map<String, String> request) {
+                return userService.verifyEmail(request.get("validationToken"))
+                                .map(activated -> org.springframework.http.ResponseEntity.ok(Map.of("Activado", activated ? "valid" : "invalid")));
+        }
+
+        @PostMapping({"/validate-token", "/auth/validate-token"})
+        public Mono<org.springframework.http.ResponseEntity<Map<String, Object>>> validateToken(@RequestBody Map<String, String> request) {
+                String token = request.get("token");
+                if (token == null || token.isEmpty()) {
+                        return Mono.just(org.springframework.http.ResponseEntity.badRequest().body(Map.of("valid", false, "message", "Token no proporcionado.")));
+                }
+                try {
+                        com.auth0.jwt.interfaces.DecodedJWT decodedJWT = jwtProvider.validateToken(token);
+                        String username = jwtProvider.extractUsername(decodedJWT);
+                        return Mono.just(org.springframework.http.ResponseEntity.ok(Map.of("valid", true, "username", username, "message", "Token válido.")));
+                } catch (Exception e) {
+                        return Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("valid", false, "message", "Token inválido: " + e.getMessage())));
+                }
         }
 
         @GetMapping({"/session", "/auth/session"})
