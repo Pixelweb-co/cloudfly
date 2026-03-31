@@ -155,13 +155,12 @@ public class AuthController {
                                 .map(verified -> Map.of("Activado", verified ? "valid" : "invalid"));
         }
 
-        @PostMapping({"/forgot-password", "/auth/forgot-password"})
-        public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestBody java.util.Map<String, String> payload) {
-                System.out.println("🚀 [STDOUT] [AUTH-CONTROLLER] Received Payload Map: " + payload);
-                String email = payload != null ? payload.get("email") : null;
+        @PostMapping("/forgot-password")
+        public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestParam(name = "email", required = false) String email) {
+                System.out.println("🚀 [STDOUT] [AUTH-CONTROLLER] Received email via @RequestParam: " + email);
                 
                 if (email == null) {
-                        return Mono.just(org.springframework.http.ResponseEntity.badRequest().body("Email no encontrado en el mapa: " + payload));
+                        return Mono.just(org.springframework.http.ResponseEntity.badRequest().body("Parámetro 'email' no proporcionado. Use /auth/forgot-password?email=..."));
                 }
 
                 return userService.forgotPassword(email)
