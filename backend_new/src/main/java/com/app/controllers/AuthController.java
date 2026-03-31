@@ -150,18 +150,18 @@ public class AuthController {
         }
 
         @PostMapping({"/forgot-password", "/auth/forgot-password"})
-        public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestBody com.app.dto.ForgotPasswordRequest request) {
-                log.info("📧 [AUTH-CONTROLLER] Method START: forgotPassword (@RequestBody) - Email: {}", request != null ? request.getEmail() : "NULL");
-                if (request == null || request.getEmail() == null) {
-                        return Mono.just(org.springframework.http.ResponseEntity.badRequest().body("Email no proporcionado."));
-                }
-                return userService.forgotPassword(request.getEmail())
-                                .then(Mono.defer(() -> {
-                                        log.info("✅ [AUTH-CONTROLLER] Method SUCCESS: forgotPassword - Email: {}", request.getEmail());
-                                        return Mono.just(org.springframework.http.ResponseEntity.ok("Correo de restablecimiento enviado."));
-                                }))
+        public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestBody Mono<com.app.dto.ForgotPasswordRequest> requestMono) {
+                return requestMono
+                                .flatMap(request -> {
+                                        log.info("📧 [AUTH-CONTROLLER] Method START: forgotPassword (Mono) - Email: {}", request.getEmail());
+                                        return userService.forgotPassword(request.getEmail())
+                                                        .then(Mono.defer(() -> {
+                                                                log.info("✅ [AUTH-CONTROLLER] Method SUCCESS: forgotPassword - Email: {}", request.getEmail());
+                                                                return Mono.just(org.springframework.http.ResponseEntity.ok("Correo de restablecimiento enviado."));
+                                                        }));
+                                })
                                 .onErrorResume(e -> {
-                                        log.error("❌ [AUTH-CONTROLLER] Method ERROR: forgotPassword - Error: {}", e.getMessage());
+                                        log.error("❌ [AUTH-CONTROLLER] Method ERROR (Deserialization or Service): forgotPassword - Error: {}", e.getMessage(), e);
                                         return Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage()));
                                 });
         }
