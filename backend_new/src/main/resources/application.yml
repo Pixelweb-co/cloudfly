@@ -23,6 +23,8 @@ logging:
     org.springframework.data.r2dbc: DEBUG
     io.asyncer.r2dbc.mysql: DEBUG
     org.springframework.security: DEBUG
+    org.springframework.web: TRACE
+    org.springframework.http: TRACE
 
 jwt:
   secret: ${JWT_SECRET:cloudfly-production-secret-998877}
