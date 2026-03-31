@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping
+@RequestMapping("/auth")
 @CrossOrigin(origins = "*")
 public class AuthController {
 
@@ -42,8 +42,14 @@ public class AuthController {
                 this.userService = userService;
         }
 
-        @PostMapping({"/login", "/auth/login"})
-        public Mono<AuthResponse> login(@RequestBody @Valid LoginRequest loginRequest) {
+        public static class RecoveryRequest {
+            private String email;
+            public String getEmail() { return email; }
+            public void setEmail(String email) { this.email = email; }
+        }
+
+        @PostMapping("/login")
+        public Mono<AuthResponse> login(@RequestBody LoginRequest loginRequest) {
                 return authenticationManager.authenticate(
                                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
                                                 loginRequest.getPassword()))
