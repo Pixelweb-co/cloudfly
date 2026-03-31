@@ -15,10 +15,4 @@ public class UserRole {
 
     @Column("role_id")
     private Long roleId;
-
-    public UserRole() {}
-    public UserRole(Long userId, Long roleId) {
-        this.userId = userId;
-        this.roleId = roleId;
-    }
 }
