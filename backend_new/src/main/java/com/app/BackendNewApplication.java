@@ -18,9 +18,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 
-@Configuration
-@EnableWebFluxSecurity
-@EnableReactiveMethodSecurity
 @SpringBootApplication(exclude = {
         DataSourceAutoConfiguration.class,
         DataSourceTransactionManagerAutoConfiguration.class,
@@ -28,31 +25,6 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 })
 public class BackendNewApplication {
 
-    @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
-        System.out.println("🛡️ [STDOUT] [MAIN-APP] Initializing SecurityWebFilterChain MINIMAL...");
-        return http
-                .cors(cors -> cors.disable())
-                .csrf(ServerHttpSecurity.CsrfSpec::disable)
-                .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/auth/**", "/login", "/register", "/verify", "/forgot-password", "/reset-password").permitAll()
-                        .anyExchange().authenticated())
-                .build();
-    }
-
-    @Bean
-    public ReactiveAuthenticationManager authenticationManager(ReactiveUserDetailsService userDetailsService,
-            PasswordEncoder passwordEncoder) {
-        System.out.println("🛡️ [STDOUT] [MAIN-APP] Initializing ReactiveAuthenticationManager...");
-        org.springframework.security.authentication.UserDetailsRepositoryReactiveAuthenticationManager authManager = new org.springframework.security.authentication.UserDetailsRepositoryReactiveAuthenticationManager(userDetailsService);
-        authManager.setPasswordEncoder(passwordEncoder);
-        return authManager;
-    }
-
-    @org.springframework.context.annotation.Bean
-    public org.springframework.security.crypto.password.PasswordEncoder passwordEncoder() {
-        return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
-    }
     public static void main(String[] args) {
         SpringApplication.run(BackendNewApplication.class, args);
     }
