@@ -59,4 +59,11 @@ public class PlanEntity {
 
     @Column("updated_at")
     private LocalDateTime updatedAt;
+
+    // Explicit getters for VPS build
+    public Long getId() { return id; }
+    public String getName() { return name; }
+    public Integer getDurationDays() { return durationDays; }
+    public Long getAiTokensLimit() { return aiTokensLimit; }
+    public Integer getUsersLimit() { return usersLimit; }
 }
