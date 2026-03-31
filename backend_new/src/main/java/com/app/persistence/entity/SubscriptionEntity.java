@@ -75,4 +75,7 @@ public class SubscriptionEntity {
 
     @Column("updated_at")
     private LocalDateTime updatedAt;
+
+    // Explicit getter for VPS build
+    public Long getId() { return id; }
 }

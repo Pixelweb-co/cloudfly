@@ -55,4 +55,12 @@ public class ChannelConfig {
     @LastModifiedDate
     @Column("updated_at")
     private LocalDateTime updatedAt;
+
+    // Explicit getters for VPS build
+    public Long getId() { return id; }
+    public String getInstanceName() { return instanceName; }
+    public String getN8nWebhookUrl() { return n8nWebhookUrl; }
+    public Boolean getIsActive() { return isActive; }
+    public Long getTenantId() { return tenantId; }
+    public Long getCompanyId() { return companyId; }
 }
