@@ -1,6 +1,9 @@
 package com.app.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class ForgotPasswordRequest {
+    @JsonProperty("email")
     private String email;
 
     public ForgotPasswordRequest() {}
