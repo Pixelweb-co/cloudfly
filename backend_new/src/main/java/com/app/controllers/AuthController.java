@@ -150,18 +150,31 @@ public class AuthController {
         }
 
         @PostMapping({"/forgot-password", "/auth/forgot-password"})
-        public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestBody Mono<com.app.dto.ForgotPasswordRequest> requestMono) {
-                return requestMono
-                                .flatMap(request -> {
-                                        log.info("📧 [AUTH-CONTROLLER] Method START: forgotPassword (Mono) - Email: {}", request.getEmail());
-                                        return userService.forgotPassword(request.getEmail())
-                                                        .then(Mono.defer(() -> {
-                                                                log.info("✅ [AUTH-CONTROLLER] Method SUCCESS: forgotPassword - Email: {}", request.getEmail());
-                                                                return Mono.just(org.springframework.http.ResponseEntity.ok("Correo de restablecimiento enviado."));
-                                                        }));
-                                })
+        public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestBody String body) {
+                System.out.println("📦 [STDOUT] [AUTH-CONTROLLER] Received body: " + body);
+                log.info("📧 [AUTH-CONTROLLER] Received body: {}", body);
+                
+                // Manualmente extraer el email si es un JSON simple {"email":"..."}
+                String email = null;
+                if (body != null && body.contains("\"email\":\"")) {
+                    int start = body.indexOf("\"email\":\"") + 9;
+                    int end = body.indexOf("\"", start);
+                    if (end > start) {
+                        email = body.substring(start, end);
+                    }
+                }
+
+                if (email == null) {
+                        return Mono.just(org.springframework.http.ResponseEntity.badRequest().body("Email no encontrado en el cuerpo: " + body));
+                }
+
+                return userService.forgotPassword(email)
+                                .then(Mono.defer(() -> {
+                                        log.info("✅ [AUTH-CONTROLLER] Method SUCCESS: forgotPassword - Email: {}", email);
+                                        return Mono.just(org.springframework.http.ResponseEntity.ok("Correo de restablecimiento enviado."));
+                                }))
                                 .onErrorResume(e -> {
-                                        log.error("❌ [AUTH-CONTROLLER] Method ERROR (Deserialization or Service): forgotPassword - Error: {}", e.getMessage(), e);
+                                        log.error("❌ [AUTH-CONTROLLER] Method ERROR: forgotPassword - Error: {}", e.getMessage());
                                         return Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage()));
                                 });
         }
