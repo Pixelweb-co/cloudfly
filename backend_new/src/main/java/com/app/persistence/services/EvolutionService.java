@@ -1,6 +1,7 @@
 package com.app.persistence.services;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -16,9 +17,10 @@ class InstanceAlreadyExistsException extends RuntimeException {
     }
 }
 
-@Slf4j
 @Service
 public class EvolutionService {
+
+    private static final Logger log = LoggerFactory.getLogger(EvolutionService.class);
 
     private final WebClient webClient;
     private final String apiKey;

@@ -7,7 +7,8 @@ import com.app.dto.AvailabilityResponse;
 import com.app.persistence.services.UserService;
 import com.app.util.JwtProvider;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -25,12 +26,21 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping
-@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class AuthController {
 
+        private static final Logger log = LoggerFactory.getLogger(AuthController.class);
         private final ReactiveAuthenticationManager authenticationManager;
         private final JwtProvider jwtProvider;
         private final UserService userService;
+
+        public AuthController(ReactiveAuthenticationManager authenticationManager, 
+                              JwtProvider jwtProvider, 
+                              UserService userService) {
+                this.authenticationManager = authenticationManager;
+                this.jwtProvider = jwtProvider;
+                this.userService = userService;
+        }
 
         @PostMapping({"/login", "/auth/login"})
         public Mono<AuthResponse> login(@RequestBody @Valid LoginRequest loginRequest) {
@@ -51,7 +61,7 @@ public class AuthController {
                                                 }));
         }
 
-        @PostMapping("/register")
+        @PostMapping({"/register", "/auth/register"})
         @ResponseStatus(HttpStatus.CREATED)
         public Mono<AuthResponse> register(@RequestBody @Valid AuthRegisterRequest registerRequest) {
                 return ReactiveSecurityContextHolder.getContext()
@@ -81,7 +91,7 @@ public class AuthController {
                                             .build());
                         })
                         .switchIfEmpty(Mono.defer(() -> {
-                            // Public registration: check if USER role is requested
+                            // Public registration
                             if (registerRequest.getRoles() != null && registerRequest.getRoles().contains("USER")) {
                                 return Mono.just(AuthResponse.builder()
                                         .status(false)
@@ -100,43 +110,43 @@ public class AuthController {
                         }));
         }
 
-        @GetMapping("/verify")
+        @GetMapping({"/verify", "/auth/verify"})
         public Mono<AuthResponse> verify(@RequestParam String token) {
                 return userService.verifyEmail(token)
                                 .map(verified -> AuthResponse.builder()
                                                 .message(verified ? "Email verificado con éxito"
-                                                                : "Token inválido o expirado")
+                                                                 : "Token inválido o expirado")
                                                 .status(verified)
                                                 .build());
         }
 
-        @PostMapping("/validate-account")
-        public Mono<Map<String, String>> validateAccount(@RequestBody Map<String, String> request) {
-                String validationToken = request.get("validationToken");
-                return userService.verifyEmail(validationToken)
-                                .map(verified -> Map.of("Activado", verified ? "valid" : "invalid"));
-        }
-
-        @PostMapping("/validate-username")
+        @PostMapping({"/validate-username", "/auth/validate-username"})
         public Mono<AvailabilityResponse> validateUsername(@RequestBody Map<String, String> request) {
                 String username = request.get("username");
                 return userService.checkUsernameAvailability(username)
                                 .map(available -> AvailabilityResponse.builder()
                                                 .isAvailable(available)
                                                 .message(available ? "Nombre de usuario disponible"
-                                                                : "El nombre de usuario ya está en uso")
+                                                                 : "El nombre de usuario ya está en uso")
                                                 .build());
         }
 
-        @PostMapping("/validate-email")
+        @PostMapping({"/validate-email", "/auth/validate-email"})
         public Mono<AvailabilityResponse> validateEmail(@RequestBody Map<String, String> request) {
                 String email = request.get("email");
                 return userService.checkEmailAvailability(email)
                                 .map(available -> AvailabilityResponse.builder()
                                                 .isAvailable(available)
                                                 .message(available ? "Correo electrónico disponible"
-                                                                : "El correo electrónico ya está en uso")
+                                                                 : "El correo electrónico ya está en uso")
                                                 .build());
+        }
+
+        @PostMapping({"/validate-account", "/auth/validate-account"})
+        public Mono<Map<String, String>> validateAccount(@RequestBody Map<String, String> request) {
+                String validationToken = request.get("validationToken");
+                return userService.verifyEmail(validationToken)
+                                .map(verified -> Map.of("Activado", verified ? "valid" : "invalid"));
         }
 
         @PostMapping({"/forgot-password", "/auth/forgot-password"})
@@ -148,7 +158,7 @@ public class AuthController {
                 }
                 return userService.forgotPassword(email)
                                 .then(Mono.defer(() -> {
-                                        log.info("✅ Password recovery process completed (Success or silent empty) for: {}", email);
+                                        log.info("✅ Password recovery process completed for: {}", email);
                                         return Mono.just(org.springframework.http.ResponseEntity.ok("Correo de restablecimiento enviado."));
                                 }))
                                 .onErrorResume(e -> {
@@ -169,24 +179,6 @@ public class AuthController {
                                         log.error("❌ Exception in resetPassword: {}", e.getMessage(), e);
                                         return Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage()));
                                 });
-        }
-
-        @PostMapping({"/validate-username", "/auth/validate-username"})
-        public Mono<org.springframework.http.ResponseEntity<Map<String, Boolean>>> validateUsername(@RequestBody Map<String, String> request) {
-                return userService.checkUsernameAvailability(request.get("username"))
-                                .map(isAvailable -> org.springframework.http.ResponseEntity.ok(Map.of("isAvailable", isAvailable)));
-        }
-
-        @PostMapping({"/validate-email", "/auth/validate-email"})
-        public Mono<org.springframework.http.ResponseEntity<Map<String, Boolean>>> validateEmail(@RequestBody Map<String, String> request) {
-                return userService.checkEmailAvailability(request.get("email"))
-                                .map(isAvailable -> org.springframework.http.ResponseEntity.ok(Map.of("isAvailable", isAvailable)));
-        }
-
-        @PostMapping({"/validate-account", "/auth/validate-account"})
-        public Mono<org.springframework.http.ResponseEntity<Map<String, String>>> validateAccount(@RequestBody Map<String, String> request) {
-                return userService.verifyEmail(request.get("validationToken"))
-                                .map(activated -> org.springframework.http.ResponseEntity.ok(Map.of("Activado", activated ? "valid" : "invalid")));
         }
 
         @PostMapping({"/validate-token", "/auth/validate-token"})
