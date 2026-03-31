@@ -151,6 +151,7 @@ public class AuthController {
 
         @PostMapping({"/forgot-password", "/auth/forgot-password"})
         public Mono<org.springframework.http.ResponseEntity<String>> forgotPassword(@RequestBody com.app.dto.ForgotPasswordRequest request) {
+                System.out.println("🚀 [STDOUT] [AUTH-CONTROLLER] Entered forgotPassword - Request: " + (request != null ? request.getEmail() : "NULL"));
                 log.info("📧 [AUTH-CONTROLLER] forgotPassword - Email: {}", request != null ? request.getEmail() : "NULL");
                 if (request == null || request.getEmail() == null) {
                         return Mono.just(org.springframework.http.ResponseEntity.badRequest().body("Email no proporcionado."));
