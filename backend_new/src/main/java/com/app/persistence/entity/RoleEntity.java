@@ -17,4 +17,8 @@ public class RoleEntity {
 
     @Column("role_name")
     private String name;
+
+    // Explicit getters for VPS build
+    public Long getId() { return id; }
+    public String getName() { return name; }
 }

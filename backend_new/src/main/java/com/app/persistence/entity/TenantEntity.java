@@ -18,6 +18,9 @@ public class TenantEntity {
     @Id
     private Long id;
 
+    // Explicit getter for VPS build
+    public Long getId() { return id; }
+
     @Column("nombre_cliente")
     private String name;
 
