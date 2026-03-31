@@ -40,4 +40,13 @@ public class Category {
 
     @Column("updated_at")
     private LocalDateTime updatedAt;
+
+    // Explicit setters to bypass Lombok issues
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return this.updatedAt;
+    }
 }
