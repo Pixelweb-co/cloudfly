@@ -155,22 +155,23 @@ public class AuthController {
                 log.info("📧 [AUTH-CONTROLLER] Received body: {}", body);
                 
                 // Manualmente extraer el email si es un JSON simple {"email":"..."}
-                String email = null;
+                String extractedEmail = null;
                 if (body != null && body.contains("\"email\":\"")) {
                     int start = body.indexOf("\"email\":\"") + 9;
                     int end = body.indexOf("\"", start);
                     if (end > start) {
-                        email = body.substring(start, end);
+                        extractedEmail = body.substring(start, end);
                     }
                 }
 
-                if (email == null) {
+                if (extractedEmail == null) {
                         return Mono.just(org.springframework.http.ResponseEntity.badRequest().body("Email no encontrado en el cuerpo: " + body));
                 }
 
-                return userService.forgotPassword(email)
+                final String finalEmail = extractedEmail;
+                return userService.forgotPassword(finalEmail)
                                 .then(Mono.defer(() -> {
-                                        log.info("✅ [AUTH-CONTROLLER] Method SUCCESS: forgotPassword - Email: {}", email);
+                                        log.info("✅ [AUTH-CONTROLLER] Method SUCCESS: forgotPassword - Email: {}", finalEmail);
                                         return Mono.just(org.springframework.http.ResponseEntity.ok("Correo de restablecimiento enviado."));
                                 }))
                                 .onErrorResume(e -> {
