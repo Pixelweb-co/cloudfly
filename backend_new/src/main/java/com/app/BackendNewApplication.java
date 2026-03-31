@@ -29,15 +29,14 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 public class BackendNewApplication {
 
     @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, com.app.config.JwtAuthenticationFilter jwtFilter) {
-        System.out.println("🛡️ [STDOUT] [MAIN-APP] Initializing SecurityWebFilterChain...");
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+        System.out.println("🛡️ [STDOUT] [MAIN-APP] Initializing SecurityWebFilterChain MINIMAL...");
         return http
                 .cors(cors -> cors.disable())
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/auth/**", "/login", "/register", "/verify", "/forgot-password", "/reset-password").permitAll()
                         .anyExchange().authenticated())
-                .addFilterAt(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION)
                 .build();
     }
 
