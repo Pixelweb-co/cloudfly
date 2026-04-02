@@ -20,10 +20,11 @@ public class AppConfig {
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         System.out.println("🛡️ [CORE-LOG] INITIALIZING SecurityWebFilterChain IN AppConfig...");
         return http
-                .cors(cors -> cors.disable())
+                .cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/auth/**", "/login", "/register", "/verify", "/forgot-password", "/reset-password").permitAll()
+                        .pathMatchers(org.springframework.http.HttpMethod.OPTIONS).permitAll() // Allow preflight
                         .anyExchange().authenticated())
                 .build();
     }
