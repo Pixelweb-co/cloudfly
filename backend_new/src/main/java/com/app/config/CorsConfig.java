@@ -16,7 +16,7 @@ import java.util.Arrays;
 public class CorsConfig {
 
     @Bean
-    public CorsWebFilter corsWebFilter() {
+    public org.springframework.web.cors.reactive.CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
         
         // Orígenes permitidos
@@ -50,6 +50,6 @@ public class CorsConfig {
         // Aplicar a todas las rutas de la API
         source.registerCorsConfiguration("/**", corsConfig);
 
-        return new CorsWebFilter(source);
+        return source;
     }
 }
