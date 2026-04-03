@@ -12,11 +12,11 @@ const path = require('path');
 const logging = require('selenium-webdriver/lib/logging');
 
 // ─── CONFIGURACIÓN ───────────────────────────────────────────────────────────
-const BASE_URL  = 'https://dashboard.cloudfly.com.co';
-const SSH_KEY   = 'C:\\Users\\Edwin\\.ssh\\id_rsa_cloudfly';
-const VPS       = 'root@109.205.182.94';
-const DB_PASS   = 'widowmaker';
-const DB_NAME   = 'cloud_master';
+const BASE_URL = 'https://dashboard.cloudfly.com.co';
+const SSH_KEY = 'C:\\Users\\Edwin\\.ssh\\id_rsa_cloudfly';
+const VPS = 'root@109.205.182.94';
+const DB_PASS = 'widowmaker';
+const DB_NAME = 'cloud_master';
 
 const SCREENSHOTS_DIR = 'C:\\apps\\cloudfly\\tmp\\screenshots';
 if (!fs.existsSync(SCREENSHOTS_DIR)) fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
@@ -30,7 +30,7 @@ function runSsh(cmd) {
 
 function runSshSql(sql) {
     const remoteCmd = `docker exec -i mysql mysql -u root -p${DB_PASS} ${DB_NAME} -N -s 2>/dev/null`;
-    const localCmd  = `echo ${JSON.stringify(sql)} | ssh -o StrictHostKeyChecking=no -i "${SSH_KEY}" ${VPS} "${remoteCmd}"`;
+    const localCmd = `echo ${JSON.stringify(sql)} | ssh -o StrictHostKeyChecking=no -i "${SSH_KEY}" ${VPS} "${remoteCmd}"`;
     try {
         return execSync(localCmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
     } catch (e) { return ''; }
@@ -46,7 +46,7 @@ async function takeScreenshot(driver, label, timestamp) {
         const data = await driver.takeScreenshot();
         fs.writeFileSync(path.join(SCREENSHOTS_DIR, `${timestamp}_${label}.png`), data, 'base64');
         console.log(`   📸 Screenshot: ${label}`);
-    } catch(e) {}
+    } catch (e) { }
 }
 
 async function waitAndClick(driver, locator, timeout = 15000) {
@@ -67,7 +67,7 @@ async function printBrowserLogs(driver) {
         logs.forEach(log => {
             console.log(`   🌐 [BROWSER] ${log.level.name}: ${log.message}`);
         });
-    } catch (e) {}
+    } catch (e) { }
 }
 
 // ─── FLOW ───────────────────────────────────────────────────────────────────
@@ -77,13 +77,13 @@ async function runTest() {
     const user = `mkt_${ts}`;
     const email = `${user}@testcloudfly.com`;
     const pass = 'Password123!'; // Usamos el de admin por si acaso hay reglas de complejidad
-    
+
     console.log(`\n═══════════════════════════════════════════════════════`);
     console.log(` 🚀  E2E ONBOARDING & MARKETING - Cloudfly v8`);
     console.log(`═══════════════════════════════════════════════════════`);
     console.log(` Usuario   : ${user}`);
     console.log(` Email     : ${email}`);
-    
+
     let chromeOptions = new chrome.Options();
     chromeOptions.addArguments('--start-maximized', '--no-sandbox', '--disable-dev-shm-usage');
     const prefs = new logging.Preferences();
@@ -119,14 +119,14 @@ async function runTest() {
         await waitAndType(driver, By.name('username'), user);
         await waitAndType(driver, By.name('password'), pass);
         await waitAndClick(driver, By.css('button[type="submit"]'));
-        
+
         console.log('   ⏳ Redirigiendo a /account-setup...');
         await driver.wait(until.urlContains('/account-setup'), 25000);
         console.log('   ✅ Login exitoso.');
 
         // [4] WIZARD
         console.log('\n── FASE 4: ACCOUNT SETUP WIZARD ──────────────────────');
-        
+
         // Paso 0: Bienvenida
         console.log('   [1/4] Bienvenida');
         await waitAndClick(driver, By.xpath("//button[contains(text(),'Continuar')]"), 15000);
@@ -135,19 +135,19 @@ async function runTest() {
         // Paso 1: Datos de Negocio
         console.log('   [2/4] Información del Negocio');
         const nit = '900' + ts.toString().slice(-6);
-        await waitAndType(driver, By.name('name'),   `Empresa Marketing ${ts}`); 
-        await waitAndType(driver, By.name('nit'),    nit);
+        await waitAndType(driver, By.name('name'), `Empresa Marketing ${ts}`);
+        await waitAndType(driver, By.name('nit'), nit);
         await waitAndType(driver, By.name('phone'), '573246285134');
         await waitAndType(driver, By.name('email'), 'mkt@test.com');
         await waitAndType(driver, By.name('address'), 'Calle Mkt');
         await waitAndType(driver, By.name('contact'), 'Admin Mkt');
         await waitAndType(driver, By.name('position'), 'Manager');
-        
+
         try {
             const bizCard = await driver.findElement(By.xpath("//*[contains(text(), 'Salón de Belleza')]"));
             await driver.executeScript("arguments[0].click();", bizCard);
-        } catch(e) {}
-        
+        } catch (e) { }
+
         await waitAndType(driver, By.name('objetoSocial'), 'Orchestration test.');
         await waitAndClick(driver, By.xpath("//button[@type='submit']"));
         console.log('   🔔 Account Setup enviado.');
@@ -160,7 +160,7 @@ async function runTest() {
             await driver.executeScript("arguments[0].click();", skipBtn);
             console.log('   ✅ WhatsApp omitido.');
         } catch (e) {
-            try { await waitAndClick(driver, By.xpath("//button[contains(text(),'Siguiente')]"), 8000); } catch(err) {}
+            try { await waitAndClick(driver, By.xpath("//button[contains(text(),'Siguiente')]"), 8000); } catch (err) { }
         }
 
         // Paso 3: Productos ("Casi Listos") - click Finalizar Configuración
@@ -187,7 +187,7 @@ async function runTest() {
                 } else {
                     console.log('   ℹ️ Asumiendo redirección automática');
                 }
-            } catch(err) {
+            } catch (err) {
                 console.log('   ℹ️ Asumiendo redirección automática');
             }
         }
@@ -201,7 +201,7 @@ async function runTest() {
         // [6] VERIFICACIÓN (DB)
         console.log('\n── FASE 6: VERIFICACIÓN DB CORE ──────────────────────');
         const tenantId = runSshSql(`SELECT id FROM clientes WHERE identificacion_cliente = '${nit}' LIMIT 1`);
-        
+
         if (!tenantId) {
             console.error('❌ ERROR: El Tenant no se creó en DB.');
             await printBrowserLogs(driver);
@@ -211,7 +211,7 @@ async function runTest() {
 
         const pipeline = runSshSql(`SELECT name FROM pipelines WHERE tenant_id = ${tenantId} AND name = 'Atención a Clientes' LIMIT 1`);
         const campaign = runSshSql(`SELECT name FROM marketing_campaigns WHERE tenant_id = ${tenantId} AND name = 'Atención Clientes' LIMIT 1`);
-        const channel  = runSshSql(`SELECT name FROM channels WHERE tenant_id = ${tenantId} AND name = 'WhatsApp Principal' LIMIT 1`);
+        const channel = runSshSql(`SELECT name FROM channels WHERE tenant_id = ${tenantId} AND name = 'WhatsApp Principal' LIMIT 1`);
 
         console.log(`   - Pipeline: ${pipeline ? '✅ ' + pipeline : '❌ FALTANTE'}`);
         console.log(`   - Campaña:  ${campaign ? '✅ ' + campaign : '❌ FALTANTE'}`);

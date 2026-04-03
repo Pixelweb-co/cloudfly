@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Función de login
   const login = async (credentials: { username: string; password: string }) => {
     try {
-      const response = await axios.post(`${ApiUrl}/auth/login`, credentials)
+      const response = await axios.post(`${ApiUrl}/login`, credentials)
       const jwtToken = response.data.token
 
       setToken(jwtToken)
