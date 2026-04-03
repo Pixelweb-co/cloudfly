@@ -17,6 +17,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class AppConfig {
 
     @Bean
+    public com.app.config.JwtAuthenticationFilter jwtAuthenticationFilter(com.app.util.JwtProvider jwtProvider) {
+        return new com.app.config.JwtAuthenticationFilter(jwtProvider);
+    }
+
+    @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, com.app.config.JwtAuthenticationFilter jwtAuthenticationFilter) {
         System.out.println("🛡️ [CORE-LOG] INITIALIZING SecurityWebFilterChain IN AppConfig...");
         return http
@@ -26,7 +31,7 @@ public class AppConfig {
                         .pathMatchers("/auth/**", "/login", "/register", "/verify", "/forgot-password", "/reset-password").permitAll()
                         .pathMatchers(org.springframework.http.HttpMethod.OPTIONS).permitAll() // Allow preflight
                         .anyExchange().authenticated())
-                .addFilterAt(jwtAuthenticationFilter, org.springframework.security.config.web.server.SecurityWebFiltersOrder.AUTHENTICATION)
+                .addFilterBefore(jwtAuthenticationFilter, org.springframework.security.config.web.server.SecurityWebFiltersOrder.AUTHORIZATION)
                 .build();
     }
 
