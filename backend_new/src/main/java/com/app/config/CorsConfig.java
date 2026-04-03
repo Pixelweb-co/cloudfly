@@ -31,16 +31,7 @@ public class CorsConfig {
         corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         
         // Cabeceras permitidas
-        corsConfig.setAllowedHeaders(Arrays.asList(
-            "Content-Type", 
-            "Authorization", 
-            "x-csrf-token", 
-            "x-requested-with",
-            "Accept",
-            "Origin",
-            "Access-Control-Allow-Origin",
-            "Access-Control-Allow-Credentials"
-        ));
+        corsConfig.setAllowedHeaders(java.util.Collections.singletonList("*"));
         
         // Permitir envío de credenciales (JWT en cookies o cabeceras)
         corsConfig.setAllowCredentials(true);
