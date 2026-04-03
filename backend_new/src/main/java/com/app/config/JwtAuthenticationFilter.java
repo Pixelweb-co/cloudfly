@@ -19,7 +19,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Component
 public class JwtAuthenticationFilter implements WebFilter {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JwtAuthenticationFilter.class);
@@ -32,9 +31,16 @@ public class JwtAuthenticationFilter implements WebFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        String path = exchange.getRequest().getURI().getPath();
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
+        // Skips auth paths
+        if (path.startsWith("/auth/") || path.equals("/login") || path.equals("/register")) {
+            return chain.filter(exchange);
+        }
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.debug("🛡️ [JWT-FILTER] No 'Bearer' token found for path: {}", path);
             return chain.filter(exchange);
         }
 
@@ -55,6 +61,9 @@ public class JwtAuthenticationFilter implements WebFilter {
             Long customerId = decodedJWT.getClaim("customer_id").asLong();
             Long companyId = decodedJWT.getClaim("company_id").asLong();
 
+            log.info("🛡️ [JWT-FILTER] Valid token for user: {}. Roles: {}. Path: {}. CustomerID: {}", 
+                     username, authoritiesStr, path, customerId);
+
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(username, null,
                     authorities);
             
@@ -68,6 +77,7 @@ public class JwtAuthenticationFilter implements WebFilter {
                     .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth));
 
         } catch (Exception e) {
+            log.error("🛡️ [JWT-FILTER] Token validation failed for path {}: {}", path, e.getMessage());
             // Token inválido, simplemente continuamos sin autenticación
             return chain.filter(exchange);
         }
