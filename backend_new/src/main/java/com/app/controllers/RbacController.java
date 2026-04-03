@@ -36,7 +36,14 @@ public class RbacController {
                             .map(GrantedAuthority::getAuthority)
                             .map(r -> r.replace("ROLE_", ""))
                             .collect(Collectors.toList());
-                    return rbacService.generateMenuForRoles(userRoles);
+                    
+                    Long customerId = null;
+                    if (auth.getDetails() instanceof java.util.Map map) {
+                        Object cid = map.get("customer_id");
+                        if (cid instanceof Number n) customerId = n.longValue();
+                    }
+                    
+                    return rbacService.generateMenuForRoles(userRoles, customerId);
                 })
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.status(401).build());

@@ -2,12 +2,15 @@ package com.app.services;
 
 import com.app.dto.rbac.MenuItemDTO;
 import com.app.persistence.repository.ModuleRepository;
+import com.app.persistence.repository.SubscriptionRepository;
+import com.app.persistence.repository.SubscriptionModuleRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -21,12 +24,34 @@ import java.util.stream.Collectors;
 public class RbacService {
 
     private final ModuleRepository moduleRepository;
+    private final SubscriptionRepository subscriptionRepository;
+    private final SubscriptionModuleRepository subscriptionModuleRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public Mono<List<MenuItemDTO>> generateMenuForRoles(List<String> roles) {
-        // Obtenemos todos los módulos activos disponibles en MySQL
-        return moduleRepository.findAll()
-                .filter(m -> m.getIsActive() != null && m.getIsActive())
+    public Mono<List<MenuItemDTO>> generateMenuForRoles(List<String> roles, Long customerId) {
+        boolean isManager = roles != null && roles.contains("MANAGER");
+
+        Flux<com.app.persistence.entity.ModuleEntity> accessibleModules;
+
+        if (isManager) {
+            log.info("Generating menu for MANAGER. Returning all active modules.");
+            accessibleModules = moduleRepository.findAll()
+                    .filter(m -> m.getIsActive() != null && m.getIsActive());
+        } else {
+            log.info("Generating menu for Admin/User. Filtering by subscription for customerId: {}", customerId);
+            if (customerId == null) {
+                accessibleModules = Flux.empty();
+            } else {
+                accessibleModules = subscriptionRepository.findFirstByCustomerIdAndStatusOrderByEndDateDesc(customerId, "active")
+                        .flatMapMany(subscription -> subscriptionModuleRepository.findBySubscriptionId(subscription.getId()))
+                        .map(com.app.persistence.entity.SubscriptionModuleEntity::getModuleId)
+                        .collectList()
+                        .flatMapMany(moduleIds -> moduleRepository.findAllById(moduleIds))
+                        .filter(m -> m.getIsActive() != null && m.getIsActive());
+            }
+        }
+
+        return accessibleModules
                 .sort(Comparator.comparingInt(m -> m.getDisplayOrder() != null ? m.getDisplayOrder() : 0))
                 .map(module -> {
                     List<MenuItemDTO> children = parseMenuItems(module.getMenuItems());
