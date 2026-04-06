@@ -1,6 +1,6 @@
 package com.app.controllers;
 
-import com.app.persistence.entity.Product;
+import com.app.dto.ProductCreateRequest;
 import com.app.persistence.services.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,22 +17,22 @@ public class ProductController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Mono<Product> save(@RequestBody Product product) {
-        return productService.saveOrUpdate(product);
+    public Mono<ProductCreateRequest> save(@RequestBody ProductCreateRequest product) {
+        return productService.saveProduct(product);
     }
 
     @GetMapping
-    public Flux<Product> findAll() {
+    public Flux<ProductCreateRequest> findAll() {
         return productService.findAll();
     }
 
     @GetMapping("/{id}")
-    public Mono<Product> getById(@PathVariable Long id) {
+    public Mono<ProductCreateRequest> getById(@PathVariable Long id) {
         return productService.getById(id);
     }
 
     @GetMapping("/tenant/{tenantId}")
-    public Flux<Product> listByTenant(@PathVariable Long tenantId) {
+    public Flux<ProductCreateRequest> listByTenant(@PathVariable Long tenantId) {
         return productService.listByTenant(tenantId);
     }
 
@@ -43,12 +43,12 @@ public class ProductController {
     }
 
     @GetMapping("/barcode/{barcode}")
-    public Mono<Product> getByBarcode(@PathVariable String barcode, @RequestParam Long tenantId) {
+    public Mono<ProductCreateRequest> getByBarcode(@PathVariable String barcode, @RequestParam Long tenantId) {
         return productService.getByBarcode(barcode, tenantId);
     }
 
     @GetMapping("/search")
-    public Flux<Product> searchByName(@RequestParam String query, @RequestParam Long tenantId) {
+    public Flux<ProductCreateRequest> searchByName(@RequestParam String query, @RequestParam Long tenantId) {
         return productService.searchByName(query, tenantId);
     }
 }
