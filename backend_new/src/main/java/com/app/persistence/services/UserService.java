@@ -155,22 +155,28 @@ public class UserService {
                 return roleRepository.findRolesByUserId(user.getId())
                                 .collectList()
                                 .flatMap(roles -> {
-                                        if (user.getCustomerId() != null) {
-                                                return Mono.zip(
-                                                        tenantRepository.findById(user.getCustomerId()),
-                                                        subscriptionRepository.findFirstByCustomerIdAndStatusOrderByEndDateDesc(user.getCustomerId(), "ACTIVE")
-                                                                .map(s -> true)
-                                                                .defaultIfEmpty(false),
-                                                        companyRepository.findByTenantId(user.getCustomerId())
-                                                                .filter(CompanyEntity::getIsPrincipal)
-                                                                .next()
-                                                                .map(CompanyEntity::getId)
-                                                                .defaultIfEmpty(0L)
-                                                ).map(tuple -> buildUserDto(user, roles, tuple.getT1(), (Boolean) tuple.getT2(), (Long) tuple.getT3()))
-                                                .defaultIfEmpty(buildUserDto(user, roles, null, false, 0L));
-                                        } else {
+                                        if (user.getCustomerId() == null) {
                                                 return Mono.just(buildUserDto(user, roles, null, false, 0L));
                                         }
+
+                                        Mono<TenantEntity> tenantMono = tenantRepository.findById(user.getCustomerId())
+                                                        .defaultIfEmpty(new TenantEntity());
+                                        
+                                        Mono<Boolean> subMono = subscriptionRepository.findFirstByCustomerIdAndStatusOrderByEndDateDesc(user.getCustomerId(), "ACTIVE")
+                                                        .map(s -> true)
+                                                        .defaultIfEmpty(false);
+                                        
+                                        Mono<Long> companyMono = companyRepository.findByTenantId(user.getCustomerId())
+                                                        .filter(CompanyEntity::getIsPrincipal)
+                                                        .next()
+                                                        .map(CompanyEntity::getId)
+                                                        .defaultIfEmpty(0L);
+
+                                        return Mono.zip(tenantMono, subMono, companyMono)
+                                                        .map(tuple -> buildUserDto(user, roles, 
+                                                                tuple.getT1().getId() != null ? tuple.getT1() : null, 
+                                                                tuple.getT2(), 
+                                                                tuple.getT3()));
                                 });
         }
 
@@ -188,9 +194,12 @@ public class UserService {
                                 .verificationToken(user.getVerificationToken())
                                 .recoveryToken(user.getRecoveryToken())
                                 .customerId(user.getCustomerId())
+                                .tenant_id(user.getCustomerId()) // Alias
                                 .activeCompanyId(activeCompanyId != 0L ? activeCompanyId : null)
+                                .company_id(activeCompanyId != 0L ? activeCompanyId : null) // Alias
                                 .roles(roles)
                                 .tenant(tenant)
+                                .customer(tenant) // Alias for frontend
                                 .hasActiveSubscription(hasActiveSub)
                                 .build();
         }
