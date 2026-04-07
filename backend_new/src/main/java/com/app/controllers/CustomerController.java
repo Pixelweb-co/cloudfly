@@ -246,12 +246,18 @@ public class CustomerController {
 
                     return subscriptionRepository.save(subscription)
                             .doOnNext(savedSub -> log.info("✅ [ACCOUNT-SETUP] Subscription created with ID: {}", savedSub.getId()))
-                            .flatMap(savedSub -> planModuleRepository.findByPlanId(freePlan.getId())
+                            .flatMap(savedSub -> {
+                                return planModuleRepository.findByPlanId(freePlan.getId())
+                                    .collectList()
+                                    .doOnNext(modules -> log.info("🔗 [ACCOUNT-SETUP] Linking {} modules from Plan {} to Subscription {}", 
+                                        modules.size(), freePlan.getName(), savedSub.getId()))
+                                    .flatMapMany(Flux::fromIterable)
                                     .flatMap(pm -> {
-                                        log.info("🔗 [ACCOUNT-SETUP] Linking Module {} to Subscription {}", pm.getModuleId(), savedSub.getId());
+                                        log.info("   - Module ID: {}", pm.getModuleId());
                                         return subscriptionModuleRepository.insertModule(savedSub.getId(), pm.getModuleId());
                                     })
-                                    .then());
+                                    .then();
+                            });
                 })
                 .doOnError(e -> log.error("🛑 [ACCOUNT-SETUP] Automatic Subscription block FAILED: {}", e.getMessage()))
                 .onErrorResume(e -> Mono.empty());
