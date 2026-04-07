@@ -43,7 +43,7 @@ public class RbacController {
                         if (cid instanceof Number n) customerId = n.longValue();
                     }
                     
-                    return rbacService.generateMenuForRoles(userRoles, customerId);
+                    return rbacService.generateMenuForRoles(userRoles, customerId, auth.getName());
                 })
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.status(401).build());

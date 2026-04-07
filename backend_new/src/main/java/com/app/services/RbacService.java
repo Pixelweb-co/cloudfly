@@ -4,6 +4,7 @@ import com.app.dto.rbac.MenuItemDTO;
 import com.app.persistence.repository.ModuleRepository;
 import com.app.persistence.repository.SubscriptionRepository;
 import com.app.persistence.repository.SubscriptionModuleRepository;
+import com.app.persistence.repository.UserRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -26,32 +27,44 @@ public class RbacService {
     private final ModuleRepository moduleRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionModuleRepository subscriptionModuleRepository;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public Mono<List<MenuItemDTO>> generateMenuForRoles(List<String> roles, Long customerId) {
+    public Mono<List<MenuItemDTO>> generateMenuForRoles(List<String> roles, Long customerId, String username) {
         boolean isManager = roles != null && roles.contains("MANAGER");
 
-        Flux<com.app.persistence.entity.ModuleEntity> accessibleModules;
+        Mono<Long> resolvedCustomerIdMono = Mono.justOrEmpty(customerId);
 
-        if (isManager) {
-            log.info("Generating menu for MANAGER. Returning all active modules.");
-            accessibleModules = moduleRepository.findAll()
-                    .filter(m -> m.getIsActive() != null && m.getIsActive());
-        } else {
-            log.info("Generating menu for Admin/User. Filtering by subscription for customerId: {}", customerId);
-            if (customerId == null) {
-                accessibleModules = Flux.empty();
-            } else {
-                accessibleModules = subscriptionRepository.findFirstByCustomerIdAndStatusOrderByEndDateDesc(customerId, "active")
-                        .flatMapMany(subscription -> subscriptionModuleRepository.findBySubscriptionId(subscription.getId()))
-                        .map(com.app.persistence.entity.SubscriptionModuleEntity::getModuleId)
-                        .collectList()
-                        .flatMapMany(moduleIds -> moduleRepository.findAllById(moduleIds))
-                        .filter(m -> m.getIsActive() != null && m.getIsActive());
-            }
+        if (!isManager && customerId == null && username != null) {
+            log.info("🏠 [MENU] customerId missing in token for {}, looking up in DB...", username);
+            resolvedCustomerIdMono = userRepository.findByUsername(username)
+                    .mapNotNull(user -> user.getCustomerId());
         }
 
-        return accessibleModules
+        return resolvedCustomerIdMono
+            .defaultIfEmpty(-1L)
+            .flatMapMany(resolvedCustomerId -> {
+                Flux<com.app.persistence.entity.ModuleEntity> accessibleModules;
+
+                if (isManager) {
+                    log.info("Generating menu for MANAGER. Returning all active modules.");
+                    accessibleModules = moduleRepository.findAll()
+                            .filter(m -> m.getIsActive() != null && m.getIsActive());
+                } else {
+                    if (resolvedCustomerId == -1L) {
+                        accessibleModules = Flux.empty();
+                    } else {
+                        log.info("Generating menu for Admin/User. Filtering by subscription for customerId: {}", resolvedCustomerId);
+                        accessibleModules = subscriptionRepository.findFirstByCustomerIdAndStatusOrderByEndDateDesc(resolvedCustomerId, "active")
+                                .flatMapMany(subscription -> subscriptionModuleRepository.findBySubscriptionId(subscription.getId()))
+                                .map(com.app.persistence.entity.SubscriptionModuleEntity::getModuleId)
+                                .collectList()
+                                .flatMapMany(moduleIds -> moduleRepository.findAllById(moduleIds))
+                                .filter(m -> m.getIsActive() != null && m.getIsActive());
+                    }
+                }
+                return accessibleModules;
+            })
                 .sort(Comparator.comparingInt(m -> m.getDisplayOrder() != null ? m.getDisplayOrder() : 0))
                 .map(module -> {
                     List<MenuItemDTO> children = parseMenuItems(module.getMenuItems());
