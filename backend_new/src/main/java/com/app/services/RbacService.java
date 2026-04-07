@@ -73,6 +73,8 @@ public class RbacService {
                             .icon("tabler-smart-home")
                             .build());
                     menu.addAll(modules);
+                    log.info("🏠 [MENU] Generated {} items for user (CustomerId: {}): {}", 
+                        menu.size(), customerId, menu.stream().map(MenuItemDTO::getLabel).collect(Collectors.joining(", ")));
                     return menu;
                 });
     }

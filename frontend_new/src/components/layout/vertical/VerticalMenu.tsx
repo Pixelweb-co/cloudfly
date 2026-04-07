@@ -133,6 +133,7 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
         // Fetch menu from endpoint /api/rbac/menu
         const menu = await menuService.getMenu()
 
+        console.log('📦 [VERTICAL-MENU] Data from API:', menu.map(m => m.label).join(', '))
         setMenuData(menu)
       } catch (err) {
         console.error('Error loading menu from backend:', err)
