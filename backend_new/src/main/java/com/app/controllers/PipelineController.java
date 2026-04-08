@@ -27,14 +27,24 @@ public class PipelineController {
     private Mono<Long> getCurrentTenantId() {
         return ReactiveSecurityContextHolder.getContext()
                 .map(SecurityContext::getAuthentication)
-                .flatMap(auth -> userService.findByUsername(auth.getName()))
-                .map(user -> user.getCustomerId());
+                .flatMap(auth -> {
+                    if (auth == null || auth.getName() == null) {
+                        return Mono.empty();
+                    }
+                    return userService.findByUsername(auth.getName());
+                })
+                .flatMap(user -> Mono.justOrEmpty(user.getCustomerId()));
     }
 
     private Mono<com.app.persistence.entity.UserEntity> getCurrentUser() {
         return ReactiveSecurityContextHolder.getContext()
                 .map(SecurityContext::getAuthentication)
-                .flatMap(auth -> userService.findByUsername(auth.getName()));
+                .flatMap(auth -> {
+                    if (auth == null || auth.getName() == null) {
+                        return Mono.empty();
+                    }
+                    return userService.findByUsername(auth.getName());
+                });
     }
 
     @GetMapping
@@ -55,8 +65,15 @@ public class PipelineController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN')")
     public Mono<PipelineDto> createPipeline(@RequestBody PipelineCreateRequest request) {
+        log.info("✨ REST Request to create Pipeline: {}", request.getName());
         return getCurrentUser()
-                .flatMap(user -> pipelineService.createPipeline(user.getCustomerId(), user.getId(), request));
+                .flatMap(user -> {
+                    if (user.getCustomerId() == null) {
+                        log.error("❌ Cannot create pipeline: Current user {} has no customerId", user.getUsername());
+                        return Mono.error(new RuntimeException("User has no associated customer"));
+                    }
+                    return pipelineService.createPipeline(user.getCustomerId(), user.getId(), request);
+                });
     }
 
     @PutMapping("/{id}")
