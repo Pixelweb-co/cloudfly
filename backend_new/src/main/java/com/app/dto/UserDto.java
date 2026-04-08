@@ -134,7 +134,7 @@ public class UserDto {
         public UserDtoBuilder accountNoLocked(boolean accountNoLocked) { this.accountNoLocked = accountNoLocked; return this; }
         public UserDtoBuilder credentialNoExpired(boolean credentialNoExpired) { this.credentialNoExpired = credentialNoExpired; return this; }
         public UserDtoBuilder verificationToken(String verificationToken) { this.verificationToken = verificationToken; return this; }
-        public UserDtoBuilder recoveryToken(String recoveryToken) { this.recoveryToken = recoveryToken; return this; return this; }
+        public UserDtoBuilder recoveryToken(String recoveryToken) { this.recoveryToken = recoveryToken; return this; }
         public UserDtoBuilder customerId(Long customerId) { this.customerId = customerId; return this; }
         public UserDtoBuilder activeCompanyId(Long activeCompanyId) { this.activeCompanyId = activeCompanyId; return this; }
         public UserDtoBuilder activeCompanyName(String activeCompanyName) { this.activeCompanyName = activeCompanyName; this.company_name = activeCompanyName; return this; }
