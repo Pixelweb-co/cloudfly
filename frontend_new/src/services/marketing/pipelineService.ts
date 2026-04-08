@@ -2,8 +2,9 @@ import { axiosInstance } from '@/utils/axiosInstance'
 import type { Pipeline, CreatePipelineDto, PipelineKanbanCard, MoveConversationDto } from '@/types/marketing/pipelineTypes'
 
 export const pipelineService = {
-  getAllPipelines: async (): Promise<Pipeline[]> => {
-    const response = await axiosInstance.get('/api/pipelines')
+  getAllPipelines: async (companyId?: number): Promise<Pipeline[]> => {
+    const url = companyId ? `/api/pipelines?companyId=${companyId}` : '/api/pipelines'
+    const response = await axiosInstance.get(url)
     
     return response.data
   },

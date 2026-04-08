@@ -49,9 +49,9 @@ public class PipelineController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
-    public Flux<PipelineDto> getAllPipelines() {
+    public Flux<PipelineDto> getAllPipelines(@RequestParam(required = false) Long companyId) {
         return getCurrentTenantId()
-                .flatMapMany(pipelineService::getAllPipelines);
+                .flatMapMany(tenantId -> pipelineService.getAllPipelines(tenantId, companyId));
     }
 
     @GetMapping("/{id}")

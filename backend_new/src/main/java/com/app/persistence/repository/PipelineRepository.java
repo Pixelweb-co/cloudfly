@@ -7,5 +7,6 @@ import reactor.core.publisher.Mono;
 
 public interface PipelineRepository extends ReactiveCrudRepository<PipelineEntity, Long> {
     Flux<PipelineEntity> findByTenantId(Long tenantId);
+    Flux<PipelineEntity> findByTenantIdAndCompanyId(Long tenantId, Long companyId);
     Mono<PipelineEntity> findByIdAndTenantId(Long id, Long tenantId);
 }
