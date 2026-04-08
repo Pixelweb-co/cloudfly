@@ -20,8 +20,10 @@ public class UserDto {
 
     // Enriquecido
     private Long activeCompanyId;
+    private String activeCompanyName;
     private Long tenant_id; // Alias for customerId
     private Long company_id; // Alias for activeCompanyId
+    private String company_name; // Alias for activeCompanyName
     private List<RoleEntity> roles;
     private TenantEntity tenant;
     private TenantEntity customer; // Alias for tenant for frontend compatibility
@@ -83,6 +85,8 @@ public class UserDto {
     public void setRoles(List<RoleEntity> roles) { this.roles = roles; }
     public TenantEntity getTenant() { return tenant; }
     public void setTenant(TenantEntity tenant) { this.tenant = tenant; }
+    public String getActiveCompanyName() { return activeCompanyName; }
+    public void setActiveCompanyName(String activeCompanyName) { this.activeCompanyName = activeCompanyName; }
     public boolean isHasActiveSubscription() { return hasActiveSubscription; }
     public void setHasActiveSubscription(boolean hasActiveSubscription) { this.hasActiveSubscription = hasActiveSubscription; }
     public ChannelConfigDTO getChannelConfig() { return channelConfig; }
@@ -92,6 +96,8 @@ public class UserDto {
     public void setTenant_id(Long tenant_id) { this.tenant_id = tenant_id; }
     public Long getCompany_id() { return company_id; }
     public void setCompany_id(Long company_id) { this.company_id = company_id; }
+    public String getCompany_name() { return company_name; }
+    public void setCompany_name(String company_name) { this.company_name = company_name; }
     public TenantEntity getCustomer() { return customer; }
     public void setCustomer(TenantEntity customer) { this.customer = customer; }
     public static class UserDtoBuilder {
@@ -108,8 +114,10 @@ public class UserDto {
         private String recoveryToken;
         private Long customerId;
         private Long activeCompanyId;
+        private String activeCompanyName;
         private Long tenant_id;
         private Long company_id;
+        private String company_name;
         private List<RoleEntity> roles;
         private TenantEntity tenant;
         private TenantEntity customer; // Alias
@@ -126,17 +134,45 @@ public class UserDto {
         public UserDtoBuilder accountNoLocked(boolean accountNoLocked) { this.accountNoLocked = accountNoLocked; return this; }
         public UserDtoBuilder credentialNoExpired(boolean credentialNoExpired) { this.credentialNoExpired = credentialNoExpired; return this; }
         public UserDtoBuilder verificationToken(String verificationToken) { this.verificationToken = verificationToken; return this; }
-        public UserDtoBuilder recoveryToken(String recoveryToken) { this.recoveryToken = recoveryToken; return this; }
+        public UserDtoBuilder recoveryToken(String recoveryToken) { this.recoveryToken = recoveryToken; return this; return this; }
         public UserDtoBuilder customerId(Long customerId) { this.customerId = customerId; return this; }
         public UserDtoBuilder activeCompanyId(Long activeCompanyId) { this.activeCompanyId = activeCompanyId; return this; }
+        public UserDtoBuilder activeCompanyName(String activeCompanyName) { this.activeCompanyName = activeCompanyName; this.company_name = activeCompanyName; return this; }
         public UserDtoBuilder tenant_id(Long tenant_id) { this.tenant_id = tenant_id; return this; }
         public UserDtoBuilder company_id(Long company_id) { this.company_id = company_id; return this; }
+        public UserDtoBuilder company_name(String company_name) { this.company_name = company_name; this.activeCompanyName = company_name; return this; }
         public UserDtoBuilder roles(List<RoleEntity> roles) { this.roles = roles; return this; }
         public UserDtoBuilder tenant(TenantEntity tenant) { this.tenant = tenant; this.customer = tenant; return this; }
         public UserDtoBuilder customer(TenantEntity customer) { this.customer = customer; this.tenant = customer; return this; }
         public UserDtoBuilder hasActiveSubscription(boolean hasActiveSubscription) { this.hasActiveSubscription = hasActiveSubscription; return this; }
         public UserDtoBuilder channelConfig(ChannelConfigDTO channelConfig) { this.channelConfig = channelConfig; return this; }
-        public UserDto build() { return new UserDto(id, nombres, apellidos, username, email, isEnabled, accountNoExpired, accountNoLocked, credentialNoExpired, verificationToken, recoveryToken, customerId, activeCompanyId, tenant_id, company_id, roles, tenant, customer, hasActiveSubscription, channelConfig); }
+
+        public UserDto build() {
+            UserDto dto = new UserDto();
+            dto.setId(id);
+            dto.setNombres(nombres);
+            dto.setApellidos(apellidos);
+            dto.setUsername(username);
+            dto.setEmail(email);
+            dto.setEnabled(isEnabled);
+            dto.setAccountNoExpired(accountNoExpired);
+            dto.setAccountNoLocked(accountNoLocked);
+            dto.setCredentialNoExpired(credentialNoExpired);
+            dto.setVerificationToken(verificationToken);
+            dto.setRecoveryToken(recoveryToken);
+            dto.setCustomerId(customerId);
+            dto.setActiveCompanyId(activeCompanyId);
+            dto.setActiveCompanyName(activeCompanyName);
+            dto.setTenant_id(tenant_id);
+            dto.setCompany_id(company_id);
+            dto.setCompany_name(company_name);
+            dto.setRoles(roles);
+            dto.setTenant(tenant);
+            dto.setCustomer(customer);
+            dto.setHasActiveSubscription(hasActiveSubscription);
+            dto.setChannelConfig(channelConfig);
+            return dto;
+        }
     }
 
     public static UserDtoBuilder builder() { return new UserDtoBuilder(); }
