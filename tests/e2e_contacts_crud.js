@@ -18,12 +18,12 @@ async function runTest() {
     let driver = await new Builder().forBrowser('chrome').build();
     try {
         console.log('🚀 Starting Contacts CRUD E2E Test...');
-        await driver.get('https://cloudfly.com.co/login');
+        await driver.get('https://dashboard.cloudfly.com.co/login');
 
         // 1. Login
         console.log('🔑 Logging in...');
         await driver.wait(until.elementLocated(By.name('username')), 10000);
-        await driver.findElement(By.name('username')).sendKeys('pipe_1775610155995');
+        await driver.findElement(By.name('username')).sendKeys('pipe_1775608262000');
         await driver.findElement(By.name('password')).sendKeys('widowmaker');
         await driver.findElement(By.css('button[type="submit"]')).click();
 
@@ -34,7 +34,7 @@ async function runTest() {
         // 2. Navigate to Contacts
         console.log('📂 Navigating to Contacts...');
         // The menu might need interation. Let's try direct navigation first to save time or find the link.
-        await driver.get('https://cloudfly.com.co/marketing/contacts/list');
+        await driver.get('https://dashboard.cloudfly.com.co/marketing/contacts/list');
         await driver.wait(until.elementLocated(By.xpath("//h5[contains(text(), 'Gestión de Contactos')]")), 15000);
         console.log('✅ Contacts Page loaded');
 
