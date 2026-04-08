@@ -35,11 +35,18 @@ const CustomerName = () => {
     const user = userMethods.getUserLogin()
     if (user) {
       setUserData(user)
-      if (user.customer) {
-        setSelectedTenant({ id: user.customerId || user.tenant_id, name: user.customer.name })
+      
+      const tenantId = user.customerId || user.tenant_id;
+      const tenantName = user.customer?.name || user.customerName || user.tenant_name || user.companyName || 'Sede Principal';
+      
+      if (tenantId) {
+        setSelectedTenant({ id: tenantId, name: tenantName })
       }
-      if (user.company_id || user.activeCompanyId) {
-        setSelectedCompany({ id: user.company_id || user.activeCompanyId, name: user.company_name || user.activeCompanyName })
+      
+      const compId = user.company_id || user.activeCompanyId;
+      const compName = user.company_name || user.activeCompanyName;
+      if (compId) {
+        setSelectedCompany({ id: compId, name: compName })
       }
     }
   }, [])
