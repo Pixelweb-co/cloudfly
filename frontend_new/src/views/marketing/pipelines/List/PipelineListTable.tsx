@@ -42,11 +42,13 @@ export default function PipelineListTable() {
       
       const user = userMethods.getUserLogin()
       const isManager = user?.roles?.some((r: any) => (r.name || r.role || '').includes('MANAGER'))
+      const isAdmin = user?.roles?.some((r: any) => (r.name || r.role || '').includes('ADMIN'))
       
-      // Only filter by company if is MANAGER
-      const companyId = isManager ? (user?.activeCompanyId || user?.company_id) : undefined
+      // Filter by tenant and company if is MANAGER or ADMIN
+      const tenantId = (isManager || isAdmin) ? (user?.customerId || user?.tenant_id) : undefined
+      const companyId = (isManager || isAdmin) ? (user?.activeCompanyId || user?.company_id) : undefined
       
-      const data = await pipelineService.getAllPipelines(companyId)
+      const data = await pipelineService.getAllPipelines(tenantId, companyId)
       setPipelines(data)
     } catch (e) {
       console.error('Error al cargar pipelines:', e)
