@@ -34,6 +34,9 @@ public class PipelineEntity {
     @Column("created_by")
     private Long createdBy;
 
+    @Column("company_id")
+    private Long companyId;
+
     @Column("created_at")
     private LocalDateTime createdAt;
 

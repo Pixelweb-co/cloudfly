@@ -4,13 +4,12 @@ export interface Stage {
     id: number
     name: string
     color?: string
-    order: number
+    position: number
     pipelineId: number
     description?: string
     isInitial?: boolean
     isFinal?: boolean
     outcome?: 'OPEN' | 'WON' | 'LOST'
-}
 }
 
 export interface Pipeline {
@@ -35,6 +34,7 @@ export interface CreatePipelineDto {
     type: string
     isActive?: boolean
     isDefault?: boolean
+    stages?: Stage[]
 }
 
 export interface PipelineKanbanCard {
