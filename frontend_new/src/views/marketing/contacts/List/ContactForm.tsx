@@ -24,6 +24,7 @@ import { Contact, ContactCreateRequest } from '@/types/marketing/contactTypes'
 import { Pipeline, PipelineStage } from '@/types/marketing/pipelineTypes'
 import { userMethods } from '@/utils/userMethods'
 import toast from 'react-hot-toast'
+import { Icon } from '@iconify/react'
 
 interface Props {
   open: boolean;
