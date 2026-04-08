@@ -84,15 +84,29 @@ public class PipelineController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN')")
     public Mono<PipelineDto> createPipeline(@RequestBody PipelineCreateRequest request) {
         log.info("✨ REST Request to create Pipeline: {}", request.getName());
-        return getCurrentUser()
-                .flatMap(user -> {
-                    if (user.getCustomerId() == null) {
-                        log.error("❌ Cannot create pipeline: Current user {} has no customerId", user.getUsername());
-                        return Mono.error(new RuntimeException("User has no associated customer"));
-                    }
-                    Long companyId = request.getCompanyId();
-                    return pipelineService.createPipeline(user.getCustomerId(), companyId, user.getId(), request);
-                });
+        
+        return ReactiveSecurityContextHolder.getContext()
+                .map(SecurityContext::getAuthentication)
+                .flatMap(auth -> userService.findByUsername(auth.getName())
+                        .flatMap(user -> {
+                            boolean isManager = auth.getAuthorities().stream()
+                                    .anyMatch(a -> a.getAuthority().contains("MANAGER"));
+                            
+                            Long targetTenantId = (isManager && request.getTenantId() != null) 
+                                    ? request.getTenantId() 
+                                    : user.getCustomerId();
+                                    
+                            if (targetTenantId == null) {
+                                log.error("❌ Cannot create pipeline: No target tenant resolved for user {}", user.getUsername());
+                                return Mono.error(new RuntimeException("No associated customer resolved for creation"));
+                            }
+                            
+                            Long companyId = request.getCompanyId();
+                            log.info("🎯 Creating pipeline mapped to Tenant: {}, Company: {}", targetTenantId, companyId);
+                            
+                            return pipelineService.createPipeline(targetTenantId, companyId, user.getId(), request);
+                        })
+                );
     }
 
     @PutMapping("/{id}")
