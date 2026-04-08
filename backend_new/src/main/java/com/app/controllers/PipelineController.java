@@ -53,18 +53,22 @@ public class PipelineController {
             @RequestParam(required = false) Long tenantId,
             @RequestParam(required = false) Long companyId) {
         
-        return getCurrentUser()
-                .flatMapMany(user -> {
-                    boolean isManager = user.getRoles().stream()
-                            .anyMatch(r -> r.getName().contains("MANAGER"));
+        return ReactiveSecurityContextHolder.getContext()
+                .map(SecurityContext::getAuthentication)
+                .flatMapMany(auth -> {
+                    boolean isManager = auth.getAuthorities().stream()
+                            .anyMatch(a -> a.getAuthority().contains("MANAGER"));
                     
-                    // If MANAGER and tenantId is provided, use it. Otherwise use user's customerId.
-                    Long targetTenantId = (isManager && tenantId != null) ? tenantId : user.getCustomerId();
-                    
-                    log.info("🚀 Fetching pipelines for Tenant: {} (Requested: {}), Company: {}", 
-                            targetTenantId, tenantId, companyId);
-                            
-                    return pipelineService.getAllPipelines(targetTenantId, companyId);
+                    return userService.findByUsername(auth.getName())
+                            .flatMapMany(user -> {
+                                // If MANAGER and tenantId is provided, use it. Otherwise use user's customerId.
+                                Long targetTenantId = (isManager && tenantId != null) ? tenantId : user.getCustomerId();
+                                
+                                log.info("🚀 Fetching pipelines for Tenant: {} (Manager: {}), Company: {}", 
+                                        targetTenantId, isManager, companyId);
+                                        
+                                return pipelineService.getAllPipelines(targetTenantId, companyId);
+                            });
                 });
     }
 
