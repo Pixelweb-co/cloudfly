@@ -155,8 +155,8 @@ public class UserService {
                 return roleRepository.findRolesByUserId(user.getId())
                                 .collectList()
                                 .flatMap(roles -> {
-                                        if (user.getCustomerId() == null) {
-                                                return Mono.just(buildUserDto(user, roles, null, false, 0L));
+                                         if (user.getCustomerId() == null) {
+                                                return Mono.just(buildUserDto(user, roles, null, false, null));
                                         }
 
                                         Mono<TenantEntity> tenantMono = tenantRepository.findById(user.getCustomerId())
