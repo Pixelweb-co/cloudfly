@@ -32,7 +32,7 @@ public class ContactService {
         contact.setCompanyId(companyId);
         contact.setCreatedAt(LocalDateTime.now());
         contact.setUpdatedAt(LocalDateTime.now());
-        if (contact.getStatus() == null) contact.setStage("LEAD"); // Default stage if not provided
+        if (contact.getStage() == null) contact.setStage("LEAD"); // Default stage if not provided
         
         log.info("Creating new contact: {} for tenant: {}", contact.getName(), tenantId);
         return contactRepository.save(contact);
