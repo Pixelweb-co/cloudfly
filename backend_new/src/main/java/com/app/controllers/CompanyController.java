@@ -20,9 +20,24 @@ public class CompanyController {
     private final CompanyRepository companyRepository;
 
     @GetMapping
-    public Flux<CompanyEntity> getAllCompanies(Authentication authentication) {
-        Long tenantId = getTenantIdFromAuth(authentication);
-        return companyRepository.findByTenantId(tenantId);
+    public Flux<CompanyEntity> getAllCompanies(
+            @RequestParam(required = false) Long tenantId,
+            Authentication authentication) {
+        
+        // If tenantId is provided and user is MANAGER, allow it.
+        // Otherwise, use the authenticated user's tenantId.
+        if (tenantId != null && hasManagerRole(authentication)) {
+            return companyRepository.findByTenantId(tenantId);
+        }
+
+        Long authTenantId = getTenantIdFromAuth(authentication);
+        return companyRepository.findByTenantId(authTenantId);
+    }
+
+    private boolean hasManagerRole(Authentication authentication) {
+        if (authentication == null) return false;
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().contains("MANAGER"));
     }
 
     @GetMapping("/{id}")

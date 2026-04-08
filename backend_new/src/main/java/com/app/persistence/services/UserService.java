@@ -166,11 +166,10 @@ public class UserService {
                                                         .map(s -> true)
                                                         .defaultIfEmpty(false);
                                         
-                                        Mono<Long> companyMono = companyRepository.findByTenantId(user.getCustomerId())
+                                        Mono<CompanyEntity> companyMono = companyRepository.findByTenantId(user.getCustomerId())
                                                         .filter(CompanyEntity::getIsPrincipal)
                                                         .next()
-                                                        .map(CompanyEntity::getId)
-                                                        .defaultIfEmpty(0L);
+                                                        .defaultIfEmpty(new CompanyEntity());
 
                                         return Mono.zip(tenantMono, subMono, companyMono)
                                                         .map(tuple -> buildUserDto(user, roles, 
@@ -180,7 +179,7 @@ public class UserService {
                                 });
         }
 
-        private UserDto buildUserDto(UserEntity user, List<RoleEntity> roles, TenantEntity tenant, boolean hasActiveSub, Long activeCompanyId) {
+        private UserDto buildUserDto(UserEntity user, List<RoleEntity> roles, TenantEntity tenant, boolean hasActiveSub, CompanyEntity activeCompany) {
                 return UserDto.builder()
                                 .id(user.getId())
                                 .nombres(user.getNombres())
@@ -195,11 +194,13 @@ public class UserService {
                                 .recoveryToken(user.getRecoveryToken())
                                 .customerId(user.getCustomerId())
                                 .tenant_id(user.getCustomerId()) // Alias
-                                .activeCompanyId(activeCompanyId != 0L ? activeCompanyId : null)
-                                .company_id(activeCompanyId != 0L ? activeCompanyId : null) // Alias
+                                .activeCompanyId(activeCompany != null && activeCompany.getId() != null ? activeCompany.getId() : null)
+                                .activeCompanyName(activeCompany != null ? activeCompany.getName() : null)
+                                .company_id(activeCompany != null && activeCompany.getId() != null ? activeCompany.getId() : null) // Alias
+                                .company_name(activeCompany != null ? activeCompany.getName() : null) // Alias
                                 .roles(roles)
                                 .tenant(tenant)
-                                .customer(tenant) // Alias for frontend
+                                .customer(tenant) // Alias for frontend compatibility
                                 .hasActiveSubscription(hasActiveSub)
                                 .build();
         }
