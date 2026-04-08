@@ -121,13 +121,15 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Pipeli
     console.log('🚀 [PIPELINE-DEBUG] handleSubmit triggered. Data:', data);
     try {
       setLoading(true)
-      // Get companyId from localStorage (userData)
+      // Get companyId and tenantId from localStorage (userData)
       const userData = JSON.parse(localStorage.getItem('userData') || '{}')
       const companyId = userData.company_id || userData.activeCompanyId
+      const tenantId = userData.customerId || userData.tenant_id
 
       const payload = {
         ...data,
         companyId: companyId,
+        tenantId: tenantId,
         stages: data.stages.map((s: any, idx: number) => ({
           ...s,
           position: s.position ?? idx

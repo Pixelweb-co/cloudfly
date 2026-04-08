@@ -19,5 +19,6 @@ public class PipelineCreateRequest {
     private String icon;
     private Boolean isDefault;
     private Long companyId;
+    private Long tenantId;
     private List<PipelineStageCreateRequest> stages;
 }
