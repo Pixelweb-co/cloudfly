@@ -48,7 +48,7 @@ const schema = yup.object().shape({
     yup.object().shape({
       name: yup.string().required('El nombre de la etapa es obligatorio'),
       color: yup.string().default('#9CA3AF'),
-      order: yup.number()
+      position: yup.number()
     })
   ).min(1, 'Debe haber al menos una etapa')
 })
@@ -80,7 +80,7 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Pipeli
       type: 'SALES',
       isActive: true,
       isDefault: false,
-      stages: [{ name: 'Prospecto', color: '#9CA3AF', order: 0 }]
+      stages: [{ name: 'Prospecto', color: '#9CA3AF', position: 0 }]
     }
   })
 
@@ -101,7 +101,7 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Pipeli
         isDefault: selectedPipeline.isDefault,
         stages: selectedPipeline.stages && selectedPipeline.stages.length > 0 
           ? selectedPipeline.stages 
-          : [{ name: 'Prospecto', color: '#9CA3AF', order: 0 }]
+          : [{ name: 'Prospecto', color: '#9CA3AF', position: 0 }]
       })
     } else {
       console.log('📝 [PIPELINE-DEBUG] Resetting for create');
@@ -112,7 +112,7 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Pipeli
         type: 'SALES',
         isActive: true,
         isDefault: false,
-        stages: [{ name: 'Prospecto', color: '#9CA3AF', order: 0 }]
+        stages: [{ name: 'Prospecto', color: '#9CA3AF', position: 0 }]
       })
     }
   }, [selectedPipeline, reset])
@@ -121,11 +121,16 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Pipeli
     console.log('🚀 [PIPELINE-DEBUG] handleSubmit triggered. Data:', data);
     try {
       setLoading(true)
+      // Get companyId from localStorage (userData)
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}')
+      const companyId = userData.company_id || userData.activeCompanyId
+
       const payload = {
         ...data,
+        companyId: companyId,
         stages: data.stages.map((s: any, idx: number) => ({
           ...s,
-          order: s.order ?? idx
+          position: s.position ?? idx
         }))
       }
       
@@ -213,6 +218,7 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Pipeli
                 render={({ field }) => (
                   <CustomTextField
                     {...field}
+                    id='pipeline-name'
                     fullWidth
                     label='Nombre del Embudo'
                     placeholder='Ej: Pipelines de Ventas 2024'
@@ -237,6 +243,7 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Pipeli
                 render={({ field }) => (
                   <CustomTextField
                     {...field}
+                    id='pipeline-description'
                     fullWidth
                     multiline
                     rows={2}
@@ -337,10 +344,11 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Pipeli
               </Box>
 
               <Button
+                id='add-stage-btn'
                 fullWidth
                 variant='outlined'
                 startIcon={<Icon icon='tabler-plus' />}
-                onClick={() => append({ name: '', color: '#9CA3AF', order: fields.length })}
+                onClick={() => append({ name: '', color: '#9CA3AF', position: fields.length })}
                 sx={{
                   mt: 4,
                   borderRadius: '12px',
@@ -361,6 +369,7 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Pipeli
             Cancelar
           </Button>
           <Button
+            id='pipeline-submit'
             type='submit'
             variant='contained'
             disabled={loading}

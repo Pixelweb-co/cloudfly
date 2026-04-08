@@ -22,6 +22,7 @@ public class PipelineDto {
     private String icon;
     private Boolean isActive;
     private Boolean isDefault;
+    private Long companyId;
     private LocalDateTime createdAt;
     private List<PipelineStageDto> stages;
 }

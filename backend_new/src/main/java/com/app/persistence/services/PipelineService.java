@@ -68,16 +68,17 @@ public class PipelineService {
     }
 
     @Transactional
-    public Mono<PipelineDto> createPipeline(Long tenantId, Long userId, PipelineCreateRequest request) {
+    public Mono<PipelineDto> createPipeline(Long tenantId, Long companyId, Long userId, PipelineCreateRequest request) {
         PipelineEntity pipeline = PipelineEntity.builder()
                 .tenantId(tenantId)
                 .name(request.getName())
                 .description(request.getDescription())
-                .type(request.getType() != null ? request.getType() : "MARKETING")
+                .type(request.getType())
                 .color(request.getColor())
                 .icon(request.getIcon())
                 .isActive(true)
                 .isDefault(request.getIsDefault() != null ? request.getIsDefault() : false)
+                .companyId(companyId != null ? companyId : request.getCompanyId())
                 .createdBy(userId)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -158,6 +159,7 @@ public class PipelineService {
                 .icon(pipeline.getIcon())
                 .isActive(pipeline.isActive())
                 .isDefault(pipeline.isDefault())
+                .companyId(pipeline.getCompanyId())
                 .createdAt(pipeline.getCreatedAt())
                 .stages(stages.stream().map(this::mapStageToDto).toList())
                 .build();

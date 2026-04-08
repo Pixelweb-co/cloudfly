@@ -18,5 +18,6 @@ public class PipelineCreateRequest {
     private String color;
     private String icon;
     private Boolean isDefault;
+    private Long companyId;
     private List<PipelineStageCreateRequest> stages;
 }

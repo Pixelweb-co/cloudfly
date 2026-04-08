@@ -72,7 +72,8 @@ public class PipelineController {
                         log.error("❌ Cannot create pipeline: Current user {} has no customerId", user.getUsername());
                         return Mono.error(new RuntimeException("User has no associated customer"));
                     }
-                    return pipelineService.createPipeline(user.getCustomerId(), user.getId(), request);
+                    Long companyId = request.getCompanyId();
+                    return pipelineService.createPipeline(user.getCustomerId(), companyId, user.getId(), request);
                 });
     }
 
