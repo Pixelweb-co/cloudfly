@@ -77,7 +77,7 @@ public class EvolutionWebhookController {
                     .flatMap(channel -> {
                         log.info("📡 [EVOLUTION-WEBHOOK] Found channel for instance: {}", instance);
                         
-                        return contactService.getOrCreateContact(channel.getTenantId(), remoteJid, pushName)
+                        return contactService.getOrCreateContact(channel.getTenantId(), channel.getCompanyId(), remoteJid, pushName)
                                 .flatMap(contact -> {
                                     OmniChannelMessageEntity msgEntity = OmniChannelMessageEntity.builder()
                                             .tenantId(channel.getTenantId())
