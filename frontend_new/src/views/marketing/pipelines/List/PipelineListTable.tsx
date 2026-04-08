@@ -21,6 +21,7 @@ import { format } from 'date-fns'
 import { pipelineService } from '@/services/marketing/pipelineService'
 import { Pipeline } from '@/types/marketing/pipelineTypes'
 import { useRouter } from 'next/navigation'
+import { userMethods } from '@/utils/userMethods'
 import PipelineForm from './PipelineForm'
 
 export default function PipelineListTable() {
@@ -38,7 +39,14 @@ export default function PipelineListTable() {
   const loadPipelines = async () => {
     try {
       setLoading(true)
-      const data = await pipelineService.getAllPipelines()
+      
+      const user = userMethods.getUserLogin()
+      const isManager = user?.roles?.some((r: any) => (r.name || r.role || '').includes('MANAGER'))
+      
+      // Only filter by company if is MANAGER
+      const companyId = isManager ? (user?.activeCompanyId || user?.company_id) : undefined
+      
+      const data = await pipelineService.getAllPipelines(companyId)
       setPipelines(data)
     } catch (e) {
       console.error('Error al cargar pipelines:', e)

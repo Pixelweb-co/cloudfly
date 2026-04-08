@@ -53,8 +53,17 @@ public class PipelineService {
                 });
     }
 
-    public Flux<PipelineDto> getAllPipelines(Long tenantId) {
-        return pipelineRepository.findByTenantId(tenantId)
+    public Flux<PipelineDto> getAllPipelines(Long tenantId, Long companyId) {
+        Flux<PipelineEntity> pipelineFlux;
+        if (companyId != null) {
+            log.info("🔍 Filtering pipelines for tenant {} and company {}", tenantId, companyId);
+            pipelineFlux = pipelineRepository.findByTenantIdAndCompanyId(tenantId, companyId);
+        } else {
+            log.info("🌐 Fetching all pipelines for tenant {}", tenantId);
+            pipelineFlux = pipelineRepository.findByTenantId(tenantId);
+        }
+
+        return pipelineFlux
                 .flatMap(pipeline -> pipelineStageRepository.findByPipelineIdOrderByPositionAsc(pipeline.getId())
                         .collectList()
                         .map(stages -> mapToDto(pipeline, stages)));
