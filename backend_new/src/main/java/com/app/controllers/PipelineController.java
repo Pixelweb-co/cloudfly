@@ -49,9 +49,23 @@ public class PipelineController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
-    public Flux<PipelineDto> getAllPipelines(@RequestParam(required = false) Long companyId) {
-        return getCurrentTenantId()
-                .flatMapMany(tenantId -> pipelineService.getAllPipelines(tenantId, companyId));
+    public Flux<PipelineDto> getAllPipelines(
+            @RequestParam(required = false) Long tenantId,
+            @RequestParam(required = false) Long companyId) {
+        
+        return getCurrentUser()
+                .flatMapMany(user -> {
+                    boolean isManager = user.getRoles().stream()
+                            .anyMatch(r -> r.getName().contains("MANAGER"));
+                    
+                    // If MANAGER and tenantId is provided, use it. Otherwise use user's customerId.
+                    Long targetTenantId = (isManager && tenantId != null) ? tenantId : user.getCustomerId();
+                    
+                    log.info("🚀 Fetching pipelines for Tenant: {} (Requested: {}), Company: {}", 
+                            targetTenantId, tenantId, companyId);
+                            
+                    return pipelineService.getAllPipelines(targetTenantId, companyId);
+                });
     }
 
     @GetMapping("/{id}")

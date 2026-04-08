@@ -20,6 +20,16 @@ const CustomerName = () => {
     return userData.roles.some((r: any) => (r.name || r.role || '').includes('MANAGER'))
   }, [userData])
 
+  const isAdmin = useMemo(() => {
+    if (!userData || !userData.roles) return false
+    return userData.roles.some((r: any) => (r.name || r.role || '').includes('ADMIN')) && !isManager
+  }, [userData, isManager])
+
+  const isUser = useMemo(() => {
+    if (!userData || !userData.roles) return false
+    return !isManager && !isAdmin
+  }, [userData, isManager, isAdmin])
+
   // Initialize
   useEffect(() => {
     const user = userMethods.getUserLogin()
@@ -47,9 +57,9 @@ const CustomerName = () => {
     }
   }, [isManager, tenants.length])
 
-  // Fetch Companies when Tenant changes
+  // Fetch Companies when Tenant changes (MANAGER) or Initial Load (ADMIN)
   useEffect(() => {
-    if (isManager && selectedTenant) {
+    if ((isManager || isAdmin) && selectedTenant) {
       setLoadingCompanies(true)
       axiosInstance.get(`/api/v1/companies?tenantId=${selectedTenant.id}`)
         .then(res => {
@@ -60,7 +70,7 @@ const CustomerName = () => {
     } else {
       setCompanies([])
     }
-  }, [isManager, selectedTenant])
+  }, [isManager, isAdmin, selectedTenant])
 
   const handleSwitchContext = useCallback((company: any) => {
     if (!company || !selectedTenant) return
@@ -82,9 +92,10 @@ const CustomerName = () => {
 
   if (!userData) return null
 
-  if (isManager) {
-    return (
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+  return (
+    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+      {/* MANAGER: Can change Tenant */}
+      {isManager ? (
         <Autocomplete
           size='small'
           options={tenants}
@@ -114,7 +125,15 @@ const CustomerName = () => {
             />
           )}
         />
+      ) : (
+        /* ADMIN/USER: Static Tenant Name */
+        <Typography variant='h6' sx={{ fontWeight: 700, color: 'text.primary', mr: 2 }}>
+          {userData.customer?.name || ''}
+        </Typography>
+      )}
 
+      {/* MANAGER/ADMIN: Can change Company */}
+      {(isManager || isAdmin) ? (
         <Autocomplete
           size='small'
           options={companies}
@@ -147,17 +166,13 @@ const CustomerName = () => {
             />
           )}
         />
-      </Box>
-    )
-  }
-
-  // Static name for ADMIN / USER
-  const displayName = `${userData.customer?.name || ''}${userData.company_name ? ` - ${userData.company_name}` : ''}`
-  
-  return (
-    <Typography variant='h6' sx={{ fontWeight: 700, color: 'text.primary' }} suppressHydrationWarning>
-      {displayName}
-    </Typography>
+      ) : (
+        /* USER: Static Company Name */
+        <Typography variant='h6' sx={{ fontWeight: 700, color: 'text.secondary' }}>
+          {userData.company_name ? ` - ${userData.company_name}` : ''}
+        </Typography>
+      )}
+    </Box>
   )
 }
 
