@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Grid, Typography, Box, CircularProgress, IconButton } from '@mui/material'
+import { Grid, Typography, Box, CircularProgress, IconButton, Avatar, Card, Divider } from '@mui/material'
 import ContactFormPanel from './ContactFormPanel'
 import ChatInterface from './ChatInterface'
 import { contactService } from '@/services/marketing/contactService'
@@ -12,6 +12,8 @@ import { Pipeline } from '@/types/marketing/pipelineTypes'
 import { userMethods } from '@/utils/userMethods'
 import toast from 'react-hot-toast'
 import { Icon } from '@iconify/react'
+import WhatsAppConfigForm from '@/views/apps/comunicaciones/canales/whatsapp/WhatsAppConfigForm'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 export default function ContactDetailView() {
   const params = useParams()
@@ -23,6 +25,8 @@ export default function ContactDetailView() {
   const [saving, setSaving] = useState(false)
   const [contact, setContact] = useState<Contact | null>(null)
   const [pipelines, setPipelines] = useState<Pipeline[]>([])
+  const [isEvolutionConnected, setIsEvolutionConnected] = useState(false)
+  const [isCheckingConnection, setIsCheckingConnection] = useState(true)
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -50,7 +54,6 @@ export default function ContactDetailView() {
         }
       } catch (err) {
         console.error('Error fetching contact:', err)
-        // Only redirect on edit mode failures, not for new contact form
         if (!isNew) {
           toast.error('Error cargando el contacto')
           router.push('/marketing/contacts/list')
@@ -59,7 +62,26 @@ export default function ContactDetailView() {
         setLoading(false)
       }
     }
+
+    const checkWhatsAppStatus = async () => {
+      try {
+        const user = userMethods.getUserLogin()
+        if (user && user.username) {
+          const name = `cloudfly_${user.username.toLowerCase().replace(/[^a-z0-9]/g, '_')}`
+          const res = await axiosInstance.get(`/api/evolution/status/${name}`)
+          if (res.data && res.data.instance && res.data.instance.state === 'open') {
+            setIsEvolutionConnected(true)
+          }
+        }
+      } catch (err) {
+        console.log('Evolution instance not active or not created')
+      } finally {
+        setIsCheckingConnection(false)
+      }
+    }
+
     fetchInitialData()
+    checkWhatsAppStatus()
   }, [idStr, isNew, router])
 
   const goBack = () => router.push('/marketing/contacts/list')
@@ -73,7 +95,6 @@ export default function ContactDetailView() {
       if (isNew) {
         const newContact = await contactService.createContact(formData, companyId)
         toast.success('Contacto creado exitosamente')
-        // Al crear, queremos redirigir a la vista de ese contacto ya creado (con chat activo)
         router.replace(`/marketing/contacts/${newContact.id}`)
       } else if (contact) {
         const updated = await contactService.updateContact(contact.id, formData, companyId)
@@ -83,7 +104,7 @@ export default function ContactDetailView() {
     } catch (error) {
       console.error('Save failed:', error)
       toast.error('Error al guardar el contacto')
-      throw error // Lanzar error para que el panel detenga spinner
+      throw error
     } finally {
       setSaving(false)
     }
@@ -131,12 +152,43 @@ export default function ContactDetailView() {
 
         {/* Right Column: Chat/Activity */}
         <Grid item xs={12} lg={7}>
-          <ChatInterface contact={contact} isNew={isNew} />
+          {isNew ? (
+            <Box sx={{ p: 10, textAlign: 'center', bgcolor: 'action.hover', borderRadius: 2, border: '1px dashed', borderColor: 'divider' }}>
+                <Icon icon="tabler:message-off" fontSize="3rem" style={{ opacity: 0.2 }} />
+                <Typography variant="h6" sx={{ mt: 4, opacity: 0.5 }}>Guarda el contacto para iniciar un chat</Typography>
+            </Box>
+          ) : isCheckingConnection ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 400 }}>
+                  <CircularProgress size={40} />
+                  <Typography sx={{ mt: 4 }} color="text.secondary">Verificando conexión de WhatsApp...</Typography>
+              </Box>
+          ) : isEvolutionConnected ? (
+            <ChatInterface contact={contact} isNew={isNew} />
+          ) : (
+            <Card sx={{ height: '700px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', p: 6, textAlign: 'center', boxShadow: 3 }}>
+                <Box sx={{ mb: 6 }}>
+                    <Avatar sx={{ width: 80, height: 80, bgcolor: 'rgba(var(--mui-palette-success-mainChannel) / 0.12)', color: 'success.main', mx: 'auto', mb: 4 }}>
+                        <Icon icon="tabler:brand-whatsapp" fontSize="3rem" />
+                    </Avatar>
+                    <Typography variant="h5" color="error" gutterBottom className="font-semibold">
+                        WhatsApp no conectado
+                    </Typography>
+                    <Typography variant="body1" sx={{ color: 'text.secondary', mb: 6 }}>
+                        Para chatear con este contacto, primero debes activar tu canal de WhatsApp.
+                    </Typography>
+                    
+                    <Divider sx={{ mb: 6, width: '100%', opacity: 0.5 }}>Configuración Instantánea</Divider>
+                    
+                    <Box sx={{ maxWidth: 500, mx: 'auto' }}>
+                        <WhatsAppConfigForm onSuccess={() => setIsEvolutionConnected(true)} />
+                    </Box>
+                </Box>
+            </Card>
+          )}
         </Grid>
 
       </Grid>
       
-      {/* Future Expansion Row */}
       <Box mt={6} />
     </Box>
   )
