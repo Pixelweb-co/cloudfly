@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Box,
   Card,
@@ -26,14 +27,12 @@ import { pipelineService } from '@/services/marketing/pipelineService'
 import { Contact } from '@/types/marketing/contactTypes'
 import { Pipeline } from '@/types/marketing/pipelineTypes'
 import { userMethods } from '@/utils/userMethods'
-import ContactForm from './ContactForm'
 
 export default function ContactListTable() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [pipelines, setPipelines] = useState<Pipeline[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     loadData()
@@ -66,13 +65,11 @@ export default function ContactListTable() {
   }
 
   const handleEdit = (contact: Contact) => {
-    setSelectedContact(contact)
-    setIsDialogOpen(true)
+    router.push(`/marketing/contacts/${contact.id}`)
   }
 
   const handleAdd = () => {
-    setSelectedContact(null)
-    setIsDialogOpen(true)
+    router.push(`/marketing/contacts/new`)
   }
 
   const handleDelete = async (id: number) => {
@@ -213,14 +210,6 @@ export default function ContactListTable() {
           </TableBody>
         </Table>
       </TableContainer>
-
-      <ContactForm 
-        open={isDialogOpen} 
-        handleClose={() => setIsDialogOpen(false)} 
-        selectedContact={selectedContact}
-        pipelines={pipelines}
-        onSuccess={loadData}
-      />
     </Card>
   )
 }

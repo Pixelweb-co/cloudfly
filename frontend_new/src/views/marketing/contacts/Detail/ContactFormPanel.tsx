@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Card,
+  CardHeader,
+  CardContent,
+  CardActions,
   Button,
   Grid,
   TextField,
@@ -15,26 +15,22 @@ import {
   Select,
   Typography,
   Divider,
-  Box,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  Box
 } from '@mui/material'
-import { contactService } from '@/services/marketing/contactService'
 import { Contact, ContactCreateRequest } from '@/types/marketing/contactTypes'
 import { Pipeline, PipelineStage } from '@/types/marketing/pipelineTypes'
-import { userMethods } from '@/utils/userMethods'
-import toast from 'react-hot-toast'
 import { Icon } from '@iconify/react'
 
 interface Props {
-  open: boolean;
-  handleClose: () => void;
-  selectedContact: Contact | null;
+  contact: Contact | null;
   pipelines: Pipeline[];
-  onSuccess: () => void;
+  onSave: (data: ContactCreateRequest) => Promise<void>;
+  saving: boolean;
 }
 
-export default function ContactForm({ open, handleClose, selectedContact, pipelines, onSuccess }: Props) {
+export default function ContactFormPanel({ contact, pipelines, onSave, saving }: Props) {
   const [formData, setFormData] = useState<ContactCreateRequest>({
     name: '',
     email: '',
@@ -49,51 +45,33 @@ export default function ContactForm({ open, handleClose, selectedContact, pipeli
     documentNumber: '',
     isActive: true
   })
-  const [saving, setSaving] = useState(false)
   const [availableStages, setAvailableStages] = useState<PipelineStage[]>([])
 
   useEffect(() => {
-    if (selectedContact) {
+    if (contact) {
       setFormData({
-        name: selectedContact.name,
-        email: selectedContact.email || '',
-        phone: selectedContact.phone || '',
-        address: selectedContact.address || '',
-        taxId: selectedContact.taxId || '',
-        type: selectedContact.type || 'LEAD',
-        stage: selectedContact.stage || 'LEAD',
-        pipelineId: selectedContact.pipelineId,
-        stageId: selectedContact.stageId,
-        documentType: selectedContact.documentType || 'CC',
-        documentNumber: selectedContact.documentNumber || '',
-        isActive: selectedContact.isActive
+        name: contact.name,
+        email: contact.email || '',
+        phone: contact.phone || '',
+        address: contact.address || '',
+        taxId: contact.taxId || '',
+        type: contact.type || 'LEAD',
+        stage: contact.stage || 'LEAD',
+        pipelineId: contact.pipelineId,
+        stageId: contact.stageId,
+        documentType: contact.documentType || 'CC',
+        documentNumber: contact.documentNumber || '',
+        isActive: contact.isActive !== undefined ? contact.isActive : true
       })
       
-      // Load stages if pipeline exists
-      if (selectedContact.pipelineId) {
-        const pipeline = pipelines.find(p => p.id === selectedContact.pipelineId)
+      if (contact.pipelineId) {
+        const pipeline = pipelines.find(p => p.id === contact.pipelineId)
         if (pipeline && pipeline.stages) {
           setAvailableStages(pipeline.stages)
         }
       }
-    } else {
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        address: '',
-        taxId: '',
-        type: 'LEAD',
-        stage: 'LEAD',
-        pipelineId: undefined,
-        stageId: undefined,
-        documentType: 'CC',
-        documentNumber: '',
-        isActive: true
-      })
-      setAvailableStages([])
     }
-  }, [selectedContact, open, pipelines])
+  }, [contact, pipelines])
 
   const handlePipelineChange = (pipelineId: number) => {
     const pipeline = pipelines.find(p => p.id === pipelineId)
@@ -106,51 +84,40 @@ export default function ContactForm({ open, handleClose, selectedContact, pipeli
   }
 
   const handleSubmit = async () => {
-    if (!formData.name) {
-      toast.error('El nombre es obligatorio')
-      return
-    }
-
-    try {
-      setSaving(true)
-      const user = userMethods.getUserLogin()
-      const companyId = user?.activeCompanyId || user?.company_id
-      
-      if (selectedContact) {
-        await contactService.updateContact(selectedContact.id, formData, companyId)
-        toast.success('Contacto actualizado')
-      } else {
-        await contactService.createContact(formData, companyId)
-        toast.success('Contacto creado')
-      }
-      onSuccess()
-      handleClose()
-    } catch (e) {
-      console.error('Error al guardar contacto:', e)
-      toast.error('Error al guardar el contacto')
-    } finally {
-      setSaving(false)
-    }
+    if (!formData.name) return // simple local check handled by UX elsewhere or add state validation
+    await onSave(formData)
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        {selectedContact ? 'Editar Contacto' : 'Nuevo Contacto'}
-      </DialogTitle>
-      <DialogContent>
-        <Typography variant="subtitle2" sx={{ mb: 4, mt: 2 }}>Información General</Typography>
+    <Card>
+      <CardHeader 
+        title="Datos del Contacto" 
+        titleTypographyProps={{ variant: 'h5' }}
+        sx={{ borderBottom: 1, borderColor: 'divider', pb: 4 }}
+      />
+      <CardContent sx={{ pt: 6 }}>
+        <Typography variant="subtitle2" sx={{ mb: 4 }} color="text.secondary">
+          Información General
+        </Typography>
         <Grid container spacing={4}>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12}>
             <TextField
               fullWidth
-              label="Nombre Completo / Razón Social"
+              label="Nombre Completo / Razón Social *"
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
               required
             />
           </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Teléfono / WhatsApp"
+              value={formData.phone}
+              onChange={e => setFormData({ ...formData, phone: e.target.value })}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
               label="Correo Electrónico"
@@ -159,18 +126,12 @@ export default function ContactForm({ open, handleClose, selectedContact, pipeli
               onChange={e => setFormData({ ...formData, email: e.target.value })}
             />
           </Grid>
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Teléfono / WhatsApp"
-              value={formData.phone}
-              onChange={e => setFormData({ ...formData, phone: e.target.value })}
-            />
-          </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12}>
             <TextField
               fullWidth
               label="Dirección"
+              multiline
+              rows={2}
               value={formData.address}
               onChange={e => setFormData({ ...formData, address: e.target.value })}
             />
@@ -178,9 +139,12 @@ export default function ContactForm({ open, handleClose, selectedContact, pipeli
         </Grid>
 
         <Divider sx={{ my: 6 }} />
-        <Typography variant="subtitle2" sx={{ mb: 4 }}>Identificación y Clasificación</Typography>
+        
+        <Typography variant="subtitle2" sx={{ mb: 4 }} color="text.secondary">
+          Identificación y Clasificación
+        </Typography>
         <Grid container spacing={4}>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} sm={6}>
             <FormControl fullWidth>
               <InputLabel>Tipo de Documento</InputLabel>
               <Select
@@ -195,7 +159,7 @@ export default function ContactForm({ open, handleClose, selectedContact, pipeli
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
               label="Número de Documento"
@@ -203,7 +167,7 @@ export default function ContactForm({ open, handleClose, selectedContact, pipeli
               onChange={e => setFormData({ ...formData, documentNumber: e.target.value })}
             />
           </Grid>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12}>
             <FormControl fullWidth>
               <InputLabel>Tipo de Contacto</InputLabel>
               <Select
@@ -221,9 +185,12 @@ export default function ContactForm({ open, handleClose, selectedContact, pipeli
         </Grid>
 
         <Divider sx={{ my: 6 }} />
-        <Typography variant="subtitle2" sx={{ mb: 4 }}>Pipeline y Seguimiento</Typography>
+        
+        <Typography variant="subtitle2" sx={{ mb: 4 }} color="text.secondary">
+          Pipeline y Seguimiento
+        </Typography>
         <Grid container spacing={4}>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12}>
             <FormControl fullWidth>
               <InputLabel>Embudo (Pipeline)</InputLabel>
               <Select
@@ -238,7 +205,7 @@ export default function ContactForm({ open, handleClose, selectedContact, pipeli
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12}>
             <FormControl fullWidth disabled={!formData.pipelineId}>
               <InputLabel>Etapa Actual</InputLabel>
               <Select
@@ -259,24 +226,24 @@ export default function ContactForm({ open, handleClose, selectedContact, pipeli
                 <Switch 
                   checked={formData.isActive} 
                   onChange={e => setFormData({...formData, isActive: e.target.checked})} 
+                  color="success"
                 />
               }
-              label="Contacto Activo"
+              label={formData.isActive ? "Contacto Activo" : "Contacto Inactivo"}
             />
           </Grid>
         </Grid>
-      </DialogContent>
-      <DialogActions sx={{ p: 5 }}>
-        <Button onClick={handleClose} color="secondary">Cancelar</Button>
+      </CardContent>
+      <CardActions sx={{ px: 6, pb: 6, pt: 2, justifyContent: 'flex-end', borderTop: 1, borderColor: 'divider', mt: 4 }}>
         <Button 
-          onClick={handleSubmit} 
           variant="contained" 
-          disabled={saving}
-          startIcon={saving && <Icon icon="tabler:refresh" className="animate-spin" />}
+          onClick={handleSubmit} 
+          disabled={saving || !formData.name}
+          startIcon={saving ? <Icon icon="tabler:loader" className="animate-spin" /> : <Icon icon="tabler:device-floppy" />}
         >
-          {selectedContact ? 'Actualizar' : 'Crear'}
+          {contact ? 'Actualizar Ficha' : 'Crear Contacto'}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </CardActions>
+    </Card>
   )
 }
