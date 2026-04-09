@@ -28,11 +28,16 @@ export default function ContactDetailView() {
     const fetchInitialData = async () => {
       try {
         const user = userMethods.getUserLogin()
+        const tenantId = user?.customerId || user?.tenant_id
         const companyId = user?.activeCompanyId || user?.company_id
 
-        // Fetch pipelines globally
-        const pips = await pipelineService.getPipelines(companyId)
-        setPipelines(pips)
+        // Fetch pipelines — don't redirect if this fails
+        try {
+          const pips = await pipelineService.getAllPipelines(tenantId, companyId)
+          setPipelines(pips)
+        } catch (pipErr) {
+          console.warn('Could not load pipelines (non-critical):', pipErr)
+        }
 
         if (!isNew && idStr) {
           const fetchedContact = await contactService.getContactById(Number(idStr), companyId)
@@ -44,9 +49,12 @@ export default function ContactDetailView() {
           }
         }
       } catch (err) {
-        console.error('Error fetching data:', err)
-        toast.error('Error cargando los datos')
-        router.push('/marketing/contacts/list')
+        console.error('Error fetching contact:', err)
+        // Only redirect on edit mode failures, not for new contact form
+        if (!isNew) {
+          toast.error('Error cargando el contacto')
+          router.push('/marketing/contacts/list')
+        }
       } finally {
         setLoading(false)
       }
