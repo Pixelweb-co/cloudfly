@@ -214,7 +214,7 @@ public class EvolutionService {
         webhookData.put("url", webhookUrl);
         webhookData.put("enabled", true);
         webhookData.put("webhook_by_events", false);
-        webhookData.put("webhook_base64", true); // Permitir media en base64
+        webhookData.put("base64", true); // Permitir media en base64 (nombre correcto para v2)
         webhookData.put("events", new String[]{
             "MESSAGES_UPSERT",
             "MESSAGES_UPDATE",
