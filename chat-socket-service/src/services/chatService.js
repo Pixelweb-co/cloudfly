@@ -49,16 +49,17 @@ class ChatService {
             const channel = channels[0];
             const tenantId = channel.tenant_id;
             const companyId = channel.company_id;
+            const channelId = channel.id;
 
             // 2. Buscar o crear el contacto
             let contact = await this.getOrCreateContact(tenantId, companyId, remoteJid, pushName);
             
-            // 3. Guardar el mensaje
+            // 3. Guardar el mensaje (usando columnas reales de la tabla omni_channel_messages)
             const [result] = await db.execute(
                 `INSERT INTO omni_channel_messages 
-                (tenant_id, internal_conversation_id, contact_id, direction, message_type, body, platform, provider, status, created_at) 
-                VALUES (?, ?, ?, 'INBOUND', 'TEXT', ?, 'WHATSAPP', 'EVOLUTION', 'RECEIVED', NOW())`,
-                [tenantId, remoteJid, contact.id, body]
+                (tenant_id, channel_id, contact_id, direction, content, status, external_msg_id, created_at) 
+                VALUES (?, ?, ?, 'INBOUND', ?, 'RECEIVED', ?, NOW())`,
+                [tenantId, channelId, contact.id, body, data.key.id || null]
             );
 
             const messageId = result.insertId;
@@ -67,9 +68,9 @@ class ChatService {
             // 4. Obtener últimos 10 mensajes
             const [history] = await db.execute(
                 `SELECT * FROM omni_channel_messages 
-                WHERE tenant_id = ? AND internal_conversation_id = ? 
+                WHERE tenant_id = ? AND contact_id = ? 
                 ORDER BY created_at DESC LIMIT 10`,
-                [tenantId, remoteJid]
+                [tenantId, contact.id]
             );
 
             // 5. Emitir por Socket.IO
@@ -77,8 +78,9 @@ class ChatService {
             const eventPayload = {
                 message: {
                     id: messageId,
-                    body,
+                    content: body,
                     direction: 'INBOUND',
+                    status: 'RECEIVED',
                     createdAt: new Date()
                 },
                 contact: contact,
@@ -133,15 +135,15 @@ class ChatService {
     }
 
     /**
-     * Guardar mensaje saliente
+     * Guardar mensaje saliente (usando columnas reales)
      */
-    async saveOutboundMessage(tenantId, conversationId, contactId, fromUserId, body, platform) {
+    async saveOutboundMessage(tenantId, channelId, contactId, body) {
         try {
             const [result] = await db.execute(
                 `INSERT INTO omni_channel_messages 
-                (tenant_id, internal_conversation_id, contact_id, from_user_id, direction, message_type, body, platform, provider, status, created_at) 
-                VALUES (?, ?, ?, ?, 'OUTBOUND', 'TEXT', ?, ?, 'EVOLUTION', 'SENT', NOW())`,
-                [tenantId, conversationId, contactId, fromUserId, body, platform || 'WHATSAPP']
+                (tenant_id, channel_id, contact_id, direction, content, status, created_at) 
+                VALUES (?, ?, ?, 'OUTBOUND', ?, 'SENT', NOW())`,
+                [tenantId, channelId, contactId, body]
             );
 
             const [newMessages] = await db.execute('SELECT * FROM omni_channel_messages WHERE id = ?', [result.insertId]);
@@ -151,6 +153,7 @@ class ChatService {
             throw error;
         }
     }
+
     /**
      * Obtener el canal de WhatsApp activo para un tenant
      */
