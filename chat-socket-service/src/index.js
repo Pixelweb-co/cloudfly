@@ -10,6 +10,7 @@ const authMiddleware = require('./middleware/auth');
 const messageHandler = require('./handlers/messageHandler');
 const presenceHandler = require('./handlers/presenceHandler');
 const notifyRouter = require('./routes/notify');
+const db = require('./utils/db');
 
 // Crear app Express
 const app = express();
