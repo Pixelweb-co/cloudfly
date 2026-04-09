@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   Card,
   Box,
@@ -9,9 +9,14 @@ import {
   Avatar,
   InputBase,
   Divider,
+  CircularProgress,
 } from '@mui/material'
 import { Contact } from '@/types/marketing/contactTypes'
 import { Icon } from '@iconify/react'
+import { chatService, ChatMessage } from '@/services/marketing/chatService'
+import { useChatSocket } from '@/hooks/useChatSocket'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
 
 interface Props {
   contact: Contact | null;
@@ -19,19 +24,87 @@ interface Props {
 }
 
 export default function ChatInterface({ contact, isNew }: Props) {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [loading, setLoading] = useState(false)
+  const [newMessage, setNewMessage] = useState('')
+  const [sending, setSending] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Use phone as conversationId for now (Evolution API uses JID which is based on phone)
+  const conversationId = contact?.phone || ''
+
+  // Real-time listener
+  useChatSocket({
+    conversationId,
+    onNewMessage: (msg) => {
+      setMessages((prev) => [...prev, msg])
+    }
+  })
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [messages])
+
+  // Fetch history
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (contact?.phone && !isNew) {
+        setLoading(true)
+        try {
+          const history = await chatService.getMessages(contact.phone)
+          setMessages(history)
+        } catch (error) {
+          console.error('Error fetching chat history:', error)
+        } finally {
+          setLoading(false)
+        }
+      }
+    }
+    fetchHistory()
+  }, [contact?.phone, isNew])
+
+  // Handler for sending
+  const handleSend = async () => {
+    if (!newMessage.trim() || !contact?.phone || sending) return
+
+    setSending(true)
+    try {
+      const sentMsg = await chatService.sendMessage({
+        conversationId: contact.phone,
+        body: newMessage,
+        platform: 'WHATSAPP'
+      })
+      
+      // Update local state (socket will also broadcast but current user needs it immediately if socket delay occurs)
+      // Actually common practice is to let socket handle it, but here we add for better UX if we don't have echo
+      setMessages(prev => {
+          if (prev.find(m => m.id === sentMsg.id)) return prev;
+          return [...prev, sentMsg];
+      });
+      
+      setNewMessage('')
+    } catch (error) {
+      console.error('Error sending message:', error)
+    } finally {
+      setSending(false)
+    }
+  }
+
   // Oculto por completo si es un contacto nuevo (no guardado en DB)
   if (isNew || !contact) {
     return null
   }
 
-  // Helper to extract initials for avatar
   const getInitials = (name?: string) => {
     if (!name) return 'C'
     return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
   }
 
   return (
-    <Card sx={{ height: '700px', display: 'flex', flexDirection: 'column' }}>
+    <Card sx={{ height: '700px', display: 'flex', flexDirection: 'column', boxShadow: 3 }}>
       {/* Header */}
       <Box 
         sx={{ 
@@ -54,15 +127,15 @@ export default function ChatInterface({ contact, isNew }: Props) {
             </Typography>
             <Typography variant="body2" sx={{ color: 'success.main', display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main' }} />
-              Conectado (WhatsApp)
+              WhatsApp Online
             </Typography>
           </Box>
         </Box>
         <Box display="flex" gap={1}>
-          <IconButton color="primary" sx={{ bgcolor: 'primary.lighter' }}>
+          <IconButton color="primary" sx={{ bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.08)' }}>
             <Icon icon="tabler:phone-call" />
           </IconButton>
-          <IconButton color="secondary" sx={{ bgcolor: 'action.hover' }}>
+          <IconButton color="secondary">
             <Icon icon="tabler:dots-vertical" />
           </IconButton>
         </Box>
@@ -70,110 +143,78 @@ export default function ChatInterface({ contact, isNew }: Props) {
 
       {/* Chat Body (Messages) */}
       <Box 
+        ref={scrollRef}
         sx={{ 
           flexGrow: 1, 
           p: 5, 
           overflowY: 'auto',
-          bgcolor: 'action.hover', // Slight background pattern/color for chat area
+          bgcolor: 'action.hover',
           display: 'flex',
           flexDirection: 'column',
           gap: 3
         }}
-        className="chat-body"
       >
-        {/* Mock Incoming Message */}
-        <Box display="flex" gap={2} maxWidth="80%">
-          <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.light', fontSize: '0.875rem' }}>
-            {getInitials(contact.name)}
-          </Avatar>
-          <Box>
-            <Box 
-              sx={{ 
-                bgcolor: 'background.paper', 
-                p: 3, 
-                borderRadius: 2, 
-                borderTopLeftRadius: 0,
-                boxShadow: 1
-              }}
-            >
-              <Typography variant="body2">
-                Hola, acabo de ver su catálogo. Quisiera más información sobre los servicios.
-              </Typography>
-            </Box>
-            <Typography variant="caption" sx={{ color: 'text.disabled', mt: 1, display: 'block' }}>
-              10:42 AM
-            </Typography>
+        {loading ? (
+          <Box display="flex" justifyContent="center" alignItems="center" height="100%">
+            <CircularProgress size={30} />
           </Box>
-        </Box>
-
-        {/* Mock Outgoing Message */}
-        <Box display="flex" gap={2} maxWidth="80%" alignSelf="flex-end" flexDirection="row-reverse">
-          <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main', fontSize: '0.875rem' }}>
-            A
-          </Avatar>
-          <Box>
-            <Box 
-              sx={{ 
-                bgcolor: 'primary.main', 
-                color: 'primary.contrastText',
-                p: 3, 
-                borderRadius: 2, 
-                borderTopRightRadius: 0,
-                boxShadow: 1
-              }}
-            >
-              <Typography variant="body2" color="inherit">
-                ¡Hola! Claro que sí, con mucho gusto. ¿Hay algún servicio en particular que te interese? Te envío nuestro portafolio en PDF.
-              </Typography>
-            </Box>
-            <Box display="flex" justifyContent="flex-end" alignItems="center" gap={1} mt={1}>
-              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-                10:45 AM
-              </Typography>
-              <Icon icon="tabler:checks" fontSize="1rem" className="text-primary" />
-            </Box>
+        ) : messages.length === 0 ? (
+          <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="100%" sx={{ opacity: 0.5 }}>
+            <Icon icon="tabler:message-off" fontSize="3rem" />
+            <Typography variant="body2" sx={{ mt: 2 }}>No hay mensajes todavía</Typography>
           </Box>
-        </Box>
-
-        {/* Mock Outgoing Document */}
-        <Box display="flex" gap={2} maxWidth="80%" alignSelf="flex-end" flexDirection="row-reverse">
-          <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main', fontSize: '0.875rem' }}>
-            A
-          </Avatar>
-          <Box>
-            <Box 
-              sx={{ 
-                bgcolor: 'primary.main', 
-                color: 'primary.contrastText',
-                p: 2, 
-                borderRadius: 2, 
-                borderTopRightRadius: 0,
-                boxShadow: 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2
-              }}
-            >
-              <Box sx={{ p: 1.5, bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 1 }}>
-                <Icon icon="tabler:file-pdf" fontSize="1.5rem" />
+        ) : (
+          messages.map((msg, index) => {
+            const isOutbound = msg.direction === 'OUTBOUND'
+            return (
+              <Box 
+                key={msg.id || index} 
+                display="flex" 
+                gap={2} 
+                maxWidth="80%" 
+                alignSelf={isOutbound ? 'flex-end' : 'flex-start'}
+                flexDirection={isOutbound ? 'row-reverse' : 'row'}
+              >
+                <Avatar sx={{ width: 32, height: 32, bgcolor: isOutbound ? 'secondary.main' : 'primary.light', fontSize: '0.875rem' }}>
+                  {isOutbound ? 'YO' : getInitials(contact.name)}
+                </Avatar>
+                <Box>
+                  <Box 
+                    sx={{ 
+                      bgcolor: isOutbound ? 'primary.main' : 'background.paper', 
+                      color: isOutbound ? 'primary.contrastText' : 'text.primary',
+                      p: 3, 
+                      borderRadius: 2, 
+                      borderTopRightRadius: isOutbound ? 0 : 2,
+                      borderTopLeftRadius: isOutbound ? 2 : 0,
+                      boxShadow: 1
+                    }}
+                  >
+                    <Typography variant="body2" color="inherit">
+                      {msg.body}
+                    </Typography>
+                  </Box>
+                  <Box display="flex" justifyContent={isOutbound ? 'flex-end' : 'flex-start'} alignItems="center" gap={1} mt={1}>
+                    <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                      {msg.sentAt ? format(new Date(msg.sentAt), 'hh:mm a') : ''}
+                    </Typography>
+                    {isOutbound && (
+                      <Icon 
+                        icon={msg.status === 'READ' ? 'tabler:checks' : 'tabler:check'} 
+                        fontSize="1rem" 
+                        sx={{ color: msg.status === 'READ' ? 'primary.main' : 'text.disabled' }} 
+                      />
+                    )}
+                  </Box>
+                </Box>
               </Box>
-              <Box>
-                <Typography variant="body2" fontWeight="bold">Portafolio_Servicios.pdf</Typography>
-                <Typography variant="caption" sx={{ opacity: 0.8 }}>2.4 MB • Documento</Typography>
-              </Box>
-            </Box>
-            <Box display="flex" justifyContent="flex-end" alignItems="center" gap={1} mt={1}>
-              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-                10:45 AM
-              </Typography>
-              <Icon icon="tabler:check" fontSize="1rem" className="text-secondary" />
-            </Box>
-          </Box>
-        </Box>
+            )
+          })
+        )}
       </Box>
 
       {/* Footer / Input Area */}
-      <Box sx={{ p: 3, bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider' }}>
+      <Box sx={{ p: 4, bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider' }}>
         <Box 
           sx={{ 
             display: 'flex', 
@@ -181,42 +222,42 @@ export default function ChatInterface({ contact, isNew }: Props) {
             gap: 2, 
             bgcolor: 'action.hover', 
             borderRadius: 8, 
-            p: 1,
-            px: 2
+            p: 1.5,
+            px: 3
           }}
         >
-          {/* Attachments Menu */}
-          <IconButton color="secondary">
+          <IconButton color="secondary" size="small">
             <Icon icon="tabler:paperclip" />
           </IconButton>
-          <IconButton color="secondary">
-            <Icon icon="tabler:photo" />
-          </IconButton>
-
-          {/* Input field */}
+          
           <InputBase
             placeholder="Escribe un mensaje..."
             fullWidth
+            multiline
+            maxRows={4}
+            value={newMessage}
+            disabled={sending}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSend()
+              }
+            }}
             sx={{ ml: 1, flex: 1 }}
           />
 
-          {/* Actions */}
-          <IconButton color="secondary">
-            <Icon icon="tabler:mood-smile" />
-          </IconButton>
-          <Divider orientation="vertical" variant="middle" flexItem sx={{ mx: 1 }} />
-          <IconButton color="secondary">
-            <Icon icon="tabler:microphone" />
-          </IconButton>
-          <IconButton 
-            color="primary" 
+          <IconButton color="primary" 
+            onClick={handleSend}
+            disabled={sending || !newMessage.trim()}
             sx={{ 
               bgcolor: 'primary.main', 
               color: 'white', 
-              '&:hover': { bgcolor: 'primary.dark' } 
+              '&:hover': { bgcolor: 'primary.dark' },
+              '&.Mui-disabled': { bgcolor: 'action.disabledBackground', color: 'action.disabled' }
             }}
           >
-            <Icon icon="tabler:send" />
+            {sending ? <CircularProgress size={20} color="inherit" /> : <Icon icon="tabler:send" />}
           </IconButton>
         </Box>
       </Box>

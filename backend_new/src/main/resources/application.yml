@@ -35,3 +35,8 @@ evolution:
     url: ${EVOLUTION_API_URL:http://evolution-api:8080}
     key: ${EVOLUTION_API_KEY:CAMBIA_ESTA_LLAVE_LARGA_Y_UNICA}
 
+services:
+  socket:
+    url: ${SOCKET_URL:http://chat-socket-service:3001}
+    secret: ${N8N_SECRET_KEY:cloudfly_secret_key_2024}
+

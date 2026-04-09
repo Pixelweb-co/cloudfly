@@ -6,12 +6,14 @@ import com.app.persistence.repository.ChannelRepository;
 import com.app.persistence.repository.MarketingCampaignRepository;
 import com.app.persistence.repository.OmniChannelMessageRepository;
 import com.app.persistence.services.ContactService;
+import com.app.persistence.services.SocketNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -24,6 +26,7 @@ public class EvolutionWebhookController {
     private final MarketingCampaignRepository campaignRepository;
     private final ContactService contactService;
     private final OmniChannelMessageRepository messageRepository;
+    private final SocketNotificationService socketNotificationService;
     private final com.app.persistence.repository.ConversationPipelineStateRepository conversationPipelineStateRepository;
     private final com.app.persistence.repository.PipelineStageRepository pipelineStageRepository;
 
@@ -96,6 +99,21 @@ public class EvolutionWebhookController {
                                             .flatMap(savedMsg -> {
                                                 log.info("✅ [EVOLUTION-WEBHOOK] Message saved. Checking pipeline state...");
                                                 
+                                                // Preparar payload para el socket
+                                                Map<String, Object> socketPayload = new HashMap<>();
+                                                socketPayload.put("messageId", savedMsg.getId());
+                                                socketPayload.put("conversationId", conversationId);
+                                                socketPayload.put("tenantId", channel.getTenantId());
+                                                socketPayload.put("platform", "WHATSAPP");
+                                                socketPayload.put("direction", "INBOUND");
+                                                socketPayload.put("body", body);
+                                                socketPayload.put("displayName", pushName);
+                                                socketPayload.put("contactId", contact.getId());
+                                                socketPayload.put("messageType", "TEXT");
+                                                
+                                                // Notificar al socket en paralelo (fire & forget-ish via Mono)
+                                                socketNotificationService.notifyNewMessage(socketPayload).subscribe();
+
                                                 return conversationPipelineStateRepository.findByTenantIdAndConversationId(channel.getTenantId(), conversationId)
                                                         .switchIfEmpty(Mono.defer(() -> {
                                                             log.info("🆕 [EVOLUTION-WEBHOOK] Creating new pipeline state for conversation: {}", conversationId);
