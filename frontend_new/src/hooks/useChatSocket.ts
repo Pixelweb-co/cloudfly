@@ -46,8 +46,8 @@ export const useChatSocket = ({ conversationId, tenantId, onNewMessage }: UseCha
       console.log('✅ Connected to chat socket')
       setIsConnected(true)
       
-      // Unirse a la habitación de la conversación
-      socket.emit('join-conversation', { conversationId })
+      // Unirse a la habitación de la conversación usando UUID
+      socket.emit('join-conversation', { contactUuid: conversationId })
     })
 
     socket.on('disconnect', (reason) => {
@@ -60,10 +60,12 @@ export const useChatSocket = ({ conversationId, tenantId, onNewMessage }: UseCha
     })
 
     // Eventos de negocio
-    socket.on('new-message', (message) => {
-      console.log('📥 New real-time message received:', message)
+    socket.on('new-message', (data) => {
+      console.log('📥 New real-time message received:', data)
+      // Normalización: el socket a veces envía { message, contact } o solo el mensaje
+      const msg = data.message || data;
       if (onNewMessage) {
-        onNewMessage(message)
+        onNewMessage(msg)
       }
     })
 
@@ -75,12 +77,13 @@ export const useChatSocket = ({ conversationId, tenantId, onNewMessage }: UseCha
     return () => {
       if (socketRef.current) {
         console.log('🔌 Disconnecting socket...')
-        socketRef.current.emit('leave-conversation', { conversationId })
+        socketRef.current.emit('leave-conversation', { contactUuid: conversationId })
         socketRef.current.disconnect()
         socketRef.current = null
       }
     }
   }, [conversationId, SOCKET_URL, onNewMessage])
+
 
   // Método manual para enviar mensajes (opcional, ya que usamos API)
   const sendMessage = useCallback((data: any) => {
