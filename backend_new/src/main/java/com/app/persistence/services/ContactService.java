@@ -28,35 +28,53 @@ public class ContactService {
     }
 
     public Mono<ContactEntity> create(ContactEntity contact, Long tenantId, Long companyId) {
+        String cleanPhone = contact.getPhone() != null ? contact.getPhone().replaceAll("[^0-9]", "") : "";
+        contact.setPhone(cleanPhone);
         contact.setTenantId(tenantId);
         contact.setCompanyId(companyId);
         contact.setCreatedAt(LocalDateTime.now());
         contact.setUpdatedAt(LocalDateTime.now());
-        if (contact.getStage() == null) contact.setStage("LEAD"); // Default stage if not provided
-        
-        log.info("Creating new contact: {} for tenant: {}", contact.getName(), tenantId);
-        return contactRepository.save(contact);
+        if (contact.getStage() == null) contact.setStage("LEAD");
+
+        return contactRepository.findByTenantIdAndCompanyIdAndPhone(tenantId, companyId, cleanPhone)
+                .flatMap(existing -> Mono.<ContactEntity>error(new RuntimeException("El número de teléfono ya está registrado para otro contacto.")))
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.info("Creating new contact: {} for tenant: {}", contact.getName(), tenantId);
+                    return contactRepository.save(contact);
+                }));
     }
 
     public Mono<ContactEntity> update(Long id, ContactEntity contact, Long tenantId, Long companyId) {
+        String cleanPhone = contact.getPhone() != null ? contact.getPhone().replaceAll("[^0-9]", "") : "";
+        
         return contactRepository.findById(id)
                 .filter(existing -> existing.getTenantId().equals(tenantId) && existing.getCompanyId().equals(companyId))
                 .flatMap(existing -> {
-                    existing.setName(contact.getName());
-                    existing.setEmail(contact.getEmail());
-                    existing.setPhone(contact.getPhone());
-                    existing.setAddress(contact.getAddress());
-                    existing.setTaxId(contact.getTaxId());
-                    existing.setType(contact.getType());
-                    existing.setStage(contact.getStage());
-                    existing.setPipelineId(contact.getPipelineId());
-                    existing.setStageId(contact.getStageId());
-                    existing.setDocumentType(contact.getDocumentType());
-                    existing.setDocumentNumber(contact.getDocumentNumber());
-                    existing.setActive(contact.isActive());
-                    existing.setUpdatedAt(LocalDateTime.now());
-                    return contactRepository.save(existing);
+                    // Si el teléfono cambió, validar que el nuevo no exista en otro contacto
+                    if (existing.getPhone() != null && !existing.getPhone().equals(cleanPhone)) {
+                        return contactRepository.findByTenantIdAndCompanyIdAndPhone(tenantId, companyId, cleanPhone)
+                                .flatMap(other -> Mono.<ContactEntity>error(new RuntimeException("El número de teléfono ya está registrado para otro contacto.")))
+                                .switchIfEmpty(Mono.defer(() -> performUpdate(existing, contact, cleanPhone)));
+                    }
+                    return performUpdate(existing, contact, cleanPhone);
                 });
+    }
+
+    private Mono<ContactEntity> performUpdate(ContactEntity existing, ContactEntity contact, String cleanPhone) {
+        existing.setName(contact.getName());
+        existing.setEmail(contact.getEmail());
+        existing.setPhone(cleanPhone);
+        existing.setAddress(contact.getAddress());
+        existing.setTaxId(contact.getTaxId());
+        existing.setType(contact.getType());
+        existing.setStage(contact.getStage());
+        existing.setPipelineId(contact.getPipelineId());
+        existing.setStageId(contact.getStageId());
+        existing.setDocumentType(contact.getDocumentType());
+        existing.setDocumentNumber(contact.getDocumentNumber());
+        existing.setActive(contact.isActive());
+        existing.setUpdatedAt(LocalDateTime.now());
+        return contactRepository.save(existing);
     }
 
     public Mono<Void> delete(Long id, Long tenantId, Long companyId) {
