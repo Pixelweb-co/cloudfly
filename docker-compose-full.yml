@@ -64,6 +64,7 @@ services:
       - SPRING_PROFILES_ACTIVE=production
       - EVOLUTION_API_URL=http://evolution-api:8080
       - EVOLUTION_API_KEY=CAMBIA_ESTA_LLAVE_LARGA_Y_UNICA
+      - JWT_SECRET=${JWT_SECRET}
     networks:
       - app-net
       - kafka-net
