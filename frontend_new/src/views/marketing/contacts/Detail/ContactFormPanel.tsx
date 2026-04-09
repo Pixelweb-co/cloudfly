@@ -63,14 +63,16 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
         stageId: contact.stageId,
         documentType: contact.documentType || 'CC',
         documentNumber: contact.documentNumber || '',
-        countryPrefix: contact.phone?.startsWith('+') ? contact.phone.substring(0, contact.phone.length - 10) || '+57' : '+57',
-        isActive: contact.isActive !== undefined ? contact.isActive : true
-      })
-      
-      // If phone exists, try to extract prefix (this is a simple heuristic, usually better to store prefix separately)
+      // If phone exists, try to extract prefix from a list of known codes
       if (contact.phone && contact.phone.startsWith('+')) {
-          // Simple logic: if it's +57XXXXXXXXXX 
-          // We'll just default to +57 for now unless we have a more robust way
+          const foundPrefix = COUNTRY_CODES.find(cc => contact.phone?.startsWith(cc.value))
+          if (foundPrefix) {
+              setFormData(prev => ({ 
+                ...prev, 
+                countryPrefix: foundPrefix.value,
+                phone: contact.phone?.replace(foundPrefix.value, '') || ''
+              }))
+          }
       }
 
       if (contact.pipelineId) {
@@ -95,12 +97,24 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
   const handleSubmit = async () => {
     if (!formData.name) return
     
-    // Concatenate prefix and phone for the backend/WhatsApp
-    const fullPhone = `${formData.countryPrefix}${formData.phone.replace(/\D/g, '')}`
+    // Concatenate prefix and phone for the backend/WhatsApp, avoiding duplication
+    const cleanPrefix = formData.countryPrefix || '+57'
+    const cleanPhone = formData.phone.replace(/\D/g, '')
+    
+    // Si el teléfono ya empieza con el prefijo (sin el +), no lo duplicamos
+    const prefixDigits = cleanPrefix.replace('+', '')
+    let finalPhone = ''
+    
+    if (cleanPhone.startsWith(prefixDigits)) {
+        finalPhone = `+${cleanPhone}`
+    } else {
+        finalPhone = `${cleanPrefix}${cleanPhone}`
+    }
     
     await onSave({
       ...formData,
-      phone: fullPhone
+      status: 'ACTIVE', // Fallback
+      phone: finalPhone
     })
   }
 
