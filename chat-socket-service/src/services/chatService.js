@@ -97,36 +97,51 @@ class ChatService {
     }
 
     /**
-     * Lógica de obtener o crear contacto
+     * Lógica de obtener o crear contacto (con protección contra duplicados)
      */
     async getOrCreateContact(tenantId, companyId, jid, name) {
         const phone = jid.split('@')[0];
         const cleanPhone = phone.replace(/[^0-9]/g, '');
 
         try {
-            // Buscar contacto
+            // 1. Buscar contacto existente por teléfono
             const [contacts] = await db.execute(
                 'SELECT * FROM contacts WHERE tenant_id = ? AND company_id = ? AND phone = ? LIMIT 1',
                 [tenantId, companyId, cleanPhone]
             );
 
             if (contacts.length > 0) {
+                logger.info(`📇 [WEBHOOK] Contact found: ${contacts[0].name} (ID: ${contacts[0].id})`);
                 return contacts[0];
             }
 
-            // Crear contacto nuevo
+            // 2. No existe: crear contacto nuevo
             const contactName = name ? `${name} (${cleanPhone})` : `Nuevo Contacto ${cleanPhone}`;
             
-            const [result] = await db.execute(
-                `INSERT INTO contacts 
-                (name, phone, type, stage, is_active, tenant_id, company_id, created_at, updated_at) 
-                VALUES (?, ?, 'LEAD', 'LEAD', 1, ?, ?, NOW(), NOW())`,
-                [contactName, cleanPhone, tenantId, companyId]
-            );
+            try {
+                const [result] = await db.execute(
+                    `INSERT INTO contacts 
+                    (name, phone, type, stage, is_active, tenant_id, company_id, created_at, updated_at) 
+                    VALUES (?, ?, 'LEAD', 'LEAD', 1, ?, ?, NOW(), NOW())`,
+                    [contactName, cleanPhone, tenantId, companyId]
+                );
 
-            const [newContacts] = await db.execute('SELECT * FROM contacts WHERE id = ?', [result.insertId]);
-            logger.info(`🆕 [WEBHOOK] New contact created: ${contactName}`);
-            return newContacts[0];
+                const [newContacts] = await db.execute('SELECT * FROM contacts WHERE id = ?', [result.insertId]);
+                logger.info(`🆕 [WEBHOOK] New contact created: ${contactName} (ID: ${result.insertId})`);
+                return newContacts[0];
+
+            } catch (insertError) {
+                // 3. Si falla por duplicado (race condition), recuperar el existente
+                if (insertError.code === 'ER_DUP_ENTRY') {
+                    logger.warn(`⚠️ [WEBHOOK] Duplicate phone detected, recovering existing contact: ${cleanPhone}`);
+                    const [existing] = await db.execute(
+                        'SELECT * FROM contacts WHERE tenant_id = ? AND company_id = ? AND phone = ? LIMIT 1',
+                        [tenantId, companyId, cleanPhone]
+                    );
+                    return existing[0];
+                }
+                throw insertError;
+            }
 
         } catch (error) {
             logger.error(`❌ [WEBHOOK] Error in getOrCreateContact: ${error.message}`);
