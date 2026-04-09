@@ -17,7 +17,8 @@ import {
   Divider,
   Switch,
   FormControlLabel,
-  Box
+  Box,
+  InputAdornment
 } from '@mui/material'
 import { Contact, ContactCreateRequest } from '@/types/marketing/contactTypes'
 import { Pipeline, PipelineStage } from '@/types/marketing/pipelineTypes'
@@ -43,6 +44,7 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
     stageId: undefined,
     documentType: 'CC',
     documentNumber: '',
+    countryPrefix: '+57',
     isActive: true
   })
   const [availableStages, setAvailableStages] = useState<PipelineStage[]>([])
@@ -61,9 +63,16 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
         stageId: contact.stageId,
         documentType: contact.documentType || 'CC',
         documentNumber: contact.documentNumber || '',
+        countryPrefix: contact.phone?.startsWith('+') ? contact.phone.substring(0, contact.phone.length - 10) || '+57' : '+57',
         isActive: contact.isActive !== undefined ? contact.isActive : true
       })
       
+      // If phone exists, try to extract prefix (this is a simple heuristic, usually better to store prefix separately)
+      if (contact.phone && contact.phone.startsWith('+')) {
+          // Simple logic: if it's +57XXXXXXXXXX 
+          // We'll just default to +57 for now unless we have a more robust way
+      }
+
       if (contact.pipelineId) {
         const pipeline = pipelines.find(p => p.id === contact.pipelineId)
         if (pipeline && pipeline.stages) {
@@ -84,9 +93,29 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
   }
 
   const handleSubmit = async () => {
-    if (!formData.name) return // simple local check handled by UX elsewhere or add state validation
-    await onSave(formData)
+    if (!formData.name) return
+    
+    // Concatenate prefix and phone for the backend/WhatsApp
+    const fullPhone = `${formData.countryPrefix}${formData.phone.replace(/\D/g, '')}`
+    
+    await onSave({
+      ...formData,
+      phone: fullPhone
+    })
   }
+
+  const COUNTRY_CODES = [
+    { value: '+57', label: '🇨🇴 +57' },
+    { value: '+1', label: '🇺🇸 +1' },
+    { value: '+34', label: '🇪🇸 +34' },
+    { value: '+52', label: '🇲🇽 +52' },
+    { value: '+54', label: '🇦🇷 +54' },
+    { value: '+56', label: '🇨🇱 +56' },
+    { value: '+51', label: '🇵🇪 +5 Peru' },
+    { value: '+58', label: '🇻🇪 +58' },
+    { value: '+507', label: '🇵🇦 +507' },
+    { value: '+593', label: '🇪🇨 +593' },
+  ]
 
   return (
     <Card>
@@ -113,8 +142,28 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
             <TextField
               fullWidth
               label="Teléfono / WhatsApp"
-              value={formData.phone}
+              placeholder="3001234567"
+              value={formData.phone.replace(formData.countryPrefix || '', '')}
               onChange={e => setFormData({ ...formData, phone: e.target.value })}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Select
+                      value={formData.countryPrefix || '+57'}
+                      onChange={e => setFormData({ ...formData, countryPrefix: e.target.value as string })}
+                      variant="standard"
+                      sx={{ 
+                        '& .MuiSelect-select': { py: 0, pl: 0, pr: '20px !important' },
+                        '&:before, &:after': { display: 'none' }
+                      }}
+                    >
+                      {COUNTRY_CODES.map(c => (
+                        <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>
+                      ))}
+                    </Select>
+                  </InputAdornment>
+                ),
+              }}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
