@@ -30,4 +30,9 @@ public class EvolutionController {
     public Mono<Map<String, Object>> getStatus(@PathVariable String name) {
         return evolutionService.checkConnection(name);
     }
+
+    @PostMapping("/webhook/{name}")
+    public Mono<Map<String, Object>> setWebhook(@PathVariable String name) {
+        return evolutionService.setWebhook(name);
+    }
 }

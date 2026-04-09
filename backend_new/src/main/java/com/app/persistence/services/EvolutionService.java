@@ -25,20 +25,24 @@ public class EvolutionService {
     private final WebClient webClient;
     private final String apiKey;
     private final String apiUrl;
+    private final String webhookUrl;
 
     public EvolutionService(
             WebClient.Builder webClientBuilder,
             @Value("${evolution.api.url}") String apiUrl,
-            @Value("${evolution.api.key}") String apiKey) {
+            @Value("${evolution.api.key}") String apiKey,
+            @Value("${evolution.webhook.url}") String webhookUrl) {
         // Limpiar espacios en blanco que puedan venir de variables de entorno
         String cleanUrl = apiUrl != null ? apiUrl.trim() : "";
         String cleanKey = apiKey != null ? apiKey.trim() : "";
+        String cleanWebhook = webhookUrl != null ? webhookUrl.trim() : "";
         
-        log.info("🚀 [EVOLUTION-SERVICE] Initialized. URL: '{}', Key: '{}'", cleanUrl, cleanKey);
+        log.info("🚀 [EVOLUTION-SERVICE] Initialized. URL: '{}', Key: '{}', Webhook: '{}'", cleanUrl, cleanKey, cleanWebhook);
         
         // Asegurar que apiUrl no termine en /
         this.apiUrl = cleanUrl.endsWith("/") ? cleanUrl.substring(0, cleanUrl.length() - 1) : cleanUrl;
         this.apiKey = cleanKey;
+        this.webhookUrl = cleanWebhook;
         this.webClient = webClientBuilder.build();
     }
 
@@ -199,6 +203,39 @@ public class EvolutionService {
                 )
                 .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
                 .doOnSuccess(res -> log.info("✅ Message sent successfully to {}", cleanNumber));
+    }
+
+    public Mono<Map<String, Object>> setWebhook(String instanceName) {
+        String url = apiUrl + "/webhook/set/" + instanceName;
+        log.info("📡 [EVOLUTION-SERVICE] Configuring Webhook for: {} (URL: {})", instanceName, webhookUrl);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("url", webhookUrl);
+        body.put("enabled", true);
+        body.put("webhook_by_events", false);
+        body.put("events", new String[]{
+            "MESSAGES_UPSERT",
+            "MESSAGES_UPDATE",
+            "MESSAGES_DELETE",
+            "SEND_MESSAGE",
+            "CONNECTION_UPDATE"
+        });
+
+        return webClient.post()
+                .uri(url)
+                .header("apikey", apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .retrieve()
+                .onStatus(status -> status.isError(), response -> 
+                    response.bodyToMono(String.class)
+                        .flatMap(errorBody -> {
+                            log.error("❌ Evolution Webhook Config Error ({}): {}", response.statusCode(), errorBody);
+                            return Mono.error(new RuntimeException("Evolution Webhook Error: " + errorBody));
+                        })
+                )
+                .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
+                .doOnSuccess(res -> log.info("✅ Webhook configured successfully for: {}", instanceName));
     }
 }
 
