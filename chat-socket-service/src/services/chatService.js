@@ -6,8 +6,10 @@ class ChatService {
      * Procesar mensaje entrante de Evolution
      */
     async processEvolutionWebhook(io, payload) {
-        const type = payload.event;
+        const type = (payload.event || '').toUpperCase().replace(/\./g, '_');
         const instance = payload.instance;
+
+        logger.info(`📥 [WEBHOOK] Received event: ${payload.event} (normalized: ${type}) from instance: ${instance}`);
 
         if (type !== 'MESSAGES_UPSERT') {
             return;
