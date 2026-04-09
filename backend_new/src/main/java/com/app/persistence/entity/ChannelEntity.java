@@ -25,6 +25,9 @@ public class ChannelEntity {
 
     private String name;
 
+    @Column("phone_number")
+    private String phoneNumber;
+
     private String platform; // WHATSAPP, FACEBOOK, INSTAGRAM, TIKTOK, WEB
     private String provider; // EVOLUTION_API, META_API, TWILIO, CUSTOM
 

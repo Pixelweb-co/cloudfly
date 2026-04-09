@@ -17,6 +17,7 @@ public class ContactEntity {
     @Id
     private Long id;
 
+    private String uuid;
     private String name;
     private String email;
     private String phone;
