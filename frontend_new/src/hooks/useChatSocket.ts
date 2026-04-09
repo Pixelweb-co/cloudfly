@@ -6,6 +6,7 @@ import { userMethods } from '@/utils/userMethods'
 
 interface UseChatSocketProps {
   conversationId?: string | number
+  phone?: string
   tenantId?: number
   onNewMessage?: (message: any) => void
 }
@@ -23,7 +24,7 @@ export const useChatSocket = ({ conversationId, tenantId, onNewMessage }: UseCha
   useEffect(() => {
     const token = localStorage.getItem('jwt')
     
-    if (!token || !conversationId) return
+    if (!token || !phone) return
 
     // Evitar múltiples conexiones
     if (socketRef.current) {
@@ -46,8 +47,8 @@ export const useChatSocket = ({ conversationId, tenantId, onNewMessage }: UseCha
       console.log('✅ Connected to chat socket')
       setIsConnected(true)
       
-      // Unirse a la habitación de la conversación usando UUID
-      socket.emit('join-conversation', { contactUuid: conversationId })
+      // Unirse a la habitación de la conversación usando Teléfono (soporta duplicados)
+      socket.emit('join-conversation', { phone })
     })
 
     socket.on('disconnect', (reason) => {
@@ -77,7 +78,7 @@ export const useChatSocket = ({ conversationId, tenantId, onNewMessage }: UseCha
     return () => {
       if (socketRef.current) {
         console.log('🔌 Disconnecting socket...')
-        socketRef.current.emit('leave-conversation', { contactUuid: conversationId })
+        socketRef.current.emit('leave-conversation', { phone })
         socketRef.current.disconnect()
         socketRef.current = null
       }

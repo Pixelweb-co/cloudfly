@@ -25,9 +25,10 @@ export default function ChatInterface({ contact, isNew }: Props) {
   // Use phone as conversationId for now (Evolution API uses JID which is based on phone)
   const conversationId = contact?.phone || ''
 
-  // Real-time listener using Contact UUID
+  // Real-time listener using Contact Phone (resilient to duplicates)
   useChatSocket({
     conversationId: contact?.uuid || '',
+    phone: contact?.phone || '',
     onNewMessage: (msg: any) => {
       // Normalización inmediata si viene con formato de socket
       const normalizedMsg = {

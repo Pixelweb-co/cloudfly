@@ -140,24 +140,25 @@ io.on('connection', (socket) => {
     // ======================
 
     /**
-     * Unirse a una conversación específica (por UUID de contacto)
+     * Unirse a una conversación específica (por teléfono del contacto)
      */
     socket.on('join-conversation', (data) => {
         try {
-            const { contactUuid } = data;
+            const { phone } = data;
 
-            if (!contactUuid) {
-                socket.emit('error', { message: 'contactUuid is required' });
+            if (!phone) {
+                socket.emit('error', { message: 'Phone is required for real-time chat' });
                 return;
             }
 
-            const roomName = `tenant_${socket.tenantId}_contact_${contactUuid}`;
+            const cleanPhone = phone.replace(/\D/g, '');
+            const roomName = `tenant_${socket.tenantId}_contact_${cleanPhone}`;
             socket.join(roomName);
 
             logger.info(`Socket ${socket.id} joined contact room: ${roomName}`);
 
             socket.emit('joined-conversation', {
-                contactUuid,
+                phone: cleanPhone,
                 room: roomName
             });
 
@@ -172,14 +173,14 @@ io.on('connection', (socket) => {
      */
     socket.on('leave-conversation', (data) => {
         try {
-            const { contactUuid } = data;
-            const roomName = `tenant_${socket.tenantId}_contact_${contactUuid}`;
-            socket.leave(roomName);
-
-            logger.info(`Socket ${socket.id} left contact room: ${roomName}`);
-
-            socket.emit('left-conversation', { contactUuid });
-
+            const { phone } = data;
+            if (phone) {
+                const cleanPhone = phone.replace(/\D/g, '');
+                const roomName = `tenant_${socket.tenantId}_contact_${cleanPhone}`;
+                socket.leave(roomName);
+                logger.info(`Socket ${socket.id} left contact room: ${roomName}`);
+                socket.emit('left-conversation', { phone: cleanPhone });
+            }
         } catch (error) {
             logger.error(`Error leaving conversation: ${error.message}`);
         }
