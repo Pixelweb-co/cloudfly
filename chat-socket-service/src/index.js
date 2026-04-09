@@ -53,17 +53,13 @@ app.post('/webhook/evolution', async (req, res) => {
     }
 });
 
-// =====================
-// REST API - Mensajes y Contactos
-// =====================
-
 /**
- * Obtener últimos mensajes de un contacto
- * GET /api/chat/messages/:contactId?tenantId=X&limit=10
+ * Obtener últimos mensajes de un contacto por UUID
+ * GET /api/chat/messages/:contactUuid?tenantId=X&limit=10
  */
-app.get('/api/chat/messages/:contactId', async (req, res) => {
+app.get('/api/chat/messages/:contactUuid', async (req, res) => {
     try {
-        const { contactId } = req.params;
+        const { contactUuid } = req.params;
         const tenantId = req.query.tenantId;
         const limit = parseInt(req.query.limit) || 10;
 
@@ -71,7 +67,13 @@ app.get('/api/chat/messages/:contactId', async (req, res) => {
             return res.status(400).json({ error: 'tenantId is required' });
         }
 
-        const messages = await chatService.getMessageHistory(tenantId, contactId, limit);
+        // Primero buscar el ID numérico por el UUID
+        const [contacts] = await db.execute('SELECT id FROM contacts WHERE uuid = ? AND tenant_id = ?', [contactUuid, tenantId]);
+        if (contacts.length === 0) {
+            return res.status(404).json({ error: 'Contact not found' });
+        }
+
+        const messages = await chatService.getMessageHistory(tenantId, contacts[0].id, limit);
         res.json(messages);
     } catch (error) {
         logger.error(`Error fetching messages: ${error.message}`);
@@ -137,24 +139,24 @@ io.on('connection', (socket) => {
     // ======================
 
     /**
-     * Unirse a una conversación específica
+     * Unirse a una conversación específica (por UUID de contacto)
      */
     socket.on('join-conversation', (data) => {
         try {
-            const { conversationId } = data;
+            const { contactUuid } = data;
 
-            if (!conversationId) {
-                socket.emit('error', { message: 'conversationId is required' });
+            if (!contactUuid) {
+                socket.emit('error', { message: 'contactUuid is required' });
                 return;
             }
 
-            const roomName = `tenant_${socket.tenantId}_conv_${conversationId}`;
+            const roomName = `tenant_${socket.tenantId}_contact_${contactUuid}`;
             socket.join(roomName);
 
-            logger.info(`Socket ${socket.id} joined conversation room: ${roomName}`);
+            logger.info(`Socket ${socket.id} joined contact room: ${roomName}`);
 
             socket.emit('joined-conversation', {
-                conversationId,
+                contactUuid,
                 room: roomName
             });
 
@@ -169,13 +171,13 @@ io.on('connection', (socket) => {
      */
     socket.on('leave-conversation', (data) => {
         try {
-            const { conversationId } = data;
-            const roomName = `tenant_${socket.tenantId}_conv_${conversationId}`;
+            const { contactUuid } = data;
+            const roomName = `tenant_${socket.tenantId}_contact_${contactUuid}`;
             socket.leave(roomName);
 
-            logger.info(`Socket ${socket.id} left conversation room: ${roomName}`);
+            logger.info(`Socket ${socket.id} left contact room: ${roomName}`);
 
-            socket.emit('left-conversation', { conversationId });
+            socket.emit('left-conversation', { contactUuid });
 
         } catch (error) {
             logger.error(`Error leaving conversation: ${error.message}`);

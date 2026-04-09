@@ -12,44 +12,57 @@ class MessageHandler {
     handleSendMessage(socket, io) {
         return async (data) => {
             try {
-                const { conversationId, body, messageType = 'TEXT' } = data;
+                const { contactUuid, body, messageType = 'TEXT' } = data;
                 const tenantId = socket.tenantId;
 
-                logger.info(`User ${socket.userId} sending DIRECT message to: ${conversationId}`);
+                logger.info(`User ${socket.userId} sending DIRECT message to contact UUID: ${contactUuid}`);
 
-                // 1. Obtener canal para saber el nombre de la instancia
+                // 1. Obtener el contacto por UUID para saber su teléfono (JID) e ID real
+                const [contacts] = await require('../utils/db').execute(
+                    'SELECT id, phone, uuid FROM contacts WHERE uuid = ? AND tenant_id = ? LIMIT 1',
+                    [contactUuid, tenantId]
+                );
+
+                if (contacts.length === 0) {
+                    return socket.emit('error', { message: 'Contact not found' });
+                }
+
+                const contact = contacts[0];
+                const remoteJid = contact.phone.includes('@') ? contact.phone : `${contact.phone}@s.whatsapp.net`;
+
+                // 2. Obtener canal para saber el nombre de la instancia
                 const channel = await chatService.getChannelForOutbound(tenantId);
                 if (!channel) {
                     return socket.emit('error', { message: 'No active WhatsApp channel found for this tenant' });
                 }
 
-                // 2. Obtener contacto para guardado
-                const contact = await chatService.getOrCreateContact(tenantId, channel.company_id, conversationId);
-
                 // 3. Enviar a Evolution API directamente
-                await evolutionClient.sendMessage(channel.instance_name, conversationId, body);
+                await evolutionClient.sendMessage(channel.instance_name, remoteJid, body);
 
                 // 4. Guardar en BD Cloudfly directamente
                 const savedMessage = await chatService.saveOutboundMessage(
                     tenantId,
-                    conversationId,
+                    channel.id,
                     contact.id,
-                    socket.userId,
-                    body,
-                    'WHATSAPP'
+                    body
                 );
 
-                // 5. Broadcast a todos los sockets en la room
-                const roomName = `tenant_${tenantId}_conv_${conversationId}`;
+                // 5. Broadcast a todos los sockets en la room del contacto
+                const roomName = `tenant_${tenantId}_contact_${contact.uuid}`;
                 
-                // Formato esperado por el frontend
                 const eventPayload = {
-                    message: savedMessage,
+                    message: {
+                        id: savedMessage.id,
+                        content: savedMessage.content,
+                        direction: 'OUTBOUND',
+                        status: 'SENT',
+                        createdAt: savedMessage.created_at
+                    },
                     contact: contact
                 };
 
                 io.to(roomName).emit('new-message', eventPayload);
-                logger.info(`✅ Message ${savedMessage.id} sent via Evolution and broadcasted to: ${roomName}`);
+                logger.info(`✅ Message ${savedMessage.id} sent via Evolution and broadcasted to room: ${roomName}`);
 
             } catch (error) {
                 logger.error(`❌ Error handling send message: ${error.message}`);
@@ -63,14 +76,12 @@ class MessageHandler {
 
     /**
      * Manejar marcado de mensajes como leídos
-     * Nota: En esta fase solo notificamos localmente, 
-     * el marcado en Evolution podría delegarse después.
      */
     handleMarkAsRead(socket, io) {
         return async (data) => {
             try {
-                const { messageIds, conversationId } = data;
-                const roomName = `tenant_${socket.tenantId}_conv_${conversationId}`;
+                const { messageIds, contactUuid } = data;
+                const roomName = `tenant_${socket.tenantId}_contact_${contactUuid}`;
                 
                 socket.to(roomName).emit('messages-read', {
                     messageIds,

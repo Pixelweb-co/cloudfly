@@ -26,14 +26,18 @@ const authMiddleware = async (socket, next) => {
 
         // Verificar el token JWT
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
+        // LOG TEMPORAL PARA DEPURECION
+        logger.info(`🔍 [AUTH] Decoded JWT payload: ${JSON.stringify(decoded)}`);
 
         // Adjuntar información del usuario al socket
         socket.userId = decoded.userId || decoded.id || decoded.sub;
-        socket.tenantId = decoded.tenantId || decoded.customer?.id;
-        socket.userRoles = decoded.roles || [];
-        socket.userName = decoded.username || decoded.email || 'Unknown';
+        socket.tenantId = decoded.customer_id;
+        socket.companyId = decoded.company_id;
+        socket.userRoles = decoded.authorities ? decoded.authorities.split(',') : (decoded.roles || []);
+        socket.userName = decoded.sub || decoded.username || decoded.email || 'Unknown';
 
-        logger.info(`User authenticated: ${socket.userName} (ID: ${socket.userId}, Tenant: ${socket.tenantId})`);
+        logger.info(`User authenticated: ${socket.userName} (ID: ${socket.userId}, Tenant: ${socket.tenantId}, Company: ${socket.companyId})`);
 
         next();
     } catch (error) {

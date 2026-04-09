@@ -54,7 +54,7 @@ class ChatService {
             // 2. Buscar o crear el contacto
             let contact = await this.getOrCreateContact(tenantId, companyId, remoteJid, pushName);
             
-            // 3. Guardar el mensaje (usando columnas reales de la tabla omni_channel_messages)
+            // 3. Guardar el mensaje
             const [result] = await db.execute(
                 `INSERT INTO omni_channel_messages 
                 (tenant_id, channel_id, contact_id, direction, content, status, external_msg_id, created_at) 
@@ -73,8 +73,8 @@ class ChatService {
                 [tenantId, contact.id]
             );
 
-            // 5. Emitir por Socket.IO
-            const roomName = `tenant_${tenantId}_conv_${remoteJid}`;
+            // 5. Emitir por Socket.IO usando UUID del contacto
+            const roomName = `tenant_${tenantId}_contact_${contact.uuid}`;
             const eventPayload = {
                 message: {
                     id: messageId,
@@ -97,7 +97,7 @@ class ChatService {
     }
 
     /**
-     * Lógica de obtener o crear contacto (con protección contra duplicados)
+     * Lógica de obtener o crear contacto (con UUID y protección contra duplicados)
      */
     async getOrCreateContact(tenantId, companyId, jid, name) {
         const phone = jid.split('@')[0];
@@ -111,23 +111,24 @@ class ChatService {
             );
 
             if (contacts.length > 0) {
-                logger.info(`📇 [WEBHOOK] Contact found: ${contacts[0].name} (ID: ${contacts[0].id})`);
+                logger.info(`📇 [WEBHOOK] Contact found: ${contacts[0].name} (ID: ${contacts[0].id}, UUID: ${contacts[0].uuid})`);
                 return contacts[0];
             }
 
-            // 2. No existe: crear contacto nuevo
+            // 2. No existe: crear contacto nuevo con UUID
             const contactName = name ? `${name} (${cleanPhone})` : `Nuevo Contacto ${cleanPhone}`;
+            const contactUuid = require('crypto').randomUUID();
             
             try {
                 const [result] = await db.execute(
                     `INSERT INTO contacts 
-                    (name, phone, type, stage, is_active, tenant_id, company_id, created_at, updated_at) 
-                    VALUES (?, ?, 'LEAD', 'LEAD', 1, ?, ?, NOW(), NOW())`,
-                    [contactName, cleanPhone, tenantId, companyId]
+                    (uuid, name, phone, type, stage, is_active, tenant_id, company_id, created_at, updated_at) 
+                    VALUES (?, ?, ?, 'LEAD', 'LEAD', 1, ?, ?, NOW(), NOW())`,
+                    [contactUuid, contactName, cleanPhone, tenantId, companyId]
                 );
 
                 const [newContacts] = await db.execute('SELECT * FROM contacts WHERE id = ?', [result.insertId]);
-                logger.info(`🆕 [WEBHOOK] New contact created: ${contactName} (ID: ${result.insertId})`);
+                logger.info(`🆕 [WEBHOOK] New contact created: ${contactName} (ID: ${result.insertId}, UUID: ${contactUuid})`);
                 return newContacts[0];
 
             } catch (insertError) {

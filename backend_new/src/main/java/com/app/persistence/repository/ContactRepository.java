@@ -11,4 +11,6 @@ public interface ContactRepository extends ReactiveCrudRepository<ContactEntity,
     Flux<ContactEntity> findByTenantIdAndCompanyIdAndNameContainingIgnoreCase(Long tenantId, Long companyId, String name);
     Flux<ContactEntity> findByTenantIdAndCompanyIdAndPipelineId(Long tenantId, Long companyId, Long pipelineId);
     Flux<ContactEntity> findByTenantIdAndCompanyIdAndPipelineIdAndStageId(Long tenantId, Long companyId, Long pipelineId, Long stageId);
+    Mono<ContactEntity> findByTenantIdAndCompanyIdAndEmail(Long tenantId, Long companyId, String email);
+    Mono<ContactEntity> findByTenantIdAndCompanyIdAndDocumentNumber(Long tenantId, Long companyId, String documentNumber);
 }
