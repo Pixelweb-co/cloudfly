@@ -63,6 +63,9 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
         stageId: contact.stageId,
         documentType: contact.documentType || 'CC',
         documentNumber: contact.documentNumber || '',
+        isActive: contact.isActive !== undefined ? contact.isActive : true
+      })
+
       // If phone exists, try to extract prefix from a list of known codes
       if (contact.phone && contact.phone.startsWith('+')) {
           const foundPrefix = COUNTRY_CODES.find(cc => contact.phone?.startsWith(cc.value))
