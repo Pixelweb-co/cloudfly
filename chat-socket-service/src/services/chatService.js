@@ -190,13 +190,14 @@ class ChatService {
      */
     async getMessageHistory(tenantId, contactId, limit = 10) {
         try {
+            const safeLimit = parseInt(limit) || 10;
             const [messages] = await db.execute(
                 `SELECT m.*, c.name as contact_name, c.phone as contact_phone
                 FROM omni_channel_messages m
                 LEFT JOIN contacts c ON m.contact_id = c.id
                 WHERE m.tenant_id = ? AND m.contact_id = ?
-                ORDER BY m.created_at DESC LIMIT ?`,
-                [tenantId, contactId, limit]
+                ORDER BY m.created_at DESC LIMIT ${safeLimit}`,
+                [tenantId, contactId]
             );
             return messages.reverse();
         } catch (error) {
