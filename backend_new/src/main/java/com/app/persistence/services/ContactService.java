@@ -71,12 +71,15 @@ public class ContactService {
 
         return contactRepository.findByTenantIdAndCompanyIdAndPhone(tenantId, companyId, cleanPhone)
                 .switchIfEmpty(Mono.defer(() -> {
-                    log.info("✨ Creating new contact for phone: {}", cleanPhone);
+                    String contactName = (name != null && !name.trim().isEmpty()) 
+                            ? name + " (" + cleanPhone + ")"
+                            : "Nuevo Contacto " + cleanPhone;
+                            
                     ContactEntity newContact = ContactEntity.builder()
                             .tenantId(tenantId)
                             .companyId(companyId)
                             .phone(cleanPhone)
-                            .name(name != null ? name : "Nuevo Contacto " + cleanPhone)
+                            .name(contactName)
                             .type("LEAD")
                             .stage("LEAD")
                             .isActive(true)

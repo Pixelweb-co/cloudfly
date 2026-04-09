@@ -171,4 +171,34 @@ public class EvolutionService {
                     return Mono.just(false);
                 });
     }
+
+    public Mono<Map<String, Object>> sendSimpleMessage(String instanceName, String phoneNumber, String body) {
+        String cleanNumber = phoneNumber.replaceAll("[^0-9]", "");
+        String url = apiUrl + "/message/sendText/" + (instanceName != null ? instanceName : "cloudfly_chatbot1");
+        
+        Map<String, Object> messageBody = new HashMap<>();
+        messageBody.put("number", cleanNumber);
+        messageBody.put("text", body);
+        messageBody.put("delay", 1200);
+        messageBody.put("linkPreview", true);
+
+        log.info("📤 [EVOLUTION-SERVICE] Sending text message to {}: {}", cleanNumber, body);
+
+        return webClient.post()
+                .uri(url)
+                .header("apikey", apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(messageBody)
+                .retrieve()
+                .onStatus(status -> status.isError(), response -> 
+                    response.bodyToMono(String.class)
+                        .flatMap(errorBody -> {
+                            log.error("❌ Evolution SendMessage Error ({}): {}", response.statusCode(), errorBody);
+                            return Mono.error(new RuntimeException("Evolution SendMessage Error: " + errorBody));
+                        })
+                )
+                .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
+                .doOnSuccess(res -> log.info("✅ Message sent successfully to {}", cleanNumber));
+    }
 }
+
