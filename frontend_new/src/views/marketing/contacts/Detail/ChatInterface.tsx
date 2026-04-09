@@ -26,19 +26,25 @@ export default function ChatInterface({ contact, isNew }: Props) {
   const conversationId = contact?.phone || ''
 
   // Real-time listener using Contact Phone (resilient to duplicates)
+  const onNewMessage = useCallback((msg: any) => {
+    // Normalización inmediata si viene con formato de socket
+    const normalizedMsg = {
+      ...msg,
+      body: msg.body || msg.content || (msg.message?.content),
+      sentAt: msg.sentAt || msg.createdAt || new Date().toISOString(),
+      direction: msg.direction || (msg.message?.direction)
+    };
+    setMessages((prev) => {
+        // Evitar duplicados si el mensaje ya existe (ej. mensaje enviado por nosotros)
+        if (prev.find(m => m.id === normalizedMsg.id)) return prev;
+        return [...prev, normalizedMsg];
+    })
+  }, [])
+
   useChatSocket({
     conversationId: contact?.uuid || '',
     phone: contact?.phone || '',
-    onNewMessage: (msg: any) => {
-      // Normalización inmediata si viene con formato de socket
-      const normalizedMsg = {
-        ...msg,
-        body: msg.body || msg.content || (msg.message?.content),
-        sentAt: msg.sentAt || msg.createdAt || new Date().toISOString(),
-        direction: msg.direction || (msg.message?.direction)
-      };
-      setMessages((prev) => [...prev, normalizedMsg])
-    }
+    onNewMessage: onNewMessage
   })
 
   // Auto-scroll to bottom
