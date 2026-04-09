@@ -34,11 +34,21 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Hacer io accesible en las rutas
-app.set('io', io);
-
 // Rutas HTTP
+const chatService = require('./services/chatService');
 app.use('/api/notify', notifyRouter);
+
+app.post('/webhook/evolution', async (req, res) => {
+    try {
+        const io = app.get('io');
+        // Ejecutar en segundo plano para responder rápido a Evolution API
+        chatService.processEvolutionWebhook(io, req.body);
+        res.status(200).send('OK');
+    } catch (error) {
+        logger.error(`Error in webhook route: ${error.message}`);
+        res.status(500).send('Error');
+    }
+});
 
 // Health check
 app.get('/health', (req, res) => {
