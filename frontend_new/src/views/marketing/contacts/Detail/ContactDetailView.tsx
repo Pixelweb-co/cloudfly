@@ -101,9 +101,10 @@ export default function ContactDetailView() {
         setContact(updated)
         toast.success('Contacto actualizado correctamente')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Save failed:', error)
-      toast.error('Error al guardar el contacto')
+      const message = error.response?.data?.message || error.message || 'Error al guardar el contacto'
+      toast.error(message)
       throw error
     } finally {
       setSaving(false)
