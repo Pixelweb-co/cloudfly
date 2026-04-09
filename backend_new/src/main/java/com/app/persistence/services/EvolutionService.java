@@ -211,7 +211,9 @@ public class EvolutionService {
 
         // Evolution v2 requiere que los campos estén dentro de un objeto 'webhook'
         Map<String, Object> webhookData = new HashMap<>();
-        webhookData.put("url", webhookUrl);
+        // El webhook ahora se gestiona en el microservicio de sockets para mayor velocidad
+        String finalWebhookUrl = "https://chat.cloudfly.com.co/webhook/evolution";
+        webhookData.put("url", finalWebhookUrl);
         webhookData.put("enabled", true);
         webhookData.put("webhook_by_events", false);
         webhookData.put("base64", true); // Permitir media en base64 (nombre correcto para v2)
