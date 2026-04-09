@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Box, Card, CircularProgress, Divider, IconButton, Typography } from '@mui/material'
+import { Avatar, Box, Card, CircularProgress, Divider, IconButton, InputBase, Typography } from '@mui/material'
 import { Contact } from '@/types/marketing/contactTypes'
 import { Icon } from '@iconify/react'
 import { chatService, ChatMessage } from '@/services/marketing/chatService'
