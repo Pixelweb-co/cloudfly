@@ -1,20 +1,12 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import {
-  Card,
-  Box,
-  Typography,
-  IconButton,
-  Avatar,
-  InputBase,
-  Divider,
-  CircularProgress,
-} from '@mui/material'
+import { Box, Card, CircularProgress, Divider, IconButton, Typography } from '@mui/material'
 import { Contact } from '@/types/marketing/contactTypes'
 import { Icon } from '@iconify/react'
 import { chatService, ChatMessage } from '@/services/marketing/chatService'
 import { useChatSocket } from '@/hooks/useChatSocket'
+import { userMethods } from '@/utils/userMethods'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -33,11 +25,18 @@ export default function ChatInterface({ contact, isNew }: Props) {
   // Use phone as conversationId for now (Evolution API uses JID which is based on phone)
   const conversationId = contact?.phone || ''
 
-  // Real-time listener
+  // Real-time listener using Contact UUID
   useChatSocket({
-    conversationId,
-    onNewMessage: (msg) => {
-      setMessages((prev) => [...prev, msg])
+    conversationId: contact?.uuid || '',
+    onNewMessage: (msg: any) => {
+      // Normalización inmediata si viene con formato de socket
+      const normalizedMsg = {
+        ...msg,
+        body: msg.body || msg.content || (msg.message?.content),
+        sentAt: msg.sentAt || msg.createdAt || new Date().toISOString(),
+        direction: msg.direction || (msg.message?.direction)
+      };
+      setMessages((prev) => [...prev, normalizedMsg])
     }
   })
 
@@ -51,10 +50,18 @@ export default function ChatInterface({ contact, isNew }: Props) {
   // Fetch history
   useEffect(() => {
     const fetchHistory = async () => {
-      if (contact?.phone && !isNew) {
+      if (contact?.uuid && !isNew) {
         setLoading(true)
         try {
-          const history = await chatService.getMessages(contact.phone)
+          const user = userMethods.getUserLogin()
+          const tenantId = user?.customerId || user?.tenant_id
+          
+          if (!tenantId) {
+             console.warn('No tenantId found for history fetch')
+             return
+          }
+
+          const history = await chatService.getMessages(contact.uuid, tenantId)
           setMessages(history)
         } catch (error) {
           console.error('Error fetching chat history:', error)
@@ -64,7 +71,7 @@ export default function ChatInterface({ contact, isNew }: Props) {
       }
     }
     fetchHistory()
-  }, [contact?.phone, isNew])
+  }, [contact?.uuid, isNew])
 
   // Handler for sending
   const handleSend = async () => {

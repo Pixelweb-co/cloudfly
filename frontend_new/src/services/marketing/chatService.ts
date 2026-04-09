@@ -1,4 +1,6 @@
-import { axiosInstance } from '@/utils/axiosInstance';
+import axios from 'axios';
+
+const CHAT_API_URL = process.env.NEXT_PUBLIC_CHAT_API_URL || 'https://chat.cloudfly.com.co';
 
 export interface ChatMessage {
   id: string | number;
@@ -8,21 +10,32 @@ export interface ChatMessage {
   direction: 'INBOUND' | 'OUTBOUND';
   messageType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT';
   mediaUrl?: string;
+  content?: string; // Support for legacy field from socket service
   sentAt: string;
   status?: string;
+  createdAt?: string; // Support for legacy field
 }
 
 export const chatService = {
   /**
    * Get historical messages for a conversation
+   * NEW: Points to chat.cloudfly.com.co directly for history
    */
-  getMessages: async (conversationId: string | number): Promise<ChatMessage[]> => {
-    const response = await axiosInstance.get(`/api/v1/chat/messages/${conversationId}`);
-    return response.data;
+  getMessages: async (contactUuid: string, tenantId: string | number): Promise<ChatMessage[]> => {
+    const response = await axios.get(`${CHAT_API_URL}/api/chat/messages/${contactUuid}`, {
+      params: { tenantId, limit: 50 }
+    });
+    
+    // Normalize response: if it uses 'content' instead of 'body'
+    return response.data.map((msg: any) => ({
+      ...msg,
+      body: msg.body || msg.content,
+      sentAt: msg.sentAt || msg.createdAt || new Date().toISOString()
+    }));
   },
 
   /**
-   * Send a new message via the Java API (which then talks to Evolution API)
+   * Send a new message via the Java API (consistent with current backend flow)
    */
   sendMessage: async (data: {
     conversationId: string | number;
@@ -31,6 +44,8 @@ export const chatService = {
     mediaUrl?: string;
     platform?: string;
   }): Promise<ChatMessage> => {
+    // Dynamic import to avoid circular dependency or issues with axiosInstance initial load
+    const { axiosInstance } = await import('@/utils/axiosInstance');
     const response = await axiosInstance.post(`/api/v1/chat/send/${data.conversationId}`, {
       ...data,
       direction: 'OUTBOUND'
@@ -38,3 +53,4 @@ export const chatService = {
     return response.data;
   }
 };
+
