@@ -11,7 +11,7 @@ interface UseChatSocketProps {
   onNewMessage?: (message: any) => void
 }
 
-export const useChatSocket = ({ conversationId, tenantId, onNewMessage }: UseChatSocketProps) => {
+export const useChatSocket = ({ conversationId, phone, tenantId, onNewMessage }: UseChatSocketProps) => {
   const socketRef = useRef<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   
@@ -83,7 +83,7 @@ export const useChatSocket = ({ conversationId, tenantId, onNewMessage }: UseCha
         socketRef.current = null
       }
     }
-  }, [conversationId, SOCKET_URL, onNewMessage])
+  }, [phone, conversationId, SOCKET_URL, onNewMessage])
 
 
   // Método manual para enviar mensajes (opcional, ya que usamos API)
