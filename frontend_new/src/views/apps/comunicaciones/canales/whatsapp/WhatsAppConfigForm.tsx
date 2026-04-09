@@ -77,6 +77,15 @@ const WhatsAppConfigForm = ({ onSuccess }: Props) => {
       
       // Según la documentación de Evolution API, el estado 'open' significa conectado
       if (res.data && res.data.instance && res.data.instance.state === 'open') {
+        // AUTOMATIZACIÓN: Configurar el webhook inmediatamente después de conectar
+        try {
+          await axiosInstance.post(`/api/evolution/webhook/${instanceName}`)
+          console.log('✅ Webhook configured automatically')
+        } catch (webhookErr) {
+          console.error('⚠️ Failed to configure webhook automatically:', webhookErr)
+          // No bloqueamos el flujo principal si falla el webhook, pero lo logueamos
+        }
+
         setStatus('connected')
         setTimeout(() => {
           onSuccess()
