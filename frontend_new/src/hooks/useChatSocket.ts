@@ -14,6 +14,12 @@ interface UseChatSocketProps {
 export const useChatSocket = ({ conversationId, phone, tenantId, onNewMessage }: UseChatSocketProps) => {
   const socketRef = useRef<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
+  const onNewMessageRef = useRef(onNewMessage)
+
+  // Actualizar el ref cada vez que cambie la función
+  useEffect(() => {
+    onNewMessageRef.current = onNewMessage
+  }, [onNewMessage])
   
   // URL del servidor de sockets - Prioridad: Env var > Dominio Producción > Localhost
   const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 
@@ -65,8 +71,8 @@ export const useChatSocket = ({ conversationId, phone, tenantId, onNewMessage }:
       console.log('📥 New real-time message received:', data)
       // Normalización: el socket a veces envía { message, contact } o solo el mensaje
       const msg = data.message || data;
-      if (onNewMessage) {
-        onNewMessage(msg)
+      if (onNewMessageRef.current) {
+        onNewMessageRef.current(msg)
       }
     })
 
@@ -83,7 +89,7 @@ export const useChatSocket = ({ conversationId, phone, tenantId, onNewMessage }:
         socketRef.current = null
       }
     }
-  }, [phone, conversationId, SOCKET_URL, onNewMessage])
+  }, [phone, conversationId, SOCKET_URL])
 
 
   // Método manual para enviar mensajes (opcional, ya que usamos API)
