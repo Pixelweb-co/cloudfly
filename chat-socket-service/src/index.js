@@ -34,6 +34,9 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Hacer io accesible en las rutas
+app.set('io', io);
+
 // Rutas HTTP
 const chatService = require('./services/chatService');
 app.use('/api/notify', notifyRouter);
