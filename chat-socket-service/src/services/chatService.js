@@ -73,8 +73,9 @@ class ChatService {
                 [tenantId, contact.id]
             );
 
-            // 5. Emitir por Socket.IO usando UUID del contacto
-            const roomName = `tenant_${tenantId}_contact_${contact.uuid}`;
+            // 5. Emitir por Socket.IO usando el teléfono (para soportar duplicados)
+            const phoneDigits = remoteJid.split('@')[0].replace(/\D/g, '');
+            const roomName = `tenant_${tenantId}_contact_${phoneDigits}`;
             const eventPayload = {
                 message: {
                     id: messageId,
