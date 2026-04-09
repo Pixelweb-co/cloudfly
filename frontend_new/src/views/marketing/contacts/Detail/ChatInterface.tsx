@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Avatar, Box, Card, CircularProgress, Divider, IconButton, InputBase, Typography } from '@mui/material'
 import { Contact } from '@/types/marketing/contactTypes'
 import { Icon } from '@iconify/react'
