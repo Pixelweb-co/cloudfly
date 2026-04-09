@@ -53,6 +53,52 @@ app.post('/webhook/evolution', async (req, res) => {
     }
 });
 
+// =====================
+// REST API - Mensajes y Contactos
+// =====================
+
+/**
+ * Obtener últimos mensajes de un contacto
+ * GET /api/chat/messages/:contactId?tenantId=X&limit=10
+ */
+app.get('/api/chat/messages/:contactId', async (req, res) => {
+    try {
+        const { contactId } = req.params;
+        const tenantId = req.query.tenantId;
+        const limit = parseInt(req.query.limit) || 10;
+
+        if (!tenantId) {
+            return res.status(400).json({ error: 'tenantId is required' });
+        }
+
+        const messages = await chatService.getMessageHistory(tenantId, contactId, limit);
+        res.json(messages);
+    } catch (error) {
+        logger.error(`Error fetching messages: ${error.message}`);
+        res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+});
+
+/**
+ * Obtener contactos con conversaciones activas
+ * GET /api/chat/contacts?tenantId=X
+ */
+app.get('/api/chat/contacts', async (req, res) => {
+    try {
+        const tenantId = req.query.tenantId;
+
+        if (!tenantId) {
+            return res.status(400).json({ error: 'tenantId is required' });
+        }
+
+        const contacts = await chatService.getContactsWithMessages(tenantId);
+        res.json(contacts);
+    } catch (error) {
+        logger.error(`Error fetching contacts: ${error.message}`);
+        res.status(500).json({ error: 'Failed to fetch contacts' });
+    }
+});
+
 // Health check
 app.get('/health', (req, res) => {
     res.json({

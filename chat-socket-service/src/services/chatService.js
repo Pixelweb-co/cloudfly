@@ -184,6 +184,55 @@ class ChatService {
             throw error;
         }
     }
+
+    /**
+     * Obtener historial de mensajes de un contacto
+     */
+    async getMessageHistory(tenantId, contactId, limit = 10) {
+        try {
+            const [messages] = await db.execute(
+                `SELECT m.*, c.name as contact_name, c.phone as contact_phone
+                FROM omni_channel_messages m
+                LEFT JOIN contacts c ON m.contact_id = c.id
+                WHERE m.tenant_id = ? AND m.contact_id = ?
+                ORDER BY m.created_at DESC LIMIT ?`,
+                [tenantId, contactId, limit]
+            );
+            return messages.reverse();
+        } catch (error) {
+            logger.error(`❌ [CHAT-SERVICE] Error getting message history: ${error.message}`);
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener contactos que tienen mensajes (conversaciones activas)
+     */
+    async getContactsWithMessages(tenantId) {
+        try {
+            const [contacts] = await db.execute(
+                `SELECT c.*, 
+                    (SELECT content FROM omni_channel_messages 
+                     WHERE contact_id = c.id AND tenant_id = ? 
+                     ORDER BY created_at DESC LIMIT 1) as last_message,
+                    (SELECT created_at FROM omni_channel_messages 
+                     WHERE contact_id = c.id AND tenant_id = ? 
+                     ORDER BY created_at DESC LIMIT 1) as last_message_at,
+                    (SELECT COUNT(*) FROM omni_channel_messages 
+                     WHERE contact_id = c.id AND tenant_id = ? 
+                     AND status = 'RECEIVED') as unread_count
+                FROM contacts c
+                WHERE c.tenant_id = ?
+                AND EXISTS (SELECT 1 FROM omni_channel_messages WHERE contact_id = c.id AND tenant_id = ?)
+                ORDER BY last_message_at DESC`,
+                [tenantId, tenantId, tenantId, tenantId, tenantId]
+            );
+            return contacts;
+        } catch (error) {
+            logger.error(`❌ [CHAT-SERVICE] Error getting contacts with messages: ${error.message}`);
+            throw error;
+        }
+    }
 }
 
 module.exports = new ChatService();
