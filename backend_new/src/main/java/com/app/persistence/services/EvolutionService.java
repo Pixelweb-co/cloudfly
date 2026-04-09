@@ -209,17 +209,21 @@ public class EvolutionService {
         String url = apiUrl + "/webhook/set/" + instanceName;
         log.info("📡 [EVOLUTION-SERVICE] Configuring Webhook for: {} (URL: {})", instanceName, webhookUrl);
 
-        Map<String, Object> body = new HashMap<>();
-        body.put("url", webhookUrl);
-        body.put("enabled", true);
-        body.put("webhook_by_events", false);
-        body.put("events", new String[]{
+        // Evolution v2 requiere que los campos estén dentro de un objeto 'webhook'
+        Map<String, Object> webhookData = new HashMap<>();
+        webhookData.put("url", webhookUrl);
+        webhookData.put("enabled", true);
+        webhookData.put("webhook_by_events", false);
+        webhookData.put("events", new String[]{
             "MESSAGES_UPSERT",
             "MESSAGES_UPDATE",
             "MESSAGES_DELETE",
             "SEND_MESSAGE",
             "CONNECTION_UPDATE"
         });
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("webhook", webhookData);
 
         return webClient.post()
                 .uri(url)
