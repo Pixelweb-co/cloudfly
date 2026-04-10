@@ -88,6 +88,7 @@ export default function ChatInterface({ contact, isNew }: Props) {
     try {
       const sentMsg = await chatService.sendMessage({
         conversationId: contact.phone,
+        contactId: Number(contact.id),
         body: newMessage,
         platform: 'WHATSAPP'
       })

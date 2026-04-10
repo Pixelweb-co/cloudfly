@@ -38,7 +38,8 @@ export const chatService = {
    * Send a new message via the Java API (consistent with current backend flow)
    */
   sendMessage: async (data: {
-    conversationId: string | number;
+    conversationId: string | number; // This is the phone
+    contactId: number; 
     body: string;
     messageType?: string;
     mediaUrl?: string;

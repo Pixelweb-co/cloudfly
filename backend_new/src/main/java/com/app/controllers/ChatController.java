@@ -29,26 +29,25 @@ public class ChatController {
     /**
      * Get historical messages for a specific conversation
      */
-    @GetMapping("/messages/{conversationId}")
-    public Flux<OmniChannelMessageEntity> getMessages(@PathVariable String conversationId) {
+    @GetMapping("/messages/{contactId}")
+    public Flux<OmniChannelMessageEntity> getMessages(@PathVariable Long contactId) {
         return userService.getCurrentUser()
                 .flatMapMany(user -> {
                     Long tenantId = user.getCustomerId();
-                    log.info("📂 [CHAT-CONTROLLER] Fetching messages for conversation: {} (Tenant: {})", conversationId, tenantId);
-                    return messageRepository.findByTenantIdAndInternalConversationId(tenantId, conversationId);
+                    log.info("📂 [CHAT-CONTROLLER] Fetching messages for contact: {} (Tenant: {})", contactId, tenantId);
+                    return messageRepository.findByTenantIdAndContactId(tenantId, contactId);
                 });
     }
 
     /**
      * Send an outbound message
      */
-    @PostMapping("/send/{conversationId}")
+    @PostMapping("/send/{phone}")
     public Mono<OmniChannelMessageEntity> sendMessage(
-            @PathVariable String conversationId,
+            @PathVariable String phone,
             @RequestBody Map<String, Object> payload) {
         
         final String body = (String) payload.get("body");
-        final String platform = (String) payload.get("platform");
         final Long contactId = payload.get("contactId") != null ? Long.valueOf(payload.get("contactId").toString()) : null;
 
         return userService.getCurrentUser()
@@ -58,13 +57,9 @@ public class ChatController {
                     // 1. Guardar en base de datos local
                     OmniChannelMessageEntity msgEntity = OmniChannelMessageEntity.builder()
                             .tenantId(tenantId)
-                            .internalConversationId(conversationId)
                             .contactId(contactId)
                             .direction("OUTBOUND")
-                            .messageType("TEXT")
                             .body(body)
-                            .platform(platform != null ? platform : "WHATSAPP")
-                            .provider("EVOLUTION")
                             .status("SENT")
                             .createdAt(LocalDateTime.now())
                             .build();
@@ -74,21 +69,17 @@ public class ChatController {
                                 log.info("📤 [CHAT-CONTROLLER] Message saved. Routing to provider...");
 
                                 // 2. Enviar a Evolution API (WhatsApp)
-                                // Usamos una instancia por defecto o configurada para el tenant
                                 String instanceName = "cloudfly_chatbot1"; 
                                 
-                                return evolutionService.sendSimpleMessage(instanceName, conversationId, body)
+                                return evolutionService.sendSimpleMessage(instanceName, phone, body)
                                         .flatMap(evolutionRes -> {
-                                            // 3. Notificar al socket para actualización en tiempo real en otras pestañas
+                                            // 3. Notificar al socket
                                             Map<String, Object> socketPayload = new HashMap<>();
                                             socketPayload.put("messageId", savedMsg.getId());
-                                            socketPayload.put("conversationId", conversationId);
                                             socketPayload.put("tenantId", tenantId);
-                                            socketPayload.put("platform", platform);
                                             socketPayload.put("direction", "OUTBOUND");
                                             socketPayload.put("body", body);
                                             socketPayload.put("contactId", contactId);
-                                            socketPayload.put("messageType", "TEXT");
                                             socketPayload.put("sentAt", savedMsg.getCreatedAt());
 
                                             socketNotificationService.notifyNewMessage(socketPayload).subscribe();
