@@ -91,7 +91,7 @@ export default function ContactDetailView() {
       setSaving(true)
       const user = userMethods.getUserLogin()
       const companyId = user?.activeCompanyId || user?.company_id
-      
+
       if (isNew) {
         const newContact = await contactService.createContact(formData, companyId)
         toast.success('Contacto creado exitosamente')
@@ -140,13 +140,13 @@ export default function ContactDetailView() {
 
       {/* Main Grid Layout */}
       <Grid container spacing={6}>
-        
+
         {/* Left Column: Form */}
         <Grid item xs={12} lg={5}>
-          <ContactFormPanel 
-            contact={contact} 
-            pipelines={pipelines} 
-            onSave={handleSaveContact} 
+          <ContactFormPanel
+            contact={contact}
+            pipelines={pipelines}
+            onSave={handleSaveContact}
             saving={saving}
           />
         </Grid>
@@ -155,41 +155,41 @@ export default function ContactDetailView() {
         <Grid item xs={12} lg={7}>
           {isNew ? (
             <Box sx={{ p: 10, textAlign: 'center', bgcolor: 'action.hover', borderRadius: 2, border: '1px dashed', borderColor: 'divider' }}>
-                <Icon icon="tabler:message-off" fontSize="3rem" style={{ opacity: 0.2 }} />
-                <Typography variant="h6" sx={{ mt: 4, opacity: 0.5 }}>Guarda el contacto para iniciar un chat</Typography>
+              <Icon icon="tabler:message-off" fontSize="3rem" style={{ opacity: 0.2 }} />
+              <Typography variant="h6" sx={{ mt: 4, opacity: 0.5 }}>Guarda el contacto para iniciar un chat</Typography>
             </Box>
           ) : isCheckingConnection ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 400 }}>
-                  <CircularProgress size={40} />
-                  <Typography sx={{ mt: 4 }} color="text.secondary">Verificando conexión de WhatsApp...</Typography>
-              </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 400 }}>
+              <CircularProgress size={40} />
+              <Typography sx={{ mt: 4 }} color="text.secondary">Verificando conexión de WhatsApp...</Typography>
+            </Box>
           ) : isEvolutionConnected ? (
             <ChatInterface contact={contact} isNew={isNew} />
-          ) : (
+          ) : !userMethods.isRole('USER') ? (
             <Card sx={{ height: '700px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', p: 6, textAlign: 'center', boxShadow: 3 }}>
-                <Box sx={{ mb: 6 }}>
-                    <Avatar sx={{ width: 80, height: 80, bgcolor: 'rgba(var(--mui-palette-success-mainChannel) / 0.12)', color: 'success.main', mx: 'auto', mb: 4 }}>
-                        <Icon icon="tabler:brand-whatsapp" fontSize="3rem" />
-                    </Avatar>
-                    <Typography variant="h5" color="error" gutterBottom className="font-semibold">
-                        WhatsApp no conectado
-                    </Typography>
-                    <Typography variant="body1" sx={{ color: 'text.secondary', mb: 6 }}>
-                        Para chatear con este contacto, primero debes activar tu canal de WhatsApp.
-                    </Typography>
-                    
-                    <Divider sx={{ mb: 6, width: '100%', opacity: 0.5 }}>Configuración Instantánea</Divider>
-                    
-                    <Box sx={{ maxWidth: 500, mx: 'auto' }}>
-                        <WhatsAppConfigForm onSuccess={() => setIsEvolutionConnected(true)} />
-                    </Box>
+              <Box sx={{ mb: 6 }}>
+                <Avatar sx={{ width: 80, height: 80, bgcolor: 'rgba(var(--mui-palette-success-mainChannel) / 0.12)', color: 'success.main', mx: 'auto', mb: 4 }}>
+                  <Icon icon="tabler:brand-whatsapp" fontSize="3rem" />
+                </Avatar>
+                <Typography variant="h5" color="error" gutterBottom className="font-semibold">
+                  WhatsApp no conectado
+                </Typography>
+                <Typography variant="body1" sx={{ color: 'text.secondary', mb: 6 }}>
+                  Para chatear con este contacto, primero debes activar tu canal de WhatsApp.
+                </Typography>
+
+                <Divider sx={{ mb: 6, width: '100%', opacity: 0.5 }}>Configuración Instantánea</Divider>
+
+                <Box sx={{ maxWidth: 500, mx: 'auto' }}>
+                  <WhatsAppConfigForm onSuccess={() => setIsEvolutionConnected(true)} />
                 </Box>
+              </Box>
             </Card>
           )}
         </Grid>
 
       </Grid>
-      
+
       <Box mt={6} />
     </Box>
   )
