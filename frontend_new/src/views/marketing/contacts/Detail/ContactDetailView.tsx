@@ -185,6 +185,10 @@ export default function ContactDetailView() {
                 </Box>
               </Box>
             </Card>
+          ) : (
+            <Box sx={{ p: 10, textAlign: 'center', opacity: 0.5 }}>
+              <Typography variant="body2">No tienes permisos para gestionar WhatsApp o canal no configurado.</Typography>
+            </Box>
           )}
         </Grid>
 

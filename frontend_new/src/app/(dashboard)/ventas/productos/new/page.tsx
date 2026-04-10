@@ -78,7 +78,7 @@ export default function CreateProductPage() {
         inventoryQty: Number(formData.inventoryQty)
       }
       
-      await productService.saveProduct(payload)
+      await productService.createProduct(payload)
       router.push('/ventas/productos/list')
     } catch (e) {
       console.error('Error al guardar producto:', e)
