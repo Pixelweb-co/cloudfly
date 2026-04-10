@@ -16,7 +16,7 @@ class MessageBufferService {
      */
     async bufferMessage(tenantId, companyId, contactId, conversationId, messageData) {
         if (!isRedisAvailable()) {
-            logger.warn('⚠️ [BUFFER] Redis unavailable, cannot buffer');
+            logger.warn('⚠️ [BUFFER] Redis unavailable, message will NOT be buffered or processed by AI');
             return false;
         }
 
@@ -136,7 +136,7 @@ class MessageBufferService {
                 );
 
                 if (success) {
-                    logger.info(`⏱️ [DEBOUNCE] Flushed ${messageCount} messages for contact ${meta.contactId} → Kafka ✅`);
+                    logger.info(`⏱️ [DEBOUNCE] BUFFER FLUSHED: ${messageCount} messages for contact ${meta.contactId} published to Kafka topic "${config.TOPIC_MESSAGES_IN}" ✅`);
                 } else {
                     logger.error(`❌ [DEBOUNCE] Kafka publish failed for ${bufferKey}`);
                 }

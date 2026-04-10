@@ -17,6 +17,7 @@ class ChatService {
         logger.info(`📥 [WEBHOOK] Received event: ${payload.event} (normalized: ${type}) from instance: ${instance}`);
 
         if (type !== 'MESSAGES_UPSERT') {
+            logger.debug(`[WEBHOOK] Skipping non-upsert event: ${type}`);
             return;
         }
 
@@ -56,6 +57,8 @@ class ChatService {
             const companyId = channel.company_id;
             const channelId = channel.id;
 
+            logger.info(`[WEBHOOK] Channel found: ID=${channelId}, Tenant=${tenantId}, Company=${companyId}`);
+
             // 2. Buscar o crear el contacto
             let contact = await this.getOrCreateContact(tenantId, companyId, remoteJid, pushName);
 
@@ -71,7 +74,7 @@ class ChatService {
             );
 
             const messageId = result.insertId;
-            logger.info(`✅ [WEBHOOK] Message saved (ID: ${messageId}, conv: ${conversationId.substring(0, 8)}...)`);
+            logger.info(`✅ [WEBHOOK] Message saved to DB (ID: ${messageId}, Group: ${conversationId.substring(0, 8)}...) content: "${body.substring(0, 20)}..."`);
 
             // 5. Obtener últimos 10 mensajes
             const [history] = await db.execute(
