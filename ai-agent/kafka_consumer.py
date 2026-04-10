@@ -1,5 +1,6 @@
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from confluent_kafka import Consumer, KafkaException
 import config
 
@@ -14,6 +15,8 @@ class MessageConsumer:
         }
         self.consumer = Consumer(self.conf)
         self.callback = callback
+        # Define a ThreadPoolExecutor for parallel processing
+        self.executor = ThreadPoolExecutor(max_workers=10)
 
     def start(self):
         try:
@@ -33,11 +36,23 @@ class MessageConsumer:
 
                 try:
                     payload = json.loads(msg.value().decode('utf-8'))
-                    self.callback(payload)
+                    # Dispatch to thread pool instead of blocking
+                    self.executor.submit(self._safe_callback, payload)
                 except Exception as e:
-                    logger.error(f"Error processing message: {e}")
+                    logger.error(f"Error parsing message: {e}")
 
         except KeyboardInterrupt:
             pass
         finally:
+            logger.info("Stopping consumer and executor...")
+            self.executor.shutdown(wait=True)
             self.consumer.close()
+
+    def _safe_callback(self, payload):
+        """
+        Wrapper to catch exceptions in the thread pool.
+        """
+        try:
+            self.callback(payload)
+        except Exception as e:
+            logger.error(f"Error in parallel callback: {e}")
