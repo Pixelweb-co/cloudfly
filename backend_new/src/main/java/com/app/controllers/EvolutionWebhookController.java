@@ -29,6 +29,7 @@ public class EvolutionWebhookController {
     private final SocketNotificationService socketNotificationService;
     private final com.app.persistence.repository.ConversationPipelineStateRepository conversationPipelineStateRepository;
     private final com.app.persistence.repository.PipelineStageRepository pipelineStageRepository;
+    private final com.app.persistence.repository.PipelineRepository pipelineRepository;
 
     @PostMapping
     public Mono<Void> handleWebhook(@RequestBody Map<String, Object> payload) {
@@ -114,12 +115,18 @@ public class EvolutionWebhookController {
                                                         .switchIfEmpty(Mono.defer(() -> {
                                                             log.info("🆕 [EVOLUTION-WEBHOOK] Creating new pipeline state for conversation: {}", conversationId);
                                                             
-                                                            // Find campaign and its pipeline
-                                                            return campaignRepository.queryByTenant(channel.getTenantId())
-                                                                    .filter(c -> "ACTIVE".equals(c.getStatus()))
+                                                            // 1. Try to find the Main (Default) Pipeline
+                                                            return pipelineRepository.findByTenantIdAndIsDefaultTrue(channel.getTenantId())
                                                                     .next()
-                                                                    .flatMap(campaign -> {
-                                                                        Long pipelineId = campaign.getTargetPipelineId();
+                                                                    .map(p -> p.getId())
+                                                                    .switchIfEmpty(Mono.defer(() -> {
+                                                                        // 2. Fallback: Find active campaign and its pipeline
+                                                                        return campaignRepository.queryByTenant(channel.getTenantId())
+                                                                                .filter(c -> "ACTIVE".equals(c.getStatus()))
+                                                                                .next()
+                                                                                .map(c -> c.getTargetPipelineId());
+                                                                    }))
+                                                                    .flatMap(pipelineId -> {
                                                                         if (pipelineId == null) return Mono.empty();
                                                                         
                                                                         return pipelineStageRepository.findByPipelineIdOrderByPositionAsc(pipelineId)

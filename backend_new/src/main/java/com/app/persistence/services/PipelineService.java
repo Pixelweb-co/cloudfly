@@ -92,7 +92,11 @@ public class PipelineService {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        return pipelineRepository.save(pipeline)
+        Mono<Void> clearDefaultsMono = Boolean.TRUE.equals(request.getIsDefault()) 
+                ? clearOtherDefaults(tenantId, null) 
+                : Mono.empty();
+
+        return clearDefaultsMono.then(pipelineRepository.save(pipeline))
                 .flatMap(savedPipeline -> {
                     if (request.getStages() == null || request.getStages().isEmpty()) {
                         return Mono.just(mapToDto(savedPipeline, List.of()));
@@ -128,7 +132,11 @@ public class PipelineService {
                     existing.setIcon(request.getIcon());
                     existing.setDefault(request.getIsDefault() != null ? request.getIsDefault() : existing.isDefault());
                     existing.setUpdatedAt(LocalDateTime.now());
-                    return pipelineRepository.save(existing);
+                    Mono<Void> clearDefaultsMono = Boolean.TRUE.equals(request.getIsDefault()) 
+                            ? clearOtherDefaults(tenantId, id) 
+                            : Mono.empty();
+
+                    return clearDefaultsMono.then(pipelineRepository.save(existing));
                 })
                 .flatMap(savedPipeline -> pipelineStageRepository.deleteByPipelineId(savedPipeline.getId())
                         .thenMany(Flux.fromIterable(request.getStages() != null ? request.getStages() : List.of()))
@@ -200,5 +208,15 @@ public class PipelineService {
                 .color(isFinal ? (outcome.equals("WON") ? "#10B981" : "#EF4444") : "#10B981")
                 .createdAt(LocalDateTime.now())
                 .build();
+    }
+
+    private Mono<Void> clearOtherDefaults(Long tenantId, Long excludeId) {
+        return pipelineRepository.findByTenantIdAndIsDefaultTrue(tenantId)
+                .filter(p -> excludeId == null || !p.getId().equals(excludeId))
+                .flatMap(p -> {
+                    p.setDefault(false);
+                    return pipelineRepository.save(p);
+                })
+                .then();
     }
 }

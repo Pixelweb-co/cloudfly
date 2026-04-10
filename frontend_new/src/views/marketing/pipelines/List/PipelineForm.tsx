@@ -16,7 +16,9 @@ import {
   useTheme,
   Slide,
   CircularProgress,
-  Popover
+  Popover,
+  Switch,
+  FormControlLabel
 } from '@mui/material'
 import { TransitionProps } from '@mui/material/transitions'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
@@ -255,6 +257,34 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Pipeli
                   />
                 )}
               />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                p: 3, 
+                bgcolor: alpha(theme.palette.primary.main, 0.05), 
+                borderRadius: '12px', 
+                border: `1px dashed ${alpha(theme.palette.primary.main, 0.3)}` 
+              }}>
+                <Box>
+                  <Typography variant='subtitle1' fontWeight={600}>Embudo Principal</Typography>
+                  <Typography variant='caption' color='text.secondary'>Asignar nuevos contactos automáticamente a este embudo</Typography>
+                </Box>
+                <Controller
+                  name='isDefault'
+                  control={control}
+                  render={({ field }) => (
+                    <Switch
+                      id='pipeline-is-default'
+                      checked={field.value}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                    />
+                  )}
+                />
+              </Box>
             </Grid>
 
             <Grid item xs={12} sm={6}>

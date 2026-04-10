@@ -12,6 +12,12 @@ const presenceHandler = require('./handlers/presenceHandler');
 const notifyRouter = require('./routes/notify');
 const db = require('./utils/db');
 
+// AI-Ready Infrastructure
+const { getRedisClient } = require('./utils/redisClient');
+const { initKafkaProducer, disconnectKafka } = require('./services/kafkaProducer');
+const { initKafkaConsumer, disconnectKafkaConsumer } = require('./services/kafkaConsumer');
+const messageBufferService = require('./services/messageBufferService');
+
 // Crear app Express
 const app = express();
 const server = http.createServer(app);
@@ -273,7 +279,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 const PORT = process.env.PORT || 3001;
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
     logger.info(` `);
     logger.info(`🚀 ========================================`);
     logger.info(`🚀 Chat Socket.IO Service Started`);
@@ -283,7 +289,41 @@ server.listen(PORT, () => {
     logger.info(`🚀 Frontend URL: ${process.env.FRONTEND_URL}`);
     logger.info(`🚀 Java API URL: ${process.env.JAVA_API_URL}`);
     logger.info(`🚀 ========================================`);
+
+    // Initialize AI-Ready Infrastructure
+    try {
+        logger.info(`🧠 [AI-INFRA] Initializing Redis...`);
+        getRedisClient();
+
+        logger.info(`🧠 [AI-INFRA] Initializing Kafka producer...`);
+        await initKafkaProducer();
+
+        logger.info(`🧠 [AI-INFRA] Starting debounce worker (3s buffer → Kafka)...`);
+        messageBufferService.startDebounceWorker();
+
+        logger.info(`🧠 [AI-INFRA] Initializing Kafka consumer (responses)...`);
+        await initKafkaConsumer(io);
+
+        logger.info(`🧠 [AI-INFRA] ✅ All systems initialized`);
+    } catch (error) {
+        logger.error(`❌ [AI-INFRA] Non-fatal init error: ${error.message}`);
+        logger.warn(`⚠️ [AI-INFRA] Service will continue without buffer/Kafka (fallback mode)`);
+    }
+
     logger.info(` `);
 });
 
+// Graceful shutdown
+const gracefulShutdown = async (signal) => {
+    logger.info(`\n🛑 Received ${signal}. Shutting down gracefully...`);
+    messageBufferService.stopDebounceWorker();
+    await disconnectKafka();
+    await disconnectKafkaConsumer();
+    process.exit(0);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 module.exports = { app, server, io };
+

@@ -9,4 +9,6 @@ public interface PipelineRepository extends ReactiveCrudRepository<PipelineEntit
     Flux<PipelineEntity> findByTenantId(Long tenantId);
     Flux<PipelineEntity> findByTenantIdAndCompanyId(Long tenantId, Long companyId);
     Mono<PipelineEntity> findByIdAndTenantId(Long id, Long tenantId);
+    Mono<PipelineEntity> findByTenantIdAndIsDefault(Long tenantId, boolean isDefault);
+    Flux<PipelineEntity> findByTenantIdAndIsDefaultTrue(Long tenantId);
 }

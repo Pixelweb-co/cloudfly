@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Avatar, Box, Card, CircularProgress, Divider, IconButton, InputBase, Typography } from '@mui/material'
+import { Avatar, Box, Card, CircularProgress, Divider, IconButton, InputBase, Switch, Tooltip, Typography } from '@mui/material'
 import { Contact } from '@/types/marketing/contactTypes'
 import { Icon } from '@iconify/react'
 import { chatService, ChatMessage } from '@/services/marketing/chatService'
@@ -9,6 +9,7 @@ import { useChatSocket } from '@/hooks/useChatSocket'
 import { userMethods } from '@/utils/userMethods'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import axiosInstance from '@/utils/axiosInstance'
 
 interface Props {
   contact: Contact | null;
@@ -20,7 +21,30 @@ export default function ChatInterface({ contact, isNew }: Props) {
   const [loading, setLoading] = useState(false)
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
+  const [chatbotEnabled, setChatbotEnabled] = useState<boolean>(
+    contact?.chatbotEnabled !== undefined ? contact.chatbotEnabled : true
+  )
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Sync chatbot state when contact changes
+  useEffect(() => {
+    if (contact?.chatbotEnabled !== undefined) {
+      setChatbotEnabled(contact.chatbotEnabled)
+    }
+  }, [contact?.chatbotEnabled])
+
+  // Toggle chatbot on/off
+  const handleToggleChatbot = async () => {
+    if (!contact?.id) return
+    const newValue = !chatbotEnabled
+    setChatbotEnabled(newValue) // Optimistic UI
+    try {
+      await axiosInstance.post(`/api/contacts/${contact.id}/chatbot-toggle`, { enabled: newValue })
+    } catch (error) {
+      console.error('Error toggling chatbot:', error)
+      setChatbotEnabled(!newValue) // Rollback on error
+    }
+  }
 
   // Use phone as conversationId for now (Evolution API uses JID which is based on phone)
   const conversationId = contact?.phone || ''
@@ -146,7 +170,23 @@ export default function ChatInterface({ contact, isNew }: Props) {
             </Typography>
           </Box>
         </Box>
-        <Box display="flex" gap={1}>
+        <Box display="flex" gap={1} alignItems="center">
+          <Tooltip title={chatbotEnabled ? 'Chatbot IA Activo' : 'Chatbot IA Desactivado'}>
+            <Box display="flex" alignItems="center" gap={0.5}>
+              <Icon 
+                icon={chatbotEnabled ? 'tabler:robot' : 'tabler:robot-off'} 
+                fontSize="1.2rem"
+                style={{ color: chatbotEnabled ? '#4caf50' : '#9e9e9e' }}
+              />
+              <Switch
+                size="small"
+                checked={chatbotEnabled}
+                onChange={handleToggleChatbot}
+                color="success"
+                sx={{ mr: 1 }}
+              />
+            </Box>
+          </Tooltip>
           <IconButton color="primary" sx={{ bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.08)' }}>
             <Icon icon="tabler:phone-call" />
           </IconButton>

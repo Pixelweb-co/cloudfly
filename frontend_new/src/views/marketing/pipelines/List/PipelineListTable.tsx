@@ -124,7 +124,19 @@ export default function PipelineListTable() {
                           {pipeline.name}
                         </Typography>
                         {pipeline.isDefault && (
-                          <Chip label="Por Defecto" size="small" color="primary" variant="outlined" sx={{ height: 20 }} />
+                          <Chip 
+                            label="PRINCIPAL" 
+                            size="small" 
+                            color="warning" 
+                            icon={<Icon icon="tabler:star-filled" />}
+                            sx={{ 
+                              height: 20, 
+                              fontSize: '0.65rem', 
+                              fontWeight: 700,
+                              px: 1,
+                              '& .MuiChip-icon': { fontSize: 12, color: 'inherit' }
+                            }} 
+                          />
                         )}
                       </Box>
                     </Box>
