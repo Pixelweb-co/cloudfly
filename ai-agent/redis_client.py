@@ -1,7 +1,7 @@
 import redis
 import json
 import logging
-from . import config
+import config
 
 logger = logging.getLogger(__name__)
 

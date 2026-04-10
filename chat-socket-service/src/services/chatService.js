@@ -269,6 +269,8 @@ class ChatService {
             logger.error(`❌ [CHAT-SERVICE] Error getting contacts with messages: ${error.message}`);
             throw error;
         }
+    }
+
     /**
      * Procesar respuesta generada por la IA (desde Kafka messages.out)
      */

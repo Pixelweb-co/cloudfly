@@ -1,10 +1,10 @@
 import logging
 import sys
-from .config import OPENAI_API_KEY
-from .kafka_consumer import MessageConsumer
-from .kafka_producer import MessageProducer
-from .ai_service import AIService
-from .redis_client import RedisMemoryClient
+from config import OPENAI_API_KEY
+from kafka_consumer import MessageConsumer
+from kafka_producer import MessageProducer
+from ai_service import AIService
+from redis_client import RedisMemoryClient
 
 # Configure Logging
 logging.basicConfig(
