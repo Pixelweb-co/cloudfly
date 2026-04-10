@@ -125,8 +125,7 @@ services:
     
     networks:
       - app-net
-    environment:
-      REDIS_PASSWORD: Elian2020#
+    command: redis-server --requirepass Elian2020#
   
   portainer:
     image: portainer/portainer-ce:latest
