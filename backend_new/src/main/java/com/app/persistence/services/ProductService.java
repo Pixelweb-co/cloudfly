@@ -3,6 +3,7 @@ package com.app.persistence.services;
 import com.app.dto.ProductCreateRequest;
 import com.app.persistence.entity.Product;
 import com.app.persistence.entity.ProductCategory;
+import com.app.events.ProductEventProducer;
 import com.app.persistence.repository.ProductCategoryRepository;
 import com.app.persistence.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductCategoryRepository productCategoryRepository;
+    private final ProductEventProducer productEventProducer;
 
     public Mono<ProductCreateRequest> saveProduct(ProductCreateRequest request) {
         Product product = Product.builder()
@@ -63,7 +65,8 @@ public class ProductService {
                                     .categoryId(catId)
                                     .build()))
                             .then(Mono.just(request));
-                });
+                })
+                .flatMap(req -> productEventProducer.publishProductChange(req).thenReturn(req));
     }
 
     public Mono<ProductCreateRequest> getById(Long id) {
@@ -121,6 +124,14 @@ public class ProductService {
                     return currentStock >= quantity;
                 })
                 .defaultIfEmpty(false);
+    }
+
+    public Flux<ProductCreateRequest> validateStockMultiple(List<Long> productIds, Long tenantId) {
+        return productRepository.findByIdInAndTenantId(productIds, tenantId)
+                .flatMap(product -> productCategoryRepository.findByProductId(product.getId())
+                        .map(ProductCategory::getCategoryId)
+                        .collectList()
+                        .map(categoryIds -> mapToRequest(product, categoryIds)));
     }
 
     public Mono<ProductCreateRequest> reduceStock(Long productId, Integer quantity) {

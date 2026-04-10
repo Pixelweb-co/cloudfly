@@ -3,3 +3,4 @@ redis>=5.0.0
 confluent-kafka>=2.0.0
 python-dotenv>=1.0.0
 mysql-connector-python>=8.0.0
+qdrant-client>=1.7.0

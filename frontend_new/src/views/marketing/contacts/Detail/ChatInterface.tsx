@@ -142,6 +142,35 @@ export default function ChatInterface({ contact, isNew }: Props) {
     return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
   }
 
+  const renderMessageBody = (text: string = '') => {
+    const mediaRegex = /^\[(https?:\/\/[^\]]+)\]\s*\n/;
+    const match = text.match(mediaRegex);
+    
+    if (match) {
+        const url = match[1];
+        const remainingText = text.replace(mediaRegex, '').trim();
+        return (
+            <Box>
+                <Box 
+                    component="img" 
+                    src={url} 
+                    alt="Media" 
+                    sx={{ maxWidth: '100%', maxHeight: 250, borderRadius: 1, mb: 1, objectFit: 'contain', display: 'block' }} 
+                />
+                <Typography variant="body2" color="inherit" sx={{ whiteSpace: 'pre-wrap' }}>
+                    {remainingText}
+                </Typography>
+            </Box>
+        );
+    }
+    
+    return (
+        <Typography variant="body2" color="inherit" sx={{ whiteSpace: 'pre-wrap' }}>
+            {text}
+        </Typography>
+    );
+  }
+
   return (
     <Card sx={{ height: '700px', display: 'flex', flexDirection: 'column', boxShadow: 3 }}>
       {/* Header */}
@@ -245,9 +274,7 @@ export default function ChatInterface({ contact, isNew }: Props) {
                       boxShadow: 1
                     }}
                   >
-                    <Typography variant="body2" color="inherit">
-                      {msg.body}
-                    </Typography>
+                    {renderMessageBody(msg.body)}
                   </Box>
                   <Box display="flex" justifyContent={isOutbound ? 'flex-end' : 'flex-start'} alignItems="center" gap={1} mt={1}>
                     <Typography variant="caption" sx={{ color: 'text.disabled' }}>

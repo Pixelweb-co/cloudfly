@@ -11,4 +11,6 @@ public interface ProductRepository extends ReactiveCrudRepository<Product, Long>
     Mono<Product> findByBarcodeAndTenantId(String barcode, Long tenantId);
 
     Flux<Product> findByProductNameContainingIgnoreCaseAndTenantId(String query, Long tenantId);
+
+    Flux<Product> findByIdInAndTenantId(Iterable<Long> ids, Long tenantId);
 }

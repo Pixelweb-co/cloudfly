@@ -26,3 +26,8 @@ DB_HOST = os.getenv("DB_HOST", "mysql")
 DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "widowmaker")
 DB_NAME = os.getenv("DB_NAME", "cloud_master")
+
+# API Services
+JAVA_API_URL = os.getenv("JAVA_API_URL", "http://backend-api:8080")
+QDRANT_HOST = os.getenv("QDRANT_HOST", "qdrant")
+QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
