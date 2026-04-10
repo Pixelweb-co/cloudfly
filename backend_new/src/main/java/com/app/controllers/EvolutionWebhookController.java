@@ -84,13 +84,9 @@ public class EvolutionWebhookController {
                                 .flatMap(contact -> {
                                     OmniChannelMessageEntity msgEntity = OmniChannelMessageEntity.builder()
                                             .tenantId(channel.getTenantId())
-                                            .internalConversationId(conversationId)
                                             .contactId(contact.getId())
                                             .direction("INBOUND")
-                                            .messageType("TEXT")
                                             .body(body)
-                                            .platform("WHATSAPP")
-                                            .provider("EVOLUTION")
                                             .status("RECEIVED")
                                             .createdAt(LocalDateTime.now())
                                             .build();
