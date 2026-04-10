@@ -136,7 +136,7 @@ class MessageBufferService {
                 );
 
                 if (success) {
-                    logger.info(`⏱️ [DEBOUNCE] BUFFER FLUSHED: ${messageCount} messages for contact ${meta.contactId} published to Kafka topic "${config.TOPIC_MESSAGES_IN}" ✅`);
+                    logger.info(`⏱️ [DEBOUNCE] BUFFER FLUSHED: ${messageCount} messages for contact ${meta.contactId} published to Kafka topic "messages.in" ✅`);
                 } else {
                     logger.error(`❌ [DEBOUNCE] Kafka publish failed for ${bufferKey}`);
                 }
