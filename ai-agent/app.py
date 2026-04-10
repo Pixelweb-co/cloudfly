@@ -44,7 +44,7 @@ class AIAgentApp:
             logger.info(f"Message already processed. Skipping: {timestamp}")
             return
 
-        logger.info(f"Processing message from tenant {tenant_id}, contact {contact_id}")
+        logger.info(f"🧠 [AI-FLOW] START: Processing message for tenant {tenant_id}, contact {contact_id}")
 
         # 2. Load Memory
         history = self.redis_client.get_memory(tenant_id, contact_id, conversation_id)
@@ -53,6 +53,8 @@ class AIAgentApp:
         response_text = self.ai_service.generate_response(
             tenant_id, contact_id, conversation_id, message_text, history
         )
+        
+        logger.info(f"🤖 [AI-FLOW] GENERATED: Response for contact {contact_id} ready.")
 
         # 4. Save to Memory (User + Assistant)
         self.redis_client.save_message(tenant_id, contact_id, conversation_id, "user", message_text)
@@ -60,7 +62,7 @@ class AIAgentApp:
 
         # 5. Produce Response to Kafka
         self.producer.send_response(tenant_id, contact_id, conversation_id, response_text)
-        logger.info(f"AI response sent to Kafka for contact {contact_id}")
+        logger.info(f"📤 [AI-FLOW] END: AI response sent to Kafka for contact {contact_id}")
 
     def run(self):
         logger.info("🚀 AI Agent Service is starting...")

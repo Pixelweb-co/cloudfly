@@ -53,6 +53,7 @@ class MessageConsumer:
         Wrapper to catch exceptions in the thread pool.
         """
         try:
+            logger.info(f"📥 [KAFKA] RECEIVED: Processing message for tenant {payload.get('tenantId')}, contact {payload.get('contactId')}")
             self.callback(payload)
         except Exception as e:
             logger.error(f"Error in parallel callback: {e}")

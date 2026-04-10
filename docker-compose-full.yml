@@ -209,6 +209,7 @@ services:
       # AI-Ready Infrastructure
       - REDIS_HOST=redis_server
       - REDIS_PORT=6379
+      - REDIS_PASSWORD=Elian2020#
       - KAFKA_BROKER=kafka:9092
     networks:
       - app-net
