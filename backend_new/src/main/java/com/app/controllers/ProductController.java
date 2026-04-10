@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/productos")
 @RequiredArgsConstructor
@@ -50,5 +52,10 @@ public class ProductController {
     @GetMapping("/search")
     public Flux<ProductCreateRequest> searchByName(@RequestParam String query, @RequestParam Long tenantId) {
         return productService.searchByName(query, tenantId);
+    }
+
+    @GetMapping("/stock/multiple")
+    public Flux<ProductCreateRequest> validateStockMultiple(@RequestParam List<Long> ids, @RequestParam Long tenantId) {
+        return productService.validateStockMultiple(ids, tenantId);
     }
 }

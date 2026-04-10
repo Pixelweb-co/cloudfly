@@ -311,8 +311,27 @@ class ChatService {
             // 4. Enviar vía WhatsApp (Evolution API)
             try {
                 const remoteJid = `${contact.phone}@s.whatsapp.net`;
-                await evolutionClient.sendMessage(channel.instance_name, remoteJid, respuesta);
-                logger.info(`✅ [AI-RESPONSE] Message sent to WhatsApp for contact ${contactId}`);
+                
+                // Interceptar MediaMessage format
+                let mediaUrl = null;
+                let textContent = respuesta;
+                
+                // Buscar [URL] en la primera línea. \s* sirve para tolerar espacios extra
+                const mediaRegex = /^\[(https?:\/\/[^\]]+)\]\s*\n/;
+                const match = respuesta.match(mediaRegex);
+                
+                if (match) {
+                    mediaUrl = match[1];
+                    textContent = respuesta.replace(mediaRegex, '').trim();
+                }
+
+                if (mediaUrl) {
+                    await evolutionClient.sendMedia(channel.instance_name, remoteJid, mediaUrl, textContent);
+                    logger.info(`✅ [AI-RESPONSE] MediaMessage sent to WhatsApp for contact ${contactId}`);
+                } else {
+                    await evolutionClient.sendMessage(channel.instance_name, remoteJid, respuesta);
+                    logger.info(`✅ [AI-RESPONSE] TextMessage sent to WhatsApp for contact ${contactId}`);
+                }
             } catch (evError) {
                 logger.error(`❌ [AI-RESPONSE] Error sending to Evolution API: ${evError.message}`);
                 // No retornamos, igual notificamos al socket que "quedó" en DB o falló el envío

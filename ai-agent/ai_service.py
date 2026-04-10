@@ -1,7 +1,11 @@
 import logging
+import json
+import requests
 from functools import lru_cache
 from openai import OpenAI
 import mysql.connector
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import Filter, FieldCondition, MatchValue
 import config
 
 logger = logging.getLogger(__name__)
@@ -9,13 +13,14 @@ logger = logging.getLogger(__name__)
 class AIService:
     def __init__(self):
         self.client = OpenAI(api_key=config.OPENAI_API_KEY)
+        self.qdrant = None
+        try:
+            self.qdrant = QdrantClient(host=config.QDRANT_HOST, port=config.QDRANT_PORT)
+        except Exception as e:
+            logger.error(f"Failed to initialize QdrantClient: {e}")
 
     @lru_cache(maxsize=128)
     def get_company_context(self, tenant_id):
-        """
-        Fetches company info from MySQL to build a personalized prompt.
-        Cached (LRU) to reduce DB load.
-        """
         try:
             conn = mysql.connector.connect(
                 host=config.DB_HOST,
@@ -36,10 +41,58 @@ class AIService:
             logger.error(f"Error fetching company context: {e}")
             return "Compañía: CloudFly SaaS"
 
+    def search_products(self, query: str, tenant_id: int):
+        logger.info(f"Searching Qdrant for '{query}' (Tenant: {tenant_id})")
+        if not self.qdrant:
+            return json.dumps({"error": "Vector database unreachable"})
+            
+        try:
+            vector_res = self.client.embeddings.create(
+                input=query,
+                model="text-embedding-3-small"
+            )
+            query_vector = vector_res.data[0].embedding
+            
+            search_result = self.qdrant.search(
+                collection_name="products",
+                query_vector=query_vector,
+                query_filter=Filter(
+                    must=[
+                        FieldCondition(
+                            key="tenant_id",
+                            match=MatchValue(value=tenant_id)
+                        )
+                    ]
+                ),
+                limit=5
+            )
+            
+            results = []
+            for hit in search_result:
+                results.append(hit.payload)
+                
+            return json.dumps(results)
+        except Exception as e:
+            logger.error(f"Vector search failed: {e}")
+            return json.dumps({"error": str(e)})
+
+    def check_products_stock(self, product_ids: list, tenant_id: int):
+        logger.info(f"Checking stock for {product_ids} (Tenant: {tenant_id})")
+        try:
+            ids_str = ",".join(map(str, product_ids))
+            url = f"{config.JAVA_API_URL}/productos/stock/multiple?ids={ids_str}&tenantId={tenant_id}"
+            res = requests.get(url, timeout=5)
+            if res.status_code == 200:
+                data = res.json()
+                # return just stock and status to reduce output
+                slim_data = [{"id": p["id"], "stock": p["inventoryQty"], "manage_stock": p["manageStock"], "status": p["inventoryStatus"]} for p in data]
+                return json.dumps(slim_data)
+            return json.dumps({"error": f"API returned {res.status_code}"})
+        except Exception as e:
+            logger.error(f"Stock check failed: {e}")
+            return json.dumps({"error": str(e)})
+
     def detect_intent(self, message):
-        """
-        Basic intent detection for specialized responses.
-        """
         msg = message.lower()
         if any(greet in msg for greet in ["hola", "buen", "saludos", "hi", "hello"]):
             return "GREETING"
@@ -48,41 +101,117 @@ class AIService:
         return "GENERAL"
 
     def generate_response(self, tenant_id, contact_id, conversation_id, message, history):
-        """
-        Calls OpenAI GPT-4o with context and memory.
-        """
         company_info = self.get_company_context(tenant_id)
-        intent = self.detect_intent(message)
 
-        system_prompt = f"""Ere un asistente de ventas profesional y servicial de la plataforma CloudFly.
-Tu objetivo es ayudar al cliente con sus dudas.
+        system_prompt = f"""Ere un asistente de ventas profesional de la plataforma CloudFly.
+Tu objetivo es ayudar al cliente con sus dudas y ventas de manera entusiasta e inmediata.
 
 INFORMACIÓN DE LA EMPRESA ACTUAL:
 {company_info}
 
-REGLAS:
+REGLAS ESTRICTAS DE FORMATO SI HABLAS DE UN PRODUCTO:
+¡CUANDO MENCIONES UN PRODUCTO QUE ENCONTRASTE, DEBES USAR OBLIGATORIAMENTE ESTE FORMATO TEXTUAL EXACTO POR CADA PRODUCTO!
+Si el producto tiene imagen (image_url válida), escribe el primer renglón con la URL. Si no tiene o es nula, omite la primera línea.
+
+[URL_DE_LA_IMAGEN]
+*{'{'}Nombre del Producto{'}'}*
+{'{'}Descripción breve{'}'}
+Precio: ${'{'}Precio{'}'}
+Estado: {'{'}Disponible (X unidades) / Agotado{'}'}
+
+OTRAS REGLAS:
 - Saluda de forma amigable.
-- Si el cliente pregunta por precios o productos, sé entusiasta.
-- Mantén la respuesta concisa para WhatsApp (máximo 2-3 párrafos).
-- No inventes información que no tienes.
+- Si te piden Catálogo, usa la herramienta search_products_semantically con palabras clave amplias o las que mencione el cliente.
+- Si presentas opciones y parecen interesantes, evalúa si necesitas llamar a check_products_stock antes de dar el "Estado".
+- Mantén la respuesta conversacional.
 """
 
         messages = [{"role": "system", "content": system_prompt}]
-        
-        # Add history (Redis)
         for h in history:
             messages.append({"role": h["role"], "content": h["content"]})
-        
-        # Add new message
         messages.append({"role": "user", "content": message})
+
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "search_products_semantically",
+                    "description": "Busca productos en el catálogo semánticamente basados en la solicitud del cliente.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "La consulta de búsqueda (ej. 'camisas de verano', 'televisores 4k', 'zapatos baratos')"
+                            }
+                        },
+                        "required": ["query"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "check_products_stock",
+                    "description": "Verifica el inventario real en la base de datos de uno o más productos a través de sus IDs.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "product_ids": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                },
+                                "description": "Lista de IDs de productos a consultar."
+                            }
+                        },
+                        "required": ["product_ids"]
+                    }
+                }
+            }
+        ]
 
         try:
             response = self.client.chat.completions.create(
                 model=config.OPENAI_MODEL,
                 messages=messages,
+                tools=tools,
                 temperature=0.7,
                 timeout=30
             )
+            
+            response_message = response.choices[0].message
+            tool_calls = response_message.tool_calls
+
+            if tool_calls:
+                messages.append(response_message) # Agregamos el llamado al historial temporal
+                for tool_call in tool_calls:
+                    function_name = tool_call.function.name
+                    function_args = json.loads(tool_call.function.arguments)
+                    
+                    if function_name == "search_products_semantically":
+                        function_response = self.search_products(function_args.get("query"), int(tenant_id))
+                    elif function_name == "check_products_stock":
+                        function_response = self.check_products_stock(function_args.get("product_ids"), int(tenant_id))
+                    else:
+                        function_response = json.dumps({"error": "Unknown function"})
+                        
+                    messages.append({
+                        "tool_call_id": tool_call.id,
+                        "role": "tool",
+                        "name": function_name,
+                        "content": function_response,
+                    })
+
+                # Segunda llamada con las respuestas de las funciones
+                second_response = self.client.chat.completions.create(
+                    model=config.OPENAI_MODEL,
+                    messages=messages,
+                    temperature=0.7,
+                    timeout=30
+                )
+                return second_response.choices[0].message.content
+                
             return response.choices[0].message.content
         except Exception as e:
             logger.error(f"Error calling OpenAI: {e}")
