@@ -23,6 +23,8 @@ import { productService } from '@/services/ventas/productService'
 import { categoryService } from '@/services/ventas/categoryService'
 import { Category } from '@/types/ventas/productTypes'
 import { userMethods } from '@/utils/userMethods'
+import MediaLibraryDialog from '@/components/media/MediaLibraryDialog'
+import { Media } from '@/services/mediaService'
 
 export default function CreateProductPage() {
   const router = useRouter()
@@ -39,8 +41,9 @@ export default function CreateProductPage() {
     manageStock: true,
     status: 'PUBLISHED',
     categoryIds: [] as number[],
-    imageUrls: ['']
+    imageUrls: [] as string[]
   })
+  const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
 
   useEffect(() => {
     loadCategories()
@@ -205,6 +208,46 @@ export default function CreateProductPage() {
           <Grid item xs={12} md={4}>
             <Card sx={{ borderRadius: 2, boxShadow: 3, mb: 6 }}>
               <CardContent>
+                <Typography variant="h6" sx={{ mb: 4 }}>Imagen del Producto</Typography>
+                <Box 
+                  sx={{ 
+                    border: '1px dashed', 
+                    borderColor: 'divider', 
+                    borderRadius: 2, 
+                    p: 4, 
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: 'action.hover' }
+                  }}
+                  onClick={() => setMediaDialogOpen(true)}
+                >
+                  {formData.imageUrls.length > 0 ? (
+                    <Box sx={{ position: 'relative' }}>
+                      <img 
+                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${formData.imageUrls[0]}`} 
+                        alt="Preview" 
+                        style={{ width: '100%', borderRadius: 8, maxHeight: 200, objectFit: 'cover' }} 
+                      />
+                      <Button 
+                        size="small" 
+                        variant="contained" 
+                        sx={{ mt: 2 }}
+                        startIcon={<Icon icon="tabler:photo" />}
+                      >
+                        Cambiar Imagen
+                      </Button>
+                    </Box>
+                  ) : (
+                    <Box sx={{ py: 4 }}>
+                      <Icon icon="tabler:plus" fontSize={32} />
+                      <Typography sx={{ mt: 2 }}>Click para seleccionar imagen</Typography>
+                    </Box>
+                  )}
+                </Box>
+              </CardContent>
+            </Card>
+            <Card sx={{ borderRadius: 2, boxShadow: 3, mb: 6 }}>
+              <CardContent>
                 <Typography variant="h6" sx={{ mb: 4 }}>Organización</Typography>
                 <Grid container spacing={4}>
                   <Grid item xs={12}>
@@ -266,6 +309,17 @@ export default function CreateProductPage() {
           </Grid>
         </Grid>
       </form>
+
+      <MediaLibraryDialog 
+        open={mediaDialogOpen}
+        onClose={() => setMediaDialogOpen(false)}
+        onSelect={(media: Media) => {
+          setFormData(prev => ({
+            ...prev,
+            imageUrls: [media.url]
+          }))
+        }}
+      />
     </Box>
   )
 }

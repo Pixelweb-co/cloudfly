@@ -28,7 +28,7 @@ public class AppConfig {
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/auth/**", "/login", "/register", "/verify", "/forgot-password", "/reset-password", "/api/webhooks/evolution").permitAll()
+                        .pathMatchers("/media/**", "/auth/**", "/login", "/register", "/verify", "/forgot-password", "/reset-password", "/api/webhooks/evolution").permitAll()
                         .pathMatchers(org.springframework.http.HttpMethod.OPTIONS).permitAll() // Allow preflight
                         .anyExchange().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, org.springframework.security.config.web.server.SecurityWebFiltersOrder.AUTHORIZATION)
