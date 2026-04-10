@@ -1,7 +1,7 @@
 import logging
 from openai import OpenAI
 import mysql.connector
-from . import config
+import config
 
 logger = logging.getLogger(__name__)
 

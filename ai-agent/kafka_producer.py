@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import datetime
 from confluent_kafka import Producer
-from . import config
+import config
 
 logger = logging.getLogger(__name__)
 
