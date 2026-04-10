@@ -25,6 +25,7 @@ public class ChatController {
     private final EvolutionService evolutionService;
     private final SocketNotificationService socketNotificationService;
     private final UserService userService;
+    private final com.app.persistence.repository.ChannelRepository channelRepository;
 
     /**
      * Get historical messages for a specific conversation
@@ -66,31 +67,41 @@ public class ChatController {
 
                     return messageRepository.save(msgEntity)
                             .flatMap(savedMsg -> {
-                                log.info("📤 [CHAT-CONTROLLER] Message saved. Routing to provider...");
+                                log.info("📤 [CHAT-CONTROLLER] Message saved locally (ID: {}). Looking for channel...", savedMsg.getId());
 
-                                // 2. Enviar a Evolution API (WhatsApp)
-                                String instanceName = "cloudfly_chatbot1"; 
-                                
-                                return evolutionService.sendSimpleMessage(instanceName, phone, body)
-                                        .flatMap(evolutionRes -> {
-                                            // 3. Notificar al socket
-                                            Map<String, Object> socketPayload = new HashMap<>();
-                                            socketPayload.put("messageId", savedMsg.getId());
-                                            socketPayload.put("tenantId", tenantId);
-                                            socketPayload.put("direction", "OUTBOUND");
-                                            socketPayload.put("body", body);
-                                            socketPayload.put("contactId", contactId);
-                                            socketPayload.put("sentAt", savedMsg.getCreatedAt());
+                                return channelRepository.findAll() // Simple check for now, filter by tenant in logic if needed
+                                        .filter(c -> c.getTenantId().equals(tenantId) && Boolean.TRUE.equals(c.getStatus()))
+                                        .next()
+                                        .flatMap(channel -> {
+                                            String instanceName = channel.getInstanceName();
+                                            log.info("📤 [CHAT-CONTROLLER] Routing to provider instance: {}", instanceName);
+                                            
+                                            return evolutionService.sendSimpleMessage(instanceName, phone, body)
+                                                    .flatMap(evolutionRes -> {
+                                                        // 3. Notificar al socket
+                                                        Map<String, Object> socketPayload = new HashMap<>();
+                                                        socketPayload.put("messageId", savedMsg.getId());
+                                                        socketPayload.put("tenantId", tenantId);
+                                                        socketPayload.put("direction", "OUTBOUND");
+                                                        socketPayload.put("body", body);
+                                                        socketPayload.put("contactId", contactId);
+                                                        socketPayload.put("sentAt", savedMsg.getCreatedAt());
 
-                                            socketNotificationService.notifyNewMessage(socketPayload).subscribe();
+                                                        socketNotificationService.notifyNewMessage(socketPayload).subscribe();
 
-                                            return Mono.just(savedMsg);
+                                                        return Mono.just(savedMsg);
+                                                    })
+                                                    .onErrorResume(e -> {
+                                                        log.error("❌ Error sending message via Evolution: {}", e.getMessage());
+                                                        savedMsg.setStatus("ERROR");
+                                                        return messageRepository.save(savedMsg);
+                                                    });
                                         })
-                                        .onErrorResume(e -> {
-                                            log.error("❌ Error sending message via Evolution: {}", e.getMessage());
+                                        .switchIfEmpty(Mono.defer(() -> {
+                                            log.warn("⚠️ [CHAT-CONTROLLER] No active channel found for tenant: {}", tenantId);
                                             savedMsg.setStatus("ERROR");
                                             return messageRepository.save(savedMsg);
-                                        });
+                                        }));
                             });
                 });
     }
