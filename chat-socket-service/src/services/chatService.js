@@ -326,7 +326,8 @@ class ChatService {
                     conversationId: conversationId,
                     createdAt: new Date()
                 },
-                contact: contact
+                contact: contact,
+                tenantId: tenantId
             };
 
             // Necesitamos el objeto 'io' – pasaremos esto desde el receptor o lo inyectaremos
