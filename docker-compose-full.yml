@@ -138,13 +138,6 @@ services:
       - portainer_data:/data
     environment:
       TZ: America/Bogota
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.portainer.rule=Host(`portainer.cloudfly.com.co`)"
-      - "traefik.http.routers.portainer.entrypoints=websecure"
-      - "traefik.http.routers.portainer.tls.certresolver=le"
-      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
-      - "traefik.docker.network=cloudfly_app-net"
     networks:
       - app-net
 
