@@ -54,6 +54,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
+    volumes:
+      - ./uploads:/uploads
     environment:
       - DB_HOST=mysql
       - DB_PORT=3306
