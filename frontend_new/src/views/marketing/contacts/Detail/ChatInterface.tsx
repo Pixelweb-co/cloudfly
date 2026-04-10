@@ -10,6 +10,7 @@ import { userMethods } from '@/utils/userMethods'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import axiosInstance from '@/utils/axiosInstance'
+import { AuthManager } from '@/utils/authManager'
 
 interface Props {
   contact: Contact | null;
@@ -59,9 +60,9 @@ export default function ChatInterface({ contact, isNew }: Props) {
       direction: msg.direction || (msg.message?.direction)
     };
     setMessages((prev) => {
-        // Evitar duplicados si el mensaje ya existe (ej. mensaje enviado por nosotros)
-        if (prev.find(m => m.id === normalizedMsg.id)) return prev;
-        return [...prev, normalizedMsg];
+      // Evitar duplicados si el mensaje ya existe (ej. mensaje enviado por nosotros)
+      if (prev.find(m => m.id === normalizedMsg.id)) return prev;
+      return [...prev, normalizedMsg];
     })
   }, [])
 
@@ -86,10 +87,10 @@ export default function ChatInterface({ contact, isNew }: Props) {
         try {
           const user = userMethods.getUserLogin()
           const tenantId = user?.customerId || user?.tenant_id
-          
+
           if (!tenantId) {
-             console.warn('No tenantId found for history fetch')
-             return
+            console.warn('No tenantId found for history fetch')
+            return
           }
 
           const history = await chatService.getMessages(contact.uuid, tenantId)
@@ -116,14 +117,14 @@ export default function ChatInterface({ contact, isNew }: Props) {
         body: newMessage,
         platform: 'WHATSAPP'
       })
-      
+
       // Update local state (socket will also broadcast but current user needs it immediately if socket delay occurs)
       // Actually common practice is to let socket handle it, but here we add for better UX if we don't have echo
       setMessages(prev => {
-          if (prev.find(m => m.id === sentMsg.id)) return prev;
-          return [...prev, sentMsg];
+        if (prev.find(m => m.id === sentMsg.id)) return prev;
+        return [...prev, sentMsg];
       });
-      
+
       setNewMessage('')
     } catch (error) {
       console.error('Error sending message:', error)
@@ -145,40 +146,40 @@ export default function ChatInterface({ contact, isNew }: Props) {
   const renderMessageBody = (text: string = '') => {
     const mediaRegex = /^\[(https?:\/\/[^\]]+)\]\s*\n/;
     const match = text.match(mediaRegex);
-    
+
     if (match) {
-        const url = match[1];
-        const remainingText = text.replace(mediaRegex, '').trim();
-        return (
-            <Box>
-                <Box 
-                    component="img" 
-                    src={url} 
-                    alt="Media" 
-                    sx={{ maxWidth: '100%', maxHeight: 250, borderRadius: 1, mb: 1, objectFit: 'contain', display: 'block' }} 
-                />
-                <Typography variant="body2" color="inherit" sx={{ whiteSpace: 'pre-wrap' }}>
-                    {remainingText}
-                </Typography>
-            </Box>
-        );
+      const url = match[1];
+      const remainingText = text.replace(mediaRegex, '').trim();
+      return (
+        <Box>
+          <Box
+            component="img"
+            src={url}
+            alt="Media"
+            sx={{ maxWidth: '100%', maxHeight: 250, borderRadius: 1, mb: 1, objectFit: 'contain', display: 'block' }}
+          />
+          <Typography variant="body2" color="inherit" sx={{ whiteSpace: 'pre-wrap' }}>
+            {remainingText}
+          </Typography>
+        </Box>
+      );
     }
-    
+
     return (
-        <Typography variant="body2" color="inherit" sx={{ whiteSpace: 'pre-wrap' }}>
-            {text}
-        </Typography>
+      <Typography variant="body2" color="inherit" sx={{ whiteSpace: 'pre-wrap' }}>
+        {text}
+      </Typography>
     );
   }
 
   return (
     <Card sx={{ height: '700px', display: 'flex', flexDirection: 'column', boxShadow: 3 }}>
       {/* Header */}
-      <Box 
-        sx={{ 
-          p: 4, 
-          display: 'flex', 
-          alignItems: 'center', 
+      <Box
+        sx={{
+          p: 4,
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'space-between',
           borderBottom: 1,
           borderColor: 'divider',
@@ -202,8 +203,8 @@ export default function ChatInterface({ contact, isNew }: Props) {
         <Box display="flex" gap={1} alignItems="center">
           <Tooltip title={chatbotEnabled ? 'Chatbot IA Activo' : 'Chatbot IA Desactivado'}>
             <Box display="flex" alignItems="center" gap={0.5}>
-              <Icon 
-                icon={chatbotEnabled ? 'tabler:robot' : 'tabler:robot-off'} 
+              <Icon
+                icon={chatbotEnabled ? 'tabler:robot' : 'tabler:robot-off'}
                 fontSize="1.2rem"
                 style={{ color: chatbotEnabled ? '#4caf50' : '#9e9e9e' }}
               />
@@ -226,11 +227,11 @@ export default function ChatInterface({ contact, isNew }: Props) {
       </Box>
 
       {/* Chat Body (Messages) */}
-      <Box 
+      <Box
         ref={scrollRef}
-        sx={{ 
-          flexGrow: 1, 
-          p: 5, 
+        sx={{
+          flexGrow: 1,
+          p: 5,
           overflowY: 'auto',
           bgcolor: 'action.hover',
           display: 'flex',
@@ -251,11 +252,11 @@ export default function ChatInterface({ contact, isNew }: Props) {
           messages.map((msg, index) => {
             const isOutbound = msg.direction === 'OUTBOUND'
             return (
-              <Box 
-                key={msg.id || index} 
-                display="flex" 
-                gap={2} 
-                maxWidth="80%" 
+              <Box
+                key={msg.id || index}
+                display="flex"
+                gap={2}
+                maxWidth="80%"
                 alignSelf={isOutbound ? 'flex-end' : 'flex-start'}
                 flexDirection={isOutbound ? 'row-reverse' : 'row'}
               >
@@ -263,12 +264,12 @@ export default function ChatInterface({ contact, isNew }: Props) {
                   {isOutbound ? 'YO' : getInitials(contact.name)}
                 </Avatar>
                 <Box>
-                  <Box 
-                    sx={{ 
-                      bgcolor: isOutbound ? 'primary.main' : 'background.paper', 
+                  <Box
+                    sx={{
+                      bgcolor: isOutbound ? 'primary.main' : 'background.paper',
                       color: isOutbound ? 'primary.contrastText' : 'text.primary',
-                      p: 3, 
-                      borderRadius: 2, 
+                      p: 3,
+                      borderRadius: 2,
                       borderTopRightRadius: isOutbound ? 0 : 2,
                       borderTopLeftRadius: isOutbound ? 2 : 0,
                       boxShadow: 1
@@ -281,10 +282,10 @@ export default function ChatInterface({ contact, isNew }: Props) {
                       {msg.sentAt ? format(new Date(msg.sentAt), 'hh:mm a') : ''}
                     </Typography>
                     {isOutbound && (
-                      <Icon 
-                        icon={msg.status === 'READ' ? 'tabler:checks' : 'tabler:check'} 
-                        fontSize="1rem" 
-                        sx={{ color: msg.status === 'READ' ? 'primary.main' : 'text.disabled' }} 
+                      <Icon
+                        icon={msg.status === 'READ' ? 'tabler:checks' : 'tabler:check'}
+                        fontSize="1rem"
+                        sx={{ color: msg.status === 'READ' ? 'primary.main' : 'text.disabled' }}
                       />
                     )}
                   </Box>
@@ -297,13 +298,13 @@ export default function ChatInterface({ contact, isNew }: Props) {
 
       {/* Footer / Input Area */}
       <Box sx={{ p: 4, bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider' }}>
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 2, 
-            bgcolor: 'action.hover', 
-            borderRadius: 8, 
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            bgcolor: 'action.hover',
+            borderRadius: 8,
             p: 1.5,
             px: 3
           }}
@@ -311,7 +312,7 @@ export default function ChatInterface({ contact, isNew }: Props) {
           <IconButton color="secondary" size="small">
             <Icon icon="tabler:paperclip" />
           </IconButton>
-          
+
           <InputBase
             placeholder="Escribe un mensaje..."
             fullWidth
@@ -329,12 +330,12 @@ export default function ChatInterface({ contact, isNew }: Props) {
             sx={{ ml: 1, flex: 1 }}
           />
 
-          <IconButton color="primary" 
+          <IconButton color="primary"
             onClick={handleSend}
             disabled={sending || !newMessage.trim()}
-            sx={{ 
-              bgcolor: 'primary.main', 
-              color: 'white', 
+            sx={{
+              bgcolor: 'primary.main',
+              color: 'white',
               '&:hover': { bgcolor: 'primary.dark' },
               '&.Mui-disabled': { bgcolor: 'action.disabledBackground', color: 'action.disabled' }
             }}
