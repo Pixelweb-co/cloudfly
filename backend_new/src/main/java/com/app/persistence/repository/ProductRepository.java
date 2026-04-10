@@ -12,5 +12,5 @@ public interface ProductRepository extends ReactiveCrudRepository<Product, Long>
 
     Flux<Product> findByProductNameContainingIgnoreCaseAndTenantId(String query, Long tenantId);
 
-    Flux<Product> findByIdInAndTenantId(Iterable<Long> ids, Long tenantId);
+    Flux<Product> findByIdInAndTenantId(java.util.Collection<Long> ids, Long tenantId);
 }
