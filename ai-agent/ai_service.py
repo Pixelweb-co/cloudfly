@@ -1,4 +1,5 @@
 import logging
+from functools import lru_cache
 from openai import OpenAI
 import mysql.connector
 import config
@@ -9,16 +10,19 @@ class AIService:
     def __init__(self):
         self.client = OpenAI(api_key=config.OPENAI_API_KEY)
 
+    @lru_cache(maxsize=128)
     def get_company_context(self, tenant_id):
         """
         Fetches company info from MySQL to build a personalized prompt.
+        Cached (LRU) to reduce DB load.
         """
         try:
             conn = mysql.connector.connect(
                 host=config.DB_HOST,
                 user=config.DB_USER,
                 password=config.DB_PASSWORD,
-                database=config.DB_NAME
+                database=config.DB_NAME,
+                connect_timeout=5
             )
             cursor = conn.cursor(dictionary=True)
             cursor.execute("SELECT name, nit, address, phone FROM companies WHERE tenant_id = %s", (tenant_id,))

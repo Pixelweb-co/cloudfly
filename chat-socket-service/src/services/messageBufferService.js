@@ -2,7 +2,7 @@ const { getRedisClient, isRedisAvailable } = require('../utils/redisClient');
 const { publishToKafka, isKafkaAvailable } = require('./kafkaProducer');
 const logger = require('../utils/logger');
 
-const DEBOUNCE_MS = 3000;              // 3 seconds inactivity window
+const DEBOUNCE_MS = 1000;              // 1 second inactivity window
 const BUFFER_EXPIRE_SECONDS = 60;      // Safety: auto-cleanup orphaned buffers
 const POLL_INTERVAL_MS = 500;          // Worker check frequency
 const DEBOUNCE_ZSET = 'debounce_queue'; // Redis sorted set for timing
