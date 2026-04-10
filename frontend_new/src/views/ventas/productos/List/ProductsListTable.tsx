@@ -110,7 +110,7 @@ export default function ProductsListTable() {
               </TableRow>
             ) : (
               products.map((product) => (
-                <TableRow key={product.id} hover sx={{ transition: 'all 0.2s', '&:hover': { backgroundColor: 'action.hover' } }}>
+                <TableRow key={product.id} hover onClick={() => handleEdit(product)} sx={{ transition: 'all 0.2s', '&:hover': { backgroundColor: 'action.hover' }, cursor: 'pointer' }}>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                       <Avatar 
