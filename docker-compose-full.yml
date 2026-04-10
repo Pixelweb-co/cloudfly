@@ -188,6 +188,8 @@ services:
       dockerfile: Dockerfile
     container_name: chat_socket
     restart: always
+    env_file:
+      - .env
     ports:
       - "3001:3001"
     environment:
@@ -224,6 +226,8 @@ services:
       dockerfile: Dockerfile
     container_name: ai_agent
     restart: always
+    env_file:
+      - .env
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - REDIS_HOST=redis_server
