@@ -137,7 +137,7 @@ export default function ContactListTable() {
               </TableRow>
             ) : (
               contacts.map((contact) => (
-                <TableRow key={contact.id} hover>
+                <TableRow key={contact.id} hover onClick={() => handleEdit(contact)} sx={{ cursor: 'pointer' }}>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                       <Avatar 
