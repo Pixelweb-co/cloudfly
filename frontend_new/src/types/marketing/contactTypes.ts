@@ -15,6 +15,7 @@ export interface Contact {
   documentType?: string;
   documentNumber?: string;
   isActive: boolean;
+  chatbotEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }

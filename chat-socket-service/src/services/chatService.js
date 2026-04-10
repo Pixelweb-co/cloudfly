@@ -1,9 +1,14 @@
 const db = require('../utils/db');
 const logger = require('../utils/logger');
+const conversationService = require('./conversationService');
+const chatbotGateService = require('./chatbotGateService');
+const messageBufferService = require('./messageBufferService');
+const evolutionClient = require('./evolutionClient');
 
 class ChatService {
     /**
      * Procesar mensaje entrante de Evolution
+     * FLOW: Save → Conversation ID → Socket.IO → Chatbot Gate → Buffer/Kafka
      */
     async processEvolutionWebhook(io, payload) {
         const type = (payload.event || '').toUpperCase().replace(/\./g, '_');
@@ -53,19 +58,22 @@ class ChatService {
 
             // 2. Buscar o crear el contacto
             let contact = await this.getOrCreateContact(tenantId, companyId, remoteJid, pushName);
+
+            // 3. Obtener o crear conversation_id (UUID, 30 min gap)
+            const conversationId = await conversationService.getOrCreateConversationId(tenantId, contact.id, channelId);
             
-            // 3. Guardar el mensaje
+            // 4. Guardar el mensaje CON conversation_id
             const [result] = await db.execute(
                 `INSERT INTO omni_channel_messages 
-                (tenant_id, channel_id, contact_id, direction, content, status, external_msg_id, created_at) 
-                VALUES (?, ?, ?, 'INBOUND', ?, 'RECEIVED', ?, NOW())`,
-                [tenantId, channelId, contact.id, body, data.key.id || null]
+                (tenant_id, channel_id, contact_id, direction, content, status, external_msg_id, conversation_id, created_at) 
+                VALUES (?, ?, ?, 'INBOUND', ?, 'RECEIVED', ?, ?, NOW())`,
+                [tenantId, channelId, contact.id, body, data.key.id || null, conversationId]
             );
 
             const messageId = result.insertId;
-            logger.info(`✅ [WEBHOOK] Message saved (ID: ${messageId})`);
+            logger.info(`✅ [WEBHOOK] Message saved (ID: ${messageId}, conv: ${conversationId.substring(0, 8)}...)`);
 
-            // 4. Obtener últimos 10 mensajes
+            // 5. Obtener últimos 10 mensajes
             const [history] = await db.execute(
                 `SELECT * FROM omni_channel_messages 
                 WHERE tenant_id = ? AND contact_id = ? 
@@ -73,7 +81,7 @@ class ChatService {
                 [tenantId, contact.id]
             );
 
-            // 5. Emitir por Socket.IO usando el teléfono (para soportar duplicados)
+            // 6. Emitir por Socket.IO (SIEMPRE, independiente del chatbot gate)
             const phoneDigits = remoteJid.split('@')[0].replace(/\D/g, '');
             const roomName = `tenant_${tenantId}_contact_${phoneDigits}`;
             const eventPayload = {
@@ -82,6 +90,7 @@ class ChatService {
                     content: body,
                     direction: 'INBOUND',
                     status: 'RECEIVED',
+                    conversationId: conversationId,
                     createdAt: new Date()
                 },
                 contact: contact,
@@ -91,11 +100,36 @@ class ChatService {
             io.to(roomName).emit('new-message', eventPayload);
             logger.info(`📡 [WEBHOOK] Socket event emitted to room: ${roomName}`);
 
+            // 7. CHATBOT GATE: Check if chatbot is enabled for this contact
+            try {
+                const chatbotEnabled = await chatbotGateService.isChatbotEnabled(tenantId, contact.id);
+
+                if (chatbotEnabled) {
+                    // Buffer the message (3s debounce → Kafka)
+                    const buffered = await messageBufferService.bufferMessage(
+                        tenantId, companyId, contact.id, conversationId,
+                        { body, messageId, timestamp: new Date().toISOString() }
+                    );
+
+                    if (buffered) {
+                        logger.info(`📦 [WEBHOOK] Message ${messageId} buffered for AI processing (chatbot=ON)`);
+                    } else {
+                        logger.warn(`⚠️ [WEBHOOK] Buffer failed for message ${messageId}, continuing without Kafka`);
+                    }
+                } else {
+                    logger.info(`👤 [WEBHOOK] Chatbot OFF for contact ${contact.id} — human-only mode (no buffer/Kafka)`);
+                }
+            } catch (gateError) {
+                // Fallback: if gate/buffer fails, the message is already saved and emitted via socket
+                logger.error(`❌ [WEBHOOK] Chatbot gate/buffer error (non-fatal): ${gateError.message}`);
+            }
+
         } catch (error) {
             logger.error(`❌ [WEBHOOK] Error processing webhook logic: ${error.message}`);
             logger.error(error.stack);
         }
     }
+
 
     /**
      * Lógica de obtener o crear contacto (con UUID y protección contra duplicados)
@@ -233,6 +267,73 @@ class ChatService {
             return contacts;
         } catch (error) {
             logger.error(`❌ [CHAT-SERVICE] Error getting contacts with messages: ${error.message}`);
+            throw error;
+        }
+    /**
+     * Procesar respuesta generada por la IA (desde Kafka messages.out)
+     */
+    async processAiResponse(payload) {
+        const { tenantId, contactId, conversationId, respuesta } = payload;
+        
+        logger.info(`🤖 [AI-RESPONSE] Processing response for contact ${contactId} in conv ${conversationId.substring(0, 8)}...`);
+
+        try {
+            // 1. Obtener información del contacto para notificar al frontend y canal
+            const [contacts] = await db.execute('SELECT * FROM contacts WHERE id = ? AND tenant_id = ?', [contactId, tenantId]);
+            if (contacts.length === 0) {
+                logger.error(`❌ [AI-RESPONSE] Contact ${contactId} not found`);
+                return;
+            }
+            const contact = contacts[0];
+
+            // 2. Obtener canal activo (Evolution instance)
+            const channel = await this.getChannelForOutbound(tenantId);
+            if (!channel) {
+                logger.error(`❌ [AI-RESPONSE] No active channel found for tenant ${tenantId}`);
+                return;
+            }
+
+            // 3. Guardar en base de datos
+            const [result] = await db.execute(
+                `INSERT INTO omni_channel_messages 
+                (tenant_id, channel_id, contact_id, direction, content, status, conversation_id, created_at) 
+                VALUES (?, ?, ?, 'OUTBOUND', ?, 'SENT', ?, NOW())`,
+                [tenantId, channel.id, contactId, respuesta, conversationId]
+            );
+
+            const messageId = result.insertId;
+
+            // 4. Enviar vía WhatsApp (Evolution API)
+            try {
+                const remoteJid = `${contact.phone}@s.whatsapp.net`;
+                await evolutionClient.sendMessage(channel.instance_name, remoteJid, respuesta);
+                logger.info(`✅ [AI-RESPONSE] Message sent to WhatsApp for contact ${contactId}`);
+            } catch (evError) {
+                logger.error(`❌ [AI-RESPONSE] Error sending to Evolution API: ${evError.message}`);
+                // No retornamos, igual notificamos al socket que "quedó" en DB o falló el envío
+            }
+
+            // 5. Notificar al Frontend vía Socket.IO
+            const roomName = `tenant_${tenantId}_contact_${contact.phone}`;
+            const eventPayload = {
+                message: {
+                    id: messageId,
+                    content: respuesta,
+                    direction: 'OUTBOUND',
+                    status: 'SENT',
+                    conversationId: conversationId,
+                    createdAt: new Date()
+                },
+                contact: contact
+            };
+
+            // Necesitamos el objeto 'io' – pasaremos esto desde el receptor o lo inyectaremos
+            // Por ahora asumimos que ChatService tiene acceso o lo recibe el método
+            // Si no lo tiene, lo emitimos globalmente si es necesario o ajustamos el index.js
+            return eventPayload;
+
+        } catch (error) {
+            logger.error(`❌ [AI-RESPONSE] Critical error: ${error.message}`);
             throw error;
         }
     }

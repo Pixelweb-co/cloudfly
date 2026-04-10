@@ -205,14 +205,43 @@ services:
       - DB_PASSWORD=widowmaker
       - EVOLUTION_API_URL=http://evolution_api:8080
       - EVOLUTION_API_KEY=CAMBIA_ESTA_LLAVE_LARGA_Y_UNICA
+      # AI-Ready Infrastructure
+      - REDIS_HOST=redis_server
+      - REDIS_PORT=6379
+      - KAFKA_BROKER=kafka:9092
     networks:
       - app-net
+      - kafka-net
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.chatsocket.rule=Host(`chat.cloudfly.com.co`)"
       - "traefik.http.routers.chatsocket.entrypoints=websecure"
       - "traefik.http.routers.chatsocket.tls.certresolver=le"
       - "traefik.http.services.chatsocket.loadbalancer.server.port=3001"
+
+  ai-agent:
+    build:
+      context: ./ai-agent
+      dockerfile: Dockerfile
+    container_name: ai_agent
+    restart: always
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - REDIS_HOST=redis_server
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=Elian2020#
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASSWORD=widowmaker
+      - DB_NAME=cloud_master
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    networks:
+      - app-net
+      - kafka-net
+    depends_on:
+      - kafka
+      - redis
+      - db
 
   # ====================
   # N8N (Automatización)

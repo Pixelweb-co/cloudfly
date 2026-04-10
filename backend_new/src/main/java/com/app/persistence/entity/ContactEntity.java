@@ -53,6 +53,9 @@ public class ContactEntity {
     @Column("is_active")
     private boolean isActive;
 
+    @Column("chatbot_enabled")
+    private Boolean chatbotEnabled;
+
     @Column("created_at")
     private LocalDateTime createdAt;
 
@@ -77,4 +80,5 @@ public class ContactEntity {
     public boolean isActive() { return isActive; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Boolean getChatbotEnabled() { return chatbotEnabled; }
 }

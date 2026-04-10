@@ -84,6 +84,20 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
           setAvailableStages(pipeline.stages)
         }
       }
+    } else {
+      // Logic for NEW contact: Auto-select Default Pipeline
+      const defaultPipeline = pipelines.find(p => p.isDefault)
+      if (defaultPipeline) {
+        const initialStage = defaultPipeline.stages?.find(s => s.isInitial) || defaultPipeline.stages?.[0]
+        setFormData(prev => ({
+          ...prev,
+          pipelineId: defaultPipeline.id,
+          stageId: initialStage?.id
+        }))
+        if (defaultPipeline.stages) {
+          setAvailableStages(defaultPipeline.stages)
+        }
+      }
     }
   }, [contact, pipelines])
 
