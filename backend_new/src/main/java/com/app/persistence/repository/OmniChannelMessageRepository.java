@@ -5,5 +5,5 @@ import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import reactor.core.publisher.Flux;
 
 public interface OmniChannelMessageRepository extends ReactiveCrudRepository<OmniChannelMessageEntity, Long> {
-    Flux<OmniChannelMessageEntity> findByTenantIdAndInternalConversationId(Long tenantId, String conversationId);
+    Flux<OmniChannelMessageEntity> findByTenantIdAndContactId(Long tenantId, Long contactId);
 }

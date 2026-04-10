@@ -19,41 +19,24 @@ public class OmniChannelMessageEntity {
     @Column("tenant_id")
     private Long tenantId;
 
-    @Column("internal_conversation_id")
-    private String internalConversationId;
+    @Column("channel_id")
+    private Long channelId;
 
     @Column("contact_id")
     private Long contactId;
 
-    @Column("from_user_id")
-    private Long fromUserId;
-
     private String direction; // INBOUND, OUTBOUND
     
-    @Column("message_type")
-    private String messageType; // TEXT, IMAGE, VIDEO, AUDIO, DOCUMENT, STICKER
-    
+    @Column("content")
     private String body;
     
     @Column("media_url")
     private String mediaUrl;
     
-    private String platform; // WHATSAPP, FACEBOOK, INSTAGRAM
-    private String provider; // EVOLUTION
-    
-    @Column("external_message_id")
+    @Column("external_msg_id")
     private String externalMessageId;
     
     private String status; // PENDING, SENT, DELIVERED, READ, FAILED
-    
-    @Column("sent_at")
-    private LocalDateTime sentAt;
-    
-    @Column("delivered_at")
-    private LocalDateTime deliveredAt;
-    
-    @Column("read_at")
-    private LocalDateTime readAt;
     
     @Column("created_at")
     private LocalDateTime createdAt;
