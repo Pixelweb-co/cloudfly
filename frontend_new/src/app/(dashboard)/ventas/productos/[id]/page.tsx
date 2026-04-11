@@ -17,6 +17,7 @@ import {
   Select,
   Switch,
   FormControlLabel,
+  Checkbox,
   CircularProgress
 } from '@mui/material'
 import { Icon } from '@iconify/react'
@@ -49,6 +50,9 @@ export default function EditProductPage() {
     categoryIds: [] as number[],
     imageUrls: [] as string[]
   })
+  const [addingCategory, setAddingCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [creatingCategory, setCreatingCategory] = useState(false)
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
 
   useEffect(() => {
@@ -285,24 +289,103 @@ export default function EditProductPage() {
             </Card>
             <Card sx={{ borderRadius: 2, boxShadow: 3, mb: 6 }}>
               <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                  <Typography variant="h6">Categorías</Typography>
+                </Box>
+                <Box sx={{ maxHeight: 250, overflow: 'auto', mb: 2 }}>
+                  {categories.map(cat => (
+                    <Box key={cat.id} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={formData.categoryIds.includes(cat.id)}
+                            onChange={(e) => {
+                              const checked = e.target.checked
+                              setFormData(prev => ({
+                                ...prev,
+                                categoryIds: checked 
+                                  ? [...prev.categoryIds, cat.id]
+                                  : prev.categoryIds.filter(id => id !== cat.id)
+                              }))
+                            }}
+                          />
+                        }
+                        label={cat.categoryName}
+                      />
+                    </Box>
+                  ))}
+                </Box>
+                
+                {addingCategory ? (
+                  <Box sx={{ display: 'flex', gap: 2, mt: 4, alignItems: 'center' }}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      placeholder="Nueva categoría..."
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      disabled={creatingCategory}
+                    />
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="small"
+                      onClick={async () => {
+                        if (!newCategoryName.trim()) return
+                        try {
+                          setCreatingCategory(true)
+                          const newCat = await categoryService.createCategory({
+                            nombreCategoria: newCategoryName
+                          })
+                          if (newCat) {
+                            setCategories(prev => [...prev, newCat])
+                            setFormData(prev => ({
+                                ...prev,
+                                categoryIds: [...prev.categoryIds, newCat.id]
+                            }))
+                            setNewCategoryName('')
+                            setAddingCategory(false)
+                          }
+                        } catch (err) {
+                          console.error("Error creating category:", err)
+                        } finally {
+                          setCreatingCategory(false)
+                        }
+                      }}
+                      disabled={creatingCategory}
+                    >
+                      {creatingCategory ? <CircularProgress size={20} color="inherit" /> : <Icon icon="tabler:device-floppy" fontSize={20} />}
+                    </Button>
+                    <Button 
+                      variant="text" 
+                      color="secondary" 
+                      size="small" 
+                      onClick={() => setAddingCategory(false)}
+                      disabled={creatingCategory}
+                    >
+                      <Icon icon="tabler:x" fontSize={20} />
+                    </Button>
+                  </Box>
+                ) : (
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    size="small"
+                    startIcon={<Icon icon="tabler:plus" />}
+                    onClick={() => setAddingCategory(true)}
+                    sx={{ mt: 2 }}
+                  >
+                    Agregar Categoría
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card sx={{ borderRadius: 2, boxShadow: 3, mb: 6 }}>
+              <CardContent>
                 <Typography variant="h6" sx={{ mb: 4 }}>Organización</Typography>
                 <Grid container spacing={4}>
-                  <Grid item xs={12}>
-                    <FormControl fullWidth>
-                      <InputLabel>Categoría</InputLabel>
-                      <Select
-                        multiple
-                        name="categoryIds"
-                        value={formData.categoryIds}
-                        onChange={handleChange}
-                        label="Categoría"
-                      >
-                        {categories.map(cat => (
-                          <MenuItem key={cat.id} value={cat.id}>{cat.categoryName}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
                   <Grid item xs={12}>
                     <FormControl fullWidth>
                       <InputLabel>Estado</InputLabel>
