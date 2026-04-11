@@ -20,11 +20,10 @@ const AgentManagementPage = () => {
     const [selectedTemplate, setSelectedTemplate] = useState<any>(null)
     const [isSaving, setIsSaving] = useState(false)
 
-    const fetchTemplates = async () => {
-        if (!session?.user?.accessToken) return
+    const fetchTemplates = async (token: string) => {
         try {
             setLoading(true)
-            const data = await agentService.getTemplates((session.user as any).accessToken)
+            const data = await agentService.getTemplates(token)
             setTemplates(data)
         } catch (err) {
             console.error(err)
@@ -35,7 +34,11 @@ const AgentManagementPage = () => {
     }
 
     useEffect(() => {
-        fetchTemplates()
+        if (session?.user?.accessToken) {
+            fetchTemplates((session.user as any).accessToken as string)
+        } else if (session === null) {
+            setLoading(false)
+        }
     }, [session])
 
     const handleEdit = (template: any) => {

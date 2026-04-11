@@ -18,11 +18,10 @@ const ChannelPage = () => {
     const [activePlatform, setActivePlatform] = useState<PlatformInfo | null>(null)
     const [openWhatsAppDialog, setOpenWhatsAppDialog] = useState(false)
 
-    const fetchChannels = async () => {
-        if (!session?.user?.accessToken) return
+    const fetchChannels = async (token: string) => {
         try {
             setLoading(true)
-            const data = await channelService.getChannels((session.user as any).accessToken)
+            const data = await channelService.getChannels(token)
             setChannels(data)
         } catch (error) {
             console.error('Error fetching channels:', error)
@@ -33,7 +32,12 @@ const ChannelPage = () => {
     }
 
     useEffect(() => {
-        fetchChannels()
+        if (session?.user?.accessToken) {
+            fetchChannels((session.user as any).accessToken as string)
+        } else if (session === null) {
+            // No session at all
+            setLoading(false)
+        }
     }, [session])
 
     const handleActivate = (platform: PlatformInfo) => {
