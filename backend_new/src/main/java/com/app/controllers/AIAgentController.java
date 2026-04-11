@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -96,8 +97,10 @@ public class AIAgentController {
      * MANAGER only: Create or Update a Global Template.
      */
     @PostMapping("/templates")
+    @PreAuthorize("hasAnyRole('MANAGER', 'SUPERADMIN')")
     public Mono<ResponseEntity<GlobalAgent>> createGlobalTemplate(@RequestBody GlobalAgent template) {
-        log.info("⚙️ [AGENT-CONTROLLER] MANAGER creating/updating global template: {}", template.getName());
+        log.info("⚙️ [AGENT-CONTROLLER] MANAGER creating/updating global template: {}. Payload: {}", 
+                 template.getName(), template);
         template.setCreatedAt(LocalDateTime.now());
         template.setUpdatedAt(LocalDateTime.now());
         template.setIsActive(true);

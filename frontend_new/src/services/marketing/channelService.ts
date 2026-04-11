@@ -1,54 +1,38 @@
-import axios from 'axios';
+import axiosInstance from '@/utils/axiosInstance';
 import { Channel } from '@/types/marketing';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL + '/api/v1/marketing/channels';
-
 export const channelService = {
-  getChannels: async (accessToken: string) => {
-    const response = await axios.get<Channel[]>(API_URL, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
+  getChannels: async () => {
+    const response = await axiosInstance.get<Channel[]>('/api/v1/marketing/channels');
     return response.data;
   },
 
-  createChannel: async (channel: Channel, accessToken: string) => {
-    const response = await axios.post<Channel>(API_URL, channel, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
+  createChannel: async (channel: Channel) => {
+    const response = await axiosInstance.post<Channel>('/api/v1/marketing/channels', channel);
     return response.data;
   },
 
-  getChannelById: async (id: number, accessToken: string) => {
-    const response = await axios.get<Channel>(`${API_URL}/${id}`, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
+  getChannelById: async (id: number) => {
+    const response = await axiosInstance.get<Channel>(`/api/v1/marketing/channels/${id}`);
     return response.data;
   },
 
-  getChannelConfigStatus: async (accessToken: string) => {
-    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/channel-config/status`, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
+  getChannelConfigStatus: async () => {
+    const response = await axiosInstance.get('/api/channel-config/status');
     return response.data;
   },
 
-  activateWhatsAppChannel: async (accessToken: string) => {
-    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/channel-config/activate`, {}, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
+  activateWhatsAppChannel: async () => {
+    const response = await axiosInstance.post('/api/channel-config/activate', {});
     return response.data;
   },
 
-  saveChannelConfig: async (config: any, accessToken: string) => {
-    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/channel-config/config`, config, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
+  saveChannelConfig: async (config: any) => {
+    const response = await axiosInstance.post('/api/channel-config/config', config);
     return response.data;
   },
   
-  deleteChannel: async (id: number, accessToken: string) => {
-    await axios.delete(`${API_URL}/${id}`, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
+  deleteChannel: async (id: number) => {
+    await axiosInstance.delete(`/api/v1/marketing/channels/${id}`);
   }
 };
