@@ -94,6 +94,7 @@ public class ChannelConfigService {
     }
 
     public Mono<ChannelConfigDTO> getQrCode(Long tenantId) {
+        log.info("🔲 [CHANNEL-CONFIG-SERVICE] Getting QR code for tenantId: {}", tenantId);
         return channelConfigRepository.findByTenantId(tenantId)
                 .flatMap(config -> evolutionService.fetchQrCode(config.getInstanceName())
                         .map(qrRes -> {
@@ -104,6 +105,18 @@ public class ChannelConfigService {
                             return dto;
                         })
                 );
+    }
+
+    public Mono<ChannelConfigDTO> createOrUpdateConfig(Long tenantId, ChannelConfigDTO dto) {
+        log.info("💾 [CHANNEL-CONFIG-SERVICE] Saving config for tenantId: {}", tenantId);
+        return channelConfigRepository.findByTenantId(tenantId)
+                .flatMap(config -> {
+                    config.setAgentName(dto.getAgentName());
+                    config.setContext(dto.getContext());
+                    config.setUpdatedAt(LocalDateTime.now());
+                    return channelConfigRepository.save(config);
+                })
+                .map(this::mapToDTO);
     }
 
     private ChannelConfigDTO mapToDTO(ChannelConfig entity) {

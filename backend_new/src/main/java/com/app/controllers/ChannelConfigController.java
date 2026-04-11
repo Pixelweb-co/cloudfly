@@ -62,4 +62,24 @@ public class ChannelConfigController {
                 })
                 .map(ResponseEntity::ok);
     }
+
+    @GetMapping("/qr")
+    public Mono<ResponseEntity<ChannelConfigDTO>> getQrCode() {
+        return getCurrentTenantId()
+                .flatMap(tenantId -> {
+                    log.info("🔲 [CHANNEL-CONFIG] Getting QR for tenantId: {}", tenantId);
+                    return channelConfigService.getQrCode(tenantId);
+                })
+                .map(ResponseEntity::ok);
+    }
+
+    @PostMapping("/config")
+    public Mono<ResponseEntity<ChannelConfigDTO>> updateConfig(@RequestBody ChannelConfigDTO dto) {
+        return getCurrentTenantId()
+                .flatMap(tenantId -> {
+                    log.info("💾 [CHANNEL-CONFIG] Updating config for tenantId: {}", tenantId);
+                    return channelConfigService.createOrUpdateConfig(tenantId, dto);
+                })
+                .map(ResponseEntity::ok);
+    }
 }

@@ -36,8 +36,13 @@ export const verticalMenuData = [
             },
             {
                 label: 'Canales',
-                route: '/marketing/canales',
+                route: '/marketing/channels',
                 roles: ['MANAGER', 'ADMIN', 'USER']
+            },
+            {
+                label: 'Agentes IA',
+                route: '/marketing/agents',
+                roles: ['MANAGER']
             },
             {
                 label: 'Contactos',
