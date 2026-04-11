@@ -10,7 +10,7 @@ import {
 } from '@mui/material'
 
 const AgentManagementPage = () => {
-    const { data: session } = useSession()
+    const { data: session, status } = useSession()
     const [templates, setTemplates] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -20,11 +20,18 @@ const AgentManagementPage = () => {
     const [selectedTemplate, setSelectedTemplate] = useState<any>(null)
     const [isSaving, setIsSaving] = useState(false)
 
-    const fetchTemplates = async (token: string) => {
+    const fetchTemplates = async (token?: string) => {
+        const accessToken = token || (session?.user as any)?.accessToken
+        if (!accessToken) {
+            setLoading(false)
+            return
+        }
+
         try {
             setLoading(true)
-            const data = await agentService.getTemplates(token)
+            const data = await agentService.getTemplates(accessToken)
             setTemplates(data)
+            setError(null)
         } catch (err) {
             console.error(err)
             setError('Error al cargar las plantillas de agentes.')
@@ -34,12 +41,12 @@ const AgentManagementPage = () => {
     }
 
     useEffect(() => {
-        if (session?.user?.accessToken) {
+        if (status === 'authenticated' && session?.user?.accessToken) {
             fetchTemplates((session.user as any).accessToken as string)
-        } else if (session === null) {
+        } else if (status === 'unauthenticated' || (status === 'authenticated' && !session?.user?.accessToken)) {
             setLoading(false)
         }
-    }, [session])
+    }, [session, status])
 
     const handleEdit = (template: any) => {
         setSelectedTemplate(template)

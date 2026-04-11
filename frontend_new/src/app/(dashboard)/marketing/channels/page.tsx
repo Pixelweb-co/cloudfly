@@ -9,7 +9,7 @@ import WhatsAppActivationDialog from '@/views/marketing/channels/WhatsAppActivat
 import { Grid, Typography, Box, CircularProgress, Alert, Button } from '@mui/material'
 
 const ChannelPage = () => {
-    const { data: session } = useSession()
+    const { data: session, status } = useSession()
     const [channels, setChannels] = useState<Channel[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -18,11 +18,18 @@ const ChannelPage = () => {
     const [activePlatform, setActivePlatform] = useState<PlatformInfo | null>(null)
     const [openWhatsAppDialog, setOpenWhatsAppDialog] = useState(false)
 
-    const fetchChannels = async (token: string) => {
+    const fetchChannels = async (token?: string) => {
+        const accessToken = token || (session?.user as any)?.accessToken
+        if (!accessToken) {
+            setLoading(false)
+            return
+        }
+
         try {
             setLoading(true)
-            const data = await channelService.getChannels(token)
+            const data = await channelService.getChannels(accessToken)
             setChannels(data)
+            setError(null)
         } catch (error) {
             console.error('Error fetching channels:', error)
             setError('No se pudieron cargar los canales.')
@@ -32,13 +39,12 @@ const ChannelPage = () => {
     }
 
     useEffect(() => {
-        if (session?.user?.accessToken) {
+        if (status === 'authenticated' && session?.user?.accessToken) {
             fetchChannels((session.user as any).accessToken as string)
-        } else if (session === null) {
-            // No session at all
+        } else if (status === 'unauthenticated' || (status === 'authenticated' && !session?.user?.accessToken)) {
             setLoading(false)
         }
-    }, [session])
+    }, [session, status])
 
     const handleActivate = (platform: PlatformInfo) => {
         if (platform.platform === 'WHATSAPP' && platform.provider === 'EVOLUTION_API') {
