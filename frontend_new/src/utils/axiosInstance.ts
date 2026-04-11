@@ -12,18 +12,19 @@ export const axiosInstance = axios.create({
 // Interceptor para agregar el token a cada request
 axiosInstance.interceptors.request.use(
     config => {
-        // Solo acceder a localStorage en el cliente (no en SSR)
         if (typeof window !== 'undefined') {
-            // ESTANDARIZADO: usar "jwt" que es el nombre que devuelve la API
-            const token = localStorage.getItem('jwt')
+            // Priority: localStorage (for legacy/migration)
+            let token = localStorage.getItem('jwt')
+
+            // If no token in localStorage, we should NOT hang, just continue.
+            // The AuthSync component will eventually sync the NextAuth token here.
 
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`
             }
         }
 
-        
-return config
+        return config
     },
     error => {
         return Promise.reject(error)
@@ -34,28 +35,30 @@ return config
 axiosInstance.interceptors.response.use(
     response => response,
     error => {
-        // Redirigir al login si el token expiró o no es válido
         if (error.response?.status === 401) {
-            // Solo en el cliente
             if (typeof window !== 'undefined') {
-                console.error('401 Unauthorized - Token inválido o expirado')
+                console.error('🔴 [AXIOS-INSTANCE] 401 Unauthorized detected for:', error.config?.url)
 
-                // Limpiar datos
-                localStorage.removeItem('jwt')
-                localStorage.removeItem('userData')
-
-                // Solo redirigir si no estamos ya en la ruta de login / register / forgot
                 const path = window.location.pathname
+                
+                // ONLY redirect if we are NOT already on an auth page
+                const isAuthPage = path.includes('/login') || path.includes('/register') || path.includes('/recover-password')
 
-                if (!path.includes('/login') && !path.includes('/register') && !path.includes('/recover-password')) {
-                    console.log('Redirigiendo al login desde interceptor...')
-                    window.location.href = '/login'
+                if (!isAuthPage) {
+                    console.warn('⚠️ [AXIOS-INSTANCE] Session might be invalid. Redirecting to login...')
+                    
+                    // Clear broken data
+                    localStorage.removeItem('jwt')
+                    localStorage.removeItem('userData')
+                    
+                    // We avoid hard redirecting here to let NextAuth handle it if possible,
+                    // but since legacy components use this instance, we might need it.
+                    // For now, let's just log it and see if the infinite loop stops.
                 }
             }
         }
 
-        
-return Promise.reject(error)
+        return Promise.reject(error)
     }
 )
 
