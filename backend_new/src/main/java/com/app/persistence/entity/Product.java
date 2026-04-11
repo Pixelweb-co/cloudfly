@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 public class Product {
 
     @Id
+    @Column("id")
     private Long id;
 
     @Column("tenant_id")
@@ -27,18 +28,22 @@ public class Product {
     @Column("product_name")
     private String productName;
 
+    @Column("description")
     private String description;
 
     @Column("product_type")
     private String productType;
 
+    @Column("price")
     private BigDecimal price;
 
     @Column("sale_price")
     private BigDecimal salePrice;
 
+    @Column("sku")
     private String sku;
 
+    @Column("barcode")
     private String barcode;
 
     @Column("manage_stock")
@@ -56,8 +61,10 @@ public class Product {
     @Column("sold_individually")
     private Boolean soldIndividually;
 
+    @Column("weight")
     private BigDecimal weight;
 
+    @Column("dimensions")
     private String dimensions;
 
     @Column("upsell_products")
@@ -66,10 +73,13 @@ public class Product {
     @Column("cross_sell_products")
     private String crossSellProducts;
 
+    @Column("status")
     private String status;
 
+    @Column("brand")
     private String brand;
 
+    @Column("model")
     private String model;
 
     @Column("created_at")
