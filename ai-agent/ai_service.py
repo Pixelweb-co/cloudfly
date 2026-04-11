@@ -7,6 +7,10 @@ import mysql.connector
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue
 import config
+import matplotlib.pyplot as plt
+import os
+from datetime import datetime
+
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +113,178 @@ class AIService:
             return "PRODUCT_INQUIRY"
         return "GENERAL"
 
+    def get_contact(self, identifier: str, tenant_id: int):
+        """Busca un contacto por email o teléfono."""
+        logger.info(f"Searching contact '{identifier}' (Tenant: {tenant_id})")
+        try:
+            conn = mysql.connector.connect(
+                host=config.DB_HOST,
+                user=config.DB_USER,
+                password=config.DB_PASSWORD,
+                database=config.DB_NAME
+            )
+            cursor = conn.cursor(dictionary=True)
+            query = "SELECT * FROM contacts WHERE (email = %s OR phone = %s) AND tenant_id = %s"
+            cursor.execute(query, (identifier, identifier, tenant_id))
+            contact = cursor.fetchone()
+            conn.close()
+            
+            if contact:
+                # Convert datetimes to strings for JSON
+                for key, val in contact.items():
+                    if isinstance(val, (datetime,)):
+                        contact[key] = val.isoformat()
+                return json.dumps(contact)
+            return json.dumps({"error": "Contact not found"})
+        except Exception as e:
+            logger.error(f"Error fetching contact: {e}")
+            return json.dumps({"error": str(e)})
+
+    def manage_contact(self, action: str, tenant_id: int, name: str = None, email: str = None, phone: str = None, contact_id: int = None):
+        """Crea o actualiza un contacto."""
+        logger.info(f"Manage contact: {action} (Tenant: {tenant_id})")
+        try:
+            conn = mysql.connector.connect(
+                host=config.DB_HOST,
+                user=config.DB_USER,
+                password=config.DB_PASSWORD,
+                database=config.DB_NAME
+            )
+            cursor = conn.cursor()
+            
+            if action == "create":
+                query = "INSERT INTO contacts (name, email, phone, tenant_id, created_at, updated_at, is_active) VALUES (%s, %s, %s, %s, NOW(), NOW(), 1)"
+                cursor.execute(query, (name, email, phone, tenant_id))
+                conn.commit()
+                new_id = cursor.lastrowid
+                conn.close()
+                return json.dumps({"success": True, "id": new_id, "message": "Contacto creado exitosamente"})
+            
+            elif action == "update":
+                if not contact_id:
+                    return json.dumps({"error": "contact_id is required for update"})
+                
+                updates = []
+                params = []
+                if name: updates.append("name = %s"); params.append(name)
+                if email: updates.append("email = %s"); params.append(email)
+                if phone: updates.append("phone = %s"); params.append(phone)
+                
+                if not updates:
+                    return json.dumps({"error": "No fields to update"})
+                
+                query = f"UPDATE contacts SET {', '.join(updates)}, updated_at = NOW() WHERE id = %s AND tenant_id = %s"
+                params.extend([contact_id, tenant_id])
+                cursor.execute(query, params)
+                conn.commit()
+                conn.close()
+                return json.dumps({"success": True, "message": "Contacto actualizado exitosamente"})
+                
+            return json.dumps({"error": "Invalid action"})
+        except Exception as e:
+            logger.error(f"Error managing contact: {e}")
+            return json.dumps({"error": str(e)})
+
+    def update_pipeline_stage(self, contact_id: int, stage_id: int, tenant_id: int):
+        """Actualiza la etapa del pipeline para un contacto."""
+        logger.info(f"Updating stage to {stage_id} for contact {contact_id} (Tenant: {tenant_id})")
+        try:
+            conn = mysql.connector.connect(
+                host=config.DB_HOST,
+                user=config.DB_USER,
+                password=config.DB_PASSWORD,
+                database=config.DB_NAME
+            )
+            cursor = conn.cursor()
+            
+            # Step 1: Update contact table (quick view)
+            query = "UPDATE contacts SET stage_id = %s, updated_at = NOW() WHERE id = %s AND tenant_id = %s"
+            cursor.execute(query, (stage_id, contact_id, tenant_id))
+            
+            # Step 2: Update conversation_pipeline_state for historical tracking/dashboard
+            # We first check if it exists
+            cursor.execute("SELECT id FROM conversation_pipeline_state WHERE contact_id = %s AND tenant_id = %s", (contact_id, tenant_id))
+            state = cursor.fetchone()
+            
+            if state:
+                cursor.execute("UPDATE conversation_pipeline_state SET current_stage_id = %s, updated_at = NOW(), entered_stage_at = NOW() WHERE contact_id = %s AND tenant_id = %s", 
+                               (stage_id, contact_id, tenant_id))
+            else:
+                # If not exists, we might need to find which pipeline this stage belongs to
+                cursor.execute("SELECT pipeline_id FROM pipeline_stages WHERE id = %s", (stage_id,))
+                ps = cursor.fetchone()
+                pipeline_id = ps[0] if ps else None
+                
+                cursor.execute("INSERT INTO conversation_pipeline_state (tenant_id, contact_id, pipeline_id, current_stage_id, entered_stage_at, is_active, created_at, updated_at) VALUES (%s, %s, %s, %s, NOW(), 1, NOW(), NOW())",
+                               (tenant_id, contact_id, pipeline_id, stage_id))
+            
+            conn.commit()
+            conn.close()
+            return json.dumps({"success": True, "message": f"Etapa actualizada a {stage_id} correctamente"})
+        except Exception as e:
+            logger.error(f"Error updating pipeline stage: {e}")
+            return json.dumps({"error": str(e)})
+
+    def generate_pipeline_chart(self, tenant_id: int):
+        """Genera un gráfico horizontal de contactos por etapa."""
+        logger.info(f"Generating pipeline chart (Tenant: {tenant_id})")
+        plt.switch_backend('Agg') # Headless mode
+        try:
+            conn = mysql.connector.connect(
+                host=config.DB_HOST,
+                user=config.DB_USER,
+                password=config.DB_PASSWORD,
+                database=config.DB_NAME
+            )
+            cursor = conn.cursor(dictionary=True)
+            
+            # Query stage names, colors and contact counts
+            query = """
+                SELECT ps.name, ps.color, COUNT(c.id) as count 
+                FROM pipeline_stages ps
+                LEFT JOIN contacts c ON c.stage_id = ps.id AND c.tenant_id = %s
+                WHERE ps.pipeline_id IN (SELECT id FROM pipelines WHERE tenant_id = %s)
+                GROUP BY ps.id, ps.name, ps.color, ps.position
+                ORDER BY ps.position ASC
+            """
+            cursor.execute(query, (tenant_id, tenant_id))
+            data = cursor.fetchall()
+            conn.close()
+            
+            if not data:
+                return json.dumps({"error": "No hay datos de pipeline para este tenant"})
+            
+            stages = [d['name'] for d in data]
+            counts = [d['count'] for d in data]
+            colors = [d['color'] if d['color'] else '#8884d8' for d in data]
+            
+            fig, ax = plt.subplots(figsize=(10, 6))
+            bars = ax.barh(stages, counts, color=colors)
+            
+            ax.set_xlabel('Número de Contactos')
+            ax.set_title('Contactos por Etapa del Pipeline')
+            ax.invert_yaxis() # Highest position at top
+            
+            # Add labels to the ends of the bars
+            for bar in bars:
+                width = bar.get_width()
+                ax.text(width + 0.1, bar.get_y() + bar.get_height()/2, f'{int(width)}', ha='left', va='center')
+            
+            # Save to shared volume
+            os.makedirs("/app/uploads/charts", exist_ok=True)
+            filename = f"pipeline_stats_{tenant_id}_{int(datetime.now().timestamp())}.png"
+            filepath = f"/app/uploads/charts/{filename}"
+            plt.tight_layout()
+            plt.savefig(filepath)
+            plt.close()
+            
+            public_url = f"https://api.cloudfly.com.co/uploads/charts/{filename}"
+            return json.dumps({"success": True, "chart_url": public_url, "message": "Gráfico generado exitosamente"})
+            
+        except Exception as e:
+            logger.error(f"Error generating chart: {e}")
+            return json.dumps({"error": str(e)})
+
     def generate_response(self, tenant_id, contact_id, conversation_id, message, history):
         company_info = self.get_company_context(tenant_id)
 
@@ -141,40 +317,67 @@ OTRAS REGLAS:
         messages.append({"role": "user", "content": message})
 
         tools = [
-            {
-                "type": "function",
-                "function": {
-                    "name": "search_products_semantically",
-                    "description": "Busca productos en el catálogo semánticamente basados en la solicitud del cliente.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "query": {
-                                "type": "string",
-                                "description": "La consulta de búsqueda (ej. 'camisas de verano', 'televisores 4k', 'zapatos baratos')"
-                            }
-                        },
-                        "required": ["query"]
                     }
                 }
             },
             {
                 "type": "function",
                 "function": {
-                    "name": "check_products_stock",
-                    "description": "Verifica el inventario real en la base de datos de uno o más productos a través de sus IDs.",
+                    "name": "get_contact",
+                    "description": "Busca un contacto existente por su teléfono o correo electrónico.",
                     "parameters": {
                         "type": "object",
                         "properties": {
-                            "product_ids": {
-                                "type": "array",
-                                "items": {
-                                    "type": "integer"
-                                },
-                                "description": "Lista de IDs de productos a consultar."
+                            "identifier": {
+                                "type": "string",
+                                "description": "Teléfono o email del contacto."
                             }
                         },
-                        "required": ["product_ids"]
+                        "required": ["identifier"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "manage_contact",
+                    "description": "Crea o actualiza la información básica de un contacto.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "action": { "type": "string", "enum": ["create", "update"] },
+                            "name": { "type": "string" },
+                            "email": { "type": "string" },
+                            "phone": { "type": "string" },
+                            "contact_id": { "type": "integer", "description": "ID del contacto (requerido para update)" }
+                        },
+                        "required": ["action"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "update_pipeline_stage",
+                    "description": "Actualiza la etapa de venta de un contacto dado su ID y el ID de la etapa.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "contact_id": { "type": "integer" },
+                            "stage_id": { "type": "integer" }
+                        },
+                        "required": ["contact_id", "stage_id"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "generate_pipeline_chart",
+                    "description": "Genera una visualización de los contactos por etapa para la empresa actual.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {}
                     }
                 }
             }
@@ -202,6 +405,25 @@ OTRAS REGLAS:
                         function_response = self.search_products(function_args.get("query"), int(tenant_id))
                     elif function_name == "check_products_stock":
                         function_response = self.check_products_stock(function_args.get("product_ids"), int(tenant_id))
+                    elif function_name == "get_contact":
+                        function_response = self.get_contact(function_args.get("identifier"), int(tenant_id))
+                    elif function_name == "manage_contact":
+                        function_response = self.manage_contact(
+                            function_args.get("action"), 
+                            int(tenant_id), 
+                            name=function_args.get("name"),
+                            email=function_args.get("email"),
+                            phone=function_args.get("phone"),
+                            contact_id=function_args.get("contact_id")
+                        )
+                    elif function_name == "update_pipeline_stage":
+                        function_response = self.update_pipeline_stage(
+                            function_args.get("contact_id"),
+                            function_args.get("stage_id"),
+                            int(tenant_id)
+                        )
+                    elif function_name == "generate_pipeline_chart":
+                        function_response = self.generate_pipeline_chart(int(tenant_id))
                     else:
                         function_response = json.dumps({"error": "Unknown function"})
                         

@@ -4,6 +4,7 @@ import com.app.persistence.entity.GlobalAgent;
 import com.app.persistence.entity.TenantAgentConfig;
 import com.app.persistence.repository.GlobalAgentRepository;
 import com.app.persistence.repository.TenantAgentConfigRepository;
+import com.app.persistence.services.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -18,18 +19,31 @@ import java.time.LocalDateTime;
 @RestController
 @RequestMapping("/api/v1/agents")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class AIAgentController {
 
     private final GlobalAgentRepository globalAgentRepository;
     private final TenantAgentConfigRepository tenantAgentConfigRepository;
+    private final UserService userService;
 
     private Mono<Long> getCurrentTenantId() {
         return ReactiveSecurityContextHolder.getContext()
-                .map(ctx -> {
-                    String tenantIdStr = ctx.getAuthentication().getCredentials().toString();
-                    return Long.parseLong(tenantIdStr);
+                .map(ctx -> ctx.getAuthentication().getName())
+                .flatMap(userService::findByUsername)
+                .map(user -> {
+                    log.info("👤 [AGENT-CONTROLLER] Found user: {} with customerId: {}", user.getUsername(), user.getCustomerId());
+                    return user.getCustomerId();
                 })
                 .doOnError(e -> log.error("❌ [AGENT-CONTROLLER] Error getting tenantId: {}", e.getMessage()));
+    }
+
+    @GetMapping("/my-agents")
+    public Flux<TenantAgentConfig> getMyAgents() {
+        return getCurrentTenantId()
+                .flatMapMany(tenantId -> {
+                    log.info("📋 [AGENT-CONTROLLER] Fetching personalized agents for tenant: {}", tenantId);
+                    return tenantAgentConfigRepository.findByTenantId(tenantId);
+                });
     }
 
     /**
@@ -39,18 +53,6 @@ public class AIAgentController {
     public Flux<GlobalAgent> getGlobalTemplates() {
         log.info("📋 [AGENT-CONTROLLER] Fetching all global templates...");
         return globalAgentRepository.findByIsActiveTrue();
-    }
-
-    /**
-     * Get tenant's personalized agents.
-     */
-    @GetMapping("/my-agents")
-    public Flux<TenantAgentConfig> getMyAgents() {
-        return getCurrentTenantId()
-                .flatMapMany(tenantId -> {
-                    log.info("📋 [AGENT-CONTROLLER] Fetching personalized agents for tenant: {}", tenantId);
-                    return tenantAgentConfigRepository.findByTenantId(tenantId);
-                });
     }
 
     /**
