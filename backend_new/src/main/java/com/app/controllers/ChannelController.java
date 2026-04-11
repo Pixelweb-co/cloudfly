@@ -2,6 +2,7 @@ package com.app.controllers;
 
 import com.app.persistence.entity.ChannelEntity;
 import com.app.persistence.services.ChannelService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
