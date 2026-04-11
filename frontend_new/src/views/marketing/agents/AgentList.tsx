@@ -20,20 +20,14 @@ const AgentManagementPage = () => {
     const [selectedTemplate, setSelectedTemplate] = useState<any>(null)
     const [isSaving, setIsSaving] = useState(false)
 
-    const fetchTemplates = async (token?: string) => {
-        const accessToken = token || (session?.user as any)?.accessToken
-        if (!accessToken) {
-            setLoading(false)
-            return
-        }
-
+    const fetchTemplates = async () => {
         try {
             setLoading(true)
-            const data = await agentService.getTemplates(accessToken)
+            const data = await agentService.getTemplates()
             setTemplates(data)
             setError(null)
         } catch (err) {
-            console.error(err)
+            console.error('Error fetching templates:', err)
             setError('Error al cargar las plantillas de agentes.')
         } finally {
             setLoading(false)
@@ -41,12 +35,12 @@ const AgentManagementPage = () => {
     }
 
     useEffect(() => {
-        if (status === 'authenticated' && session?.user?.accessToken) {
-            fetchTemplates((session.user as any).accessToken as string)
-        } else if (status === 'unauthenticated' || (status === 'authenticated' && !session?.user?.accessToken)) {
+        if (status === 'authenticated') {
+            fetchTemplates()
+        } else if (status === 'unauthenticated') {
             setLoading(false)
         }
-    }, [session, status])
+    }, [status])
 
     const handleEdit = (template: any) => {
         setSelectedTemplate(template)
@@ -54,15 +48,16 @@ const AgentManagementPage = () => {
     }
 
     const handleSave = async () => {
-        if (!session?.user?.accessToken || !selectedTemplate) return
+        if (!selectedTemplate) return
         try {
             setIsSaving(true)
-            await agentService.createTemplate(selectedTemplate, (session.user as any).accessToken)
+            await agentService.createTemplate(selectedTemplate)
+            alert('Plantilla guardada exitosamente')
             setOpenDialog(false)
             fetchTemplates()
         } catch (err) {
-            console.error(err)
-            alert('Error al guardar la plantilla.')
+            console.error('Error saving template:', err)
+            alert('Error al guardar la plantilla. Verifique la conexión o si el código ya existe.')
         } finally {
             setIsSaving(false)
         }
