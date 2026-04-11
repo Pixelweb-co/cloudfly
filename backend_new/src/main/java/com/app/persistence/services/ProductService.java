@@ -25,6 +25,11 @@ public class ProductService {
     private final ProductEventProducer productEventProducer;
 
     public Mono<ProductCreateRequest> saveProduct(ProductCreateRequest request) {
+        if (request.getTenantId() == null || request.getTenantId() == 0) {
+            log.error("❌ [PRODUCT-SERVICE] Cannot save product: tenantId is null or 0. Request: {}", request);
+            return Mono.error(new IllegalArgumentException("El ID de cliente (tenantId) es obligatorio para crear un producto."));
+        }
+
         Product product = Product.builder()
                 .id(request.getId())
                 .tenantId(request.getTenantId())
