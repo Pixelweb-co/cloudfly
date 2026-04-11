@@ -111,8 +111,6 @@ public class ChannelConfigService {
         log.info("💾 [CHANNEL-CONFIG-SERVICE] Saving config for tenantId: {}", tenantId);
         return channelConfigRepository.findByTenantId(tenantId)
                 .flatMap(config -> {
-                    config.setAgentName(dto.getAgentName());
-                    config.setContext(dto.getContext());
                     config.setUpdatedAt(LocalDateTime.now());
                     return channelConfigRepository.save(config);
                 })
@@ -127,8 +125,6 @@ public class ChannelConfigService {
                 .channelType(entity.getChannelType())
                 .isActive(entity.getIsActive())
                 .n8nWebhookUrl(entity.getN8nWebhookUrl())
-                .context(entity.getContext())
-                .agentName(entity.getAgentName())
                 .apiKey(entity.getApiKey())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())

@@ -19,8 +19,6 @@ public class ChannelConfigDTO {
     private ChannelType channelType;
     private Boolean isActive;
     private String n8nWebhookUrl;
-    private String context;
-    private String agentName;
     private String apiKey;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
