@@ -79,6 +79,9 @@ class AIService:
             return json.dumps(results)
 
         except Exception as e:
+            if "404" in str(e) or "doesn't exist" in str(e):
+                logger.warning("Vector collection 'products' not found. Returning empty catalog.")
+                return json.dumps([])
             logger.error(f"Vector search failed: {e}")
             return json.dumps({"error": str(e)})
 
