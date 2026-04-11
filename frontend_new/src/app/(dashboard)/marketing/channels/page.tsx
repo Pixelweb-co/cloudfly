@@ -33,10 +33,12 @@ const ChannelPage = () => {
     }
 
     useEffect(() => {
-        } else if (status === 'unauthenticated' || (status === 'authenticated' && !session?.user?.accessToken)) {
+        if (status === 'authenticated') {
+            fetchChannels()
+        } else if (status === 'unauthenticated') {
             setLoading(false)
         }
-    }, [session, status])
+    }, [status])
 
     const handleActivate = (platform: PlatformInfo) => {
         if (platform.platform === 'WHATSAPP' && platform.provider === 'EVOLUTION_API') {
@@ -51,7 +53,7 @@ const ChannelPage = () => {
         if (!window.confirm(`¿Estás seguro de eliminar el canal ${channel.name}?`)) return
         
         try {
-            await channelService.deleteChannel(channel.id, (session?.user as any).accessToken)
+            await channelService.deleteChannel(channel.id)
             await fetchChannels()
         } catch (error) {
             console.error('Error deleting channel:', error)
