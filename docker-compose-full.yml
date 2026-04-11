@@ -250,6 +250,32 @@ services:
       - redis
       - db
 
+  ai-vector-worker:
+    build:
+      context: ./ai-agent
+      dockerfile: Dockerfile
+    container_name: ai_vector_worker
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - REDIS_HOST=redis_server
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=Elian2020#
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASSWORD=widowmaker
+      - DB_NAME=cloud_master
+    networks:
+      - app-net
+      - kafka-net
+    depends_on:
+      - kafka
+      - db
+    command: ["python", "vector_worker.py"]
+
+
   # ====================
   # N8N (Automatización)
   # ====================
