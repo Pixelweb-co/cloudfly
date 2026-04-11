@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axiosInstance from '@/utils/axiosInstance'
 import { userMethods } from '@/utils/userMethods'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
@@ -18,7 +18,7 @@ export const mediaService = {
   getMedia: async (): Promise<Media[]> => {
     const user = userMethods.getUserLogin()
     const tenantId = user?.customerId || user?.tenant_id
-    const response = await axios.get(`${API_URL}/api/v1/media`, {
+    const response = await axiosInstance.get(`/api/v1/media`, {
       params: { tenantId }
     })
     return response.data
@@ -27,7 +27,7 @@ export const mediaService = {
   searchMedia: async (query: string): Promise<Media[]> => {
     const user = userMethods.getUserLogin()
     const tenantId = user?.customerId || user?.tenant_id
-    const response = await axios.get(`${API_URL}/api/v1/media/search`, {
+    const response = await axiosInstance.get(`/api/v1/media/search`, {
       params: { tenantId, query }
     })
     return response.data
@@ -39,7 +39,7 @@ export const mediaService = {
     const formData = new FormData()
     formData.append('file', file)
     
-    const response = await axios.post(`${API_URL}/api/v1/media`, formData, {
+    const response = await axiosInstance.post(`/api/v1/media`, formData, {
       params: { tenantId },
       headers: {
         'Content-Type': 'multipart/form-data'
@@ -51,7 +51,7 @@ export const mediaService = {
   deleteMedia: async (id: number): Promise<void> => {
     const user = userMethods.getUserLogin()
     const tenantId = user?.customerId || user?.tenant_id
-    await axios.delete(`${API_URL}/api/v1/media/${id}`, {
+    await axiosInstance.delete(`/api/v1/media/${id}`, {
       params: { tenantId }
     })
   }
