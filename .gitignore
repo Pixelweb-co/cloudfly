@@ -43,3 +43,6 @@ callcenterIA/asterisk/data/*.sqlite3
 *.swp
 *.swo
 
+
+# IA Metadata
+brain/
