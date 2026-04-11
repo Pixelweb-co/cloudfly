@@ -13,6 +13,7 @@ import CircularProgress from '@mui/material/CircularProgress'
 import WelcomeBanner from './WelcomeBanner'
 import CardStatsWithAreaChart from '@/components/card-statistics/StatsWithAreaChart'
 import CardStatsSquare from '@/components/card-statistics/CardStatsSquare'
+import PipelineContactsChart from './PipelineContactsChart'
 
 // Service Imports
 import type { DashboardStats } from '@/services/dashboardService';
@@ -158,6 +159,11 @@ const HighImpactDashboard = () => {
                             statsTitle='Productos'
                             avatarSize={42}
                         />
+                    </Grid>
+
+                    {/* Funnel/Pipeline Chart - High Impact Visualization */}
+                    <Grid item xs={12}>
+                        <PipelineContactsChart />
                     </Grid>
                 </>
             ) : null}

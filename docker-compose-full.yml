@@ -249,6 +249,8 @@ services:
       - kafka
       - redis
       - db
+    volumes:
+      - ./uploads:/app/uploads
 
   ai-vector-worker:
     build:

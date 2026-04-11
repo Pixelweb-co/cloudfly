@@ -27,6 +27,20 @@ export interface DashboardStats {
     messagesChange?: number
 }
 
+export interface PipelineStageStats {
+    stageId: number
+    name: string
+    color: string
+    contactCount: number
+    position: number
+}
+
+export interface PipelineStats {
+    pipelineId: number
+    pipelineName: string
+    stages: PipelineStageStats[]
+}
+
 export interface SalesChartData {
     categories: string[]
     series: Array<{
@@ -115,6 +129,15 @@ return response.data
 
         
 return response.data
+    },
+
+    // Get pipeline stats
+    async getPipelineStats(companyId?: number): Promise<PipelineStats> {
+        const response = await axiosInstance.get('/dashboard/pipeline-stats', {
+            params: { companyId }
+        })
+
+        return response.data
     },
 
     // TODO: Implement these endpoints in backend first
