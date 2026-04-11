@@ -25,8 +25,16 @@ const ProductCreationStep = ({ onProductCreated }: ProductCreationStepProps) => 
         const fetchDefaultCategory = async () => {
             try {
                 setCategoryLoading(true)
+                
+                // Refrescar datos del usuario desde localStorage (importante si viene del paso anterior)
                 const user = userMethods.getUserLogin()
-                if (!user || !user.customerId) return
+                console.log('📦 [PRODUCT-STEP] Refreshing user data:', user)
+
+                if (!user || !user.customerId) {
+                    console.warn('⚠️ [PRODUCT-STEP] No customerId found yet. User might be stale.')
+                    setCategoryLoading(false)
+                    return
+                }
 
                 const response = await axiosInstance.get(`/categorias/customer/${user.customerId}`)
                 const categories = response.data
@@ -37,29 +45,19 @@ const ProductCreationStep = ({ onProductCreated }: ProductCreationStepProps) => 
                     : null
 
                 if (generalCategory) {
+                    console.log('✅ [PRODUCT-STEP] Found General category:', generalCategory.id)
                     setCategoryId(generalCategory.id)
                 } else {
-                    // Si por alguna razón no existe (fallback), la creamos
+                    console.info('📂 [PRODUCT-STEP] General category not found, creating it...')
                     const createResponse = await axiosInstance.post('/categorias', {
                         nombreCategoria: 'General',
                         description: 'Categoría por defecto',
                         status: true
                     })
-                    setCategoryId(createResponse.data.id || createResponse.data.message) // Dependiendo de la API
+                    setCategoryId(createResponse.data.id)
                 }
             } catch (error) {
-                console.error('Error fetching default category:', error)
-                // Intentar crearla si el GET falló
-                try {
-                   const createSnap = await axiosInstance.post('/categorias', {
-                        nombreCategoria: 'General',
-                        description: 'Categoría por defecto',
-                        status: true
-                    })
-                    setCategoryId(createSnap.data.id)
-                } catch(e) {
-                    console.error('Final fallback failed', e)
-                }
+                console.error('❌ [PRODUCT-STEP] Error fetching/creating default category:', error)
             } finally {
                 setCategoryLoading(false)
             }
@@ -82,13 +80,18 @@ const ProductCreationStep = ({ onProductCreated }: ProductCreationStepProps) => 
 
             const user = userMethods.getUserLogin()
 
+            if (!user || !user.customerId) {
+                setMessage({ type: 'error', text: 'Error de sesión: No se encontró ID de cliente. Por favor refresca la página.' })
+                return
+            }
+
             await axiosInstance.post('/productos', {
                 productName: productName,
                 description: productDescription,
                 price: parseFloat(productPrice),
                 salePrice: parseFloat(productPrice),
                 categoryIds: categoryId ? [categoryId] : [],
-                tenantId: user?.customerId,
+                tenantId: user.customerId,
                 productType: '0', // Producto simple
                 status: 'ACTIVE',
                 manageStock: false,
