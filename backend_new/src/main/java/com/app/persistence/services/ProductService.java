@@ -7,6 +7,7 @@ import com.app.events.ProductEventProducer;
 import com.app.persistence.repository.ProductCategoryRepository;
 import com.app.persistence.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -14,6 +15,7 @@ import reactor.core.publisher.Mono;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductService {
@@ -54,6 +56,7 @@ public class ProductService {
 
         return productRepository.save(product)
                 .flatMap(savedProduct -> {
+                    log.info("Product saved successfully with ID: {}", savedProduct.getId());
                     request.setId(savedProduct.getId());
                     if (request.getCategoryIds() == null || request.getCategoryIds().isEmpty()) {
                         return Mono.just(request);
@@ -66,7 +69,8 @@ public class ProductService {
                                     .build()))
                             .then(Mono.just(request));
                 })
-                .flatMap(req -> productEventProducer.publishProductChange(req).thenReturn(req));
+                .flatMap(req -> productEventProducer.publishProductChange(req).thenReturn(req))
+                .doOnError(e -> log.error("Error in saveProduct for tenant {}: {}", request.getTenantId(), e.getMessage(), e));
     }
 
     public Mono<ProductCreateRequest> getById(Long id) {
