@@ -240,7 +240,6 @@ services:
       - DB_USER=root
       - DB_PASSWORD=widowmaker
       - DB_NAME=cloud_master
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
     networks:
       - app-net
       - kafka-net
