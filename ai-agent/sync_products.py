@@ -26,18 +26,26 @@ def main():
         database=config.DB_NAME
     )
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM productos")
+    query = """
+    SELECT p.*, GROUP_CONCAT(c.name) as category_names 
+    FROM productos p 
+    LEFT JOIN product_categories pc ON p.id = pc.product_id 
+    LEFT JOIN categorias c ON pc.category_id = c.id 
+    GROUP BY p.id
+    """
+    cursor.execute(query)
     products = cursor.fetchall()
     
     if not products:
         logger.info("No products found in DB.")
         return
 
-    logger.info(f"Found {len(products)} products to sync.")
+    logger.info(f"Found {len(products)} products to sync with categories.")
     
     points = []
     for prod in products:
-        searchable_text = f"Nombre: {prod.get('product_name', '')}\nDescripción: {prod.get('description', '')}\nCategoría/Tipo: {prod.get('product_type', '')}\nMarca: {prod.get('brand', '')}\nModelo: {prod.get('model', '')}\nPrecio: {prod.get('price', '')}"
+        category_names = prod.get('category_names', '') or ''
+        searchable_text = f"Nombre: {prod.get('product_name', '')}\nCategorías: {category_names}\nDescripción: {prod.get('description', '')}\nCategoría/Tipo: {prod.get('product_type', '')}\nMarca: {prod.get('brand', '')}\nModelo: {prod.get('model', '')}\nPrecio: {prod.get('price', '')}"
         
         response = openai_client.embeddings.create(input=searchable_text, model="text-embedding-3-small")
         vector = response.data[0].embedding
@@ -46,6 +54,7 @@ def main():
             "product_id": prod.get("id"),
             "tenant_id": prod.get("tenant_id"),
             "name": prod.get("product_name", ""),
+            "categories": category_names.split(',') if category_names else [],
             "description": prod.get("description", ""),
             "price": float(prod.get("price") or 0),
             "stock": int(prod.get("inventory_qty") or 0),

@@ -8,6 +8,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams, PointStruct
 from openai import OpenAI
 import config
+import mysql.connector
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,6 +42,29 @@ def get_embedding(text):
     )
     return response.data[0].embedding
 
+def get_db_connection():
+    return mysql.connector.connect(
+        host=config.DB_HOST,
+        user=config.DB_USER,
+        password=config.DB_PASSWORD,
+        database=config.DB_NAME
+    )
+
+def get_category_names(category_ids):
+    if not category_ids:
+        return []
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        format_strings = ','.join(['%s'] * len(category_ids))
+        cursor.execute(f"SELECT name FROM categorias WHERE id IN ({format_strings})", tuple(category_ids))
+        names = [row[0] for row in cursor.fetchall()]
+        conn.close()
+        return names
+    except Exception as e:
+        logger.error(f"Error fetching category names: {e}")
+        return []
+
 def process_product_update(msg_value):
     try:
         product = json.loads(msg_value)
@@ -52,9 +76,15 @@ def process_product_update(msg_value):
             logger.error("Product ID missing in event")
             return
 
+        # Fetch category names if present
+        category_ids = product.get("categoryIds", [])
+        category_names = get_category_names(category_ids)
+        categories_str = ", ".join(category_names)
+
         # Prepare string for vectorization
         searchable_text = f"""
         Nombre: {product.get('productName', '')}
+        Categorías: {categories_str}
         Descripción: {product.get('description', '')}
         Categoría/Tipo: {product.get('productType', '')}
         Marca: {product.get('brand', '')}
@@ -73,6 +103,7 @@ def process_product_update(msg_value):
             "price": product.get("price", 0),
             "stock": product.get("inventoryQty", 0),
             "manage_stock": product.get("manageStock", False),
+            "categories": category_names,
             "image_url": "" # Simplifica: tomar la primera si existiera en un arreglo, o null
         }
         
