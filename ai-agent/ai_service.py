@@ -53,9 +53,9 @@ class AIService:
             )
             query_vector = vector_res.data[0].embedding
             
-            search_result = self.qdrant.search(
+            search_result = self.qdrant.query_points(
                 collection_name="products",
-                query_vector=query_vector,
+                query=query_vector,
                 query_filter=Filter(
                     must=[
                         FieldCondition(
@@ -66,12 +66,18 @@ class AIService:
                 ),
                 limit=5
             )
+
             
             results = []
-            for hit in search_result:
+            
+            # Extract points whether it returns a list or a QueryResponse object
+            points_list = search_result.points if hasattr(search_result, 'points') else search_result
+            
+            for hit in points_list:
                 results.append(hit.payload)
                 
             return json.dumps(results)
+
         except Exception as e:
             logger.error(f"Vector search failed: {e}")
             return json.dumps({"error": str(e)})
