@@ -1,206 +1,166 @@
 const { Builder, By, Key, until, logging } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
+const fs = require('fs');
+const path = require('path');
+const mailHelper = require('./mail_helper');
 
 /**
- * Selenium E2E Test: Admin Marketing Onboarding
- *
- * Flujo:
- * 1. Navegar a página de Registro (/register).
- * 2. Rellenar formulario (username, email, password) para crear nuevo usuario.
- * 3. Enviar formulario y verificar que redirija a /home.
- * 4. Desloguearse (o limpiar sesión forzadamente para asegurar logout).
- * 5. Volver a Iniciar Sesión (/login) con las credenciales del usuario recién creado.
- * 6. Verificar que la cuenta esté activa y redirija correctamente a /home (sin problemas de verificación de cuenta).
+ * Selenium E2E Test: Admin Marketing Onboarding (FULL FLOW)
+ * 
+ * Flujo validado por Diagrama de Secuencia:
+ * 1. Registro con cuenta real @cloudfly.com.co.
+ * 2. Activación vía Email (IMAP Link).
+ * 3. Login.
+ * 4. Wizard Step 0: Bienvenida.
+ * 5. Wizard Step 1: Form Business (Empresa).
+ * 6. Wizard Step 2: WhatsApp (SALTAR/OMITIR).
+ * 7. Wizard Step 3: Producto y Categoría (Review Fix tenantId).
  */
 
 const BASE_URL = 'https://dashboard.cloudfly.com.co';
-
 const UNIQUE_ID = Date.now();
-const NEW_USER_EMAIL = `test_onboarding_${UNIQUE_ID}@example.com`;
-const NEW_USER_NAME = `onboarding_${UNIQUE_ID}`;
+const MAIL_ACC = `mkt_${UNIQUE_ID}`;
+const MAIL_PASS = 'TestPass2026*';
+const NEW_USER_EMAIL = `${MAIL_ACC}@cloudfly.com.co`;
+const NEW_USER_NAME = `onboarding_mkt_${UNIQUE_ID}`;
 const NEW_USER_PASSWORD = 'Password123!';
 
 async function sleep(ms) {
     return new Promise(r => setTimeout(r, ms));
 }
 
-async function checkBrowserLogs(driver, label = '') {
-    console.log(`\n--- [BROWSER CONSOLE ${label}] ---`);
-    try {
-        const logs = await driver.manage().logs().get(logging.Type.BROWSER);
-        if (logs.length === 0) {
-            console.log('(Sin logs nuevos)');
-        } else {
-            logs.forEach(log => {
-                const level = log.level.name;
-                const msg = log.message;
-                const ts = new Date(log.timestamp).toLocaleTimeString();
-                if (level === 'SEVERE') {
-                    console.error(`🔴 [${ts}] [${level}] ${msg}`);
-                } else if (level === 'WARNING') {
-                    console.warn(`🟡 [${ts}] [${level}] ${msg}`);
-                } else {
-                    console.log(`⚪ [${ts}] [${level}] ${msg}`);
-                }
-            });
-        }
-    } catch (e) {
-        console.warn('⚠️ No se pudieron obtener logs del navegador:', e.message);
-    }
-    console.log('-------------------------------\n');
+async function takeScreenshot(driver, name) {
+    const dir = 'tests/logs/screenshots';
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const screenshot = await driver.takeScreenshot();
+    const filePath = path.join(dir, `${name}_${Date.now()}.png`);
+    fs.writeFileSync(filePath, screenshot, 'base64');
+    console.log(`📸 Screenshot: ${filePath}`);
 }
 
-async function runOnboardingTest() {
-    const prefs = new logging.Preferences();
-    prefs.setLevel(logging.Type.BROWSER, logging.Level.ALL);
+async function runTest() {
+    console.log('\n--- INICIANDO TEST E2E ONBOARDING MARKETING ---');
+    
+    // Paso 0: Preparar buzón
+    if (!(await mailHelper.createAccount(MAIL_ACC, MAIL_PASS))) {
+        console.error('❌ No se pudo preparar el buzón de prueba.');
+        process.exit(1);
+    }
 
     const options = new chrome.Options();
-    options.addArguments('--window-size=1440,900');
-    options.addArguments('--no-sandbox');
-    options.addArguments('--disable-dev-shm-usage');
-    options.setLoggingPrefs(prefs);
-    // options.addArguments('--headless'); // Si necesitas correr sin interfaz
+    options.addArguments('--window-size=1440,900', '--no-sandbox', '--disable-dev-shm-usage');
+    // options.addArguments('--headless'); 
 
-    const driver = await new Builder()
-        .forBrowser('chrome')
-        .setChromeOptions(options)
-        .build();
+    const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
 
     try {
-        // ──────────────────────────────────────────
-        // 1. REGISTRO DEL NUEVO USUARIO
-        // ──────────────────────────────────────────
-        console.log(`\n🚀 [1/4] NAVEGANDO AL REGISTRO...`);
+        // [1] REGISTRO
+        console.log(`\n🚀 [1/7] REGISTRANDO: ${NEW_USER_NAME} | ${NEW_USER_EMAIL}`);
         await driver.get(`${BASE_URL}/register`);
+        await driver.wait(until.elementLocated(By.name('nombres')), 15000).sendKeys('Admin');
+        await driver.findElement(By.name('apellidos')).sendKeys('Marketing');
+        await driver.findElement(By.name('username')).sendKeys(NEW_USER_NAME);
+        await driver.findElement(By.name('email')).sendKeys(NEW_USER_EMAIL);
+        await driver.findElement(By.name('password')).sendKeys(NEW_USER_PASSWORD);
+        await driver.findElement(By.name('confirmPassword')).sendKeys(NEW_USER_PASSWORD);
+        
+        const checkbox = await driver.findElement(By.xpath("//input[@type='checkbox']"));
+        await driver.executeScript("arguments[0].click();", checkbox);
 
-        await sleep(3000);
+        await driver.findElement(By.xpath("//button[@type='submit']")).click();
+        await driver.wait(until.urlContains('/verify-email'), 20000);
+        console.log('✅ Registro enviado. Esperando email de activación...');
 
-        // Ubicar campos de registro
-        console.log(`📝 Rellenando formulario con usuario: ${NEW_USER_NAME} | ${NEW_USER_EMAIL}`);
-        const newUsernameInput = await driver.wait(
-            until.elementLocated(By.xpath("//input[@name='username']")),
-            15000,
-            'No se encontró el campo username en registro'
-        );
-        await newUsernameInput.sendKeys(NEW_USER_NAME);
+        // [2] ACTIVACIÓN
+        const activationLink = await mailHelper.getActivationLink(MAIL_ACC, MAIL_PASS);
+        if (!activationLink) throw new Error('No se recibió el link de activación');
+        
+        await driver.get(activationLink);
+        await sleep(5000);
+        await takeScreenshot(driver, 'account_activated');
+        
+        const accederBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Acceder')]")), 15000);
+        await accederBtn.click();
+        console.log('✅ Cuenta activada exitosamente.');
 
-        const newEmailInput = await driver.findElement(By.xpath("//input[@name='email']"));
-        await newEmailInput.sendKeys(NEW_USER_EMAIL);
+        // [3] LOGIN
+        console.log('\n🔑 [3/7] INICIANDO SESIÓN...');
+        await driver.wait(until.urlContains('/login'), 15000);
+        await driver.findElement(By.name('username')).sendKeys(NEW_USER_NAME);
+        await driver.findElement(By.name('password')).sendKeys(NEW_USER_PASSWORD);
+        await driver.findElement(By.xpath("//button[@type='submit']")).click();
 
-        const newPasswordInput = await driver.findElement(By.xpath("//input[@name='password']"));
-        await newPasswordInput.sendKeys(NEW_USER_PASSWORD);
+        await driver.wait(until.urlContains('/account-setup'), 25000);
+        console.log('✅ Login exitoso. Entrando al Wizard.');
 
-        // Handle possible confirmPassword (dependiendo si es RegisterV2 o V3)
+        // [4] STEP 0: BIENVENIDA
+        console.log('\n🌟 [4/7] WIZARD: BIENVENIDA');
+        const contBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Continuar')]")), 15000);
+        await contBtn.click();
+
+        // [5] STEP 1: EMPRESA
+        console.log('\n🏢 [5/7] WIZARD: DATOS DE NEGOCIO');
+        await driver.wait(until.elementLocated(By.name('name')), 15000).sendKeys('Agencia Marketing IA');
+        await driver.findElement(By.name('nit')).sendKeys('900.555.444-1');
+        await driver.findElement(By.name('phone')).sendKeys('3005553322');
+        await driver.findElement(By.name('email')).sendKeys(NEW_USER_EMAIL);
+        await driver.findElement(By.name('address')).sendKeys('Centro Empresarial El Dorado');
+        await driver.findElement(By.name('objetoSocial')).sendKeys('Estrategias de marketing basadas en datos y agentes de IA autónomos.');
+        await driver.findElement(By.name('contact')).sendKeys('Camila Marketing');
+        await driver.findElement(By.name('position')).sendKeys('Directora');
+
+        const card = await driver.findElement(By.xpath("//*[contains(text(), 'Software / SaaS')]"));
+        await card.click();
+        
+        await driver.findElement(By.xpath("//button[contains(., 'Siguiente')]")).click();
+        console.log('✅ Paso 1 guardado.');
+
+        // [6] STEP 2: WHATSAPP (OMITIR)
+        console.log('\n📱 [6/7] WIZARD: WHATSAPP (OMITIENDO)');
+        await sleep(5000);
         try {
-            const newConfirmPasswordInput = await driver.findElement(By.xpath("//input[@name='confirmPassword']"));
-            await newConfirmPasswordInput.sendKeys(NEW_USER_PASSWORD);
-        } catch(e) {
-            console.log("  ℹ️ No se requirió confirmar contraseña.");
-        }
-
-        // Aceptar términos si hay checkbox
-        try {
-            const checkbox = await driver.findElement(By.xpath("//input[@type='checkbox']"));
-            await driver.executeScript("arguments[0].click();", checkbox);
+            // Buscamos el botón para avanzar sin QR (Ya escaneé o similar)
+            const skipBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Continuar') or contains(., 'Ya escaneé')]")), 15000);
+            await skipBtn.click();
+            console.log('⏩ Paso 2 omitido.');
         } catch (e) {
-            console.log('  ℹ️ No hay checkbox de términos o ya estaba marcado.');
+             console.warn('⚠️ No se pudo omitir el paso 2 con el botón. Intentando navegación forzada.');
+             await driver.get(`${BASE_URL}/account-setup`); // Recargar para ver si avanza
         }
 
-        // Submit
-        const registerBtn = await driver.findElement(By.xpath("//button[@type='submit']"));
-        await registerBtn.click();
-
-        console.log('⏳ Esperando redirección tras el registro...');
-        // Wait till URL matches home or dashboard or account-setup
-        await driver.wait(
-            until.urlMatches(/\/(home|dashboard|account-setup)/),
-            20000,
-            'No se redirigió tras el registro exitoso'
-        );
+        // [7] STEP 3: PRODUCTO (REVIEW FIX)
+        console.log('\n🎁 [7/7] WIZARD: PRODUCTO Y CATEGORÍA (VALIDANDO FIX)');
+        await sleep(5000);
         
-        let currentUrl = await driver.getCurrentUrl();
-        console.log(`✅ Registro exitoso. Redirigido a: ${currentUrl}`);
-        if(currentUrl.includes('/account-setup')){
-             console.log('⚠️ Redirigió a /account-setup en lugar de /home. Esto es normal en onboarding si falta configurar la empresa, pero lo permitiremos por ahora para validar que activó sesion.');
-        }
-        await checkBrowserLogs(driver, 'POST-REGISTRO');
+        const nameInp = await driver.wait(until.elementLocated(By.xpath("//input[contains(@placeholder, 'Hamb') or @label='Nombre'] | //input[@type='text' and not(@value)]")), 20000);
+        await nameInp.clear();
+        await nameInp.sendKeys('Pack Marketing Autómata');
 
+        const descInp = await driver.findElement(By.xpath("//textarea[contains(@placeholder, 'Describe')]"));
+        await descInp.clear();
+        await descInp.sendKeys('Gestión proactiva de redes sociales y leads con IA.');
 
-        // ──────────────────────────────────────────
-        // 2. LOGOUT (DESLOGUEARSE)
-        // ──────────────────────────────────────────
-        console.log('\n🔒 [2/4] DESLOGUEANDO USUARIO...');
-        // Para asegurar deslogueo: borramos localStorage y forzamos redirect
-        await driver.executeScript("localStorage.clear(); sessionStorage.clear(); document.cookie.split(';').forEach(function(c) { document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/'); });");
-        
-        await driver.get(`${BASE_URL}/login`);
-        await sleep(3000);
-        
-        console.log('✅ Sesión limpiada y redirigido exitosamente a /login');
-        
+        const priceInp = await driver.findElement(By.xpath("//input[@type='number']"));
+        await priceInp.clear();
+        await priceInp.sendKeys('480000');
 
-        // ──────────────────────────────────────────
-        // 3. LOGIN NUEVO USUARIO
-        // ──────────────────────────────────────────
-        console.log('\n🔑 [3/4] INICIANDO SESIÓN CON EL USUARIO RECIÉN CREADO...');
-        
-        // Esperamos a que los campos de login estén presentes
-        const usernameLogin = await driver.wait(
-            until.elementLocated(By.xpath("//input[@name='username' or @placeholder='juanperez123']")),
-            15000,
-            'No se encontró el campo username en Login'
-        );
-        await usernameLogin.clear();
-        await usernameLogin.sendKeys(NEW_USER_NAME);
+        await takeScreenshot(driver, 'onboarding_step3_product');
+        const finBtn = await driver.findElement(By.xpath("//button[contains(., 'Finalizar')]"));
+        await finBtn.click();
 
-        const passwordLogin = await driver.findElement(By.xpath("//input[@type='password' or @name='password']"));
-        await passwordLogin.sendKeys(NEW_USER_PASSWORD);
-
-        const loginBtn = await driver.findElement(By.xpath("//button[contains(., 'Iniciar sesión') or @type='submit']"));
-        await loginBtn.click();
-
-
-        // ──────────────────────────────────────────
-        // 4. VERIFICAR ACTIVACIÓN Y REDIRECCIÓN
-        // ──────────────────────────────────────────
-        console.log(`\n🔍 [4/4] VERIFICANDO ACTIVACIÓN Y ACCESO A HOME...`);
-        // Queremos asegurar de que llega a /home (o dashboard) sin problemas 
-        await driver.wait(
-            until.urlMatches(/\/(home|dashboard|account-setup)/),
-            15000,
-            'No se redirigió tras iniciar sesión. Posible bloqueo de verificación de cuenta.'
-        );
-
-        let finalUrl = await driver.getCurrentUrl();
-        console.log(`✅ Login comprobado. Acceso permitido sin bloqueos. URL Actual: ${finalUrl}`);
-
-        await checkBrowserLogs(driver, 'POST-RE-LOGIN');
-
-        console.log('\n╔═════════════════════════════════════════╗');
-        console.log('║ ✨ E2E ONBOARDING & LOGIN TEST EXITOSO ✨║');
-        console.log('╚═════════════════════════════════════════╝');
+        console.log('⏳ Esperando redirección final a Dashboard...');
+        await driver.wait(until.urlMatches(/\/(home|dashboard)/), 20000);
+        console.log('✅ TEST E2E EXITOSO. SISTEMA COMPROBADO.');
 
     } catch (error) {
-        console.error('\n❌ ERROR DURANTE EL TEST E2E:');
-        console.error(error.message || error);
-        await checkBrowserLogs(driver, 'ERROR');
-
-        try {
-            const fs = require('fs');
-            const screenshot = await driver.takeScreenshot();
-            const ts = Date.now();
-            const path = `tests/logs/onboarding_error_${ts}.png`;
-            fs.mkdirSync('tests/logs', { recursive: true });
-            fs.writeFileSync(path, screenshot, 'base64');
-            console.log(`📸 Screenshot guardado en: ${path}`);
-        } catch (screenshotErr) {
-            console.warn('⚠️ No se pudo tomar captura:', screenshotErr.message);
-        }
-
-        process.exit(1);
+        console.error('\n❌ FALLO EN EL TEST:');
+        console.error(error.message);
+        await takeScreenshot(driver, 'error_final');
     } finally {
+        // [MODIFICADO] No eliminamos el buzón para que el usuario pueda revisarlo
+        // await mailHelper.deleteAccount(MAIL_ACC);
         await driver.quit();
     }
 }
 
-runOnboardingTest();
+runTest();

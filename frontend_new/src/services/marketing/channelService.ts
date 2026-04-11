@@ -23,5 +23,32 @@ export const channelService = {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
     return response.data;
+  },
+
+  getChannelConfigStatus: async (accessToken: string) => {
+    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/channel-config/status`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    return response.data;
+  },
+
+  activateWhatsAppChannel: async (accessToken: string) => {
+    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/channel-config/activate`, {}, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    return response.data;
+  },
+
+  saveChannelConfig: async (config: any, accessToken: string) => {
+    const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/channel-config/config`, config, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    return response.data;
+  },
+  
+  deleteChannel: async (id: number, accessToken: string) => {
+    await axios.delete(`${API_URL}/${id}`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
   }
 };

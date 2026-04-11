@@ -40,11 +40,6 @@ public class ChannelConfig {
     @Column("n8n_webhook_url")
     private String n8nWebhookUrl;
 
-    private String context;
-
-    @Column("agent_name")
-    private String agentName;
-
     @Column("api_key")
     private String apiKey;
 
