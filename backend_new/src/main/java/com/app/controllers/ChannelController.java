@@ -2,9 +2,9 @@ package com.app.controllers;
 
 import com.app.persistence.entity.ChannelEntity;
 import com.app.persistence.services.ChannelService;
-import com.app.persistence.services.UserService;
-import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -14,29 +14,43 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/marketing/channels")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class ChannelController {
 
     private final ChannelService channelService;
-    private final UserService userService;
 
     private Mono<Long> getCurrentTenantId() {
         return ReactiveSecurityContextHolder.getContext()
-                .map(ctx -> ctx.getAuthentication().getName())
-                .flatMap(userService::findByUsername)
-                .map(user -> {
-                    return user.getCustomerId();
+                .map(SecurityContext::getAuthentication)
+                .map(auth -> {
+                    if (auth == null) return 1L;
+                    java.util.Map<String, Object> details = (java.util.Map<String, Object>) auth.getDetails();
+                    if (details != null && details.containsKey("customer_id")) {
+                        Object cid = details.get("customer_id");
+                        if (cid instanceof Number) return ((Number) cid).longValue();
+                        return Long.parseLong(cid.toString());
+                    }
+                    return 1L;
                 });
     }
 
     private Mono<Long> getCurrentCompanyId() {
-        // Fallback to principal company for the tenant
         return ReactiveSecurityContextHolder.getContext()
-                .map(ctx -> ctx.getAuthentication().getName())
-                .flatMap(userService::findByUsername)
-                .map(user -> {
-                    // This project usually has customerId as tenantId
-                    return user.getCustomerId(); 
+                .map(SecurityContext::getAuthentication)
+                .map(auth -> {
+                    if (auth == null) return 1L;
+                    java.util.Map<String, Object> details = (java.util.Map<String, Object>) auth.getDetails();
+                    if (details != null && details.containsKey("company_id")) {
+                        Object cid = details.get("company_id");
+                        if (cid instanceof Number) return ((Number) cid).longValue();
+                        return Long.parseLong(cid.toString());
+                    }
+                    // Fallback to customer_id if company_id is missing
+                    if (details != null && details.containsKey("customer_id")) {
+                        Object cid = details.get("customer_id");
+                        if (cid instanceof Number) return ((Number) cid).longValue();
+                        return Long.parseLong(cid.toString());
+                    }
+                    return 1L;
                 });
     }
 
