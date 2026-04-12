@@ -52,9 +52,10 @@ public class ContactEntity {
 
     @Column("is_active")
     @JsonProperty("isActive")
-    private Boolean isActive; // Changed to Boolean (Object) for better name resolution in R2DBC
+    private Boolean isActive; // Boolean Object is safer for Spring Data R2DBC mapping
 
     @Column("chatbot_enabled")
+    @JsonProperty("chatbotEnabled")
     private Boolean chatbotEnabled;
 
     @Column("created_at")
@@ -63,8 +64,6 @@ public class ContactEntity {
     @Column("updated_at")
     private LocalDateTime updatedAt;
 
-    // No manual getters/setters here. 
-    // Lombok @Data provides them. 
-    // Using Boolean (Object) ensures the setter is setIsActive() and getter is getIsActive(), 
-    // which aligns perfectly with both Jackson and R2DBC reflection.
+    // NO EXPLICIT GETTERS/SETTERS - Let Lombok @Data handle it consistently.
+    // getIsActive() and setIsActive() will be generated for Boolean isActive.
 }

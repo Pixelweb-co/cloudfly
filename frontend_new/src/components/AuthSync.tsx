@@ -31,11 +31,11 @@ export const AuthSync = () => {
                 }
             }
         } else if (status === 'unauthenticated') {
-            // Optional: clear if unauthenticated to avoid stale tokens
+            // Clear only the technical token, preserve visual context (userData) 
+            // to avoid 'ghost' UI/vanishing combos during logout transitions.
             if (localStorage.getItem('jwt')) {
-                console.warn('⚠️ [AUTH-SYNC] Session ended. Clearing localStorage...')
+                console.warn('⚠️ [AUTH-SYNC] Session ended. Clearing token...')
                 localStorage.removeItem('jwt')
-                localStorage.removeItem('userData')
             }
         }
     }, [session, status])
