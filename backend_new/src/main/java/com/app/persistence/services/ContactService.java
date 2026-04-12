@@ -142,7 +142,7 @@ public class ContactService {
                             .name(contactName)
                             .type("LEAD")
                             .stage("LEAD")
-                            .isActive(true)
+                            .active(true)
                             .createdAt(LocalDateTime.now())
                             .updatedAt(LocalDateTime.now())
                             .build();
