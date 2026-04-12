@@ -95,6 +95,9 @@ public class ContactService {
     }
 
     private Mono<ContactEntity> performUpdate(ContactEntity existing, ContactEntity contact, String cleanPhone) {
+        log.info("Updating Contact ID: {}. Name: {}, PipelineID: {}, StageID: {}, StageName: {}", 
+                existing.getId(), contact.getName(), contact.getPipelineId(), contact.getStageId(), contact.getStage());
+        
         existing.setName(contact.getName());
         existing.setEmail(contact.getEmail());
         existing.setPhone(cleanPhone);
@@ -108,7 +111,10 @@ public class ContactService {
         existing.setDocumentNumber(contact.getDocumentNumber());
         existing.setActive(contact.isActive());
         existing.setUpdatedAt(LocalDateTime.now());
-        return contactRepository.save(existing);
+        
+        return contactRepository.save(existing)
+                .doOnSuccess(saved -> log.info("Successfully saved Contact ID: {}. Persisted PipelineID: {}, StageID: {}", 
+                        saved.getId(), saved.getPipelineId(), saved.getStageId()));
     }
 
     public Mono<Void> delete(Long id, Long tenantId, Long companyId) {
