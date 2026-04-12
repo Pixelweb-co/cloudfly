@@ -112,6 +112,7 @@ export const authOptions: NextAuthOptions = {
           token.userCapabilities = u.user.userCapabilities
           token.customerId = u.user.customerId
           token.activeCompanyId = u.user.activeCompanyId
+          token.roles = u.user.roles || [] // NEW: Pass the full roles array
         } else {
           token.id = u.id
           token.role = u.role
@@ -121,6 +122,7 @@ export const authOptions: NextAuthOptions = {
           token.userCapabilities = u.userCapabilities
           token.customerId = u.customerId
           token.activeCompanyId = u.activeCompanyId
+          token.roles = u.roles || [] // NEW: Pass the full roles array
         }
       }
 
@@ -139,6 +141,7 @@ export const authOptions: NextAuthOptions = {
           ; (session as any).user.userCapabilities = token.userCapabilities
           ; (session as any).user.customerId = token.customerId
           ; (session as any).user.activeCompanyId = token.activeCompanyId
+          ; (session as any).user.roles = token.roles // NEW: Pass the full roles array
       }
 
 

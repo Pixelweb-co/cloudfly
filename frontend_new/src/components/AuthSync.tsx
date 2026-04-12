@@ -21,10 +21,13 @@ export const AuthSync = () => {
             if (token) {
                 // Sync to localStorage for axiosInstance and other legacy scripts
                 const currentToken = localStorage.getItem('jwt')
-                if (currentToken !== token) {
+                const prevUserData = localStorage.getItem('userData')
+                const newUserData = JSON.stringify(session.user)
+
+                if (currentToken !== token || prevUserData !== newUserData) {
                     console.log('🔄 [AUTH-SYNC] Synchronizing NextAuth session to localStorage...')
                     localStorage.setItem('jwt', token)
-                    localStorage.setItem('userData', userData)
+                    localStorage.setItem('userData', newUserData)
                     
                     // Trigger a storage event for other tabs/components
                     window.dispatchEvent(new Event('storage'))
