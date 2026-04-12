@@ -8,11 +8,13 @@ import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Table("contacts")
+@ToString
 public class ContactEntity {
     @Id
     private Long id;
@@ -52,7 +54,7 @@ public class ContactEntity {
 
     @Column("is_active")
     @JsonProperty("isActive")
-    private Boolean isActive; // Boolean Object is safer for Spring Data R2DBC mapping
+    private Boolean isActive; 
 
     @Column("chatbot_enabled")
     @JsonProperty("chatbotEnabled")
@@ -64,6 +66,10 @@ public class ContactEntity {
     @Column("updated_at")
     private LocalDateTime updatedAt;
 
-    // NO EXPLICIT GETTERS/SETTERS - Let Lombok @Data handle it consistently.
-    // getIsActive() and setIsActive() will be generated for Boolean isActive.
+    // Explicitly providing getters/setters for Boolean fields to ensure 
+    // R2DBC reflection finds 'setIsActive' and 'getIsActive' correctly.
+    public Boolean getIsActive() { return isActive; }
+    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+    public Boolean getChatbotEnabled() { return chatbotEnabled; }
+    public void setChatbotEnabled(Boolean chatbotEnabled) { this.chatbotEnabled = chatbotEnabled; }
 }
