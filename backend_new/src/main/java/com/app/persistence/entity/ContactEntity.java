@@ -51,7 +51,7 @@ public class ContactEntity {
     private String documentNumber;
 
     @Column("is_active")
-    private boolean isActive;
+    private boolean active;
 
     @Column("chatbot_enabled")
     private Boolean chatbotEnabled;
@@ -77,7 +77,7 @@ public class ContactEntity {
     public Long getStageId() { return stageId; }
     public String getDocumentType() { return documentType; }
     public String getDocumentNumber() { return documentNumber; }
-    public boolean isActive() { return isActive; }
+    public boolean isActive() { return active; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public Boolean getChatbotEnabled() { return chatbotEnabled; }
@@ -99,7 +99,7 @@ public class ContactEntity {
     public void setStageId(Long stageId) { this.stageId = stageId; }
     public void setDocumentType(String documentType) { this.documentType = documentType; }
     public void setDocumentNumber(String documentNumber) { this.documentNumber = documentNumber; }
-    public void setActive(boolean active) { this.isActive = active; }
+    public void setActive(boolean active) { this.active = active; }
     public void setChatbotEnabled(Boolean chatbotEnabled) { this.chatbotEnabled = chatbotEnabled; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
