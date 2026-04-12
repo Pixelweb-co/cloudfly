@@ -109,7 +109,7 @@ public class ContactService {
         existing.setStageId(contact.getStageId());
         existing.setDocumentType(contact.getDocumentType());
         existing.setDocumentNumber(contact.getDocumentNumber());
-        existing.setActive(contact.isActive());
+        existing.setIsActive(contact.getIsActive());
         existing.setUpdatedAt(LocalDateTime.now());
         
         return contactRepository.save(existing)
