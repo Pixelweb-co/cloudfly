@@ -317,6 +317,38 @@ OTRAS REGLAS:
         messages.append({"role": "user", "content": message})
 
         tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "search_products_semantically",
+                    "description": "Busca productos en el catálogo usando lenguaje natural. Úsalo cuando el cliente pregunte por precios, catálogo o disponibilidad de productos.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "Término de búsqueda o descripción del producto."
+                            }
+                        },
+                        "required": ["query"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "check_products_stock",
+                    "description": "Consulta el inventario real y estado de uno o varios productos por su ID numérico.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "product_ids": {
+                                "type": "array",
+                                "items": { "type": "integer" },
+                                "description": "Lista de IDs de productos a consultar."
+                            }
+                        },
+                        "required": ["product_ids"]
                     }
                 }
             },

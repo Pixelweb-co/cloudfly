@@ -78,8 +78,23 @@ public class EvolutionWebhookController {
             log.info("✉️ [EVOLUTION-WEBHOOK] Message from {}: {}", pushName, body);
 
             return channelRepository.findByInstanceName(instance)
+                    .switchIfEmpty(Mono.defer(() -> {
+                        log.warn("⚠️ [EVOLUTION-WEBHOOK] No exact channel match for instance: {}. Attempting fallback...", instance);
+                        // Fallback: Si el nombre contiene un ID numérico (ej. cloudfly_51), intentamos buscar por companyId
+                        try {
+                            String numericPart = instance.replaceAll("[^0-9]", "");
+                            if (!numericPart.isEmpty()) {
+                                Long inferredCompanyId = Long.parseLong(numericPart);
+                                log.info("🔍 [EVOLUTION-WEBHOOK] Searching for channel with inferred companyId: {}", inferredCompanyId);
+                                return channelRepository.findByCompanyId(inferredCompanyId).next();
+                            }
+                        } catch (Exception e) {
+                            log.error("❌ [EVOLUTION-WEBHOOK] Error parsing fallback ID from {}: {}", instance, e.getMessage());
+                        }
+                        return Mono.empty();
+                    }))
                     .flatMap(channel -> {
-                        log.info("📡 [EVOLUTION-WEBHOOK] Found channel for instance: {}", instance);
+                        log.info("📡 [EVOLUTION-WEBHOOK] Resolved channel (ID={}) for instance: {}", channel.getId(), instance);
                         
                         return contactService.getOrCreateContact(channel.getTenantId(), channel.getCompanyId(), remoteJid, pushName)
                                 .flatMap(contact -> {

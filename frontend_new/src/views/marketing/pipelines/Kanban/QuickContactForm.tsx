@@ -1,7 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Box, TextField, Button, Grid, CircularProgress, Alert } from '@mui/material'
+import { Box, TextField, Button, Grid, CircularProgress, Alert, InputAdornment } from '@mui/material'
+import { contactService } from '@/services/marketing/contactService'
+import { Icon } from '@iconify/react'
 
 interface Props {
   onCancel: () => void
@@ -17,9 +19,32 @@ export default function QuickContactForm({ onCancel, onCreated }: Props) {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [phoneError, setPhoneError] = useState<string | null>(null)
+  const [validatingPhone, setValidatingPhone] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+    if (e.target.name === 'phone' && phoneError) setPhoneError(null)
+  }
+
+  const handlePhoneBlur = async () => {
+    if (!formData.phone) return
+    
+    setValidatingPhone(true)
+    setPhoneError(null)
+    
+    try {
+        // En QuickContactForm el usuario escribe el número completo o con prefijo
+        // El backend limpia los caracteres no numéricos
+        const isDuplicate = await contactService.checkPhoneAvailability(formData.phone)
+        if (isDuplicate) {
+            setPhoneError('Este número ya está registrado en esta compañía')
+        }
+    } catch (err) {
+        console.error('Error validating phone:', err)
+    } finally {
+        setValidatingPhone(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -76,6 +101,16 @@ export default function QuickContactForm({ onCancel, onCreated }: Props) {
             placeholder="+57 300 123 4567"
             value={formData.phone}
             onChange={handleChange}
+            onBlur={handlePhoneBlur}
+            error={!!phoneError}
+            helperText={phoneError}
+            InputProps={{
+                endAdornment: validatingPhone ? (
+                  <InputAdornment position="end">
+                    <Icon icon="tabler:loader" className="animate-spin" />
+                  </InputAdornment>
+                ) : null
+              }}
           />
         </Grid>
         <Grid item xs={12}>
@@ -97,7 +132,7 @@ export default function QuickContactForm({ onCancel, onCreated }: Props) {
         <Button 
           type="submit" 
           variant="contained" 
-          disabled={loading || !formData.name || !formData.phone}
+          disabled={loading || validatingPhone || !!phoneError || !formData.name || !formData.phone}
         >
           {loading ? <CircularProgress size={20} color="inherit" /> : 'Crear Contacto'}
         </Button>

@@ -1,6 +1,7 @@
 package com.app.controllers;
 
 import com.app.persistence.entity.ContactEntity;
+import com.app.persistence.repository.CompanyRepository;
 import com.app.persistence.services.ContactService;
 import com.app.persistence.services.UserService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class ContactController {
 
     private final ContactService contactService;
     private final UserService userService;
+    private final CompanyRepository companyRepository;
 
     private Mono<Long> getCurrentTenantId() {
         return ReactiveSecurityContextHolder.getContext()
@@ -50,8 +52,23 @@ public class ContactController {
                     return userService.findByUsername(auth.getName())
                             .flatMapMany(user -> {
                                 Long targetTenantId = (isManager && tenantId != null) ? tenantId : user.getCustomerId();
-                                log.info("Fetching contacts for Tenant: {}, Company: {}", targetTenantId, companyId);
-                                return contactService.findAll(targetTenantId, companyId);
+                                
+                                if (companyId != null) {
+                                    log.info("Fetching contacts for Tenant: {}, Specific Company: {}", targetTenantId, companyId);
+                                    return contactService.findAll(targetTenantId, companyId);
+                                } else {
+                                    log.info("No company specified, resolving principal company for Tenant: {}", targetTenantId);
+                                    return companyRepository.findFirstByTenantIdAndIsPrincipalTrue(targetTenantId)
+                                            .flatMapMany(primaryCompany -> {
+                                                log.info("Resolved principal company: {} (ID: {})", primaryCompany.getName(), primaryCompany.getId());
+                                                return contactService.findAll(targetTenantId, primaryCompany.getId());
+                                            })
+                                            .switchIfEmpty(Flux.defer(() -> {
+                                                log.warn("No principal company found for Tenant: {}. Falling back to tenant-only search.", targetTenantId);
+                                                // Safety fallback: if no company exists yet, search only by tenant
+                                                return contactService.findAll(targetTenantId, null);
+                                            }));
+                                }
                             });
                 });
     }
@@ -60,7 +77,8 @@ public class ContactController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
     public Mono<ContactEntity> getContactById(@PathVariable Long id, @RequestParam(required = false) Long companyId) {
         return getCurrentTenantId()
-                .flatMap(tenantId -> contactService.findById(id, tenantId, companyId));
+                .flatMap(tenantId -> resolveCompanyId(companyId, tenantId)
+                        .flatMap(targetCompanyId -> contactService.findById(id, tenantId, targetCompanyId)));
     }
 
     @PostMapping
@@ -89,10 +107,8 @@ public class ContactController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN')")
     public Mono<ContactEntity> updateContact(@PathVariable Long id, @RequestBody ContactEntity contact, @RequestParam(required = false) Long companyId) {
         return getCurrentTenantId()
-                .flatMap(tenantId -> {
-                    Long targetCompanyId = (companyId != null) ? companyId : contact.getCompanyId();
-                    return contactService.update(id, contact, tenantId, targetCompanyId);
-                });
+                .flatMap(tenantId -> resolveCompanyId(companyId, tenantId)
+                        .flatMap(targetCompanyId -> contactService.update(id, contact, tenantId, targetCompanyId)));
     }
 
     @DeleteMapping("/{id}")
@@ -100,6 +116,24 @@ public class ContactController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN')")
     public Mono<Void> deleteContact(@PathVariable Long id, @RequestParam(required = false) Long companyId) {
         return getCurrentTenantId()
-                .flatMap(tenantId -> contactService.delete(id, tenantId, companyId));
+                .flatMap(tenantId -> resolveCompanyId(companyId, tenantId)
+                        .flatMap(targetCompanyId -> contactService.delete(id, tenantId, targetCompanyId)));
+    }
+
+    @GetMapping("/check-phone")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
+    public Mono<Boolean> checkPhoneAvailability(@RequestParam String phone, @RequestParam(required = false) Long companyId) {
+        return getCurrentTenantId()
+                .flatMap(tenantId -> resolveCompanyId(companyId, tenantId)
+                        .flatMap(targetCompanyId -> contactService.existsByPhone(tenantId, targetCompanyId, phone)));
+    }
+
+    private Mono<Long> resolveCompanyId(Long parameterCompanyId, Long tenantId) {
+        if (parameterCompanyId != null) {
+            return Mono.just(parameterCompanyId);
+        }
+        return companyRepository.findFirstByTenantIdAndIsPrincipalTrue(tenantId)
+                .map(com.app.persistence.entity.CompanyEntity::getId)
+                .switchIfEmpty(Mono.error(new RuntimeException("No se pudo resolver la compañía principal para el tenant")));
     }
 }

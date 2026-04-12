@@ -18,8 +18,13 @@ public class ContactService {
     private final ContactRepository contactRepository;
 
     public Flux<ContactEntity> findAll(Long tenantId, Long companyId) {
-        log.info("Fetching all contacts for tenant: {} and company: {}", tenantId, companyId);
-        return contactRepository.findByTenantIdAndCompanyId(tenantId, companyId);
+        if (companyId != null) {
+            log.info("Fetching all contacts for tenant: {} and company: {}", tenantId, companyId);
+            return contactRepository.findByTenantIdAndCompanyId(tenantId, companyId);
+        } else {
+            log.info("Fetching all contacts for tenant: {} (Broad search)", tenantId);
+            return contactRepository.findByTenantId(tenantId);
+        }
     }
 
     public Mono<ContactEntity> findById(Long id, Long tenantId, Long companyId) {
@@ -136,5 +141,10 @@ public class ContactService {
                             .build();
                     return contactRepository.save(newContact);
                 }));
+    }
+
+    public Mono<Boolean> existsByPhone(Long tenantId, Long companyId, String phone) {
+        String cleanPhone = phone.replaceAll("[^0-9]", "");
+        return contactRepository.existsByTenantIdAndCompanyIdAndPhone(tenantId, companyId, cleanPhone);
     }
 }
