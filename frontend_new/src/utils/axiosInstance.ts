@@ -51,9 +51,8 @@ axiosInstance.interceptors.response.use(
                     localStorage.removeItem('jwt')
                     localStorage.removeItem('userData')
                     
-                    // We avoid hard redirecting here to let NextAuth handle it if possible,
-                    // but since legacy components use this instance, we might need it.
-                    // For now, let's just log it and see if the infinite loop stops.
+                    // FORCE REDIRECT to login
+                    window.location.href = '/login'
                 }
             }
         }

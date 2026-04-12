@@ -81,4 +81,26 @@ public class ContactEntity {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public Boolean getChatbotEnabled() { return chatbotEnabled; }
+
+    // Explicit Setters for VPS Build Stability
+    public void setId(Long id) { this.id = id; }
+    public void setUuid(String uuid) { this.uuid = uuid; }
+    public void setName(String name) { this.name = name; }
+    public void setEmail(String email) { this.email = email; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public void setAddress(String address) { this.address = address; }
+    public void setTaxId(String taxId) { this.taxId = taxId; }
+    public void setType(String type) { this.type = type; }
+    public void setStage(String stage) { this.stage = stage; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+    public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
+    public void setCompanyId(Long companyId) { this.companyId = companyId; }
+    public void setPipelineId(Long pipelineId) { this.pipelineId = pipelineId; }
+    public void setStageId(Long stageId) { this.stageId = stageId; }
+    public void setDocumentType(String documentType) { this.documentType = documentType; }
+    public void setDocumentNumber(String documentNumber) { this.documentNumber = documentNumber; }
+    public void setActive(boolean active) { this.isActive = active; }
+    public void setChatbotEnabled(Boolean chatbotEnabled) { this.chatbotEnabled = chatbotEnabled; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }
