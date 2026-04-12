@@ -47,9 +47,8 @@ axiosInstance.interceptors.response.use(
                 if (!isAuthPage) {
                     console.warn('⚠️ [AXIOS-INSTANCE] Session might be invalid. Redirecting to login...')
                     
-                    // Clear broken data
+                    // Clear technical token only, preserve visual context (userData) for the redirect phase
                     localStorage.removeItem('jwt')
-                    localStorage.removeItem('userData')
                     
                     // FORCE REDIRECT to login
                     window.location.href = '/login'
