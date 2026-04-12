@@ -3,6 +3,7 @@ package com.app.persistence.services;
 import com.app.dto.DashboardStatsDTO;
 import com.app.dto.PipelineStageStatsDTO;
 import com.app.dto.PipelineStatsDTO;
+import com.app.persistence.entity.PipelineEntity;
 import com.app.persistence.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +48,11 @@ public class DashboardService {
     public Mono<PipelineStatsDTO> getPipelineStats(Long tenantId, Long companyId) {
         log.info("Fetching pipeline stats for tenant: {} and company: {}", tenantId, companyId);
         
-        return pipelineRepository.findByTenantIdAndCompanyId(tenantId, companyId)
+        Flux<PipelineEntity> pipelineFlux = (companyId != null)
+                ? pipelineRepository.findByTenantIdAndCompanyId(tenantId, companyId)
+                : pipelineRepository.findByTenantId(tenantId);
+
+        return pipelineFlux
                 .next() // Get first pipeline for now
                 .flatMap(pipeline -> {
                     return pipelineStageRepository.findByPipelineIdOrderByPositionAsc(pipeline.getId())
@@ -74,6 +79,7 @@ public class DashboardService {
                                                 .build());
                             });
                 })
+                .cast(PipelineStatsDTO.class)
                 .switchIfEmpty(Mono.error(new RuntimeException("No se encontró un pipeline activo para esta empresa.")));
     }
 }

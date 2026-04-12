@@ -9,4 +9,5 @@ public interface ChannelRepository extends ReactiveCrudRepository<ChannelEntity,
     Flux<ChannelEntity> findByCompanyIdAndTenantId(Long companyId, Long tenantId);
     Mono<ChannelEntity> findByInstanceName(String instanceName);
     Flux<ChannelEntity> findByTenantId(Long tenantId);
+    Flux<ChannelEntity> findByCompanyId(Long companyId);
 }

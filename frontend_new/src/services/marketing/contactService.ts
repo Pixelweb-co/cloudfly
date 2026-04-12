@@ -35,5 +35,15 @@ export const contactService = {
   deleteContact: async (id: number, companyId?: number): Promise<void> => {
     const url = `/api/v1/contacts/${id}${companyId ? `?companyId=${companyId}` : ''}`;
     await axiosInstance.delete(url);
+  },
+
+  checkPhoneAvailability: async (phone: string, companyId?: number): Promise<boolean> => {
+    const params = new URLSearchParams();
+    params.append('phone', phone);
+    if (companyId) params.append('companyId', companyId.toString());
+    
+    const url = `/api/v1/contacts/check-phone?${params.toString()}`;
+    const response = await axiosInstance.get(url);
+    return response.data; // returns true if exists
   }
 };

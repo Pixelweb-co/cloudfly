@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS `channels` (
     `tenant_id` BIGINT NOT NULL,
     `company_id` BIGINT NOT NULL,
     `name` VARCHAR(255) NOT NULL,
+    `phone_number` VARCHAR(20),
+    `instance_name` VARCHAR(100),
     `platform` ENUM('WHATSAPP', 'FACEBOOK', 'INSTAGRAM', 'TIKTOK', 'WEB') NOT NULL,
     `provider` ENUM('EVOLUTION_API', 'META_API', 'TWILIO', 'CUSTOM') NOT NULL,
     `bot_integration_id` BIGINT,

@@ -23,6 +23,8 @@ import {
 import { Contact, ContactCreateRequest } from '@/types/marketing/contactTypes'
 import { Pipeline, PipelineStage } from '@/types/marketing/pipelineTypes'
 import { Icon } from '@iconify/react'
+import { contactService } from '@/services/marketing/contactService'
+import toast from 'react-hot-toast'
 
 interface Props {
   contact: Contact | null;
@@ -48,6 +50,8 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
     isActive: true
   })
   const [availableStages, setAvailableStages] = useState<PipelineStage[]>([])
+  const [phoneError, setPhoneError] = useState<string | null>(null)
+  const [validatingPhone, setValidatingPhone] = useState(false)
 
   useEffect(() => {
     if (contact) {
@@ -111,8 +115,40 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
     }
   }
 
+  const validatePhoneAvailability = async () => {
+    if (!formData.phone || contact) {
+        setPhoneError(null)
+        return
+    }
+    
+    setValidatingPhone(true)
+    setPhoneError(null)
+    
+    try {
+        const cleanPrefix = formData.countryPrefix || '+57'
+        const cleanPhoneInput = formData.phone.replace(/\D/g, '')
+        const prefixDigits = cleanPrefix.replace('+', '')
+        
+        let finalPhone = ''
+        if (cleanPhoneInput.startsWith(prefixDigits)) {
+            finalPhone = `+${cleanPhoneInput}`
+        } else {
+            finalPhone = `${cleanPrefix}${cleanPhoneInput}`
+        }
+
+        const isDuplicate = await contactService.checkPhoneAvailability(finalPhone)
+        if (isDuplicate) {
+            setPhoneError('Este número ya está registrado en esta compañía')
+        }
+    } catch (error) {
+        console.error('Error validating phone:', error)
+    } finally {
+        setValidatingPhone(false)
+    }
+  }
+
   const handleSubmit = async () => {
-    if (!formData.name) return
+    if (!formData.name || phoneError) return
     
     // Concatenate prefix and phone for the backend/WhatsApp, avoiding duplication
     const cleanPrefix = formData.countryPrefix || '+57'
@@ -175,13 +211,23 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
               label="Teléfono / WhatsApp"
               placeholder="3001234567"
               value={formData.phone.replace(formData.countryPrefix || '', '')}
-              onChange={e => setFormData({ ...formData, phone: e.target.value })}
+              onChange={e => {
+                setFormData({ ...formData, phone: e.target.value })
+                if (phoneError) setPhoneError(null)
+              }}
+              onBlur={validatePhoneAvailability}
+              error={!!phoneError}
+              helperText={phoneError}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
                     <Select
                       value={formData.countryPrefix || '+57'}
-                      onChange={e => setFormData({ ...formData, countryPrefix: e.target.value as string })}
+                      onChange={e => {
+                        setFormData({ ...formData, countryPrefix: e.target.value as string })
+                        if (phoneError) setPhoneError(null)
+                      }}
+                      onBlur={validatePhoneAvailability}
                       variant="standard"
                       sx={{ 
                         '& .MuiSelect-select': { py: 0, pl: 0, pr: '20px !important' },
@@ -194,6 +240,11 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
                     </Select>
                   </InputAdornment>
                 ),
+                endAdornment: validatingPhone ? (
+                  <InputAdornment position="end">
+                    <Icon icon="tabler:loader" className="animate-spin" />
+                  </InputAdornment>
+                ) : null
               }}
             />
           </Grid>
@@ -291,7 +342,15 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
               <Select
                 label="Etapa Actual"
                 value={formData.stageId || ''}
-                onChange={e => setFormData({ ...formData, stageId: Number(e.target.value) })}
+                onChange={e => {
+                  const sId = Number(e.target.value)
+                  const stageObj = availableStages.find(s => s.id === sId)
+                  setFormData({ 
+                    ...formData, 
+                    stageId: sId,
+                    stage: stageObj ? stageObj.name : formData.stage
+                  })
+                }}
               >
                 <MenuItem value=""><em>Seleccionar Etapa</em></MenuItem>
                 {availableStages.map(s => (
@@ -318,7 +377,7 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
         <Button 
           variant="contained" 
           onClick={handleSubmit} 
-          disabled={saving || !formData.name}
+          disabled={saving || validatingPhone || !!phoneError || !formData.name}
           startIcon={saving ? <Icon icon="tabler:loader" className="animate-spin" /> : <Icon icon="tabler:device-floppy" />}
         >
           {contact ? 'Actualizar Ficha' : 'Crear Contacto'}
