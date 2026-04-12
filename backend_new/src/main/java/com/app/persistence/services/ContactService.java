@@ -114,7 +114,8 @@ public class ContactService {
         
         return contactRepository.save(existing)
                 .doOnSuccess(saved -> log.info("Successfully saved Contact ID: {}. Persisted PipelineID: {}, StageID: {}", 
-                        saved.getId(), saved.getPipelineId(), saved.getStageId()));
+                        saved.getId(), saved.getPipelineId(), saved.getStageId()))
+                .doOnError(err -> log.error("FALTA AL GUARDAR CONTACTO ID: {}. Error: {}", existing.getId(), err.getMessage(), err));
     }
 
     public Mono<Void> delete(Long id, Long tenantId, Long companyId) {
