@@ -60,6 +60,25 @@ public class ContactService {
         return mapToDTO(contact);
     }
 
+    @Transactional
+    public ContactResponseDTO update(Long id, ContactRequestDTO request) {
+        Contact contact = contactRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Contact not found"));
+        
+        BeanUtils.copyProperties(request, contact, "id", "createdAt", "tenantId");
+        
+        Contact savedContact = contactRepository.save(contact);
+        return mapToDTO(savedContact);
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        if (!contactRepository.existsById(id)) {
+            throw new RuntimeException("Contact not found");
+        }
+        contactRepository.deleteById(id);
+    }
+
     private ContactResponseDTO mapToDTO(Contact contact) {
         ContactResponseDTO dto = new ContactResponseDTO();
         BeanUtils.copyProperties(contact, dto);

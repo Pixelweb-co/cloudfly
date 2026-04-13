@@ -66,10 +66,64 @@ public class ContactEntity {
     @Column("updated_at")
     private LocalDateTime updatedAt;
 
-    // Explicitly providing getters/setters for Boolean fields to ensure 
-    // R2DBC reflection finds 'setIsActive' and 'getIsActive' correctly.
+    // Explicit Getters and Setters for VPS environment compatibility
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getUuid() { return uuid; }
+    public void setUuid(String uuid) { this.uuid = uuid; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
+
+    public String getTaxId() { return taxId; }
+    public void setTaxId(String taxId) { this.taxId = taxId; }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+
+    public String getStage() { return stage; }
+    public void setStage(String stage) { this.stage = stage; }
+
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+
+    public Long getTenantId() { return tenantId; }
+    public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
+
+    public Long getCompanyId() { return companyId; }
+    public void setCompanyId(Long companyId) { this.companyId = companyId; }
+
+    public Long getPipelineId() { return pipelineId; }
+    public void setPipelineId(Long pipelineId) { this.pipelineId = pipelineId; }
+
+    public Long getStageId() { return stageId; }
+    public void setStageId(Long stageId) { this.stageId = stageId; }
+
+    public String getDocumentType() { return documentType; }
+    public void setDocumentType(String documentType) { this.documentType = documentType; }
+
+    public String getDocumentNumber() { return documentNumber; }
+    public void setDocumentNumber(String documentNumber) { this.documentNumber = documentNumber; }
+
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+
     public Boolean getChatbotEnabled() { return chatbotEnabled; }
     public void setChatbotEnabled(Boolean chatbotEnabled) { this.chatbotEnabled = chatbotEnabled; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }
