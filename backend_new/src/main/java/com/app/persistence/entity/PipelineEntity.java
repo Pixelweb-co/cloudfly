@@ -65,10 +65,14 @@ public class PipelineEntity {
     public String getIcon() { return icon; }
     public void setIcon(String icon) { this.icon = icon; }
 
+    public boolean isActive() { return isActive; }
     public boolean getIsActive() { return isActive; }
+    public void setActive(boolean isActive) { this.isActive = isActive; }
     public void setIsActive(boolean isActive) { this.isActive = isActive; }
 
+    public boolean isDefault() { return isDefault; }
     public boolean getIsDefault() { return isDefault; }
+    public void setDefault(boolean isDefault) { this.isDefault = isDefault; }
     public void setIsDefault(boolean isDefault) { this.isDefault = isDefault; }
 
     public Long getCreatedBy() { return createdBy; }
