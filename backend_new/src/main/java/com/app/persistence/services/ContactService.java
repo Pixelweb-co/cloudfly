@@ -152,6 +152,7 @@ public class ContactService {
 
     public Mono<Boolean> existsByPhone(Long tenantId, Long companyId, String phone) {
         String cleanPhone = phone.replaceAll("[^0-9]", "");
-        return contactRepository.existsByTenantIdAndCompanyIdAndPhone(tenantId, companyId, cleanPhone);
+        return contactRepository.countByTenantIdAndCompanyIdAndPhone(tenantId, companyId, cleanPhone)
+                .map(count -> count > 0);
     }
 }
