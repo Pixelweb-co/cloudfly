@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -66,15 +67,18 @@ public class DashboardService {
                     return pipelineStageRepository.findByPipelineIdOrderByPositionAsc(pipeline.getId())
                             .collectList()
                             .flatMap(stages -> {
-                                // NEW: Fetch ALL contacts for the tenant once (very efficient for current scale ~11 contacts)
-                                // This bypasses ANY database-level filtering issues with parameters
-                                return contactRepository.findByTenantId(tenantId)
-                                        .collectList()
-                                        .map(allContacts -> {
-                                            // Filter by company in Java if needed
-                                            List<ContactEntity> contacts = allContacts.stream()
-                                                    .filter(c -> companyId == null || (c.getCompanyId() != null && c.getCompanyId().equals(companyId)))
-                                                    .collect(Collectors.toList());
+                                    // NEW: Fetch ALL contacts for the tenant once (very efficient for current scale ~11 contacts)
+                                    // This bypasses ANY database-level filtering issues with parameters
+                                    LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+                                    
+                                    return contactRepository.findByTenantId(tenantId)
+                                            .collectList()
+                                            .map(allContacts -> {
+                                                // Filter by company AND date (last 30 days)
+                                                List<ContactEntity> contacts = allContacts.stream()
+                                                        .filter(c -> companyId == null || (c.getCompanyId() != null && c.getCompanyId().equals(companyId)))
+                                                        .filter(c -> c.getCreatedAt() == null || c.getCreatedAt().isAfter(thirtyDaysAgo))
+                                                        .collect(Collectors.toList());
                                             
                                             log.info("📊 Aggregating stats for Pipeline: {} (ID: {}). Contacts to process: {}", 
                                                     pipeline.getName(), pipeline.getId(), contacts.size());

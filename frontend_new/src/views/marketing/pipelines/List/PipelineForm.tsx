@@ -66,6 +66,8 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Pipeli
   const theme = useTheme()
   const [loading, setLoading] = useState(false)
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
+  const [stageAnchorEl, setStageAnchorEl] = useState<HTMLButtonElement | null>(null)
+  const [activeStageIndex, setActiveStageIndex] = useState<number | null>(null)
 
   const {
     control,
@@ -170,7 +172,18 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Pipeli
     setAnchorEl(null)
   }
 
+  const handleOpenStageColorPicker = (event: React.MouseEvent<HTMLButtonElement>, index: number) => {
+    setStageAnchorEl(event.currentTarget)
+    setActiveStageIndex(index)
+  }
+
+  const handleCloseStageColorPicker = () => {
+    setStageAnchorEl(null)
+    setActiveStageIndex(null)
+  }
+
   const currentColor = watch('color')
+  const stages = watch('stages')
 
   return (
     <Dialog
@@ -345,6 +358,25 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Pipeli
                         <Box sx={{ color: 'text.disabled', display: 'flex' }}>
                           <Icon icon='tabler-grip-vertical' fontSize={20} />
                         </Box>
+                        <Box sx={{ flexShrink: 0 }}>
+                          <Controller
+                            name={`stages.${index}.color` as const}
+                            control={control}
+                            render={({ field: colorField }) => (
+                              <IconButton
+                                onClick={(e) => handleOpenStageColorPicker(e, index)}
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  backgroundColor: colorField.value || '#9CA3AF',
+                                  border: `2px solid ${theme.palette.background.paper}`,
+                                  boxShadow: theme.shadows[1],
+                                  '&:hover': { backgroundColor: colorField.value || '#9CA3AF', transform: 'scale(1.1)' }
+                                }}
+                              />
+                            )}
+                          />
+                        </Box>
                         <Controller
                           name={`stages.${index}.name` as const}
                           control={control}
@@ -418,6 +450,26 @@ const PipelineForm = ({ open, handleClose, selectedPipeline, onSuccess }: Pipeli
             {loading ? 'Guardando...' : selectedPipeline ? 'Actualizar Embudo' : 'Guardar Embudo'}
           </Button>
         </DialogActions>
+        <Popover
+          open={Boolean(stageAnchorEl)}
+          anchorEl={stageAnchorEl}
+          onClose={handleCloseStageColorPicker}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          PaperProps={{ sx: { p: 2, borderRadius: '12px', mt: 1 } }}
+        >
+          {activeStageIndex !== null && (
+            <Controller
+              name={`stages.${activeStageIndex}.color` as const}
+              control={control}
+              render={({ field }) => (
+                <HexColorPicker
+                  color={field.value || '#9CA3AF'}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          )}
+        </Popover>
       </form>
     </Dialog>
   )
