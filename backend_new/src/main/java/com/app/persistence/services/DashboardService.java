@@ -3,6 +3,7 @@ package com.app.persistence.services;
 import com.app.dto.DashboardStatsDTO;
 import com.app.dto.PipelineStageStatsDTO;
 import com.app.dto.PipelineStatsDTO;
+import com.app.persistence.entity.ContactEntity;
 import com.app.persistence.entity.PipelineEntity;
 import com.app.persistence.repository.*;
 import lombok.RequiredArgsConstructor;
