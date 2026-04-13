@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Autocomplete, TextField, Box, CircularProgress, Typography } from '@mui/material'
+import { useRouter } from 'next/navigation'
 import { userMethods } from '@/utils/userMethods'
 import axiosInstance from '@/utils/axiosInstance'
 
@@ -13,6 +13,7 @@ const CustomerName = () => {
   const [selectedCompany, setSelectedCompany] = useState<any>(null)
   const [loadingTenants, setLoadingTenants] = useState(false)
   const [loadingCompanies, setLoadingCompanies] = useState(false)
+  const router = useRouter()
 
   // Role detection
   const isManager = useMemo(() => {
@@ -92,9 +93,11 @@ const CustomerName = () => {
     updatedUser.company_name = company.name
 
     localStorage.setItem('userData', JSON.stringify(updatedUser))
+    localStorage.setItem('activeCompanyId', company.id)
+    localStorage.setItem('activeTenantId', selectedTenant.id)
     
-    // Hard reload to refresh all context/hooks
-    window.location.reload()
+    // Redirect to home and trigger a hard refresh to reset all state/hooks
+    window.location.href = '/home'
   }, [userData, selectedTenant])
 
   if (!userData) return null
