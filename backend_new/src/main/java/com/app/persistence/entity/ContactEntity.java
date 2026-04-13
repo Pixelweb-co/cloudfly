@@ -115,11 +115,15 @@ public class ContactEntity {
     public String getDocumentNumber() { return documentNumber; }
     public void setDocumentNumber(String documentNumber) { this.documentNumber = documentNumber; }
 
+    public Boolean isActive() { return isActive; }
     public Boolean getIsActive() { return isActive; }
+    public void setActive(Boolean isActive) { this.isActive = isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
 
+    public Boolean isChatbotEnabled() { return chatbotEnabled; }
     public Boolean getChatbotEnabled() { return chatbotEnabled; }
     public void setChatbotEnabled(Boolean chatbotEnabled) { this.chatbotEnabled = chatbotEnabled; }
+    public void setIsChatbotEnabled(Boolean chatbotEnabled) { this.chatbotEnabled = chatbotEnabled; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

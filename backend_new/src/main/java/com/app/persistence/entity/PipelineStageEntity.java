@@ -66,10 +66,14 @@ public class PipelineStageEntity {
     public int getPosition() { return position; }
     public void setPosition(int position) { this.position = position; }
 
+    public boolean isInitial() { return isInitial; }
     public boolean getIsInitial() { return isInitial; }
+    public void setInitial(boolean isInitial) { this.isInitial = isInitial; }
     public void setIsInitial(boolean isInitial) { this.isInitial = isInitial; }
 
+    public boolean isFinal() { return isFinal; }
     public boolean getIsFinal() { return isFinal; }
+    public void setFinal(boolean isFinal) { this.isFinal = isFinal; }
     public void setIsFinal(boolean isFinal) { this.isFinal = isFinal; }
 
     public String getOutcome() { return outcome; }
@@ -78,8 +82,10 @@ public class PipelineStageEntity {
     public Integer getTimeoutHours() { return timeoutHours; }
     public void setTimeoutHours(Integer timeoutHours) { this.timeoutHours = timeoutHours; }
 
+    public boolean isRotationEnabled() { return rotationEnabled; }
     public boolean getRotationEnabled() { return rotationEnabled; }
     public void setRotationEnabled(boolean rotationEnabled) { this.rotationEnabled = rotationEnabled; }
+    public void setIsRotationEnabled(boolean rotationEnabled) { this.rotationEnabled = rotationEnabled; }
 
     public Integer getMaxConversations() { return maxConversations; }
     public void setMaxConversations(Integer maxConversations) { this.maxConversations = maxConversations; }
