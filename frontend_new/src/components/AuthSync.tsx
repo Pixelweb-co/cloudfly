@@ -16,29 +16,30 @@ export const AuthSync = () => {
     useEffect(() => {
         if (status === 'authenticated' && session?.user) {
             const token = (session as any).accessToken
-            const userData = JSON.stringify(session.user)
-
+            
             if (token) {
-                // Sync to localStorage for axiosInstance and other legacy scripts
                 const currentToken = localStorage.getItem('jwt')
                 const prevUserData = localStorage.getItem('userData')
                 const newUserData = JSON.stringify(session.user)
 
                 if (currentToken !== token || prevUserData !== newUserData) {
-                    console.log('🔄 [AUTH-SYNC] Synchronizing NextAuth session to localStorage...')
+                    console.log('🔄 [AUTH-SYNC] Session authenticated. Syncing to localStorage...')
                     localStorage.setItem('jwt', token)
                     localStorage.setItem('userData', newUserData)
-                    
-                    // Trigger a storage event for other tabs/components
                     window.dispatchEvent(new Event('storage'))
                 }
             }
         } else if (status === 'unauthenticated') {
-            // Clear only the technical token, preserve visual context (userData) 
-            // to avoid 'ghost' UI/vanishing combos during logout transitions.
+            // Only clear if we actually have a token but no session
             if (localStorage.getItem('jwt')) {
-                console.warn('⚠️ [AUTH-SYNC] Session ended. Clearing token...')
+                console.warn('⚠️ [AUTH-SYNC] No session found. Clearing technical token...')
                 localStorage.removeItem('jwt')
+                window.dispatchEvent(new Event('storage'))
+            }
+        } else {
+            // Status is 'loading' - we keep what we have in localStorage to avoid 401s during transitions
+            if (localStorage.getItem('jwt')) {
+                console.debug('⏳ [AUTH-SYNC] Session loading... keeping existing token.')
             }
         }
     }, [session, status])
