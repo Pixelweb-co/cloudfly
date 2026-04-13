@@ -194,12 +194,24 @@ export default function ContactListTable() {
                   </TableCell>
                   <TableCell align="right">
                     <Tooltip title="Editar">
-                      <IconButton onClick={() => handleEdit(contact)} color="info">
+                      <IconButton 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(contact);
+                        }} 
+                        color="info"
+                      >
                         <Icon icon="tabler:edit" />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Eliminar">
-                      <IconButton onClick={() => handleDelete(contact.id)} color="error">
+                      <IconButton 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(contact.id);
+                        }} 
+                        color="error"
+                      >
                         <Icon icon="tabler:trash" />
                       </IconButton>
                     </Tooltip>

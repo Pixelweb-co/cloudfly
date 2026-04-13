@@ -56,4 +56,15 @@ public class ContactController {
     public ResponseEntity<ContactResponseDTO> getById(@PathVariable Long id) {
         return ResponseEntity.ok(contactService.getById(id));
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ContactResponseDTO> update(@PathVariable Long id, @Valid @RequestBody ContactRequestDTO request) {
+        return ResponseEntity.ok(contactService.update(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        contactService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
 }

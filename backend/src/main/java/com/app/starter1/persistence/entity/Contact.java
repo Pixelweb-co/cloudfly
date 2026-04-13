@@ -47,6 +47,12 @@ public class Contact {
     @Column(name = "tenant_id", nullable = false)
     private Integer tenantId;
 
+    @Column(name = "pipeline_id")
+    private Long pipelineId;
+
+    @Column(name = "stage_id")
+    private Long stageId;
+
     // ===== CAMPOS CONTABLES (Integración con Contabilidad) =====
 
     // Tipo de documento: CC, NIT, CE, PASAPORTE
