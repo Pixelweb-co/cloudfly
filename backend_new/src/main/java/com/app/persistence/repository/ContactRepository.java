@@ -36,4 +36,10 @@ public interface ContactRepository extends ReactiveCrudRepository<ContactEntity,
 
     @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND email = :email")
     Mono<Long> countByTenantIdAndCompanyIdAndEmail(Long tenantId, Long companyId, String email);
+
+    @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND pipeline_id = :pipelineId AND stage_id = :stageId")
+    Mono<Long> countByPipelineAndStage(Long tenantId, Long companyId, Long pipelineId, Long stageId);
+
+    @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId)")
+    Mono<Long> countByTenantIdAndOptionalCompanyId(Long tenantId, Long companyId);
 }

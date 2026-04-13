@@ -19,6 +19,7 @@ import PipelineContactsChart from './PipelineContactsChart'
 import type { DashboardStats } from '@/services/dashboardService';
 import dashboardService from '@/services/dashboardService'
 import usePermissions from '@/hooks/usePermissions'
+import { userMethods } from '@/utils/userMethods'
 
 // Util Imports
 import { formatCurrency } from '@/utils/format'
@@ -32,9 +33,12 @@ const HighImpactDashboard = () => {
 
     useEffect(() => {
         const fetchStats = async () => {
+            const user = userMethods.getUserLogin()
+            const currentCompanyId = user?.activeCompanyId || user?.company_id
+
             try {
                 setLoading(true)
-                const data = await dashboardService.getStats()
+                const data = await dashboardService.getStats(currentCompanyId)
 
                 setStats(data)
             } catch (err) {

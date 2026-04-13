@@ -94,11 +94,12 @@ return response.data
     },
 
     // Get dashboard stats based on user's modules
-    async getStats(): Promise<DashboardStats> {
-        const response = await axiosInstance.get('/dashboard/stats')
+    async getStats(companyId?: number): Promise<DashboardStats> {
+        const response = await axiosInstance.get('/dashboard/stats', {
+            params: { companyId }
+        })
 
-        
-return response.data
+        return response.data
     },
 
     // Get sales chart data
