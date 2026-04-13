@@ -128,6 +128,14 @@ public class ContactController {
                         .flatMap(targetCompanyId -> contactService.existsByPhone(tenantId, targetCompanyId, phone)));
     }
 
+    @GetMapping("/check-email")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
+    public Mono<Boolean> checkEmailAvailability(@RequestParam String email, @RequestParam(required = false) Long companyId) {
+        return getCurrentTenantId()
+                .flatMap(tenantId -> resolveCompanyId(companyId, tenantId)
+                        .flatMap(targetCompanyId -> contactService.existsByEmail(tenantId, targetCompanyId, email)));
+    }
+
     private Mono<Long> resolveCompanyId(Long parameterCompanyId, Long tenantId) {
         if (parameterCompanyId != null) {
             return Mono.just(parameterCompanyId);

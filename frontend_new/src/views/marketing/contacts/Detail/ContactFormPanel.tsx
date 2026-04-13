@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Card,
   CardHeader,
@@ -18,12 +18,19 @@ import {
   Switch,
   FormControlLabel,
   Box,
-  InputAdornment
+  InputAdornment,
+  FormHelperText,
+  CircularProgress,
+  Avatar
 } from '@mui/material'
+import { useForm, Controller } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
+import * as yup from 'yup'
 import { Contact, ContactCreateRequest } from '@/types/marketing/contactTypes'
 import { Pipeline, PipelineStage } from '@/types/marketing/pipelineTypes'
 import { Icon } from '@iconify/react'
 import { contactService } from '@/services/marketing/contactService'
+import { userMethods } from '@/utils/userMethods'
 import toast from 'react-hot-toast'
 
 interface Props {
@@ -33,356 +40,423 @@ interface Props {
   saving: boolean;
 }
 
-export default function ContactFormPanel({ contact, pipelines, onSave, saving }: Props) {
-  const [formData, setFormData] = useState<ContactCreateRequest>({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    taxId: '',
-    type: 'LEAD',
-    stage: 'LEAD',
-    pipelineId: undefined,
-    stageId: undefined,
-    documentType: 'CC',
-    documentNumber: '',
-    countryPrefix: '+57',
-    isActive: true
-  })
-  const [availableStages, setAvailableStages] = useState<PipelineStage[]>([])
-  const [phoneError, setPhoneError] = useState<string | null>(null)
-  const [validatingPhone, setValidatingPhone] = useState(false)
+const COUNTRY_CODES = [
+  { value: '+57', label: '🇨🇴 +57' },
+  { value: '+1', label: '🇺🇸 +1' },
+  { value: '+34', label: '🇪🇸 +34' },
+  { value: '+52', label: '🇲🇽 +52' },
+  { value: '+54', label: '🇦🇷 +54' },
+  { value: '+56', label: '🇨🇱 +56' },
+  { value: '+51', label: '🇵🇪 +51' },
+  { value: '+58', label: '🇻🇪 +58' },
+  { value: '+507', label: '🇵🇦 +507' },
+  { value: '+593', label: '🇪🇨 +593' },
+]
 
+export default function ContactFormPanel({ contact, pipelines, onSave, saving }: Props) {
+  const [availableStages, setAvailableStages] = useState<PipelineStage[]>([])
+  const [isValidating, setIsValidating] = useState(false)
+
+  const user = userMethods.getUserLogin()
+  const companyId = user?.activeCompanyId || user?.company_id
+
+  // Validation Schema
+  const schema = useMemo(() => {
+    return yup.object({
+      name: yup.string().required('El nombre es obligatorio').min(3, 'Mínimo 3 caracteres'),
+      email: yup.string().email('Correo electrónico inválido').nullable().test(
+        'checkEmail',
+        'Este correo ya está registrado en esta compañía',
+        async (value) => {
+          if (!value || (contact && contact.email === value)) return true
+          setIsValidating(true)
+          try {
+            const isDuplicate = await contactService.checkEmailAvailability(value, companyId)
+            return !isDuplicate
+          } catch (e) {
+            return true // Allow if service fails
+          } finally {
+            setIsValidating(false)
+          }
+        }
+      ),
+      phone: yup.string().required('El teléfono es obligatorio').matches(/^[0-9]+$/, 'Solo números').test(
+        'checkPhone',
+        'Este número ya está registrado en esta compañía',
+        async (value, context) => {
+          if (!value) return true
+          const prefix = context.parent.countryPrefix || '+57'
+          const finalPhone = value.startsWith(prefix.replace('+', '')) ? `+${value}` : `${prefix}${value}`
+          
+          if (contact && contact.phone === finalPhone) return true
+          
+          setIsValidating(true)
+          try {
+            const isDuplicate = await contactService.checkPhoneAvailability(finalPhone, companyId)
+            return !isDuplicate
+          } catch (e) {
+            return true
+          } finally {
+            setIsValidating(false)
+          }
+        }
+      ),
+      countryPrefix: yup.string().default('+57'),
+      address: yup.string().nullable(),
+      documentType: yup.string().default('CC'),
+      documentNumber: yup.string().nullable(),
+      type: yup.string().default('LEAD'),
+      pipelineId: yup.number().nullable(),
+      stageId: yup.number().nullable(),
+      isActive: yup.boolean().default(true)
+    })
+  }, [contact, companyId])
+
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors }
+  } = useForm({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      name: '',
+      email: '',
+      phone: '',
+      countryPrefix: '+57',
+      address: '',
+      documentType: 'CC',
+      documentNumber: '',
+      type: 'LEAD',
+      pipelineId: undefined,
+      stageId: undefined,
+      isActive: true
+    }
+  })
+
+  const watchedPipelineId = watch('pipelineId')
+
+  // Load initial data
   useEffect(() => {
     if (contact) {
-      setFormData({
+      let phoneOnly = contact.phone || ''
+      let prefix = '+57'
+      
+      if (phoneOnly.startsWith('+')) {
+        const found = COUNTRY_CODES.find(cc => phoneOnly.startsWith(cc.value))
+        if (found) {
+          prefix = found.value
+          phoneOnly = phoneOnly.replace(found.value, '')
+        }
+      }
+
+      reset({
         name: contact.name,
         email: contact.email || '',
-        phone: contact.phone || '',
+        phone: phoneOnly,
+        countryPrefix: prefix,
         address: contact.address || '',
-        taxId: contact.taxId || '',
-        type: contact.type || 'LEAD',
-        stage: contact.stage || 'LEAD',
-        pipelineId: contact.pipelineId,
-        stageId: contact.stageId,
         documentType: contact.documentType || 'CC',
         documentNumber: contact.documentNumber || '',
+        type: contact.type || 'LEAD',
+        pipelineId: contact.pipelineId,
+        stageId: contact.stageId,
         isActive: contact.isActive !== undefined ? contact.isActive : true
       })
-
-      // If phone exists, try to extract prefix from a list of known codes
-      if (contact.phone && contact.phone.startsWith('+')) {
-          const foundPrefix = COUNTRY_CODES.find(cc => contact.phone?.startsWith(cc.value))
-          if (foundPrefix) {
-              setFormData(prev => ({ 
-                ...prev, 
-                countryPrefix: foundPrefix.value,
-                phone: contact.phone?.replace(foundPrefix.value, '') || ''
-              }))
-          }
-      }
-
-      if (contact.pipelineId) {
-        const pipeline = pipelines.find(p => p.id === contact.pipelineId)
-        if (pipeline && pipeline.stages) {
-          setAvailableStages(pipeline.stages)
-        }
-      }
     } else {
-      // Logic for NEW contact: Auto-select Default Pipeline
+      // Default pipeline for new contact
       const defaultPipeline = pipelines.find(p => p.isDefault)
       if (defaultPipeline) {
+        setValue('pipelineId', defaultPipeline.id)
         const initialStage = defaultPipeline.stages?.find(s => s.isInitial) || defaultPipeline.stages?.[0]
-        setFormData(prev => ({
-          ...prev,
-          pipelineId: defaultPipeline.id,
-          stageId: initialStage?.id
-        }))
-        if (defaultPipeline.stages) {
-          setAvailableStages(defaultPipeline.stages)
-        }
+        if (initialStage) setValue('stageId', initialStage.id)
       }
     }
-  }, [contact, pipelines])
+  }, [contact, pipelines, reset, setValue])
 
-  const handlePipelineChange = (pipelineId: number) => {
-    const pipeline = pipelines.find(p => p.id === pipelineId)
-    setFormData(prev => ({ ...prev, pipelineId, stageId: undefined }))
-    if (pipeline && pipeline.stages) {
-      setAvailableStages(pipeline.stages)
+  // Update available stages when pipeline changes
+  useEffect(() => {
+    if (watchedPipelineId) {
+      const pipeline = pipelines.find(p => p.id === watchedPipelineId)
+      setAvailableStages(pipeline?.stages || [])
     } else {
       setAvailableStages([])
     }
-  }
+  }, [watchedPipelineId, pipelines])
 
-  const validatePhoneAvailability = async () => {
-    if (!formData.phone || contact) {
-        setPhoneError(null)
-        return
-    }
-    
-    setValidatingPhone(true)
-    setPhoneError(null)
-    
+  const onFormSubmit = async (data: any) => {
     try {
-        const cleanPrefix = formData.countryPrefix || '+57'
-        const cleanPhoneInput = formData.phone.replace(/\D/g, '')
-        const prefixDigits = cleanPrefix.replace('+', '')
-        
-        let finalPhone = ''
-        if (cleanPhoneInput.startsWith(prefixDigits)) {
-            finalPhone = `+${cleanPhoneInput}`
-        } else {
-            finalPhone = `${cleanPrefix}${cleanPhoneInput}`
-        }
+      const finalPhone = data.phone.startsWith(data.countryPrefix.replace('+', '')) 
+        ? `+${data.phone}` 
+        : `${data.countryPrefix}${data.phone.replace(/\D/g, '')}`
 
-        const isDuplicate = await contactService.checkPhoneAvailability(finalPhone)
-        if (isDuplicate) {
-            setPhoneError('Este número ya está registrado en esta compañía')
-        }
-    } catch (error) {
-        console.error('Error validating phone:', error)
-    } finally {
-        setValidatingPhone(false)
+      const stageName = availableStages.find(s => s.id === data.stageId)?.name || 'LEAD'
+
+      await onSave({
+        ...data,
+        phone: finalPhone,
+        stage: stageName,
+        status: 'ACTIVE'
+      })
+    } catch (err: any) {
+        // Validation errors are already handled by Hook Form, but 409 Conflict can come here
+        console.error('Submission error:', err)
     }
   }
-
-  const handleSubmit = async () => {
-    if (!formData.name || phoneError) return
-    
-    // Concatenate prefix and phone for the backend/WhatsApp, avoiding duplication
-    const cleanPrefix = formData.countryPrefix || '+57'
-    const cleanPhone = formData.phone.replace(/\D/g, '')
-    
-    // Si el teléfono ya empieza con el prefijo (sin el +), no lo duplicamos
-    const prefixDigits = cleanPrefix.replace('+', '')
-    let finalPhone = ''
-    
-    if (cleanPhone.startsWith(prefixDigits)) {
-        finalPhone = `+${cleanPhone}`
-    } else {
-        finalPhone = `${cleanPrefix}${cleanPhone}`
-    }
-    
-    await onSave({
-      ...formData,
-      status: 'ACTIVE', // Fallback
-      phone: finalPhone
-    })
-  }
-
-  const COUNTRY_CODES = [
-    { value: '+57', label: '🇨🇴 +57' },
-    { value: '+1', label: '🇺🇸 +1' },
-    { value: '+34', label: '🇪🇸 +34' },
-    { value: '+52', label: '🇲🇽 +52' },
-    { value: '+54', label: '🇦🇷 +54' },
-    { value: '+56', label: '🇨🇱 +56' },
-    { value: '+51', label: '🇵🇪 +5 Peru' },
-    { value: '+58', label: '🇻🇪 +58' },
-    { value: '+507', label: '🇵🇦 +507' },
-    { value: '+593', label: '🇪🇨 +593' },
-  ]
 
   return (
-    <Card>
+    <Card sx={{ boxShadow: 4, borderRadius: 2 }}>
       <CardHeader 
-        title="Datos del Contacto" 
-        titleTypographyProps={{ variant: 'h5' }}
+        title={contact ? "Editar Contacto" : "Información del Contacto"} 
+        titleTypographyProps={{ variant: 'h5', className: 'font-semibold' }}
+        avatar={<Avatar sx={{ bgcolor: 'primary.main' }}><Icon icon="tabler:user-plus" /></Avatar>}
         sx={{ borderBottom: 1, borderColor: 'divider', pb: 4 }}
       />
-      <CardContent sx={{ pt: 6 }}>
-        <Typography variant="subtitle2" sx={{ mb: 4 }} color="text.secondary">
-          Información General
-        </Typography>
-        <Grid container spacing={4}>
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Nombre Completo / Razón Social *"
-              value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
+      <form onSubmit={handleSubmit(onFormSubmit)}>
+        <CardContent sx={{ pt: 6 }}>
+          <Box mb={6}>
+            <Typography variant="overline" color="primary" sx={{ fontWeight: 600, letterSpacing: 1.2 }}>
+              Datos Personales
+            </Typography>
+            <Divider sx={{ mt: 1, mb: 4, width: '40px', borderBottomWidth: 3, borderRadius: 1, borderColor: 'primary.main' }} />
+          </Box>
+          
+          <Grid container spacing={5}>
+            <Grid item xs={12}>
+              <Controller
+                name="name"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Nombre Completo / Razón Social *"
+                    error={!!errors.name}
+                    helperText={errors.name?.message}
+                    placeholder="Ej: Juan Pérez o Empresa SAS"
+                  />
+                )}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name="phone"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Teléfono / WhatsApp"
+                    placeholder="3001234567"
+                    error={!!errors.phone}
+                    helperText={errors.phone?.message}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Controller
+                            name="countryPrefix"
+                            control={control}
+                            render={({ field: prefixField }) => (
+                              <Select
+                                {...prefixField}
+                                variant="standard"
+                                sx={{ 
+                                  '& .MuiSelect-select': { py: 0, pl: 0, pr: '20px !important' },
+                                  '&:before, &:after': { display: 'none' }
+                                }}
+                              >
+                                {COUNTRY_CODES.map(c => (
+                                  <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>
+                                ))}
+                              </Select>
+                            )}
+                          />
+                        </InputAdornment>
+                      ),
+                      endAdornment: isValidating ? (
+                        <InputAdornment position="end">
+                          <CircularProgress size={20} color="inherit" />
+                        </InputAdornment>
+                      ) : null
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name="email"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Correo Electrónico"
+                    placeholder="juan@ejemplo.com"
+                    error={!!errors.email}
+                    helperText={errors.email?.message}
+                    InputProps={{
+                      endAdornment: isValidating ? (
+                        <InputAdornment position="end">
+                          <CircularProgress size={20} color="inherit" />
+                        </InputAdornment>
+                      ) : null
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Tipo de Documento</InputLabel>
+                <Controller
+                  name="documentType"
+                  control={control}
+                  render={({ field }) => (
+                    <Select {...field} label="Tipo de Documento">
+                      <MenuItem value="CC">Cédula de Ciudadanía</MenuItem>
+                      <MenuItem value="NIT">NIT</MenuItem>
+                      <MenuItem value="CE">Cédula de Extranjería</MenuItem>
+                      <MenuItem value="PP">Pasaporte</MenuItem>
+                    </Select>
+                  )}
+                />
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name="documentNumber"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Número de Documento"
+                    placeholder="123456789"
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Controller
+                name="address"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="Dirección"
+                    multiline
+                    rows={2}
+                    placeholder="Carrera 1 # 2 - 3"
+                  />
+                )}
+              />
+            </Grid>
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Teléfono / WhatsApp"
-              placeholder="3001234567"
-              value={formData.phone.replace(formData.countryPrefix || '', '')}
-              onChange={e => {
-                setFormData({ ...formData, phone: e.target.value })
-                if (phoneError) setPhoneError(null)
-              }}
-              onBlur={validatePhoneAvailability}
-              error={!!phoneError}
-              helperText={phoneError}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Select
-                      value={formData.countryPrefix || '+57'}
-                      onChange={e => {
-                        setFormData({ ...formData, countryPrefix: e.target.value as string })
-                        if (phoneError) setPhoneError(null)
-                      }}
-                      onBlur={validatePhoneAvailability}
-                      variant="standard"
-                      sx={{ 
-                        '& .MuiSelect-select': { py: 0, pl: 0, pr: '20px !important' },
-                        '&:before, &:after': { display: 'none' }
-                      }}
-                    >
-                      {COUNTRY_CODES.map(c => (
-                        <MenuItem key={c.value} value={c.value}>{c.label}</MenuItem>
+
+          <Box mt={8} mb={6}>
+            <Typography variant="overline" color="primary" sx={{ fontWeight: 600, letterSpacing: 1.2 }}>
+              Etapa en el Embudo
+            </Typography>
+            <Divider sx={{ mt: 1, mb: 4, width: '40px', borderBottomWidth: 3, borderRadius: 1, borderColor: 'primary.main' }} />
+          </Box>
+
+          <Grid container spacing={5}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth error={!!errors.pipelineId}>
+                <InputLabel>Embudo (Pipeline)</InputLabel>
+                <Controller
+                  name="pipelineId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select {...field} label="Embudo (Pipeline)" value={field.value || ''}>
+                      <MenuItem value=""><em>Ninguno</em></MenuItem>
+                      {pipelines.map(p => (
+                        <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
                       ))}
                     </Select>
-                  </InputAdornment>
-                ),
-                endAdornment: validatingPhone ? (
-                  <InputAdornment position="end">
-                    <Icon icon="tabler:loader" className="animate-spin" />
-                  </InputAdornment>
-                ) : null
-              }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Correo Electrónico"
-              type="email"
-              value={formData.email}
-              onChange={e => setFormData({ ...formData, email: e.target.value })}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <TextField
-              fullWidth
-              label="Dirección"
-              multiline
-              rows={2}
-              value={formData.address}
-              onChange={e => setFormData({ ...formData, address: e.target.value })}
-            />
-          </Grid>
-        </Grid>
-
-        <Divider sx={{ my: 6 }} />
-        
-        <Typography variant="subtitle2" sx={{ mb: 4 }} color="text.secondary">
-          Identificación y Clasificación
-        </Typography>
-        <Grid container spacing={4}>
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth>
-              <InputLabel>Tipo de Documento</InputLabel>
-              <Select
-                label="Tipo de Documento"
-                value={formData.documentType}
-                onChange={e => setFormData({ ...formData, documentType: e.target.value })}
-              >
-                <MenuItem value="CC">Cédula de Ciudadanía</MenuItem>
-                <MenuItem value="NIT">NIT</MenuItem>
-                <MenuItem value="CE">Cédula de Extranjería</MenuItem>
-                <MenuItem value="PP">Pasaporte</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Número de Documento"
-              value={formData.documentNumber}
-              onChange={e => setFormData({ ...formData, documentNumber: e.target.value })}
-            />
-          </Grid>
-          <Grid item xs={12}>
-            <FormControl fullWidth>
-              <InputLabel>Tipo de Contacto</InputLabel>
-              <Select
-                label="Tipo de Contacto"
-                value={formData.type}
-                onChange={e => setFormData({ ...formData, type: e.target.value })}
-              >
-                <MenuItem value="LEAD">Lead / Prospecto</MenuItem>
-                <MenuItem value="CLIENT">Cliente</MenuItem>
-                <MenuItem value="VENDOR">Proveedor</MenuItem>
-                <MenuItem value="OTHER">Otro</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
-
-        <Divider sx={{ my: 6 }} />
-        
-        <Typography variant="subtitle2" sx={{ mb: 4 }} color="text.secondary">
-          Pipeline y Seguimiento
-        </Typography>
-        <Grid container spacing={4}>
-          <Grid item xs={12}>
-            <FormControl fullWidth>
-              <InputLabel>Embudo (Pipeline)</InputLabel>
-              <Select
-                label="Embudo (Pipeline)"
-                value={formData.pipelineId || ''}
-                onChange={e => handlePipelineChange(Number(e.target.value))}
-              >
-                <MenuItem value=""><em>Ninguno</em></MenuItem>
-                {pipelines.map(p => (
-                  <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12}>
-            <FormControl fullWidth disabled={!formData.pipelineId}>
-              <InputLabel>Etapa Actual</InputLabel>
-              <Select
-                label="Etapa Actual"
-                value={formData.stageId || ''}
-                onChange={e => {
-                  const sId = Number(e.target.value)
-                  const stageObj = availableStages.find(s => s.id === sId)
-                  setFormData({ 
-                    ...formData, 
-                    stageId: sId,
-                    stage: stageObj ? stageObj.name : formData.stage
-                  })
-                }}
-              >
-                <MenuItem value=""><em>Seleccionar Etapa</em></MenuItem>
-                {availableStages.map(s => (
-                  <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12}>
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={formData.isActive} 
-                  onChange={e => setFormData({...formData, isActive: e.target.checked})} 
-                  color="success"
+                  )}
                 />
-              }
-              label={formData.isActive ? "Contacto Activo" : "Contacto Inactivo"}
-            />
+                {errors.pipelineId && <FormHelperText>{errors.pipelineId.message}</FormHelperText>}
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth disabled={!watchedPipelineId} error={!!errors.stageId}>
+                <InputLabel>Etapa Actual</InputLabel>
+                <Controller
+                  name="stageId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select {...field} label="Etapa Actual" value={field.value || ''}>
+                      <MenuItem value=""><em>Seleccionar Etapa</em></MenuItem>
+                      {availableStages.map(s => (
+                        <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
+                      ))}
+                    </Select>
+                  )}
+                />
+                {errors.stageId && <FormHelperText>{errors.stageId.message}</FormHelperText>}
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Tipo de Contacto</InputLabel>
+                <Controller
+                  name="type"
+                  control={control}
+                  render={({ field }) => (
+                    <Select {...field} label="Tipo de Contacto">
+                      <MenuItem value="LEAD">Lead / Prospecto</MenuItem>
+                      <MenuItem value="CLIENT">Cliente</MenuItem>
+                      <MenuItem value="VENDOR">Proveedor</MenuItem>
+                      <MenuItem value="OTHER">Otro</MenuItem>
+                    </Select>
+                  )}
+                />
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Controller
+                name="isActive"
+                control={control}
+                render={({ field }) => (
+                  <FormControlLabel
+                    control={<Switch {...field} checked={field.value} color="success" />}
+                    label={field.value ? "Contacto Habilitado" : "Contacto Deshabilitado"}
+                  />
+                )}
+              />
+            </Grid>
           </Grid>
-        </Grid>
-      </CardContent>
-      <CardActions sx={{ px: 6, pb: 6, pt: 2, justifyContent: 'flex-end', borderTop: 1, borderColor: 'divider', mt: 4 }}>
-        <Button 
-          variant="contained" 
-          onClick={handleSubmit} 
-          disabled={saving || validatingPhone || !!phoneError || !formData.name}
-          startIcon={saving ? <Icon icon="tabler:loader" className="animate-spin" /> : <Icon icon="tabler:device-floppy" />}
-        >
-          {contact ? 'Actualizar Ficha' : 'Crear Contacto'}
-        </Button>
-      </CardActions>
+        </CardContent>
+
+        <CardActions sx={{ px: 6, pb: 8, pt: 4, justifyContent: 'space-between', borderTop: 1, borderColor: 'divider', mt: 4, bgcolor: 'action.hover' }}>
+          <Typography variant="caption" color="text.secondary">
+            * Campos obligatorios
+          </Typography>
+          <Button 
+            variant="contained" 
+            type="submit"
+            disabled={saving || isValidating || Object.keys(errors).length > 0}
+            size="large"
+            sx={{ px: 10, py: 3, fontWeight: 600, borderRadius: '8px' }}
+            startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <Icon icon="tabler:device-floppy" />}
+          >
+            {contact ? 'Guardar Cambios' : 'Crear Contacto Nuevo'}
+          </Button>
+        </CardActions>
+      </form>
     </Card>
   )
 }

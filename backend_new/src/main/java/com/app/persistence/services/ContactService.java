@@ -50,12 +50,12 @@ public class ContactService {
     }
 
     private Mono<Void> validateContactUniqueness(ContactEntity contact, Long tenantId, Long companyId) {
-        Mono<Void> phoneCheck = contactRepository.findByTenantIdAndCompanyIdAndPhone(tenantId, companyId, contact.getPhone())
-                .flatMap(existing -> Mono.error(new RuntimeException("El número de teléfono ya está registrado.")));
+        Mono<Void> phoneCheck = existsByPhone(tenantId, companyId, contact.getPhone())
+                .flatMap(exists -> exists ? Mono.error(new RuntimeException("El número de teléfono ya está registrado.")) : Mono.empty());
         
         Mono<Void> emailCheck = (contact.getEmail() != null && !contact.getEmail().isEmpty())
-                ? contactRepository.findByTenantIdAndCompanyIdAndEmail(tenantId, companyId, contact.getEmail())
-                        .flatMap(existing -> Mono.error(new RuntimeException("El correo electrónico ya está registrado.")))
+                ? existsByEmail(tenantId, companyId, contact.getEmail())
+                        .flatMap(exists -> exists ? Mono.error(new RuntimeException("El correo electrónico ya está registrado.")) : Mono.empty())
                 : Mono.empty();
         
         Mono<Void> docCheck = (contact.getDocumentNumber() != null && !contact.getDocumentNumber().isEmpty())
@@ -151,8 +151,15 @@ public class ContactService {
     }
 
     public Mono<Boolean> existsByPhone(Long tenantId, Long companyId, String phone) {
+        if (phone == null || phone.isEmpty()) return Mono.just(false);
         String cleanPhone = phone.replaceAll("[^0-9]", "");
         return contactRepository.countByTenantIdAndCompanyIdAndPhone(tenantId, companyId, cleanPhone)
+                .map(count -> count > 0);
+    }
+
+    public Mono<Boolean> existsByEmail(Long tenantId, Long companyId, String email) {
+        if (email == null || email.isEmpty()) return Mono.just(false);
+        return contactRepository.countByTenantIdAndCompanyIdAndEmail(tenantId, companyId, email)
                 .map(count -> count > 0);
     }
 }

@@ -45,5 +45,15 @@ export const contactService = {
     const url = `/api/v1/contacts/check-phone?${params.toString()}`;
     const response = await axiosInstance.get(url);
     return response.data; // returns true if exists
+  },
+
+  checkEmailAvailability: async (email: string, companyId?: number): Promise<boolean> => {
+    const params = new URLSearchParams();
+    params.append('email', email);
+    if (companyId) params.append('companyId', companyId.toString());
+    
+    const url = `/api/v1/contacts/check-email?${params.toString()}`;
+    const response = await axiosInstance.get(url);
+    return response.data; // returns true if exists
   }
 };
