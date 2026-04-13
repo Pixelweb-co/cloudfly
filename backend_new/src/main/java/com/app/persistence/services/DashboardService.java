@@ -65,24 +65,36 @@ public class DashboardService {
                     return pipelineStageRepository.findByPipelineIdOrderByPositionAsc(pipeline.getId())
                             .collectList()
                             .flatMap(stages -> {
-                                return Flux.fromIterable(stages)
-                                        .flatMap(stage -> {
-                                            // Count contacts in this stage with optional company filtering
-                                            return contactRepository.countByPipelineAndStage(tenantId, companyId, pipeline.getId(), stage.getId())
-                                                    .map(count -> PipelineStageStatsDTO.builder()
-                                                            .stageId(stage.getId())
-                                                            .name(stage.getName())
-                                                            .color(stage.getColor())
-                                                            .contactCount(count.intValue())
-                                                            .position(stage.getPosition())
-                                                            .build());
-                                        })
+                                // Fetch ALL contacts for this pipeline once to aggregate in memory (more reliable than SQL count with complex filters)
+                                return contactRepository.findByPipelineId(tenantId, companyId, pipeline.getId())
                                         .collectList()
-                                        .map(stageStats -> PipelineStatsDTO.builder()
-                                                .pipelineId(pipeline.getId())
-                                                .pipelineName(pipeline.getName())
-                                                .stages(stageStats)
-                                                .build());
+                                        .map(contacts -> {
+                                            log.info("📊 Aggregating stats for Pipeline: {}. Total contacts found: {}", pipeline.getName(), contacts.size());
+                                            
+                                            List<PipelineStageStatsDTO> stageStats = stages.stream().map(stage -> {
+                                                // Count by ID (precise) or by Name (fallback for legacy or automated imports)
+                                                long count = contacts.stream()
+                                                        .filter(c -> (c.getStageId() != null && c.getStageId().equals(stage.getId())) ||
+                                                                    (c.getStage() != null && c.getStage().equalsIgnoreCase(stage.getName())))
+                                                        .count();
+                                                
+                                                log.debug("  - Stage: {} (ID: {}), Count: {}", stage.getName(), stage.getId(), count);
+                                                
+                                                return PipelineStageStatsDTO.builder()
+                                                        .stageId(stage.getId())
+                                                        .name(stage.getName())
+                                                        .color(stage.getColor())
+                                                        .contactCount((int) count)
+                                                        .position(stage.getPosition())
+                                                        .build();
+                                            }).collect(Collectors.toList());
+
+                                            return PipelineStatsDTO.builder()
+                                                    .pipelineId(pipeline.getId())
+                                                    .pipelineName(pipeline.getName())
+                                                    .stages(stageStats)
+                                                    .build();
+                                        });
                             });
                 })
                 .switchIfEmpty(Mono.error(new RuntimeException("No se encontró un pipeline activo para esta empresa.")));
