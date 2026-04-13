@@ -22,6 +22,17 @@ axiosInstance.interceptors.request.use(
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`
             }
+
+            // Inject Multi-Tenant and Multi-Company Context
+            const activeTenantId = localStorage.getItem('activeTenantId')
+            const activeCompanyId = localStorage.getItem('activeCompanyId')
+            
+            if (activeTenantId) {
+                config.headers['X-Tenant-Id'] = activeTenantId
+            }
+            if (activeCompanyId) {
+                config.headers['X-Company-Id'] = activeCompanyId
+            }
         }
 
         return config
