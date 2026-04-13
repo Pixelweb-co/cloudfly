@@ -97,9 +97,10 @@ const CustomerName = () => {
     localStorage.setItem('activeCompanyId', company.id)
     localStorage.setItem('activeTenantId', selectedTenant.id)
     
-    // Redirect to home and trigger a hard refresh to reset all state/hooks
-    window.location.href = '/home'
-  }, [userData, selectedTenant])
+    // Switch to soft navigation for better session persistence
+    // After changing localStorage, we go to home. Dashboard will re-mount and pick up new ID.
+    router.push('/home')
+  }, [userData, selectedTenant, router])
 
   if (!userData) return null
 

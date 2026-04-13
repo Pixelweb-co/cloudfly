@@ -13,25 +13,30 @@ export const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
     config => {
         if (typeof window !== 'undefined') {
-            // Priority: localStorage (for legacy/migration)
-            let token = localStorage.getItem('jwt')
+            try {
+                const token = localStorage.getItem('jwt')
+                const activeTenantId = localStorage.getItem('activeTenantId')
+                const activeCompanyId = localStorage.getItem('activeCompanyId')
 
-            // If no token in localStorage, we should NOT hang, just continue.
-            // The AuthSync component will eventually sync the NextAuth token here.
+                if (token) {
+                    config.headers.Authorization = `Bearer ${token}`
+                } else {
+                    console.warn('⚠️ [AXIOS] No JWT token found in localStorage for request:', config.url)
+                }
 
-            if (token) {
-                config.headers.Authorization = `Bearer ${token}`
-            }
+                if (activeTenantId) {
+                    config.headers['X-Tenant-Id'] = activeTenantId
+                }
+                if (activeCompanyId) {
+                    config.headers['X-Company-Id'] = activeCompanyId
+                }
 
-            // Inject Multi-Tenant and Multi-Company Context
-            const activeTenantId = localStorage.getItem('activeTenantId')
-            const activeCompanyId = localStorage.getItem('activeCompanyId')
-            
-            if (activeTenantId) {
-                config.headers['X-Tenant-Id'] = activeTenantId
-            }
-            if (activeCompanyId) {
-                config.headers['X-Company-Id'] = activeCompanyId
+                // Log headers in development/debug
+                if (activeTenantId || activeCompanyId) {
+                    console.debug(`🔌 [AXIOS] Request: ${config.url} | Tenant: ${activeTenantId} | Company: ${activeCompanyId}`)
+                }
+            } catch (e) {
+                console.error('Error setting auth headers:', e)
             }
         }
 
