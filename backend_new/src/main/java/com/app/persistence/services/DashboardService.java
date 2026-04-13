@@ -27,7 +27,7 @@ public class DashboardService {
     public Mono<DashboardStatsDTO> getStats(Long tenantId, Long companyId) {
         log.info("Fetching dashboard stats for tenant: {} and company: {}", tenantId, companyId);
         
-        Mono<Long> totalCustomers = contactRepository.countByTenantIdAndOptionalCompanyId(tenantId, companyId);
+        Mono<Long> totalCustomers = contactRepository.countTotalContacts(tenantId, companyId);
         Mono<Long> totalProducts = productRepository.countByTenantId(tenantId);
         
         return Mono.zip(totalCustomers, totalProducts)
@@ -65,11 +65,17 @@ public class DashboardService {
                     return pipelineStageRepository.findByPipelineIdOrderByPositionAsc(pipeline.getId())
                             .collectList()
                             .flatMap(stages -> {
-                                // Fetch ALL contacts for this pipeline once to aggregate in memory (more reliable than SQL count with complex filters)
-                                return contactRepository.findByPipelineId(tenantId, companyId, pipeline.getId())
+                                // NEW: Fetch ALL contacts for the tenant once (very efficient for current scale ~11 contacts)
+                                // This bypasses ANY database-level filtering issues with parameters
+                                return contactRepository.findByTenantId(tenantId)
                                         .collectList()
-                                        .map(contacts -> {
-                                            log.info("📊 Aggregating stats for Pipeline: {}. Total contacts found: {}", pipeline.getName(), contacts.size());
+                                        .map(allContacts -> {
+                                            // Filter by company in Java if needed
+                                            List<ContactEntity> contacts = allContacts.stream()
+                                                    .filter(c -> companyId == null || (c.getCompanyId() != null && c.getCompanyId().equals(companyId)))
+                                                    .collect(Collectors.toList());
+                                            
+                                            log.info("📊 Aggregating stats for Pipeline: {}. Contacts after company filter: {}", pipeline.getName(), contacts.size());
                                             
                                             List<PipelineStageStatsDTO> stageStats = stages.stream().map(stage -> {
                                                 // Count by ID (precise) or by Name (fallback for legacy or automated imports)
