@@ -76,18 +76,28 @@ public class DashboardService {
                                                     .filter(c -> companyId == null || (c.getCompanyId() != null && c.getCompanyId().equals(companyId)))
                                                     .collect(Collectors.toList());
                                             
-                                            log.info("📊 Aggregating stats for Pipeline: {}. Contacts after company filter: {}", pipeline.getName(), contacts.size());
+                                            log.info("📊 Aggregating stats for Pipeline: {} (ID: {}). Contacts to process: {}", 
+                                                    pipeline.getName(), pipeline.getId(), contacts.size());
                                             
                                             List<PipelineStageStatsDTO> stageStats = stages.stream().map(stage -> {
-                                                // Count by ID (precise) or by Name (fallback for legacy or automated imports)
+                                                // Count by ID (precise) or by Name (fallback)
                                                 long count = contacts.stream()
-                                                        .filter(c -> (c.getStageId() != null && c.getStageId().equals(stage.getId())) ||
-                                                                    (c.getStage() != null && c.getStage().equalsIgnoreCase(stage.getName())))
+                                                        .filter(c -> {
+                                                            boolean matchId = c.getStageId() != null && c.getStageId().equals(stage.getId());
+                                                            boolean matchName = c.getStage() != null && c.getStage().equalsIgnoreCase(stage.getName());
+                                                            
+                                                            // Special case: if contact is 'LEAD' and we are looking at the first stage
+                                                            boolean isFirstStageLEADFallback = (stage.getPosition() == 0 || stage.getName().equalsIgnoreCase("Prospecto")) 
+                                                                    && "LEAD".equalsIgnoreCase(c.getStage());
+
+                                                            return matchId || matchName || isFirstStageLEADFallback;
+                                                        })
                                                         .count();
                                                 
-                                                log.debug("  - Stage: {} (ID: {}), Count: {}", stage.getName(), stage.getId(), count);
+                                                log.info("  - Stage: {} (ID: {}), Count: {}", stage.getName(), stage.getId(), count);
                                                 
                                                 return PipelineStageStatsDTO.builder()
+
                                                         .stageId(stage.getId())
                                                         .name(stage.getName())
                                                         .color(stage.getColor())
