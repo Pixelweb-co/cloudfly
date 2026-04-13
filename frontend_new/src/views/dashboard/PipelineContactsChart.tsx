@@ -18,6 +18,7 @@ import type { ApexOptions } from 'apexcharts'
 
 // Service Imports
 import dashboardService, { PipelineStats } from '@/services/dashboardService'
+import { userMethods } from '@/utils/userMethods'
 
 // Styled Component Imports
 const AppReactApexCharts = dynamic(() => import('@/libs/styles/AppReactApexCharts'))
@@ -30,9 +31,12 @@ const PipelineContactsChart = () => {
 
     useEffect(() => {
         const fetchData = async () => {
+            const user = userMethods.getUserLogin()
+            const currentCompanyId = user?.activeCompanyId || user?.company_id
+
             try {
                 setLoading(true)
-                const res = await dashboardService.getPipelineStats()
+                const res = await dashboardService.getPipelineStats(currentCompanyId)
                 setData(res)
             } catch (err) {
                 console.error('Error fetching pipeline stats:', err)

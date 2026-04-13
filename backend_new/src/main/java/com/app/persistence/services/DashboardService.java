@@ -27,11 +27,8 @@ public class DashboardService {
     public Mono<DashboardStatsDTO> getStats(Long tenantId, Long companyId) {
         log.info("Fetching dashboard stats for tenant: {} and company: {}", tenantId, companyId);
         
-        // In a real scenario, we would have complex queries. 
-        // For now, we aggregate counts from repositories.
-        
-        Mono<Long> totalCustomers = contactRepository.count(); // TODO: Add tenant filtering if repository supports it
-        Mono<Long> totalProducts = productRepository.count();
+        Mono<Long> totalCustomers = contactRepository.countByTenantIdAndOptionalCompanyId(tenantId, companyId);
+        Mono<Long> totalProducts = productRepository.countByTenantId(tenantId);
         
         return Mono.zip(totalCustomers, totalProducts)
                 .map(tuple -> DashboardStatsDTO.builder()
@@ -53,16 +50,25 @@ public class DashboardService {
                 : pipelineRepository.findByTenantId(tenantId);
 
         return pipelineFlux
-                .next() // Get first pipeline for now
-                .flatMap(pipeline -> {
+                .collectList()
+                .flatMap(pipelines -> {
+                    if (pipelines.isEmpty()) {
+                        return Mono.error(new RuntimeException("No se encontró un pipeline activo para esta empresa."));
+                    }
+                    
+                    // Prioritize default pipeline
+                    PipelineEntity pipeline = pipelines.stream()
+                            .filter(PipelineEntity::isDefault)
+                            .findFirst()
+                            .orElse(pipelines.get(0));
+
                     return pipelineStageRepository.findByPipelineIdOrderByPositionAsc(pipeline.getId())
                             .collectList()
                             .flatMap(stages -> {
                                 return Flux.fromIterable(stages)
                                         .flatMap(stage -> {
-                                            // Count contacts in this stage
-                                            return contactRepository.findByTenantIdAndCompanyIdAndPipelineIdAndStageId(tenantId, companyId, pipeline.getId(), stage.getId())
-                                                    .count()
+                                            // Count contacts in this stage with optional company filtering
+                                            return contactRepository.countByPipelineAndStage(tenantId, companyId, pipeline.getId(), stage.getId())
                                                     .map(count -> PipelineStageStatsDTO.builder()
                                                             .stageId(stage.getId())
                                                             .name(stage.getName())
@@ -79,7 +85,6 @@ public class DashboardService {
                                                 .build());
                             });
                 })
-                .cast(PipelineStatsDTO.class)
                 .switchIfEmpty(Mono.error(new RuntimeException("No se encontró un pipeline activo para esta empresa.")));
     }
 }
