@@ -37,5 +37,13 @@ Cualquier consulta a la base de datos **DEBE** incluir el filtro por `tenant_id`
 2.  **Navegación**: Al cambiar la compañía, se debe redirigir al usuario a `/home` para refrescar todas las estadísticas y contextos globales del Dashboard.
 3.  **Peticiones API**: Los servicios del frontend deben anexar automáticamente estos IDs a las URIs o cabeceras para que el backend aplique los filtros correctamente.
 
+## Estadísticas y Métricas (Dashboard)
+
+Para mantener la relevancia de los datos y el rendimiento del sistema, las estadísticas visuales (gráficos de embudo/pipelines) en el Home Dashboard aplican las siguientes reglas:
+
+*   **Ventana de 30 Días**: Solo se contabilizan los contactos cuya fecha de creación (`created_at`) esté dentro de los últimos 30 días.
+*   **Aislamiento**: Los conteos siempre se filtran estrictamente por `tenant_id` y opcionalmente por `company_id`.
+*   **Criterio de Conteo**: Se prioriza el `stage_id` del contacto. Si este es nulo, se intenta emparejar por el nombre de la etapa (`stage` string) de forma insensible a mayúsculas.
+
 ---
 *Documento creado bajo requerimiento del usuario para estandarizar la lógica de desarrollo SaaS.*
