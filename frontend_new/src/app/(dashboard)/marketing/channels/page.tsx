@@ -6,6 +6,7 @@ import { channelService } from '@/services/marketing/channelService'
 import type { Channel } from '@/types/marketing'
 import ChannelCardList, { PlatformInfo } from '@/views/marketing/channels/ChannelCardList'
 import WhatsAppActivationDialog from '@/views/marketing/channels/WhatsAppActivationDialog'
+import WhatsAppManagementDialog from '@/views/marketing/channels/WhatsAppManagementDialog'
 import { Grid, Typography, Box, CircularProgress, Alert, Button } from '@mui/material'
 
 const ChannelPage = () => {
@@ -17,6 +18,8 @@ const ChannelPage = () => {
     // State for Activation Dialogs
     const [activePlatform, setActivePlatform] = useState<PlatformInfo | null>(null)
     const [openWhatsAppDialog, setOpenWhatsAppDialog] = useState(false)
+    const [openManageDialog, setOpenManageDialog] = useState(false)
+    const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null)
 
     const fetchChannels = async () => {
         try {
@@ -46,6 +49,13 @@ const ChannelPage = () => {
         } else {
             // Future platforms logic here (Facebook, etc.)
             console.log('Activating', platform.platform)
+        }
+    }
+
+    const handleManage = (channel: Channel) => {
+        if (channel.platform === 'WHATSAPP') {
+            setSelectedChannel(channel)
+            setOpenManageDialog(true)
         }
     }
 
@@ -99,7 +109,7 @@ const ChannelPage = () => {
                     <ChannelCardList
                         channels={channels}
                         onActivate={handleActivate}
-                        onManage={(channel) => console.log('Manage', channel)}
+                        onManage={handleManage}
                         onDelete={handleDelete}
                     />
                 </Grid>
@@ -107,11 +117,19 @@ const ChannelPage = () => {
 
             {/* Dialogs */}
             {session?.user?.accessToken && (
-                <WhatsAppActivationDialog 
-                    open={openWhatsAppDialog}
-                    onClose={() => setOpenWhatsAppDialog(false)}
-                    onComplete={fetchChannels}
-                />
+                <>
+                    <WhatsAppActivationDialog 
+                        open={openWhatsAppDialog}
+                        onClose={() => setOpenWhatsAppDialog(false)}
+                        accessToken={session.user.accessToken}
+                        onComplete={fetchChannels}
+                    />
+                    <WhatsAppManagementDialog
+                        open={openManageDialog}
+                        onClose={() => setOpenManageDialog(false)}
+                        onComplete={fetchChannels}
+                    />
+                </>
             )}
         </Box>
     )
