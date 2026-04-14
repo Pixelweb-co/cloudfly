@@ -27,6 +27,11 @@ export const channelService = {
     return response.data;
   },
 
+  getWhatsAppQrCode: async () => {
+    const response = await axiosInstance.get('/api/channel-config/qr');
+    return response.data;
+  },
+
   saveChannelConfig: async (config: any) => {
     const response = await axiosInstance.post('/api/channel-config/config', config);
     return response.data;

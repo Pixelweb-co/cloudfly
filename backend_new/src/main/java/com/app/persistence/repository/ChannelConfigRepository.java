@@ -8,4 +8,5 @@ import reactor.core.publisher.Mono;
 @Repository
 public interface ChannelConfigRepository extends ReactiveCrudRepository<ChannelConfig, Long> {
     Mono<ChannelConfig> findByTenantId(Long tenantId);
+    Mono<ChannelConfig> findByTenantIdAndCompanyId(Long tenantId, Long companyId);
 }
