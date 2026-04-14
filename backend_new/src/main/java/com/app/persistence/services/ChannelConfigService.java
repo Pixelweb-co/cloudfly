@@ -105,6 +105,7 @@ public class ChannelConfigService {
                             }
                             return Mono.error(err);
                         })
+                        .then(evolutionService.setWebhook(finalName))
                         .then(Mono.defer(() -> {
                             log.info("✅ [CHANNEL-CONFIG-SERVICE] Ensuring config is active: {}", tenantId);
                             config.setIsActive(true);
