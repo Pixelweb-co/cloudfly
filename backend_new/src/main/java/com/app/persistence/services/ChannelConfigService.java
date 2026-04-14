@@ -85,7 +85,7 @@ public class ChannelConfigService {
                     newConfig.setTenantId(tenantId);
                     newConfig.setCompanyId(companyId);
                     newConfig.setInstanceName(expectedInstanceName);
-                    newConfig.setChannelType(ChannelType.WHATSAPP);
+                    newConfig.setChannelType(ChannelType.SALES);
                     newConfig.setIsActive(false);
                     newConfig.setCreatedAt(LocalDateTime.now());
                     return channelConfigRepository.save(newConfig);
