@@ -68,10 +68,15 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
         'checkEmail',
         'Este correo ya está registrado en esta compañía',
         async (value) => {
-          if (!value || (contact && contact.email === value)) return true
+          if (!value) return true
+          const currentEmail = (contact?.email || '').toLowerCase().trim()
+          const newEmail = (value || '').toLowerCase().trim()
+          
+          if (contact && currentEmail === newEmail) return true
+          
           setIsValidating(true)
           try {
-            const isDuplicate = await contactService.checkEmailAvailability(value, companyId)
+            const isDuplicate = await contactService.checkEmailAvailability(newEmail, companyId)
             return !isDuplicate
           } catch (e) {
             return true // Allow if service fails
@@ -88,7 +93,9 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
           const prefix = context.parent.countryPrefix || '+57'
           const finalPhone = value.startsWith(prefix.replace('+', '')) ? `+${value}` : `${prefix}${value}`
           
-          if (contact && contact.phone === finalPhone) return true
+          const normalize = (p: string) => (p || '').replace(/\D/g, '')
+          
+          if (contact && normalize(contact.phone) === normalize(finalPhone)) return true
           
           setIsValidating(true)
           try {

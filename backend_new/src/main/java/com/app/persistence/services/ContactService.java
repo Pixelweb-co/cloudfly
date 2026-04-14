@@ -75,7 +75,8 @@ public class ContactService {
                     // Validar unicidad si los campos cambiaron
                     Mono<Void> validation = Mono.empty();
                     
-                    if (!existing.getPhone().equals(cleanPhone)) {
+                    String existingCleanPhone = existing.getPhone() != null ? existing.getPhone().replaceAll("[^0-9]", "") : "";
+                    if (!existingCleanPhone.equals(cleanPhone)) {
                         validation = validation.then(contactRepository.findByTenantIdAndCompanyIdAndPhone(tenantId, companyId, cleanPhone)
                                 .flatMap(other -> Mono.error(new RuntimeException("El número de teléfono ya está registrado en otro contacto."))));
                     }
