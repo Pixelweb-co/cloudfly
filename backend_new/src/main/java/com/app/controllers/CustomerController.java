@@ -162,7 +162,7 @@ public class CustomerController {
                                                                                     .then(baseFlow);
                                                                         }
                                                                         
-                                                                        String instanceName = "cloudfly_" + savedCompany.getId();
+                                                                        String instanceName = "cloudfly_t" + savedTenant.getId() + "_c" + savedCompany.getId();
                                                                         log.info("🚀 [ACCOUNT-SETUP] Creating/Fetching QR for instance: {}", instanceName);
                                                                         return evolutionService.createInstance(instanceName)
                                                                             .timeout(java.time.Duration.ofSeconds(30))

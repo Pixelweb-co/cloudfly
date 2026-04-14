@@ -19,16 +19,28 @@ public class ChannelController {
 
     private final ChannelService channelService;
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ChannelController.class);
+
     private Mono<Long> getCurrentTenantId() {
         return ReactiveSecurityContextHolder.getContext()
                 .map(SecurityContext::getAuthentication)
                 .map(auth -> {
-                    if (auth == null) return 1L;
-                    java.util.Map<String, Object> details = (java.util.Map<String, Object>) auth.getDetails();
-                    if (details != null && details.containsKey("customer_id")) {
-                        Object cid = details.get("customer_id");
-                        if (cid instanceof Number) return ((Number) cid).longValue();
-                        return Long.parseLong(cid.toString());
+                    if (auth == null) {
+                        log.warn("🔍 [CHANNEL-CTRL] No authentication found, using default tenant 1L");
+                        return 1L;
+                    }
+                    try {
+                        Object detailsObj = auth.getDetails();
+                        if (detailsObj instanceof java.util.Map) {
+                            java.util.Map<String, Object> details = (java.util.Map<String, Object>) detailsObj;
+                            if (details.containsKey("customer_id")) {
+                                Object cid = details.get("customer_id");
+                                if (cid instanceof Number) return ((Number) cid).longValue();
+                                return Long.parseLong(cid.toString());
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.error("🔍 [CHANNEL-CTRL] Error extracting tenant_id: {}", e.getMessage());
                     }
                     return 1L;
                 });
@@ -38,18 +50,28 @@ public class ChannelController {
         return ReactiveSecurityContextHolder.getContext()
                 .map(SecurityContext::getAuthentication)
                 .map(auth -> {
-                    if (auth == null) return 1L;
-                    java.util.Map<String, Object> details = (java.util.Map<String, Object>) auth.getDetails();
-                    if (details != null && details.containsKey("company_id")) {
-                        Object cid = details.get("company_id");
-                        if (cid instanceof Number) return ((Number) cid).longValue();
-                        return Long.parseLong(cid.toString());
+                    if (auth == null) {
+                        log.warn("🔍 [CHANNEL-CTRL] No authentication found, using default company 1L");
+                        return 1L;
                     }
-                    // Fallback to customer_id if company_id is missing
-                    if (details != null && details.containsKey("customer_id")) {
-                        Object cid = details.get("customer_id");
-                        if (cid instanceof Number) return ((Number) cid).longValue();
-                        return Long.parseLong(cid.toString());
+                    try {
+                        Object detailsObj = auth.getDetails();
+                        if (detailsObj instanceof java.util.Map) {
+                            java.util.Map<String, Object> details = (java.util.Map<String, Object>) detailsObj;
+                            if (details.containsKey("company_id")) {
+                                Object cid = details.get("company_id");
+                                if (cid instanceof Number) return ((Number) cid).longValue();
+                                return Long.parseLong(cid.toString());
+                            }
+                            // Fallback to customer_id if company_id is missing
+                            if (details.containsKey("customer_id")) {
+                                Object cid = details.get("customer_id");
+                                if (cid instanceof Number) return ((Number) cid).longValue();
+                                return Long.parseLong(cid.toString());
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.error("🔍 [CHANNEL-CTRL] Error extracting company_id: {}", e.getMessage());
                     }
                     return 1L;
                 });

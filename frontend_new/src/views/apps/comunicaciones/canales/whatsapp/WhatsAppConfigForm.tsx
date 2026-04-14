@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Box, Button, Typography, CircularProgress, Alert } from '@mui/material'
-import { axiosInstance } from '@/utils/axiosInstance'
+import { channelService } from '@/services/marketing/channelService'
 import { userMethods } from '@/utils/userMethods'
 
 interface Props {
@@ -15,26 +15,23 @@ const WhatsAppConfigForm = ({ onSuccess }: Props) => {
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'generating' | 'waiting' | 'connected' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
-  const [instanceName, setInstanceName] = useState<string>('')
 
   useEffect(() => {
-    const user = userMethods.getUserLogin()
-    if (user && user.username) {
-      const name = `cloudfly_${user.username.toLowerCase().replace(/[^a-z0-9]/g, '_')}`
-      setInstanceName(name)
-      checkInitialStatus(name)
-    }
+    checkInitialStatus()
   }, [])
 
-  const checkInitialStatus = async (name: string) => {
+  const checkInitialStatus = async () => {
     try {
       setLoading(true)
-      const res = await axiosInstance.get(`/api/evolution/status/${name}`)
-      if (res.data && res.data.instance && res.data.instance.state === 'open') {
+      const data = await channelService.getChannelConfigStatus()
+      if (data && data.isConnected) {
         setStatus('connected')
         setTimeout(() => {
           onSuccess()
         }, 1000)
+      } else if (data && data.exists && data.qrCode) {
+         setQrCode(data.qrCode)
+         setStatus('waiting')
       }
     } catch (err) {
       console.log('Instance not yet created or connected')
@@ -49,17 +46,24 @@ const WhatsAppConfigForm = ({ onSuccess }: Props) => {
       setStatus('generating')
       setError(null)
 
-      // 1. Crear instancia
-      await axiosInstance.post(`/api/evolution/instance/${instanceName}`)
+      // 1. Activar canal (Crea instancia en backend/evolution)
+      const data = await channelService.activateWhatsAppChannel()
       
-      // 2. Obtener QR
-      const qrResponse = await axiosInstance.get(`/api/evolution/qr/${instanceName}`)
-      
-      if (qrResponse.data && qrResponse.data.base64) {
-        setQrCode(qrResponse.data.base64)
+      if (data && data.qrCode) {
+        setQrCode(data.qrCode)
         setStatus('waiting')
+      } else if (data && data.isConnected) {
+        setStatus('connected')
+        onSuccess()
       } else {
-        throw new Error('No se pudo obtener el código QR')
+        // Intentar obtener QR explícitamente si no vino en la activación
+        const qrData = await channelService.getWhatsAppQrCode()
+        if (qrData && qrData.qrCode) {
+            setQrCode(qrData.qrCode)
+            setStatus('waiting')
+        } else {
+            throw new Error('No se pudo obtener el código QR')
+        }
       }
     } catch (err: any) {
       console.error('Error connecting WhatsApp:', err)
@@ -73,19 +77,9 @@ const WhatsAppConfigForm = ({ onSuccess }: Props) => {
   const handleConfirmScan = async () => {
     try {
       setLoading(true)
-      const res = await axiosInstance.get(`/api/evolution/status/${instanceName}`)
+      const data = await channelService.getChannelConfigStatus()
       
-      // Según la documentación de Evolution API, el estado 'open' significa conectado
-      if (res.data && res.data.instance && res.data.instance.state === 'open') {
-        // AUTOMATIZACIÓN: Configurar el webhook inmediatamente después de conectar
-        try {
-          await axiosInstance.post(`/api/evolution/webhook/${instanceName}`)
-          console.log('✅ Webhook configured automatically')
-        } catch (webhookErr) {
-          console.error('⚠️ Failed to configure webhook automatically:', webhookErr)
-          // No bloqueamos el flujo principal si falla el webhook, pero lo logueamos
-        }
-
+      if (data && data.isConnected) {
         setStatus('connected')
         setTimeout(() => {
           onSuccess()

@@ -20,24 +20,34 @@ public class ChannelConfigController {
     private final ChannelConfigService channelConfigService;
     private final UserService userService;
 
-    private Mono<Long> getCurrentTenantId() {
+    private record UserContext(Long tenantId, Long companyId) {}
+
+    private Mono<UserContext> getCurrentUserContext() {
         return ReactiveSecurityContextHolder.getContext()
                 .map(SecurityContext::getAuthentication)
-                .doOnNext(auth -> log.info("🔐 [CHANNEL-CONFIG-AUTH] Checking auth for: {}", auth != null ? auth.getName() : "NULL"))
-                .flatMap(auth -> userService.findByUsername(auth.getName()))
-                .map(user -> {
-                    log.info("👤 [CHANNEL-CONFIG-AUTH] Found user: {} with customerId: {}", user.getUsername(), user.getCustomerId());
-                    return user.getCustomerId();
-                })
-                .doOnTerminate(() -> log.info("🏁 [CHANNEL-CONFIG-AUTH] Tenant lookup finished"));
+                .map(auth -> {
+                    if (auth == null || auth.getDetails() == null) {
+                        log.warn("⚠️ [CHANNEL-CONFIG-AUTH] No auth or details found in context");
+                        return new UserContext(1L, 1L); // Fallback
+                    }
+                    Object detailsObj = auth.getDetails();
+                    if (detailsObj instanceof java.util.Map) {
+                        java.util.Map<String, Object> details = (java.util.Map<String, Object>) detailsObj;
+                        Long tenantId = (Long) details.get("customer_id");
+                        Long companyId = (Long) details.get("company_id");
+                        log.info("👤 [CHANNEL-CONFIG-AUTH] Context IDs - Tenant: {}, Company: {}", tenantId, companyId);
+                        return new UserContext(tenantId != null ? tenantId : 1L, companyId != null ? companyId : 1L);
+                    }
+                    return new UserContext(1L, 1L);
+                });
     }
 
     @GetMapping("/config")
     public Mono<ResponseEntity<ChannelConfigDTO>> getConfig() {
-        return getCurrentTenantId()
-                .flatMap(tenantId -> {
-                    log.info("📋 [CHANNEL-CONFIG] Getting config for tenantId: {}", tenantId);
-                    return channelConfigService.getConfigByTenant(tenantId);
+        return getCurrentUserContext()
+                .flatMap(ctx -> {
+                    log.info("📋 [CHANNEL-CONFIG] Getting config for tenantId: {}, companyId: {}", ctx.tenantId(), ctx.companyId());
+                    return channelConfigService.getConfigByTenantAndCompany(ctx.tenantId(), ctx.companyId());
                 })
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build());
@@ -45,40 +55,40 @@ public class ChannelConfigController {
 
     @GetMapping("/status")
     public Mono<ResponseEntity<ChannelConfigDTO>> getStatus() {
-        return getCurrentTenantId()
-                .flatMap(tenantId -> {
-                    log.info("📊 [CHANNEL-CONFIG] Getting status for tenantId: {}", tenantId);
-                    return channelConfigService.getStatus(tenantId);
+        return getCurrentUserContext()
+                .flatMap(ctx -> {
+                    log.info("📊 [CHANNEL-CONFIG] Getting status for tenantId: {}, companyId: {}", ctx.tenantId(), ctx.companyId());
+                    return channelConfigService.getStatus(ctx.tenantId(), ctx.companyId());
                 })
                 .map(ResponseEntity::ok);
     }
 
     @PostMapping("/activate")
     public Mono<ResponseEntity<ChannelConfigDTO>> activateChannel() {
-        return getCurrentTenantId()
-                .flatMap(tenantId -> {
-                    log.info("🚀 [CHANNEL-CONFIG] Activating channel for tenantId: {}", tenantId);
-                    return channelConfigService.activateChatbot(tenantId);
+        return getCurrentUserContext()
+                .flatMap(ctx -> {
+                    log.info("🚀 [CHANNEL-CONFIG] Activating channel for tenantId: {}, companyId: {}", ctx.tenantId(), ctx.companyId());
+                    return channelConfigService.activateChatbot(ctx.tenantId(), ctx.companyId());
                 })
                 .map(ResponseEntity::ok);
     }
 
     @GetMapping("/qr")
     public Mono<ResponseEntity<ChannelConfigDTO>> getQrCode() {
-        return getCurrentTenantId()
-                .flatMap(tenantId -> {
-                    log.info("🔲 [CHANNEL-CONFIG] Getting QR for tenantId: {}", tenantId);
-                    return channelConfigService.getQrCode(tenantId);
+        return getCurrentUserContext()
+                .flatMap(ctx -> {
+                    log.info("🔲 [CHANNEL-CONFIG] Getting QR for tenantId: {}, companyId: {}", ctx.tenantId(), ctx.companyId());
+                    return channelConfigService.getQrCode(ctx.tenantId(), ctx.companyId());
                 })
                 .map(ResponseEntity::ok);
     }
 
     @PostMapping("/config")
     public Mono<ResponseEntity<ChannelConfigDTO>> updateConfig(@RequestBody ChannelConfigDTO dto) {
-        return getCurrentTenantId()
-                .flatMap(tenantId -> {
-                    log.info("💾 [CHANNEL-CONFIG] Updating config for tenantId: {}", tenantId);
-                    return channelConfigService.createOrUpdateConfig(tenantId, dto);
+        return getCurrentUserContext()
+                .flatMap(ctx -> {
+                    log.info("💾 [CHANNEL-CONFIG] Updating config for tenantId: {}, companyId: {}", ctx.tenantId(), ctx.companyId());
+                    return channelConfigService.createOrUpdateConfig(ctx.tenantId(), ctx.companyId(), dto);
                 })
                 .map(ResponseEntity::ok);
     }

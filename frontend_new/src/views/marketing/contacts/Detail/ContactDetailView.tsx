@@ -7,6 +7,7 @@ import ContactFormPanel from './ContactFormPanel'
 import ChatInterface from './ChatInterface'
 import { contactService } from '@/services/marketing/contactService'
 import { pipelineService } from '@/services/marketing/pipelineService'
+import { channelService } from '@/services/marketing/channelService'
 import { Contact } from '@/types/marketing/contactTypes'
 import { Pipeline } from '@/types/marketing/pipelineTypes'
 import { userMethods } from '@/utils/userMethods'
@@ -65,13 +66,9 @@ export default function ContactDetailView() {
 
     const checkWhatsAppStatus = async () => {
       try {
-        const user = userMethods.getUserLogin()
-        if (user && user.username) {
-          const name = `cloudfly_${user.username.toLowerCase().replace(/[^a-z0-9]/g, '_')}`
-          const res = await axiosInstance.get(`/api/evolution/status/${name}`)
-          if (res.data && res.data.instance && res.data.instance.state === 'open') {
-            setIsEvolutionConnected(true)
-          }
+        const data = await channelService.getChannelConfigStatus()
+        if (data && data.isConnected) {
+          setIsEvolutionConnected(true)
         }
       } catch (err) {
         console.log('Evolution instance not active or not created')
