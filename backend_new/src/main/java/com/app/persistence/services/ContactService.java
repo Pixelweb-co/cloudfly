@@ -67,31 +67,36 @@ public class ContactService {
     }
 
     public Mono<ContactEntity> update(Long id, ContactEntity contact, Long tenantId, Long companyId) {
-        String cleanPhone = contact.getPhone() != null ? contact.getPhone().replaceAll("[^0-9]", "") : "";
+        String cleanPhone = contact.getPhone() != null ? contact.getPhone().replaceAll("\\D", "") : "";
+        String cleanEmail = contact.getEmail() != null ? contact.getEmail().trim().toLowerCase() : null;
         
         return contactRepository.findById(id)
                 .filter(existing -> existing.getTenantId().equals(tenantId) && existing.getCompanyId().equals(companyId))
                 .flatMap(existing -> {
-                    // Validar unicidad si los campos cambiaron
-                    Mono<Void> validation = Mono.empty();
-                    
-                    String existingCleanPhone = existing.getPhone() != null ? existing.getPhone().replaceAll("[^0-9]", "") : "";
-                    if (!existingCleanPhone.equals(cleanPhone)) {
-                        validation = validation.then(contactRepository.findByTenantIdAndCompanyIdAndPhone(tenantId, companyId, cleanPhone)
-                                .flatMap(other -> Mono.error(new RuntimeException("El número de teléfono ya está registrado en otro contacto."))));
-                    }
-                    
-                    if (contact.getEmail() != null && !contact.getEmail().equals(existing.getEmail())) {
-                        validation = validation.then(contactRepository.findByTenantIdAndCompanyIdAndEmail(tenantId, companyId, contact.getEmail())
-                                .flatMap(other -> Mono.error(new RuntimeException("El correo electrónico ya está registrado en otro contacto."))));
-                    }
+                    String existingCleanPhone = existing.getPhone() != null ? existing.getPhone().replaceAll("\\D", "") : "";
+                    String existingCleanEmail = existing.getEmail() != null ? existing.getEmail().trim().toLowerCase() : null;
 
-                    if (contact.getDocumentNumber() != null && !contact.getDocumentNumber().equals(existing.getDocumentNumber())) {
-                        validation = validation.then(contactRepository.findByTenantIdAndCompanyIdAndDocumentNumber(tenantId, companyId, contact.getDocumentNumber())
-                                .flatMap(other -> Mono.error(new RuntimeException("El número de documento ya está registrado en otro contacto."))));
-                    }
+                    boolean phoneChanged = !cleanPhone.equals(existingCleanPhone);
+                    boolean emailChanged = (cleanEmail != null && !cleanEmail.equals(existingCleanEmail));
 
-                    return validation.then(Mono.defer(() -> performUpdate(existing, contact, cleanPhone)));
+                    Mono<Boolean> phoneExists = phoneChanged ? 
+                        contactRepository.existsByPhoneAndCompanyIdAndIdNot(cleanPhone, companyId, id, tenantId) : 
+                        Mono.just(false);
+
+                    Mono<Boolean> emailExists = emailChanged ? 
+                        contactRepository.existsByEmailAndCompanyIdAndIdNot(cleanEmail, companyId, id, tenantId) : 
+                        Mono.just(false);
+
+                    return Mono.zip(phoneExists, emailExists)
+                        .flatMap(tuple -> {
+                            if (tuple.getT1()) {
+                                return Mono.error(new RuntimeException("Este número ya está registrado en esta compañía"));
+                            }
+                            if (tuple.getT2()) {
+                                return Mono.error(new RuntimeException("El correo electrónico ya está registrado en esta compañía"));
+                            }
+                            return performUpdate(existing, contact, cleanPhone);
+                        });
                 });
     }
 

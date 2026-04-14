@@ -45,4 +45,10 @@ public interface ContactRepository extends ReactiveCrudRepository<ContactEntity,
 
     @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND pipeline_id = :pipelineId")
     Flux<ContactEntity> findByPipelineId(Long tenantId, Long companyId, Long pipelineId);
+
+    @Query("SELECT COUNT(*) > 0 FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND email = :email AND id != :id")
+    Mono<Boolean> existsByEmailAndCompanyIdAndIdNot(String email, Long companyId, Long id, Long tenantId);
+
+    @Query("SELECT COUNT(*) > 0 FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND phone = :phone AND id != :id")
+    Mono<Boolean> existsByPhoneAndCompanyIdAndIdNot(String phone, Long companyId, Long id, Long tenantId);
 }

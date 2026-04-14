@@ -126,10 +126,14 @@ const PipelineContactsChart = () => {
         }
     }
 
+    const currentMonth = new Date().getMonth()
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+    const chartTitle = `${data.pipelineName || 'Contactos por Etapa'} - ${months[currentMonth]}`
+
     return (
         <Card>
             <CardHeader 
-                title={data.pipelineName || 'Contactos por Etapa'} 
+                title={chartTitle} 
                 subheader="Estadísticas en tiempo real del embudo de ventas"
             />
             <CardContent>
