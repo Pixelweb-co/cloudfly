@@ -44,11 +44,11 @@ class AsyncRedisClient:
 
     # ── Conversation Memory ────────────────────────────────────────────────
 
-    def _memory_key(self, tenant_id: int, contact_id: int, conversation_id: int) -> str:
+    def _memory_key(self, tenant_id: int, contact_id: int, conversation_id: str) -> str:
         return f"chat:{tenant_id}:{contact_id}:{conversation_id}"
 
     async def get_memory(
-        self, tenant_id: int, contact_id: int, conversation_id: int
+        self, tenant_id: int, contact_id: int, conversation_id: str
     ) -> List[ChatMessage]:
         """Return the last N messages, oldest-first (chronological order)."""
         key = self._memory_key(tenant_id, contact_id, conversation_id)
@@ -65,7 +65,7 @@ class AsyncRedisClient:
         self,
         tenant_id: int,
         contact_id: int,
-        conversation_id: int,
+        conversation_id: str,
         role: str,
         content: str,
     ) -> None:

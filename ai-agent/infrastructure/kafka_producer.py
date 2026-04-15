@@ -62,7 +62,7 @@ class AsyncKafkaProducer:
         self,
         tenant_id: int,
         contact_id: int,
-        conversation_id: int,
+        conversation_id: str,
         response_text: str,
     ) -> None:
         """Publish the AI-generated reply to messages.out."""
