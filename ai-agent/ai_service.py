@@ -221,6 +221,9 @@ class AIService:
             conn.commit()
             conn.close()
             return json.dumps({"success": True, "message": f"Etapa actualizada a {stage_id} correctamente"})
+        except Exception as e:
+            logger.error(f"Error updating pipeline stage: {e}")
+            return json.dumps({"error": str(e)})
 
     def get_contact_pipeline(self, contact_id: int, tenant_id: int):
         """Lee el pipeline asociado al contacto y todas sus etapas disponibles."""
