@@ -133,3 +133,26 @@ class AsyncRedisClient:
         except Exception as exc:
             logger.error("Redis rate limit check failed", extra={"error": str(exc)})
             return True  # Fail open
+
+    # ── Chatbot Gateway Sync ──────────────────────────────────────────────
+
+    def _chatbot_gate_key(self, tenant_id: int, contact_id: int) -> str:
+        return f"chatbot:{tenant_id}:{contact_id}"
+
+    async def invalidate_chatbot_cache(self, tenant_id: int, contact_id: int) -> None:
+        """
+        Invalidates the cache key used by chat-socket-service to determine
+        if the chatbot is enabled. Call this after DB updates to chatbot_enabled.
+        """
+        key = self._chatbot_gate_key(tenant_id, contact_id)
+        try:
+            await self._redis.delete(key)
+            logger.info(
+                "Chatbot cache invalidated in Redis",
+                extra={"tenant_id": tenant_id, "contact_id": contact_id},
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to invalidate chatbot cache",
+                extra={"error": str(exc), "key": key},
+            )

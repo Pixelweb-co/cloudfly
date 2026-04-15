@@ -161,6 +161,7 @@ class AIAgentApp:
             if handoff_request:
                 is_handoff = True
                 await self.db.disable_chatbot(payload.contact_id, payload.tenant_id)
+                await self.redis.invalidate_chatbot_cache(payload.tenant_id, payload.contact_id)
                 logger.info(
                     "Handoff triggered by AI",
                     extra={**log_ctx, "reason": handoff_request.get("reason")},
