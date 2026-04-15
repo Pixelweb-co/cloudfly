@@ -259,3 +259,19 @@ class AsyncMySQLClient:
             )
             row = await cur.fetchone()
             return row or {}
+
+    async def disable_chatbot(self, contact_id: int, tenant_id: int) -> bool:
+        """
+        Disables the chatbot for a specific contact. This effectively hands
+        over the conversation to a human operator.
+        """
+        async with self.transaction() as cur:
+            await cur.execute(
+                "UPDATE contacts SET chatbot_enabled = 0, updated_at = NOW() WHERE id = %s AND tenant_id = %s",
+                (contact_id, tenant_id),
+            )
+        logger.info(
+            "Chatbot disabled (Handoff to human)",
+            extra={"contact_id": contact_id, "tenant_id": tenant_id},
+        )
+        return True

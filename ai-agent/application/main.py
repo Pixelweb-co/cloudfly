@@ -137,7 +137,7 @@ class AIAgentApp:
             )
 
             # ⑥ Generate AI response
-            response_text, pipeline_update, token_usage = await self.ai.generate_response(
+            response_text, pipeline_update, handoff_request, token_usage = await self.ai.generate_response(
                 payload.tenant_id,
                 payload.contact_id,
                 payload.conversation_id,
@@ -148,14 +148,22 @@ class AIAgentApp:
 
             # ⑦ Execute pipeline stage update if LLM requested one
             if pipeline_update:
+                # Security/Logic fix: Always use the contact_id from the original payload
+                # to prevent the AI from accidentally updating a different contact (or getting IDs mixed up).
                 await self.db.update_stage(
                     contact_id=payload.contact_id,
                     stage_id=pipeline_update["stage_id"],
                     tenant_id=payload.tenant_id,
                 )
+
+            # ⑦.1 Handle human handoff if requested by LLM
+            is_handoff = False
+            if handoff_request:
+                is_handoff = True
+                await self.db.disable_chatbot(payload.contact_id, payload.tenant_id)
                 logger.info(
-                    "Pipeline stage updated by AI",
-                    extra={**log_ctx, "stage_id": pipeline_update["stage_id"]},
+                    "Handoff triggered by AI",
+                    extra={**log_ctx, "reason": handoff_request.get("reason")},
                 )
 
             # ⑧ Persist conversation turns
@@ -174,6 +182,7 @@ class AIAgentApp:
                 payload.contact_id,
                 payload.conversation_id,
                 response_text,
+                is_bot_handoff=is_handoff,
             )
             logger.info("Response sent", extra=log_ctx)
 
