@@ -22,6 +22,12 @@ public class QuoteItemEntity {
     @Column("quote_id")
     private Long quoteId;
 
+    @Column("tenant_id")
+    private Long tenantId;
+
+    @Column("company_id")
+    private Long companyId;
+
     @Column("product_id")
     private Long productId;
 
