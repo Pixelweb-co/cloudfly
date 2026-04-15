@@ -241,10 +241,10 @@ class AsyncMySQLClient:
         return True
 
     async def get_company_info(self, tenant_id: int) -> Dict[str, Any]:
-        """Returns name and description of the company for the system prompt."""
+        """Returns name and other details of the company for the system prompt."""
         async with self.readonly() as cur:
             await cur.execute(
-                "SELECT name, description FROM companies WHERE tenant_id = %s LIMIT 1",
+                "SELECT name, nit, address, phone FROM companies WHERE tenant_id = %s LIMIT 1",
                 (tenant_id,),
             )
             row = await cur.fetchone()

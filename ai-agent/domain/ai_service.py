@@ -16,7 +16,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import requests
-from openai import OpenAI, RateLimitError, APITimeoutError, APIConnectionError
+from openai import AsyncOpenAI, RateLimitError, APITimeoutError, APIConnectionError
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue
 from tenacity import (
@@ -104,7 +104,7 @@ class AIService:
     """
 
     def __init__(self, db, qdrant: Optional[QdrantClient] = None) -> None:
-        self._openai = OpenAI(api_key=config.openai_api_key)
+        self._openai = AsyncOpenAI(api_key=config.openai_api_key)
         self._db = db          # infrastructure.mysql_client.AsyncMySQLClient
         self._qdrant = qdrant
 
@@ -118,7 +118,9 @@ class AIService:
     ) -> str:
         company_block = (
             f"Empresa: {company_info.get('name', 'CloudFly')}\n"
-            f"{company_info.get('description', '')}"
+            f"NIT: {company_info.get('nit', 'N/A')}\n"
+            f"Dirección: {company_info.get('address', 'N/A')}\n"
+            f"Teléfono: {company_info.get('phone', 'N/A')}"
         )
         custom_block = agent_config.get("custom_instructions", "")
 
@@ -171,8 +173,8 @@ Responde siempre en el idioma del cliente."""
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
-    def _call_openai(self, messages: List[Dict], tools: List[Dict]) -> Any:
-        return self._openai.chat.completions.create(
+    async def _call_openai(self, messages: List[Dict], tools: List[Dict]) -> Any:
+        return await self._openai.chat.completions.create(
             model=config.openai_model,
             messages=messages,
             tools=tools,
@@ -182,7 +184,7 @@ Responde siempre en el idioma del cliente."""
 
     # ── Tool Dispatcher ───────────────────────────────────────────────────
 
-    def _execute_tool(
+    async def _execute_tool(
         self,
         function_name: str,
         function_args: Dict[str, Any],
@@ -192,7 +194,7 @@ Responde siempre en el idioma del cliente."""
         """Dispatch a tool call to its implementation. Returns a JSON string."""
         try:
             if function_name == "search_products_semantically":
-                return self._search_products(function_args["query"], tenant_id)
+                return await self._search_products(function_args["query"], tenant_id)
             elif function_name == "check_products_stock":
                 return self._check_stock(function_args["product_ids"], tenant_id)
             elif function_name == "update_pipeline_stage":
@@ -243,7 +245,7 @@ Responde siempre en el idioma del cliente."""
         usage = TokenUsage()
 
         try:
-            response = self._call_openai(messages, _TOOLS)
+            response = await self._call_openai(messages, _TOOLS)
         except _OPENAI_RETRYABLE as exc:
             raise RetryableError(f"OpenAI transient error: {exc}") from exc
         except Exception as exc:
@@ -264,7 +266,7 @@ Responde siempre en el idioma del cliente."""
                 fn_name = tool_call.function.name
                 fn_args = json.loads(tool_call.function.arguments)
 
-                tool_result = self._execute_tool(fn_name, fn_args, tenant_id, contact_id)
+                tool_result = await self._execute_tool(fn_name, fn_args, tenant_id, contact_id)
                 tool_data = json.loads(tool_result)
 
                 # Capture pipeline update intent (executed async by orchestrator)
@@ -284,7 +286,7 @@ Responde siempre en el idioma del cliente."""
 
             # Second OpenAI call with tool results
             try:
-                second_response = self._call_openai(messages, _TOOLS)
+                second_response = await self._call_openai(messages, _TOOLS)
             except Exception as exc:
                 raise RetryableError(f"Second OpenAI call failed: {exc}") from exc
 
@@ -314,11 +316,11 @@ Responde siempre en el idioma del cliente."""
 
     # ── Tool Implementations ──────────────────────────────────────────────
 
-    def _search_products(self, query: str, tenant_id: int) -> str:
+    async def _search_products(self, query: str, tenant_id: int) -> str:
         if not self._qdrant:
             return json.dumps({"error": "Vector database unreachable"})
         try:
-            vector_res = self._openai.embeddings.create(
+            vector_res = await self._openai.embeddings.create(
                 input=query, model="text-embedding-3-small"
             )
             query_vector = vector_res.data[0].embedding
@@ -352,29 +354,4 @@ Responde siempre en el idioma del cliente."""
         except Exception as exc:
             logger.error("Stock check failed", extra={"error": str(exc)})
             return json.dumps({"error": str(exc)})
-
-    def generate_response_sync(
-        self,
-        tenant_id: int,
-        contact_id: int,
-        conversation_id: str,
-        message: str,
-        history,
-        pipeline_state,
-    ):
-        """
-        Synchronous wrapper around generate_response for use with
-        asyncio.to_thread(). Runs an inner event loop for the async DB calls
-        inside generate_response (company_info, agent_config).
-        """
-        import asyncio
-        loop = asyncio.new_event_loop()
-        try:
-            return loop.run_until_complete(
-                self.generate_response(
-                    tenant_id, contact_id, conversation_id, message, history, pipeline_state
-                )
-            )
-        finally:
-            loop.close()
 

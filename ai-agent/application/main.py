@@ -137,10 +137,7 @@ class AIAgentApp:
             )
 
             # ⑥ Generate AI response
-            response_text, pipeline_update, token_usage = await asyncio.to_thread(
-                # AIService._call_openai is synchronous (OpenAI SDK);
-                # run it in a thread to keep the event loop free.
-                self.ai.generate_response_sync,
+            response_text, pipeline_update, token_usage = await self.ai.generate_response(
                 payload.tenant_id,
                 payload.contact_id,
                 payload.conversation_id,
