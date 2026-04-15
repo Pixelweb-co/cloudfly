@@ -254,7 +254,7 @@ class AsyncMySQLClient:
         """Returns AI agent custom instructions if configured."""
         async with self.readonly() as cur:
             await cur.execute(
-                "SELECT custom_instructions FROM tenant_agent_configs WHERE tenant_id = %s LIMIT 1",
+                "SELECT company_specific_context FROM tenant_agent_configs WHERE tenant_id = %s LIMIT 1",
                 (tenant_id,),
             )
             row = await cur.fetchone()
