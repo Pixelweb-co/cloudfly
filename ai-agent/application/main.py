@@ -149,7 +149,7 @@ class AIAgentApp:
             # ⑦ Execute pipeline stage update if LLM requested one
             if pipeline_update:
                 await self.db.update_stage(
-                    contact_id=pipeline_update["contact_id"],
+                    contact_id=payload.contact_id,
                     stage_id=pipeline_update["stage_id"],
                     tenant_id=payload.tenant_id,
                 )
