@@ -243,26 +243,33 @@ Responde siempre en el idioma del cliente."""
 
         pipeline_update_request: Optional[Dict] = None
         usage = TokenUsage()
+        final_text = ""
 
-        try:
-            response = await self._call_openai(messages, _TOOLS)
-        except _OPENAI_RETRYABLE as exc:
-            raise RetryableError(f"OpenAI transient error: {exc}") from exc
-        except Exception as exc:
-            raise NonRetryableError(f"OpenAI fatal error: {exc}") from exc
+        # Loop to handle sequential tool calls (max 5 iterations)
+        for _ in range(5):
+            try:
+                response = await self._call_openai(messages, _TOOLS)
+            except _OPENAI_RETRYABLE as exc:
+                raise RetryableError(f"OpenAI transient error: {exc}") from exc
+            except Exception as exc:
+                raise NonRetryableError(f"OpenAI fatal error: {exc}") from exc
 
-        # Accumulate token usage
-        if response.usage:
-            usage.prompt_tokens = response.usage.prompt_tokens
-            usage.completion_tokens = response.usage.completion_tokens
-            usage.total_tokens = response.usage.total_tokens
+            # Track token usage
+            if response.usage:
+                usage.prompt_tokens += response.usage.prompt_tokens
+                usage.completion_tokens += response.usage.completion_tokens
+                usage.total_tokens += response.usage.total_tokens
 
-        response_message = response.choices[0].message
-        tool_calls = response_message.tool_calls
-
-        if tool_calls:
+            response_message = response.choices[0].message
             messages.append(response_message)
-            for tool_call in tool_calls:
+
+            if not response_message.tool_calls:
+                # No more tools to call, we have a final text response
+                final_text = response_message.content or ""
+                break
+
+            # Handle tool calls
+            for tool_call in response_message.tool_calls:
                 fn_name = tool_call.function.name
                 fn_args = json.loads(tool_call.function.arguments)
 
@@ -283,21 +290,14 @@ Responde siempre en el idioma del cliente."""
                     "name": fn_name,
                     "content": tool_result,
                 })
-
-            # Second OpenAI call with tool results
-            try:
-                second_response = await self._call_openai(messages, _TOOLS)
-            except Exception as exc:
-                raise RetryableError(f"Second OpenAI call failed: {exc}") from exc
-
-            if second_response.usage:
-                usage.prompt_tokens += second_response.usage.prompt_tokens
-                usage.completion_tokens += second_response.usage.completion_tokens
-                usage.total_tokens += second_response.usage.total_tokens
-
-            final_text = second_response.choices[0].message.content or ""
+            # Continue the loop for the next assistant response
         else:
-            final_text = response_message.content or ""
+            logger.warning("Tool call limit reached", extra={"contact_id": contact_id})
+            final_text = "Disculpa, estoy procesando mucha información. ¿Podrías ser más específico?"
+
+        # Fallback for empty content (shouldn't happen with Gpt-4o but good for safety)
+        if not final_text.strip() and not pipeline_update_request:
+             final_text = "Entendido. ¿En qué más puedo ayudarte?"
 
         logger.info(
             "AI response generated",
