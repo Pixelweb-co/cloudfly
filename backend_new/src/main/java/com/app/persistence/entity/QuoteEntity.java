@@ -23,6 +23,9 @@ public class QuoteEntity {
     @Column("tenant_id")
     private Long tenantId;
 
+    @Column("company_id")
+    private Long companyId;
+
     @Column("customer_id")
     private Long customerId;
 

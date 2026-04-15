@@ -10,6 +10,7 @@ import java.util.List;
 public class QuoteResponseDTO {
     private Long id;
     private Long tenantId;
+    private Long companyId;
     private Long customerId;
     private String customerName; // Opcional, si se enriquece
     private String quoteNumber;

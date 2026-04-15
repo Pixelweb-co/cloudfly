@@ -9,6 +9,7 @@ import java.util.List;
 @Data
 public class QuoteRequestDTO {
     private Long tenantId;
+    private Long companyId;
     private Long customerId;
     private LocalDateTime expirationDate;
     private QuoteStatus status;

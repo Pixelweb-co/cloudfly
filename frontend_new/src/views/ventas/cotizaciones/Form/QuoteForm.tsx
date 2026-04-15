@@ -61,14 +61,9 @@ const QuoteForm = () => {
 
     const loadInitialData = async () => {
         try {
-            // Obtenemos el tenantId del usuario logueado (simulado o desde authContext si estuviera disponible)
-            // Por consistencia con backend_new, usaremos tenantId=1 por defecto si no se encuentra
-            const tenantId = 1 
-            const companyId = 1
-
             const [contactsData, productsData] = await Promise.all([
-                contactService.listByTenant(tenantId),
-                productService.listByTenant(tenantId)
+                contactService.getAllContacts(),
+                productService.getAllProducts()
             ])
 
             setCustomers(contactsData.filter(c => c.type === 'CUSTOMER'))
@@ -174,10 +169,8 @@ const QuoteForm = () => {
 
         try {
             setLoading(true)
-            const tenantId = 1 // Simulado
 
             const payload = {
-                tenantId,
                 customerId: Number(formData.customerId),
                 expirationDate: formData.expirationDate ? new Date(formData.expirationDate).toISOString() : null,
                 status: formData.status,
