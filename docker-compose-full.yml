@@ -215,6 +215,10 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=Elian2020#
       - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+      - redis
+      - db
     networks:
       - app-net
       - kafka-net
