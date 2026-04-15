@@ -1,24 +1,37 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import QuotesListTable from '@/views/ventas/cotizaciones/List/QuotesListTable'
 import { axiosInstance } from '@/utils/axiosInstance'
+import { toast } from 'react-hot-toast'
 
-const getQuotes = async () => {
-  // En Next.js App Router (Server Components), axiosInstance podría necesitar configuración si usa cookies
-  // Pero como QuotesListTable es 'use client', el fetch inicial lo haremos en el componente o aquí si es posible.
-  // Para simplicidad y siguiendo el patrón del proyecto:
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/quotes/tenant/1`, { cache: 'no-store' })
-    if (!res.ok) throw new Error('Failed to fetch quotes')
-    return res.json()
-  } catch (error) {
-    console.error(error)
-    return []
-  }
-}
+const QuotesPage = () => {
+    const [quotes, setQuotes] = useState([])
+    const [loading, setLoading] = useState(true)
 
-const QuotesPage = async () => {
-    const quotes = await getQuotes()
+    const fetchQuotes = async () => {
+        try {
+            setLoading(true)
+            // Usamos tenant 1 por defecto para esta fase de migración
+            const res = await axiosInstance.get('/quotes/tenant/1')
+            setQuotes(res.data)
+        } catch (error) {
+            console.error('Error fetching quotes:', error)
+            toast.error('Error al cargar cotizaciones')
+        } finally {
+            setLoading(false)
+        }
+    }
 
-    return <QuotesListTable tableData={quotes} onReload={() => {}} />
+    useEffect(() => {
+        fetchQuotes()
+    }, [])
+
+    if (loading) {
+        return <div className="p-6 text-center">Cargando cotizaciones...</div>
+    }
+
+    return <QuotesListTable tableData={quotes} onReload={fetchQuotes} />
 }
 
 export default QuotesPage
