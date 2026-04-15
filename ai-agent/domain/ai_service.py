@@ -243,7 +243,7 @@ Responde siempre en el idioma del cliente."""
         message: str,
         history: List[ChatMessage],
         pipeline_state: Optional[ContactPipelineState],
-    ) -> Tuple[str, Optional[Dict], Optional[Dict], TokenUsage]:
+    ) -> tuple[str, Optional[Dict], Optional[Dict], TokenUsage]:
         """
         Builds the prompt and calls OpenAI in a tool execution loop.
         Returns (final_text, pipeline_update_request, handoff_request, token_usage)
