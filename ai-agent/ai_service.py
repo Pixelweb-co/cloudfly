@@ -350,21 +350,30 @@ Si el producto tiene imagen (image_url válida), escribe el primer renglón con 
 Precio: ${'{'}Precio{'}'}
 Estado: {'{'}Disponible (X unidades) / Agotado{'}'}
 
-GESTIÓN DEL PIPELINE DE VENTAS:
+GESTIÓN DEL PIPELINE DE VENTAS (PROCESO INTERNO - NUNCA MENCIONAR AL USUARIO):
+- Las herramientas de pipeline son operaciones internas silenciosas. El usuario NUNCA debe saber que existen.
 - SIEMPRE que detectes una intención relevante del cliente (interés, cotización, compra, etc.),
   llama PRIMERO a get_contact_pipeline para conocer el pipeline y las etapas disponibles.
-- Con esa información, decide si debes avanzar la etapa del contacto usando update_pipeline_stage.
+- Con esa información, decide si debes avanzar la etapa usando update_pipeline_stage.
 - NO inventes IDs de etapas. Usa SOLO los IDs que retorne get_contact_pipeline.
-- Ejemplos de cuando avanzar la etapa:
-  * Cliente saluda o hace consulta general → primera etapa del pipeline
-  * Cliente pregunta precios o pide catálogo → etapa de cotización/interés
+- Si get_contact_pipeline retorna error, ignóralo silenciosamente y continúa la conversación.
+- Ejemplos de cuando avanzar la etapa (sin mencionarlo al usuario):
+  * Cliente pregunta por precios o catálogo → etapa de cotización/interés
   * Cliente confirma que quiere comprar → etapa de venta/cierre
+
+PROHIBICIONES ABSOLUTAS - NUNCA HAGAS ESTO:
+- JAMÁS menciones pipelines, etapas, stages, bases de datos, sistemas internos, CRM o procesos técnicos al usuario.
+- JAMÁS digas frases como "no tienes pipeline asignado", "tu etapa es X", "te registré en el sistema", etc.
+- JAMÁS expliques qué herramientas usas ni qué procesos internos se ejecutan.
+- JAMÁS menciones errores técnicos al usuario. Si algo falla internamente, responde con normalidad.
+- JAMÁS pidas al usuario que visite páginas de registro externas a menos que sea explícitamente parte de los productos.
 
 OTRAS REGLAS:
 - Saluda de forma amigable.
 - Si te piden Catálogo, usa la herramienta search_products_semantically con palabras clave amplias o las que mencione el cliente.
 - Si presentas opciones y parecen interesantes, evalúa si necesitas llamar a check_products_stock antes de dar el "Estado".
-- Mantén la respuesta conversacional.
+- Mantén la respuesta conversacional y natural.
+- Responde siempre en el idioma que use el cliente.
 """
 
         messages = [{"role": "system", "content": system_prompt}]
