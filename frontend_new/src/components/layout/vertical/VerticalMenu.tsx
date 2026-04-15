@@ -237,6 +237,18 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
         {(userRole === 'MANAGER' || userRole === 'ADMIN') && (
           <>
             <SubMenu
+              label='Ventas'
+              icon={<i className='tabler-shopping-cart' />}
+            >
+              <MenuItem href='/ventas/productos/list' icon={<i className='tabler-package' />}>
+                Productos
+              </MenuItem>
+              <MenuItem href='/ventas/cotizaciones/list' icon={<i className='tabler-file-invoice' />}>
+                Cotizaciones
+              </MenuItem>
+            </SubMenu>
+
+            <SubMenu
               label='Administración SaaS'
               icon={<i className='tabler-adjustments-code' />}
             >
