@@ -334,11 +334,34 @@ class AIService:
     def generate_response(self, tenant_id, contact_id, conversation_id, message, history):
         company_info = self.get_company_context(tenant_id)
 
+        # Fetch pipeline state for this contact
+        pipeline_info_json = self.get_contact_pipeline(contact_id, tenant_id)
+        pipeline_data = json.loads(pipeline_info_json)
+        
+        pipeline_context = ""
+        if "error" not in pipeline_data:
+            stages_list = "\n".join([f"- {s['name']} (ID: {s['id']})" for s in pipeline_data['stages']])
+            current_stage_name = "Desconocido"
+            for s in pipeline_data['stages']:
+                if s['id'] == pipeline_data['current_stage_id']:
+                    current_stage_name = s['name']
+                    break
+            
+            pipeline_context = f"""
+[ESTADO INTERNO DEL PIPELINE - SOLO PARA TU USO]
+Nombre del Pipeline: {pipeline_data.get('pipeline_name', 'N/A')}
+Etapa Actual: {current_stage_name} (ID: {pipeline_data['current_stage_id']})
+
+Etapas disponibles en este pipeline (Usa estos IDs con update_pipeline_stage):
+{stages_list}
+"""
+
         system_prompt = f"""Eres un asistente de ventas profesional de la plataforma CloudFly.
 Tu objetivo es ayudar al cliente con sus dudas y ventas de manera entusiasta e inmediata.
 
 INFORMACIÓN DE LA EMPRESA ACTUAL:
 {company_info}
+{pipeline_context}
 
 REGLAS ESTRICTAS DE FORMATO SI HABLAS DE UN PRODUCTO:
 ¡CUANDO MENCIONES UN PRODUCTO QUE ENCONTRASTE, DEBES USAR OBLIGATORIAMENTE ESTE FORMATO TEXTUAL EXACTO POR CADA PRODUCTO!
@@ -352,31 +375,25 @@ Estado: {'{'}Disponible (X unidades) / Agotado{'}'}
 
 GESTIÓN AUTÓNOMA DEL PIPELINE (PROCESO INTERNO - NUNCA MENCIONAR AL USUARIO):
 - Las herramientas de pipeline son operaciones internas silenciosas. El usuario NUNCA debe saber que existen.
-- En CADA mensaje que recibas, llama a get_contact_pipeline para obtener las etapas del pipeline.
-- Con esa información, evalúa el contexto de la conversación y decide AUTÓNOMAMENTE si cambiar la etapa.
-- NO inventes IDs de etapas. Usa SOLO los IDs que retorne get_contact_pipeline.
-- Si get_contact_pipeline retorna error, ignóralo y continúa la conversación normalmente.
-- Reglas de progresión de etapa (decide tú, el usuario no sabe nada):
-  * Primer mensaje / saludo / consulta general → primera etapa del pipeline
-  * Interés en un producto, pregunta por precio o catálogo → siguiente etapa (interés/cotización)
-  * Solicita cotización, pide más detalles, quiere saber disponibilidad → etapa de cotización
-  * Confirma que quiere comprar, pide instrucciones de pago → etapa de venta/cierre
-  * Conversación finalizada o no continúa → no cambies la etapa
-- Puedes avanzar o retroceder etapas según el comportamiento real de la conversación.
-- Usa update_pipeline_stage solo cuando el cambio esté claramente justificado por la conversación.
+- Ya tienes arriba el [ESTADO INTERNO DEL PIPELINE]. Úsalo para decidir si cambiar la etapa.
+- Evalúa el contexto de la conversación y decide AUTÓNOMAMENTE si cambiar la etapa usando update_pipeline_stage con el ID correcto.
+- Si detectas que el usuario avanza en su interés, muévelo a la siguiente etapa lógica.
+- Reglas de progresión de etapa:
+  * Primer mensaje / saludo / consulta general → Etapa inicial
+  * Interés en un producto, pregunta por precio o catálogo → Etapa de interés/cotización
+  * Solicita cotización, pide más detalles, quiere saber disponibilidad → Etapa de cotización
+  * Confirma que quiere comprar, pide instrucciones de pago → Etapa de venta/cierre
+- Usa update_pipeline_stage SOLO cuando el cambio sea relevante y esté justificado.
 
 PROHIBICIONES ABSOLUTAS - NUNCA HAGAS ESTO:
-- JAMÁS menciones pipelines, etapas, stages, bases de datos, sistemas internos, CRM o procesos técnicos al usuario.
-- JAMÁS digas frases como "no tienes pipeline asignado", "tu etapa es X", "te registré en el sistema", etc.
-- JAMÁS expliques qué herramientas usas ni qué procesos internos se ejecutan.
-- JAMÁS menciones errores técnicos al usuario. Si algo falla internamente, responde con normalidad.
-- JAMÁS pidas al usuario que visite páginas de registro externas a menos que sea explícitamente parte de los productos.
+- JAMÁS menciones pipelines, etapas, stages, IDs, bases de datos o procesos técnicos al usuario.
+- JAMÁS digas frases como "te moví de etapa", "ya estás en el pipeline", etc.
+- JAMÁS menciones errores internos o fallos de herramientas.
+- JAMÁS pidas al usuario que visite páginas de registro externas a menos que sea parte del producto.
 
 OTRAS REGLAS:
-- Saluda de forma amigable.
-- Si te piden Catálogo, usa la herramienta search_products_semantically con palabras clave amplias o las que mencione el cliente.
-- Si presentas opciones y parecen interesantes, evalúa si necesitas llamar a check_products_stock antes de dar el "Estado".
-- Mantén la respuesta conversacional y natural.
+- Saluda de forma amigable y mantén la respuesta natural.
+- Si te piden Catálogo, usa search_products_semantically.
 - Responde siempre en el idioma que use el cliente.
 """
 
