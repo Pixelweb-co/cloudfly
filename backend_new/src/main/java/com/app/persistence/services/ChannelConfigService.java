@@ -4,6 +4,7 @@ import com.app.dto.ChannelConfigDTO;
 import com.app.persistence.entity.ChannelConfig;
 import com.app.persistence.entity.ChannelType;
 import com.app.persistence.repository.ChannelConfigRepository;
+import com.app.persistence.repository.ChannelRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import java.util.Map;
 public class ChannelConfigService {
 
     private final ChannelConfigRepository channelConfigRepository;
+    private final ChannelRepository channelRepository;
     private final EvolutionService evolutionService;
 
     public Mono<ChannelConfigDTO> getConfigByTenantAndCompany(Long tenantId, Long companyId) {
@@ -110,8 +112,19 @@ public class ChannelConfigService {
                             log.info("✅ [CHANNEL-CONFIG-SERVICE] Ensuring config is active: {}", tenantId);
                             config.setIsActive(true);
                             config.setUpdatedAt(LocalDateTime.now());
-                            return channelConfigRepository.save(config)
-                                    .then(getStatus(tenantId, companyId));
+                            
+                            // Synchronize instance_name with the main channels table
+                            return channelRepository.findByCompanyIdAndTenantId(companyId, tenantId)
+                                .filter(ch -> "WHATSAPP".equals(ch.getPlatform()))
+                                .flatMap(ch -> {
+                                    log.info("🔄 [CHANNEL-CONFIG-SERVICE] Syncing instance_name '{}' to channel ID {}", finalName, ch.getId());
+                                    ch.setInstanceName(finalName);
+                                    ch.setUpdatedAt(LocalDateTime.now());
+                                    return channelRepository.save(ch);
+                                })
+                                .collectList()
+                                .then(channelConfigRepository.save(config))
+                                .then(getStatus(tenantId, companyId));
                         }));
                 });
     }
