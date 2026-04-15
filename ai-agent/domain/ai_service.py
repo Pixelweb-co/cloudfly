@@ -122,7 +122,7 @@ class AIService:
             f"Dirección: {company_info.get('address', 'N/A')}\n"
             f"Teléfono: {company_info.get('phone', 'N/A')}"
         )
-        custom_block = agent_config.get("custom_instructions", "")
+        custom_block = agent_config.get("company_specific_context", "")
 
         pipeline_block = ""
         if pipeline_state:
