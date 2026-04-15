@@ -13,7 +13,7 @@ class MessagePayload:
     """Kafka inbound message from chat-socket-service."""
     tenant_id: int
     contact_id: int
-    conversation_id: int
+    conversation_id: str
     message_text: str
     message_id: str          # UUID for idempotency
     timestamp: str
@@ -27,7 +27,7 @@ class MessagePayload:
         return cls(
             tenant_id=int(data["tenantId"]),
             contact_id=int(data["contactId"]),
-            conversation_id=int(data["conversationId"]),
+            conversation_id=str(data["conversationId"]),
             message_text=str(data["mensaje"]),
             # Prefer explicit messageId; fall back to timestamp for legacy compat
             message_id=str(data.get("messageId") or data.get("timestamp", "")),
