@@ -1,25 +1,25 @@
-# Use an official Python runtime as a parent image
 FROM python:3.11-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+# Prevent .pyc files and ensure stdout/stderr are unbuffered
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Set the working directory
 WORKDIR /app
 
-# Install system dependencies for confluent-kafka
-RUN apt-get update && apt-get install -y \
+# System dependencies for confluent-kafka (librdkafka) + aiomysql (gcc)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     librdkafka-dev \
+    default-libmysqlclient-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
+# Install Python dependencies first (layer cached unless requirements change)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
+# Copy application source
 COPY . .
 
-# Run the application
-CMD ["python", "-m", "app"]
+# Entry point — runs the async orchestrator
+CMD ["python", "-m", "application.main"]
