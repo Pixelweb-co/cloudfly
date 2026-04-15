@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/quotes")
+@RequestMapping("/quotes")
 @RequiredArgsConstructor
 public class QuoteController {
 

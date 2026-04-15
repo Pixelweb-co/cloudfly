@@ -66,7 +66,7 @@ const QuoteForm = () => {
                 productService.getAllProducts()
             ])
 
-            setCustomers(contactsData.filter(c => c.type === 'CUSTOMER'))
+            setCustomers(contactsData.filter(c => c.type === 'CUSTOMER' || c.type === 'LEAD'))
             setProducts(productsData)
         } catch (error) {
             console.error('Error loading initial data:', error)
