@@ -3,7 +3,6 @@ package com.app.controllers;
 import com.app.persistence.entity.ContactEntity;
 import com.app.persistence.repository.CompanyRepository;
 import com.app.persistence.services.ContactService;
-import com.app.persistence.services.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -14,6 +13,10 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/contacts")
@@ -22,126 +25,108 @@ import reactor.core.publisher.Mono;
 public class ContactController {
 
     private final ContactService contactService;
-    private final UserService userService;
     private final CompanyRepository companyRepository;
 
-    private Mono<Long> getCurrentTenantId() {
+    private record UserContext(Long tenantId, Long companyId, Set<String> roles) {}
+
+    private Mono<UserContext> getCurrentUserContext(Map<String, String> headers) {
         return ReactiveSecurityContextHolder.getContext()
                 .map(SecurityContext::getAuthentication)
-                .flatMap(auth -> {
-                    if (auth == null || auth.getName() == null) {
-                        return Mono.empty();
+                .map(auth -> {
+                    if (auth == null || auth.getDetails() == null) {
+                        return new UserContext(1L, null, Set.of());
                     }
-                    return userService.findByUsername(auth.getName());
-                })
-                .flatMap(user -> Mono.justOrEmpty(user.getCustomerId()));
+
+                    Map<String, Object> details = (Map<String, Object>) auth.getDetails();
+                    Long tokenTenantId = (Long) details.get("customer_id");
+                    Long tokenCompanyId = (Long) details.get("company_id");
+                    Set<String> roles = auth.getAuthorities().stream()
+                            .map(a -> a.getAuthority())
+                            .collect(Collectors.toSet());
+
+                    boolean isAdminOrManager = roles.contains("ROLE_ADMIN") || roles.contains("ROLE_MANAGER");
+
+                    Long finalTenantId = tokenTenantId;
+                    if (isAdminOrManager && (headers.containsKey("x-tenant-id") || headers.containsKey("X-Tenant-Id"))) {
+                        try {
+                            String headerVal = headers.getOrDefault("x-tenant-id", headers.get("X-Tenant-Id"));
+                            finalTenantId = Long.parseLong(headerVal);
+                        } catch (Exception e) {
+                            log.warn("⚠️ [CONTACT-AUTH] Invalid x-tenant-id header");
+                        }
+                    }
+
+                    Long finalCompanyId = tokenCompanyId;
+                    if (isAdminOrManager && (headers.containsKey("x-company-id") || headers.containsKey("X-Company-Id"))) {
+                        try {
+                            String headerVal = headers.getOrDefault("x-company-id", headers.get("X-Company-Id"));
+                            finalCompanyId = Long.parseLong(headerVal);
+                        } catch (Exception e) {
+                            log.warn("⚠️ [CONTACT-AUTH] Invalid x-company-id header");
+                        }
+                    }
+
+                    return new UserContext(finalTenantId, finalCompanyId, roles);
+                });
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
-    public Flux<ContactEntity> getAllContacts(
-            @RequestParam(required = false) Long tenantId,
-            @RequestParam(required = false) Long companyId) {
-        
-        return ReactiveSecurityContextHolder.getContext()
-                .map(SecurityContext::getAuthentication)
-                .flatMapMany(auth -> {
-                    boolean isManager = auth.getAuthorities().stream()
-                            .anyMatch(a -> a.getAuthority().contains("MANAGER"));
-                    
-                    return userService.findByUsername(auth.getName())
-                            .flatMapMany(user -> {
-                                Long targetTenantId = (isManager && tenantId != null) ? tenantId : user.getCustomerId();
-                                
-                                if (companyId != null) {
-                                    log.info("Fetching contacts for Tenant: {}, Specific Company: {}", targetTenantId, companyId);
-                                    return contactService.findAll(targetTenantId, companyId);
-                                } else {
-                                    log.info("No company specified, resolving principal company for Tenant: {}", targetTenantId);
-                                    return companyRepository.findFirstByTenantIdAndIsPrincipalTrue(targetTenantId)
-                                            .flatMapMany(primaryCompany -> {
-                                                log.info("Resolved principal company: {} (ID: {})", primaryCompany.getName(), primaryCompany.getId());
-                                                return contactService.findAll(targetTenantId, primaryCompany.getId());
-                                            })
-                                            .switchIfEmpty(Flux.defer(() -> {
-                                                log.warn("No principal company found for Tenant: {}. Falling back to tenant-only search.", targetTenantId);
-                                                // Safety fallback: if no company exists yet, search only by tenant
-                                                return contactService.findAll(targetTenantId, null);
-                                            }));
-                                }
-                            });
+    public Flux<ContactEntity> getAllContacts(@RequestHeader Map<String, String> headers) {
+        return getCurrentUserContext(headers)
+                .flatMapMany(ctx -> {
+                    if (ctx.companyId() != null) {
+                        return contactService.findAll(ctx.tenantId(), ctx.companyId());
+                    } else {
+                        // Si no hay compañía definida (o es global), podemos buscar por principal o por tenant solo
+                        return companyRepository.findFirstByTenantIdAndIsPrincipalTrue(ctx.tenantId())
+                                .flatMapMany(primary -> contactService.findAll(ctx.tenantId(), primary.getId()))
+                                .switchIfEmpty(contactService.findAll(ctx.tenantId(), null));
+                    }
                 });
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
-    public Mono<ContactEntity> getContactById(@PathVariable Long id, @RequestParam(required = false) Long companyId) {
-        return getCurrentTenantId()
-                .flatMap(tenantId -> resolveCompanyId(companyId, tenantId)
-                        .flatMap(targetCompanyId -> contactService.findById(id, tenantId, targetCompanyId)));
+    public Mono<ContactEntity> getContactById(@PathVariable Long id, @RequestHeader Map<String, String> headers) {
+        return getCurrentUserContext(headers)
+                .flatMap(ctx -> contactService.findById(id, ctx.tenantId(), ctx.companyId()));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN')")
-    public Mono<ContactEntity> createContact(@RequestBody ContactEntity contact, @RequestParam(required = false) Long companyId) {
-        return ReactiveSecurityContextHolder.getContext()
-                .map(SecurityContext::getAuthentication)
-                .flatMap(auth -> userService.findByUsername(auth.getName())
-                        .flatMap(user -> {
-                            boolean isManager = auth.getAuthorities().stream()
-                                    .anyMatch(a -> a.getAuthority().contains("MANAGER"));
-                            
-                            Long targetTenantId = (isManager && contact.getTenantId() != null) 
-                                    ? contact.getTenantId() 
-                                    : user.getCustomerId();
-                                    
-                            Long targetCompanyId = (companyId != null) ? companyId : contact.getCompanyId();
-                            
-                            return contactService.create(contact, targetTenantId, targetCompanyId);
-                        })
-                );
+    public Mono<ContactEntity> createContact(@RequestBody ContactEntity contact, @RequestHeader Map<String, String> headers) {
+        return getCurrentUserContext(headers)
+                .flatMap(ctx -> contactService.create(contact, ctx.tenantId(), ctx.companyId()));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN')")
-    public Mono<ContactEntity> updateContact(@PathVariable Long id, @RequestBody ContactEntity contact, @RequestParam(required = false) Long companyId) {
-        return getCurrentTenantId()
-                .flatMap(tenantId -> resolveCompanyId(companyId, tenantId)
-                        .flatMap(targetCompanyId -> contactService.update(id, contact, tenantId, targetCompanyId)));
+    public Mono<ContactEntity> updateContact(@PathVariable Long id, @RequestBody ContactEntity contact, @RequestHeader Map<String, String> headers) {
+        return getCurrentUserContext(headers)
+                .flatMap(ctx -> contactService.update(id, contact, ctx.tenantId(), ctx.companyId()));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN')")
-    public Mono<Void> deleteContact(@PathVariable Long id, @RequestParam(required = false) Long companyId) {
-        return getCurrentTenantId()
-                .flatMap(tenantId -> resolveCompanyId(companyId, tenantId)
-                        .flatMap(targetCompanyId -> contactService.delete(id, tenantId, targetCompanyId)));
+    public Mono<Void> deleteContact(@PathVariable Long id, @RequestHeader Map<String, String> headers) {
+        return getCurrentUserContext(headers)
+                .flatMap(ctx -> contactService.delete(id, ctx.tenantId(), ctx.companyId()));
     }
 
     @GetMapping("/check-phone")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
-    public Mono<Boolean> checkPhoneAvailability(@RequestParam String phone, @RequestParam(required = false) Long companyId) {
-        return getCurrentTenantId()
-                .flatMap(tenantId -> resolveCompanyId(companyId, tenantId)
-                        .flatMap(targetCompanyId -> contactService.existsByPhone(tenantId, targetCompanyId, phone)));
+    public Mono<Boolean> checkPhoneAvailability(@RequestParam String phone, @RequestHeader Map<String, String> headers) {
+        return getCurrentUserContext(headers)
+                .flatMap(ctx -> contactService.existsByPhone(ctx.tenantId(), ctx.companyId(), phone));
     }
 
     @GetMapping("/check-email")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
-    public Mono<Boolean> checkEmailAvailability(@RequestParam String email, @RequestParam(required = false) Long companyId) {
-        return getCurrentTenantId()
-                .flatMap(tenantId -> resolveCompanyId(companyId, tenantId)
-                        .flatMap(targetCompanyId -> contactService.existsByEmail(tenantId, targetCompanyId, email)));
-    }
-
-    private Mono<Long> resolveCompanyId(Long parameterCompanyId, Long tenantId) {
-        if (parameterCompanyId != null) {
-            return Mono.just(parameterCompanyId);
-        }
-        return companyRepository.findFirstByTenantIdAndIsPrincipalTrue(tenantId)
-                .map(com.app.persistence.entity.CompanyEntity::getId)
-                .switchIfEmpty(Mono.error(new RuntimeException("No se pudo resolver la compañía principal para el tenant")));
+    public Mono<Boolean> checkEmailAvailability(@RequestParam String email, @RequestHeader Map<String, String> headers) {
+        return getCurrentUserContext(headers)
+                .flatMap(ctx -> contactService.existsByEmail(ctx.tenantId(), ctx.companyId(), email));
     }
 }

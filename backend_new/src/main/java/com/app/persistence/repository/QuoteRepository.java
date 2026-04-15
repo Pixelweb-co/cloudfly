@@ -8,7 +8,8 @@ import reactor.core.publisher.Mono;
 
 public interface QuoteRepository extends ReactiveCrudRepository<QuoteEntity, Long> {
     @Query("SELECT * FROM quotes WHERE tenant_id = :tenantId")
-    Flux<QuoteEntity> findByTenantId(Long tenantId);
+    Flux<QuoteEntity> findAllByTenantId(Long tenantId);
+    Flux<QuoteEntity> findAllByTenantIdAndCompanyId(Long tenantId, Long companyId);
 
     @Query("SELECT * FROM quotes WHERE quote_number = :quoteNumber AND tenant_id = :tenantId")
     Mono<QuoteEntity> findByQuoteNumberAndTenantId(String quoteNumber, Long tenantId);

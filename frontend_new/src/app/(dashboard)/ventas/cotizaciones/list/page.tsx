@@ -12,8 +12,8 @@ const QuotesPage = () => {
     const fetchQuotes = async () => {
         try {
             setLoading(true)
-            // Usamos tenant 1 por defecto para esta fase de migración
-            const res = await axiosInstance.get('/quotes/tenant/1')
+            // El backend resolverá tenantId y companyId automáticamente
+            const res = await axiosInstance.get('/quotes')
             setQuotes(res.data)
         } catch (error) {
             console.error('Error fetching quotes:', error)

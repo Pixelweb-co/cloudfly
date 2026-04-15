@@ -4,11 +4,8 @@ import { Product, ProductCreateRequest } from '@/types/ventas/productTypes';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.cloudfly.com.co';
 
 export const productService = {
-  getAllProducts: async (tenantId?: number, companyId?: number): Promise<Product[]> => {
-    // Para MySQL R2DBC las vistas suelen agruparse por tenantId en el nuevo backend,
-    // que funcionalmente es equivalent al company_id aislando la data corporativa.
-    const effectiveId = companyId || tenantId;
-    const url = `/productos${effectiveId ? `/tenant/${effectiveId}` : ''}`;
+  getAllProducts: async (): Promise<Product[]> => {
+    const url = `/productos`;
     const response = await axiosInstance.get(url);
     return response.data;
   },
