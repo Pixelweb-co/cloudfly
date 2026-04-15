@@ -1,171 +1,346 @@
 import logging
 import sys
 import json
-import mysql.connector
-from config import OPENAI_API_KEY, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
-from kafka_consumer import MessageConsumer
-from kafka_producer import MessageProducer
-from ai_service import AIService
-from redis_client import RedisMemoryClient
+import time
+from typing import Dict, Any, List
 
-# Configure Logging
+import mysql.connector
+from mysql.connector import pooling
+import redis
+import openai
+
+# ==============================
+# CONFIG
+# ==============================
+OPENAI_API_KEY = "YOUR_OPENAI_API_KEY"
+
+DB_CONFIG = {
+    "host": "localhost",
+    "user": "root",
+    "password": "root",
+    "database": "crm"
+}
+
+REDIS_CONFIG = {
+    "host": "localhost",
+    "port": 6379,
+    "db": 0
+}
+
+# ==============================
+# LOGGING
+# ==============================
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(levelname)s - %(message)s",
     stream=sys.stdout
 )
 logger = logging.getLogger("ai-agent")
 
+# ==============================
+# DB POOL
+# ==============================
+db_pool = pooling.MySQLConnectionPool(
+    pool_name="ai_pool",
+    pool_size=10,
+    **DB_CONFIG
+)
 
-def ensure_contact_pipeline(tenant_id, contact_id):
-    """
-    Si el contacto no tiene pipeline/stage asignado, le asigna
-    el pipeline por defecto del tenant y su primera etapa.
-    Retorna True si se asignó, False si ya tenía o si falló.
-    """
-    try:
-        conn = mysql.connector.connect(
-            host=DB_HOST, user=DB_USER,
-            password=DB_PASSWORD, database=DB_NAME, connect_timeout=5
-        )
-        cursor = conn.cursor(dictionary=True)
+# ==============================
+# REDIS CLIENT
+# ==============================
+class RedisMemoryClient:
 
-        # 1. Verificar si el contacto ya tiene pipeline/stage
-        cursor.execute(
-            "SELECT pipeline_id, stage_id FROM contacts WHERE id = %s AND tenant_id = %s",
-            (contact_id, tenant_id)
-        )
-        contact = cursor.fetchone()
+    def __init__(self):
+        self.client = redis.Redis(**REDIS_CONFIG)
 
-        if not contact:
-            conn.close()
-            logger.warning(f"[PIPELINE-FALLBACK] Contact {contact_id} not found for tenant {tenant_id}")
-            return False
+    def _key(self, tenant, contact, conv):
+        return f"mem:{tenant}:{contact}:{conv}"
 
-        if contact.get('pipeline_id') and contact.get('stage_id'):
-            conn.close()
-            return False  # Ya tiene pipeline, no hacer nada
+    def save_message(self, tenant, contact, conv, role, content):
+        key = self._key(tenant, contact, conv)
+        message = json.dumps({"role": role, "content": content})
+        self.client.rpush(key, message)
+        self.client.expire(key, 86400)
 
-        # 2. Buscar el primer pipeline del tenant
-        cursor.execute(
-            "SELECT id FROM pipelines WHERE tenant_id = %s ORDER BY id ASC LIMIT 1",
-            (tenant_id,)
-        )
-        pipeline = cursor.fetchone()
-        if not pipeline:
-            conn.close()
-            logger.warning(f"[PIPELINE-FALLBACK] No pipeline found for tenant {tenant_id}")
-            return False
+    def get_memory(self, tenant, contact, conv):
+        key = self._key(tenant, contact, conv)
+        data = self.client.lrange(key, 0, -1)
+        return [json.loads(x) for x in data]
 
-        pipeline_id = pipeline['id']
-
-        # 3. Buscar la primera etapa del pipeline (position=0)
-        cursor.execute(
-            "SELECT id FROM pipeline_stages WHERE pipeline_id = %s ORDER BY position ASC LIMIT 1",
-            (pipeline_id,)
-        )
-        stage = cursor.fetchone()
-        if not stage:
-            conn.close()
-            logger.warning(f"[PIPELINE-FALLBACK] No stages found for pipeline {pipeline_id}")
-            return False
-
-        stage_id = stage['id']
-
-        # 4. Actualizar el contacto
-        cursor.execute(
-            "UPDATE contacts SET pipeline_id = %s, stage_id = %s, updated_at = NOW() WHERE id = %s AND tenant_id = %s",
-            (pipeline_id, stage_id, contact_id, tenant_id)
-        )
-
-        # 5. Insertar/actualizar conversation_pipeline_state
-        cursor.execute(
-            "SELECT id FROM conversation_pipeline_state WHERE contact_id = %s AND tenant_id = %s",
-            (contact_id, tenant_id)
-        )
-        existing_state = cursor.fetchone()
-
-        if existing_state:
-            cursor.execute(
-                "UPDATE conversation_pipeline_state SET pipeline_id=%s, current_stage_id=%s, entered_stage_at=NOW(), updated_at=NOW() WHERE contact_id=%s AND tenant_id=%s",
-                (pipeline_id, stage_id, contact_id, tenant_id)
-            )
-        else:
-            cursor.execute(
-                """INSERT INTO conversation_pipeline_state
-                   (tenant_id, contact_id, pipeline_id, current_stage_id,
-                    entered_stage_at, is_active, created_at, updated_at)
-                   VALUES (%s, %s, %s, %s, NOW(), 1, NOW(), NOW())""",
-                (tenant_id, contact_id, pipeline_id, stage_id)
-            )
-
-        conn.commit()
-        conn.close()
-        logger.info(f"🏷️ [PIPELINE-FALLBACK] Contact {contact_id} assigned to pipeline={pipeline_id}, stage={stage_id}")
-        return True
-
-    except Exception as e:
-        logger.error(f"[PIPELINE-FALLBACK] Error: {e}")
+    def is_processed(self, tenant, contact, conv, ts):
+        key = f"processed:{tenant}:{contact}:{conv}:{ts}"
+        if self.client.exists(key):
+            return True
+        self.client.setex(key, 3600, "1")
         return False
 
+# ==============================
+# PIPELINE SERVICE
+# ==============================
+class PipelineService:
 
-class AIAgentApp:
+    def ensure_pipeline(self, tenant_id, contact_id):
+
+        conn = db_pool.get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        try:
+            conn.start_transaction()
+
+            # Intento atómico
+            cursor.execute("""
+                UPDATE contacts
+                SET pipeline_id = (
+                    SELECT id FROM pipelines
+                    WHERE tenant_id = %s ORDER BY id ASC LIMIT 1
+                ),
+                stage_id = (
+                    SELECT id FROM pipeline_stages
+                    WHERE pipeline_id = (
+                        SELECT id FROM pipelines
+                        WHERE tenant_id = %s ORDER BY id ASC LIMIT 1
+                    )
+                    ORDER BY position ASC LIMIT 1
+                )
+                WHERE id = %s AND tenant_id = %s
+                AND pipeline_id IS NULL
+                AND stage_id IS NULL
+            """, (tenant_id, tenant_id, contact_id, tenant_id))
+
+            conn.commit()
+
+            # Obtener estado actual
+            cursor.execute("""
+                SELECT pipeline_id, stage_id
+                FROM contacts
+                WHERE id = %s AND tenant_id = %s
+            """, (contact_id, tenant_id))
+
+            return cursor.fetchone()
+
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"[PIPELINE] Error: {e}")
+            return None
+        finally:
+            cursor.close()
+            conn.close()
+
+    def move_stage(self, tenant_id, contact_id, stage_name):
+
+        conn = db_pool.get_connection()
+        cursor = conn.cursor()
+
+        try:
+            conn.start_transaction()
+
+            cursor.execute("""
+                UPDATE contacts
+                SET stage_id = (
+                    SELECT id FROM pipeline_stages
+                    WHERE name = %s LIMIT 1
+                )
+                WHERE id = %s AND tenant_id = %s
+            """, (stage_name, contact_id, tenant_id))
+
+            conn.commit()
+
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"[PIPELINE MOVE] Error: {e}")
+        finally:
+            cursor.close()
+            conn.close()
+
+# ==============================
+# CRM SERVICE (dummy)
+# ==============================
+class CRMService:
+
+    def create_task(self, tenant_id, contact_id, title):
+        logger.info(f"[TASK] Created: {title} for contact {contact_id}")
+
+    def add_tag(self, tenant_id, contact_id, tag):
+        logger.info(f"[TAG] Added: {tag} to contact {contact_id}")
+
+# ==============================
+# ACTION ENGINE
+# ==============================
+class ActionEngine:
+
     def __init__(self):
-        if not OPENAI_API_KEY:
-            logger.error("OPENAI_API_KEY is not set. Exiting...")
-            sys.exit(1)
+        self.pipeline = PipelineService()
+        self.crm = CRMService()
 
-        self.ai_service = AIService()
-        self.redis_client = RedisMemoryClient()
+    def execute(self, action, tenant_id, contact_id):
+        try:
+            t = action.get("type")
+
+            if t == "MOVE_PIPELINE":
+                self.pipeline.move_stage(
+                    tenant_id,
+                    contact_id,
+                    action.get("stage")
+                )
+
+            elif t == "CREATE_TASK":
+                self.crm.create_task(
+                    tenant_id,
+                    contact_id,
+                    action.get("title")
+                )
+
+            elif t == "TAG_CONTACT":
+                self.crm.add_tag(
+                    tenant_id,
+                    contact_id,
+                    action.get("tag")
+                )
+
+        except Exception as e:
+            logger.error(f"[ACTION ERROR] {e}")
+
+# ==============================
+# AI SERVICE
+# ==============================
+class AIService:
+
+    def __init__(self):
+        openai.api_key = OPENAI_API_KEY
+
+    def generate_with_actions(self, message, context):
+
+        prompt = f"""
+Eres un asistente de ventas inteligente.
+
+CONTEXTO:
+{json.dumps(context)}
+
+MENSAJE:
+{message}
+
+Responde SOLO en JSON:
+
+{{
+  "response": "mensaje",
+  "actions": []
+}}
+"""
+
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                timeout=10
+            )
+
+            text = response["choices"][0]["message"]["content"]
+
+            return json.loads(text)
+
+        except Exception as e:
+            logger.error(f"[AI ERROR] {e}")
+            return {
+                "response": "Lo siento, ocurrió un error.",
+                "actions": []
+            }
+
+# ==============================
+# KAFKA (SIMULADO)
+# ==============================
+class MessageProducer:
+    def send_response(self, tenant, contact, conv, text):
+        logger.info(f"[KAFKA OUT] → {text}")
+
+
+class MessageConsumer:
+
+    def __init__(self, callback):
+        self.callback = callback
+
+    def start(self):
+        logger.info("Listening messages...")
+
+        # Simulación
+        while True:
+            payload = {
+                "tenantId": 1,
+                "contactId": 101,
+                "conversationId": 5001,
+                "mensaje": input("Cliente: "),
+                "timestamp": int(time.time())
+            }
+            self.callback(payload)
+
+# ==============================
+# ORCHESTRATOR
+# ==============================
+class MessageOrchestrator:
+
+    def __init__(self):
+        self.memory = RedisMemoryClient()
+        self.ai = AIService()
+        self.pipeline = PipelineService()
+        self.actions = ActionEngine()
         self.producer = MessageProducer()
-        self.consumer = MessageConsumer(self.process_message)
 
-    def process_message(self, payload):
-        """
-        Main logic flow for each consumed message.
-        """
-        tenant_id = payload.get("tenantId")
-        contact_id = payload.get("contactId")
-        conversation_id = payload.get("conversationId")
-        message_text = payload.get("mensaje")
-        timestamp = payload.get("timestamp")
+    def build_context(self, tenant, contact, conv, pipeline_state):
 
-        if not all([tenant_id, contact_id, conversation_id, message_text]):
-            logger.warning(f"Invalid payload received: {payload}")
+        history = self.memory.get_memory(tenant, contact, conv)
+
+        return {
+            "pipeline_stage": pipeline_state,
+            "history": history[-10:]
+        }
+
+    def handle(self, payload):
+
+        tenant = payload["tenantId"]
+        contact = payload["contactId"]
+        conv = payload["conversationId"]
+        msg = payload["mensaje"]
+        ts = payload["timestamp"]
+
+        if self.memory.is_processed(tenant, contact, conv, ts):
             return
 
-        # 1. Idempotency Check
-        if self.redis_client.is_processed(tenant_id, contact_id, conversation_id, timestamp):
-            logger.info(f"Message already processed. Skipping: {timestamp}")
-            return
+        # Guardar primero
+        self.memory.save_message(tenant, contact, conv, "user", msg)
 
-        logger.info(f"🧠 [AI-FLOW] START: Processing message for tenant {tenant_id}, contact {contact_id}")
+        # Pipeline
+        pipeline_state = self.pipeline.ensure_pipeline(tenant, contact)
 
-        # 2. Fallback: asignar pipeline por defecto si el contacto no tiene uno
-        assigned = ensure_contact_pipeline(tenant_id, contact_id)
-        if assigned:
-            logger.info(f"🏷️ [AI-FLOW] Pipeline assigned automatically to contact {contact_id}")
+        # Contexto
+        context = self.build_context(tenant, contact, conv, pipeline_state)
 
-        # 3. Load Memory
-        history = self.redis_client.get_memory(tenant_id, contact_id, conversation_id)
+        # IA
+        ai_result = self.ai.generate_with_actions(msg, context)
 
-        # 4. Generate AI Response
-        response_text = self.ai_service.generate_response(
-            tenant_id, contact_id, conversation_id, message_text, history
-        )
+        response = ai_result.get("response", "Error")
+        actions = ai_result.get("actions", [])
 
-        logger.info(f"🤖 [AI-FLOW] GENERATED: Response for contact {contact_id} ready.")
+        # Acciones
+        for action in actions:
+            self.actions.execute(action, tenant, contact)
 
-        # 5. Save to Memory (User + Assistant)
-        self.redis_client.save_message(tenant_id, contact_id, conversation_id, "user", message_text)
-        self.redis_client.save_message(tenant_id, contact_id, conversation_id, "assistant", response_text)
+        # Guardar respuesta
+        self.memory.save_message(tenant, contact, conv, "assistant", response)
 
-        # 6. Produce Response to Kafka
-        self.producer.send_response(tenant_id, contact_id, conversation_id, response_text)
-        logger.info(f"📤 [AI-FLOW] END: AI response sent to Kafka for contact {contact_id}")
+        # Enviar
+        self.producer.send_response(tenant, contact, conv, response)
+
+# ==============================
+# APP
+# ==============================
+class AIAgentApp:
+
+    def __init__(self):
+        self.orchestrator = MessageOrchestrator()
+        self.consumer = MessageConsumer(self.orchestrator.handle)
 
     def run(self):
-        logger.info("🚀 AI Agent Service is starting...")
+        logger.info("🚀 AI Agent started")
         self.consumer.start()
 
 
