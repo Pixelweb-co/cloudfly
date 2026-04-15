@@ -20,7 +20,8 @@ class ChatbotGateService {
                 const cached = await redis.get(cacheKey);
                 if (cached !== null) {
                     const enabled = cached === '1';
-                    logger.debug(`🤖 [CHATBOT-GATE] Cache HIT for contact ${contactId}: ${enabled}`);
+                    // Temporarily using INFO to debug Zombie AI issue
+                    logger.info(`🤖 [CHATBOT-GATE] Cache HIT for contact ${contactId}: ${enabled}`);
                     return enabled;
                 }
             }
@@ -32,8 +33,12 @@ class ChatbotGateService {
             );
 
             let enabled = true; // default
-            if (rows.length > 0 && rows[0].chatbot_enabled !== null) {
-                enabled = rows[0].chatbot_enabled === 1;
+            if (rows.length > 0 && rows[0].chatbot_enabled !== undefined && rows[0].chatbot_enabled !== null) {
+                // Robust check: 1, '1', true, or any truthy value
+                enabled = rows[0].chatbot_enabled == 1 || rows[0].chatbot_enabled === true;
+                logger.info(`🤖 [CHATBOT-GATE] DB result for contact ${contactId}: raw=${rows[0].chatbot_enabled}, parsed=${enabled}`);
+            } else {
+                logger.warn(`⚠️ [CHATBOT-GATE] No row or column found for contact ${contactId}, defaulting to enabled=${enabled}`);
             }
 
             // 3. Store in cache
