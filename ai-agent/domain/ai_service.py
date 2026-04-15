@@ -94,6 +94,26 @@ _TOOLS: List[Dict[str, Any]] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "transfer_to_human",
+            "description": (
+                "Transfiere la conversación a un asesor humano cuando no puedas ayudar al cliente, "
+                "si el cliente lo pide explícitamente, o si detectas frustración extrema."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "description": "Breve razón de la transferencia.",
+                    }
+                },
+                "required": ["reason"],
+            },
+        },
+    },
 ]
 
 
@@ -205,9 +225,10 @@ Responde siempre en el idioma del cliente."""
                     "contact_id": function_args["contact_id"],
                     "stage_id": function_args["stage_id"],
                 })
+            elif function_name == "transfer_to_human":
+                return self._transfer_to_human(function_args["reason"])
             else:
-                logger.warning("Unknown tool called", extra={"function_name": function_name})
-                return json.dumps({"error": "Unknown tool"})
+                return json.dumps({"error": f"Unknown tool: {function_name}"})
         except Exception as exc:
             logger.error("Tool execution failed", extra={"tool": function_name, "error": str(exc)})
             return json.dumps({"error": str(exc)})
@@ -222,13 +243,10 @@ Responde siempre en el idioma del cliente."""
         message: str,
         history: List[ChatMessage],
         pipeline_state: Optional[ContactPipelineState],
-    ) -> tuple[str, Optional[Dict], TokenUsage]:
+    ) -> Tuple[str, Optional[Dict], Optional[Dict], TokenUsage]:
         """
-        Returns:
-          (response_text, pipeline_update_request, token_usage)
-
-          pipeline_update_request: {contact_id, stage_id} if the LLM
-          decided to move the stage, otherwise None.
+        Builds the prompt and calls OpenAI in a tool execution loop.
+        Returns (final_text, pipeline_update_request, handoff_request, token_usage)
         """
         # Fetch context from DB
         company_info = await self._db.get_company_info(tenant_id)
@@ -242,6 +260,7 @@ Responde siempre en el idioma del cliente."""
         messages.append({"role": "user", "content": message})
 
         pipeline_update_request: Optional[Dict] = None
+        handoff_request: Optional[Dict] = None
         usage = TokenUsage()
         final_text = ""
 
@@ -284,6 +303,11 @@ Responde siempre en el idioma del cliente."""
                     }
                     tool_result = json.dumps({"success": True})
 
+                # Capture handoff intent
+                if fn_name == "transfer_to_human" and "action" in tool_data:
+                    handoff_request = {"reason": fn_args.get("reason", "No reason provided")}
+                    tool_result = json.dumps({"success": True, "status": "transfer_initiated"})
+
                 messages.append({
                     "tool_call_id": tool_call.id,
                     "role": "tool",
@@ -312,9 +336,14 @@ Responde siempre en el idioma del cliente."""
             },
         )
 
-        return final_text, pipeline_update_request, usage
+        return final_text, pipeline_update_request, handoff_request, usage
 
     # ── Tool Implementations ──────────────────────────────────────────────
+
+    def _transfer_to_human(self, reason: str) -> str:
+        """Called when the AI wants to hand over to a human advisor."""
+        logger.info("Human handoff request received from AI", extra={"reason": reason})
+        return json.dumps({"action": "handoff", "status": "pending", "reason": reason})
 
     async def _search_products(self, query: str, tenant_id: int) -> str:
         if not self._qdrant:
