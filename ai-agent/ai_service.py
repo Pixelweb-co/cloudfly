@@ -221,8 +221,51 @@ class AIService:
             conn.commit()
             conn.close()
             return json.dumps({"success": True, "message": f"Etapa actualizada a {stage_id} correctamente"})
+
+    def get_contact_pipeline(self, contact_id: int, tenant_id: int):
+        """Lee el pipeline asociado al contacto y todas sus etapas disponibles."""
+        logger.info(f"Getting pipeline stages for contact {contact_id} (Tenant: {tenant_id})")
+        try:
+            conn = mysql.connector.connect(
+                host=config.DB_HOST, user=config.DB_USER,
+                password=config.DB_PASSWORD, database=config.DB_NAME
+            )
+            cursor = conn.cursor(dictionary=True)
+
+            # Leer pipeline_id y stage_id actuales del contacto
+            cursor.execute(
+                "SELECT pipeline_id, stage_id FROM contacts WHERE id = %s AND tenant_id = %s",
+                (contact_id, tenant_id)
+            )
+            contact = cursor.fetchone()
+
+            if not contact or not contact.get('pipeline_id'):
+                conn.close()
+                return json.dumps({"error": "El contacto no tiene pipeline asignado"})
+
+            pipeline_id = contact['pipeline_id']
+            current_stage_id = contact['stage_id']
+
+            # Leer nombre del pipeline
+            cursor.execute("SELECT id, name FROM pipelines WHERE id = %s", (pipeline_id,))
+            pipeline = cursor.fetchone()
+
+            # Leer todas las etapas del pipeline
+            cursor.execute(
+                "SELECT id, name, position, color FROM pipeline_stages WHERE pipeline_id = %s ORDER BY position ASC",
+                (pipeline_id,)
+            )
+            stages = cursor.fetchall()
+            conn.close()
+
+            return json.dumps({
+                "pipeline_id": pipeline_id,
+                "pipeline_name": pipeline['name'] if pipeline else None,
+                "current_stage_id": current_stage_id,
+                "stages": stages
+            })
         except Exception as e:
-            logger.error(f"Error updating pipeline stage: {e}")
+            logger.error(f"Error getting contact pipeline: {e}")
             return json.dumps({"error": str(e)})
 
     def generate_pipeline_chart(self, tenant_id: int):
@@ -288,7 +331,7 @@ class AIService:
     def generate_response(self, tenant_id, contact_id, conversation_id, message, history):
         company_info = self.get_company_context(tenant_id)
 
-        system_prompt = f"""Ere un asistente de ventas profesional de la plataforma CloudFly.
+        system_prompt = f"""Eres un asistente de ventas profesional de la plataforma CloudFly.
 Tu objetivo es ayudar al cliente con sus dudas y ventas de manera entusiasta e inmediata.
 
 INFORMACIÓN DE LA EMPRESA ACTUAL:
@@ -303,6 +346,16 @@ Si el producto tiene imagen (image_url válida), escribe el primer renglón con 
 {'{'}Descripción breve{'}'}
 Precio: ${'{'}Precio{'}'}
 Estado: {'{'}Disponible (X unidades) / Agotado{'}'}
+
+GESTIÓN DEL PIPELINE DE VENTAS:
+- SIEMPRE que detectes una intención relevante del cliente (interés, cotización, compra, etc.),
+  llama PRIMERO a get_contact_pipeline para conocer el pipeline y las etapas disponibles.
+- Con esa información, decide si debes avanzar la etapa del contacto usando update_pipeline_stage.
+- NO inventes IDs de etapas. Usa SOLO los IDs que retorne get_contact_pipeline.
+- Ejemplos de cuando avanzar la etapa:
+  * Cliente saluda o hace consulta general → primera etapa del pipeline
+  * Cliente pregunta precios o pide catálogo → etapa de cotización/interés
+  * Cliente confirma que quiere comprar → etapa de venta/cierre
 
 OTRAS REGLAS:
 - Saluda de forma amigable.
@@ -412,6 +465,23 @@ OTRAS REGLAS:
                         "properties": {}
                     }
                 }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_contact_pipeline",
+                    "description": "Lee el pipeline asignado al contacto y devuelve todas las etapas disponibles con sus IDs y nombres. Llama a esta herramienta ANTES de update_pipeline_stage para conocer los IDs correctos.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "contact_id": {
+                                "type": "integer",
+                                "description": "ID del contacto actual."
+                            }
+                        },
+                        "required": ["contact_id"]
+                    }
+                }
             }
         ]
 
@@ -456,6 +526,11 @@ OTRAS REGLAS:
                         )
                     elif function_name == "generate_pipeline_chart":
                         function_response = self.generate_pipeline_chart(int(tenant_id))
+                    elif function_name == "get_contact_pipeline":
+                        function_response = self.get_contact_pipeline(
+                            function_args.get("contact_id"),
+                            int(tenant_id)
+                        )
                     else:
                         function_response = json.dumps({"error": "Unknown function"})
                         

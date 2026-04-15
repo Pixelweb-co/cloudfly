@@ -153,24 +153,70 @@ class ChatService {
                 return contacts[0];
             }
 
-            // 2. No existe: crear contacto nuevo con UUID
+            // 2. No existe: buscar el pipeline por defecto del tenant y su primera etapa
+            let defaultPipelineId = null;
+            let defaultStageId = null;
+
+            try {
+                const [pipelines] = await db.execute(
+                    'SELECT id FROM pipelines WHERE tenant_id = ? ORDER BY id ASC LIMIT 1',
+                    [tenantId]
+                );
+                if (pipelines.length > 0) {
+                    defaultPipelineId = pipelines[0].id;
+                    const [stages] = await db.execute(
+                        'SELECT id FROM pipeline_stages WHERE pipeline_id = ? ORDER BY position ASC LIMIT 1',
+                        [defaultPipelineId]
+                    );
+                    if (stages.length > 0) defaultStageId = stages[0].id;
+                }
+                if (defaultPipelineId && defaultStageId) {
+                    logger.info(`🏷️ [WEBHOOK] Default pipeline=${defaultPipelineId}, first stage=${defaultStageId} (tenant ${tenantId})`);
+                } else {
+                    logger.warn(`⚠️ [WEBHOOK] No pipeline/stage found for tenant ${tenantId}, contact created without stage`);
+                }
+            } catch (pipelineErr) {
+                logger.warn(`⚠️ [WEBHOOK] Could not fetch default pipeline: ${pipelineErr.message}`);
+            }
+
+            // 3. Crear contacto nuevo con UUID + pipeline/stage asignados
             const contactName = name ? `${name} (${cleanPhone})` : `Nuevo Contacto ${cleanPhone}`;
             const contactUuid = require('crypto').randomUUID();
-            
+
             try {
                 const [result] = await db.execute(
-                    `INSERT INTO contacts 
-                    (uuid, name, phone, type, stage, is_active, tenant_id, company_id, created_at, updated_at) 
-                    VALUES (?, ?, ?, 'LEAD', 'LEAD', 1, ?, ?, NOW(), NOW())`,
-                    [contactUuid, contactName, cleanPhone, tenantId, companyId]
+                    `INSERT INTO contacts
+                    (uuid, name, phone, type, stage, is_active, tenant_id, company_id,
+                     pipeline_id, stage_id, created_at, updated_at)
+                    VALUES (?, ?, ?, 'LEAD', 'LEAD', 1, ?, ?, ?, ?, NOW(), NOW())`,
+                    [contactUuid, contactName, cleanPhone, tenantId, companyId,
+                     defaultPipelineId, defaultStageId]
                 );
 
-                const [newContacts] = await db.execute('SELECT * FROM contacts WHERE id = ?', [result.insertId]);
-                logger.info(`🆕 [WEBHOOK] New contact created: ${contactName} (ID: ${result.insertId}, UUID: ${contactUuid})`);
+                const contactId = result.insertId;
+
+                // 4. Registrar en conversation_pipeline_state
+                if (defaultPipelineId && defaultStageId) {
+                    try {
+                        await db.execute(
+                            `INSERT INTO conversation_pipeline_state
+                            (tenant_id, contact_id, pipeline_id, current_stage_id,
+                             entered_stage_at, is_active, created_at, updated_at)
+                            VALUES (?, ?, ?, ?, NOW(), 1, NOW(), NOW())`,
+                            [tenantId, contactId, defaultPipelineId, defaultStageId]
+                        );
+                        logger.info(`📊 [WEBHOOK] Pipeline state created for contact ${contactId}`);
+                    } catch (stateErr) {
+                        logger.warn(`⚠️ [WEBHOOK] Could not create pipeline state: ${stateErr.message}`);
+                    }
+                }
+
+                const [newContacts] = await db.execute('SELECT * FROM contacts WHERE id = ?', [contactId]);
+                logger.info(`🆕 [WEBHOOK] New contact created: ${contactName} (ID: ${contactId}, stage_id: ${defaultStageId})`);
                 return newContacts[0];
 
             } catch (insertError) {
-                // 3. Si falla por duplicado (race condition), recuperar el existente
+                // 5. Si falla por duplicado (race condition), recuperar el existente
                 if (insertError.code === 'ER_DUP_ENTRY') {
                     logger.warn(`⚠️ [WEBHOOK] Duplicate phone detected, recovering existing contact: ${cleanPhone}`);
                     const [existing] = await db.execute(
