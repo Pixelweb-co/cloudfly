@@ -11,12 +11,16 @@ public class QuoteRequestDTO {
     private Long tenantId;
     private Long companyId;
     private Long customerId;
+    private String customerName;
+    private LocalDateTime quoteDate;
     private LocalDateTime expirationDate;
     private QuoteStatus status;
     private String notes;
     private String terms;
+    private BigDecimal subtotal;
     private BigDecimal discount;
     private BigDecimal tax;
+    private BigDecimal total;
     private List<QuoteItemRequestDTO> items;
 
     @Data
@@ -26,5 +30,6 @@ public class QuoteRequestDTO {
         private Integer quantity;
         private BigDecimal unitPrice;
         private BigDecimal discount;
+        private BigDecimal subtotal;
     }
 }

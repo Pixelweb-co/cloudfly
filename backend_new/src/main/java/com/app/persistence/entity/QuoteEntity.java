@@ -57,6 +57,9 @@ public class QuoteEntity {
     @Column("updated_at")
     private LocalDateTime updatedAt;
 
+    @Column("customer_name")
+    private String customerName;
+
     // Explicit Getters and Setters for VPS environment compatibility
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -64,7 +67,14 @@ public class QuoteEntity {
     public Long getTenantId() { return tenantId; }
     public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
 
+    public Long getCompanyId() { return companyId; }
+    public void setCompanyId(Long companyId) { this.companyId = companyId; }
+
+    public String getCustomerName() { return customerName; }
+    public void setCustomerName(String customerName) { this.customerName = customerName; }
+
     public Long getCustomerId() { return customerId; }
+
     public void setCustomerId(Long customerId) { this.customerId = customerId; }
 
     public String getQuoteNumber() { return quoteNumber; }
