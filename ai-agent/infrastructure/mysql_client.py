@@ -275,3 +275,52 @@ class AsyncMySQLClient:
             extra={"contact_id": contact_id, "tenant_id": tenant_id},
         )
         return True
+    
+    async def get_contact(self, identifier: str, tenant_id: int) -> Optional[Dict[str, Any]]:
+        """Busca un contacto por email o teléfono."""
+        sql = "SELECT * FROM contacts WHERE (email = %s OR phone = %s) AND tenant_id = %s LIMIT 1"
+        async with self.readonly() as cur:
+            await cur.execute(sql, (identifier, identifier, tenant_id))
+            return await cur.fetchone()
+
+    async def create_contact(self, tenant_id: int, data: Dict[str, Any]) -> int:
+        """Crea un contacto y devuelve su ID."""
+        fields = ["tenant_id", "created_at", "updated_at", "is_active"]
+        values = [tenant_id, "NOW()", "NOW()", 1]
+        
+        # Mapeo de campos permitidos
+        allowed = ["name", "email", "phone", "address", "tax_id", "document_type", "document_number", "pipeline_id", "stage_id"]
+        for k, v in data.items():
+            if k in allowed and v is not None:
+                fields.append(k)
+                values.append(v)
+        
+        placeholders = ", ".join(["%s" if v != "NOW()" else "NOW()" for v in values])
+        # Filtrar "NOW()" de los parámetros reales para execute
+        params = [v for v in values if v != "NOW()"]
+        
+        sql = f"INSERT INTO contacts ({', '.join(fields)}) VALUES ({placeholders})"
+        async with self.transaction() as cur:
+            await cur.execute(sql, params)
+            return cur.lastrowid
+
+    async def update_contact(self, contact_id: int, tenant_id: int, data: Dict[str, Any]) -> bool:
+        """Actualiza campos de un contacto."""
+        allowed = ["name", "email", "phone", "address", "tax_id", "document_type", "document_number", "stage_id", "pipeline_id"]
+        updates = []
+        params = []
+        
+        for k, v in data.items():
+            if k in allowed and v is not None:
+                updates.append(f"{k} = %s")
+                params.append(v)
+        
+        if not updates:
+            return False
+            
+        sql = f"UPDATE contacts SET {', '.join(updates)}, updated_at = NOW() WHERE id = %s AND tenant_id = %s"
+        params.extend([contact_id, tenant_id])
+        
+        async with self.transaction() as cur:
+            await cur.execute(sql, params)
+            return cur.rowcount > 0

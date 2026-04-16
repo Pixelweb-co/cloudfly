@@ -49,6 +49,9 @@ class AppConfig:
     # ── Rate-limiting per tenant ──────────────────────────────────────────
     ai_rate_limit_per_tenant_per_day: int
 
+    # ── External APIs ─────────────────────────────────────────────────────
+    java_api_url: str
+
     # ── Observability ─────────────────────────────────────────────────────
     log_level: str
 
@@ -86,6 +89,7 @@ def load_config() -> AppConfig:
 
         ai_rate_limit_per_tenant_per_day=int(os.getenv("AI_RATE_LIMIT_PER_DAY", "500")),
 
+        java_api_url=os.getenv("JAVA_API_URL", "http://backend:8080/api"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
     )
 
