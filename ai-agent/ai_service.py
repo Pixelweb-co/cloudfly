@@ -140,7 +140,7 @@ class AIService:
             logger.error(f"Error fetching contact: {e}")
             return json.dumps({"error": str(e)})
 
-    def manage_contact(self, action: str, tenant_id: int, name: str = None, email: str = None, phone: str = None, contact_id: int = None):
+    def manage_contact(self, action: str, tenant_id: int, name: str = None, email: str = None, phone: str = None, contact_id: int = None, address: str = None, tax_id: str = None, document_type: str = None, document_number: str = None):
         """Crea o actualiza un contacto."""
         logger.info(f"Manage contact: {action} (Tenant: {tenant_id})")
         try:
@@ -153,8 +153,17 @@ class AIService:
             cursor = conn.cursor()
             
             if action == "create":
-                query = "INSERT INTO contacts (name, email, phone, tenant_id, created_at, updated_at, is_active) VALUES (%s, %s, %s, %s, NOW(), NOW(), 1)"
-                cursor.execute(query, (name, email, phone, tenant_id))
+                fields = ["name", "email", "phone", "tenant_id", "created_at", "updated_at", "is_active"]
+                values = [name, email, phone, tenant_id, datetime.now(), datetime.now(), 1]
+                
+                if address: fields.append("address"); values.append(address)
+                if tax_id: fields.append("tax_id"); values.append(tax_id)
+                if document_type: fields.append("document_type"); values.append(document_type)
+                if document_number: fields.append("document_number"); values.append(document_number)
+                
+                placeholders = ", ".join(["%s"] * len(values))
+                query = f"INSERT INTO contacts ({', '.join(fields)}) VALUES ({placeholders})"
+                cursor.execute(query, tuple(values))
                 conn.commit()
                 new_id = cursor.lastrowid
                 conn.close()
@@ -169,6 +178,10 @@ class AIService:
                 if name: updates.append("name = %s"); params.append(name)
                 if email: updates.append("email = %s"); params.append(email)
                 if phone: updates.append("phone = %s"); params.append(phone)
+                if address: updates.append("address = %s"); params.append(address)
+                if tax_id: updates.append("tax_id = %s"); params.append(tax_id)
+                if document_type: updates.append("document_type = %s"); params.append(document_type)
+                if document_number: updates.append("document_number = %s"); params.append(document_number)
                 
                 if not updates:
                     return json.dumps({"error": "No fields to update"})
@@ -183,6 +196,82 @@ class AIService:
             return json.dumps({"error": "Invalid action"})
         except Exception as e:
             logger.error(f"Error managing contact: {e}")
+            return json.dumps({"error": str(e)})
+
+    def create_order(self, customer_id: int, items: list, tenant_id: int, notes: str = None):
+        """Crea un pedido en el sistema."""
+        logger.info(f"Creating order for customer {customer_id} (Tenant: {tenant_id})")
+        try:
+            # Re-fetch product names and prices if not provided correctly by AI for safety
+            # But we trust the AI if it provides them.
+            # Convert items to the expected DTO format
+            order_items = []
+            for item in items:
+                order_items.append({
+                    "productId": item.get("productId"),
+                    "productName": item.get("productName"),
+                    "quantity": item.get("quantity"),
+                    "unitPrice": item.get("unitPrice"),
+                    "discount": item.get("discount", 0),
+                    "subtotal": item.get("quantity", 0) * item.get("unitPrice", 0)
+                })
+
+            payload = {
+                "customerId": customer_id,
+                "status": "PROCESANDO",
+                "notes": notes,
+                "items": order_items
+            }
+
+            url = f"{config.JAVA_API_URL}/orders?tenantId={tenant_id}"
+            res = requests.post(url, json=payload, timeout=10)
+            if res.status_code in [200, 201]:
+                return json.dumps(res.json())
+            return json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})
+        except Exception as e:
+            logger.error(f"Error creating order: {e}")
+            return json.dumps({"error": str(e)})
+
+    def get_order(self, order_id: int, tenant_id: int):
+        """Obtiene el detalle de un pedido."""
+        logger.info(f"Fetching order {order_id} (Tenant: {tenant_id})")
+        try:
+            url = f"{config.JAVA_API_URL}/orders/{order_id}?tenantId={tenant_id}"
+            res = requests.get(url, timeout=5)
+            if res.status_code == 200:
+                return json.dumps(res.json())
+            return json.dumps({"error": f"API returned {res.status_code}"})
+        except Exception as e:
+            logger.error(f"Error fetching order: {e}")
+            return json.dumps({"error": str(e)})
+
+    def modify_order(self, order_id: int, items: list, tenant_id: int, notes: str = None):
+        """Modifica un pedido existente."""
+        logger.info(f"Modifying order {order_id} (Tenant: {tenant_id})")
+        try:
+            order_items = []
+            for item in items:
+                order_items.append({
+                    "productId": item.get("productId"),
+                    "productName": item.get("productName"),
+                    "quantity": item.get("quantity"),
+                    "unitPrice": item.get("unitPrice"),
+                    "discount": item.get("discount", 0),
+                    "subtotal": item.get("quantity", 0) * item.get("unitPrice", 0)
+                })
+
+            payload = {
+                "notes": notes,
+                "items": order_items
+            }
+
+            url = f"{config.JAVA_API_URL}/orders/{order_id}?tenantId={tenant_id}"
+            res = requests.put(url, json=payload, timeout=10)
+            if res.status_code == 200:
+                return json.dumps(res.json())
+            return json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})
+        except Exception as e:
+            logger.error(f"Error modifying order: {e}")
             return json.dumps({"error": str(e)})
 
     def update_pipeline_stage(self, contact_id: int, stage_id: int, tenant_id: int):
@@ -378,12 +467,17 @@ GESTIÓN AUTÓNOMA DEL PIPELINE (PROCESO INTERNO - NUNCA MENCIONAR AL USUARIO):
 - Ya tienes arriba el [ESTADO INTERNO DEL PIPELINE]. Úsalo para decidir si cambiar la etapa.
 - Evalúa el contexto de la conversación y decide AUTÓNOMAMENTE si cambiar la etapa usando update_pipeline_stage con el ID correcto.
 - Si detectas que el usuario avanza en su interés, muévelo a la siguiente etapa lógica.
-- Reglas de progresión de etapa:
-  * Primer mensaje / saludo / consulta general → Etapa inicial
-  * Interés en un producto, pregunta por precio o catálogo → Etapa de interés/cotización
-  * Solicita cotización, pide más detalles, quiere saber disponibilidad → Etapa de cotización
-  * Confirma que quiere comprar, pide instrucciones de pago → Etapa de venta/cierre
 - Usa update_pipeline_stage SOLO cuando el cambio sea relevante y esté justificado.
+- FLUJO DE CIERRE DE PEDIDO (IMPORTANTE):
+  1. Identifica los productos que el cliente quiere.
+  2. Confirma si sus datos de contacto (Nombre, Email, NIT, Dirección, etc.) están actualizados usando get_contact. Si falta información o es incorrecta, usa manage_contact(action='update').
+  3. Procesa el pedido usando create_order.
+  4. Una vez creado el pedido, usa update_pipeline_stage para mover al contacto a la etapa de "Facturado" o "Cierre de Venta" (usa get_contact_pipeline para saber el ID correcto de la etapa).
+  5. Informa amigablemente al cliente que su pedido ha sido procesado.
+
+- FLUJO DE RECTIFICACIÓN:
+  1. Si un cliente quiere corregir algo en su pedido actual o previo, usa get_order para ver los detalles.
+  2. Ajusta los productos/cantidades mediante modify_order.
 
 PROHIBICIONES ABSOLUTAS - NUNCA HAGAS ESTO:
 - JAMÁS menciones pipelines, etapas, stages, IDs, bases de datos o procesos técnicos al usuario.
@@ -467,6 +561,10 @@ OTRAS REGLAS:
                             "name": { "type": "string" },
                             "email": { "type": "string" },
                             "phone": { "type": "string" },
+                            "address": { "type": "string" },
+                            "tax_id": { "type": "string", "description": "NIT o Identificación Tributaria" },
+                            "document_type": { "type": "string", "enum": ["CC", "NIT", "TI", "PASAPORTE"] },
+                            "document_number": { "type": "string" },
                             "contact_id": { "type": "integer", "description": "ID del contacto (requerido para update)" }
                         },
                         "required": ["action"]
@@ -515,6 +613,76 @@ OTRAS REGLAS:
                         "required": ["contact_id"]
                     }
                 }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "create_order",
+                    "description": "Crea un pedido oficial de productos para un cliente. Llama a esta función cuando el cliente confirme explícitamente que desea comprar.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "customer_id": { "type": "integer" },
+                            "notes": { "type": "string" },
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "productId": { "type": "integer" },
+                                        "productName": { "type": "string" },
+                                        "quantity": { "type": "integer" },
+                                        "unitPrice": { "type": "number" }
+                                    },
+                                    "required": ["productId", "productName", "quantity", "unitPrice"]
+                                }
+                            }
+                        },
+                        "required": ["customer_id", "items"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_order",
+                    "description": "Obtiene el detalle de un pedido existente por su ID. Úsalo para rectificar o confirmar datos de un pedido previo.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "order_id": { "type": "integer" }
+                        },
+                        "required": ["order_id"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "modify_order",
+                    "description": "Modifica un pedido existente (rectificación).",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "order_id": { "type": "integer" },
+                            "notes": { "type": "string" },
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "productId": { "type": "integer" },
+                                        "productName": { "type": "string" },
+                                        "quantity": { "type": "integer" },
+                                        "unitPrice": { "type": "number" }
+                                    },
+                                    "required": ["productId", "productName", "quantity", "unitPrice"]
+                                }
+                            }
+                        },
+                        "required": ["order_id", "items"]
+                    }
+                }
             }
         ]
 
@@ -549,7 +717,11 @@ OTRAS REGLAS:
                             name=function_args.get("name"),
                             email=function_args.get("email"),
                             phone=function_args.get("phone"),
-                            contact_id=function_args.get("contact_id")
+                            contact_id=function_args.get("contact_id"),
+                            address=function_args.get("address"),
+                            tax_id=function_args.get("tax_id"),
+                            document_type=function_args.get("document_type"),
+                            document_number=function_args.get("document_number")
                         )
                     elif function_name == "update_pipeline_stage":
                         function_response = self.update_pipeline_stage(
@@ -563,6 +735,25 @@ OTRAS REGLAS:
                         function_response = self.get_contact_pipeline(
                             function_args.get("contact_id"),
                             int(tenant_id)
+                        )
+                    elif function_name == "create_order":
+                        function_response = self.create_order(
+                            function_args.get("customer_id"),
+                            function_args.get("items"),
+                            int(tenant_id),
+                            notes=function_args.get("notes")
+                        )
+                    elif function_name == "get_order":
+                        function_response = self.get_order(
+                            function_args.get("order_id"),
+                            int(tenant_id)
+                        )
+                    elif function_name == "modify_order":
+                        function_response = self.modify_order(
+                            function_args.get("order_id"),
+                            function_args.get("items"),
+                            int(tenant_id),
+                            notes=function_args.get("notes")
                         )
                     else:
                         function_response = json.dumps({"error": "Unknown function"})
