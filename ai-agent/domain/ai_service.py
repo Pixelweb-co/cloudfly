@@ -37,42 +37,98 @@ logger = logging.getLogger(__name__)
 _OPENAI_RETRYABLE = (RateLimitError, APITimeoutError, APIConnectionError)
 
 # Tool definitions exposed to the LLM
-_TOOLS: List[Dict[str, Any]] = [
     {
         "type": "function",
         "function": {
-            "name": "search_products_semantically",
-            "description": (
-                "Busca productos en el catálogo usando lenguaje natural. "
-                "Úsalo cuando el cliente pregunte por precios, catálogo o disponibilidad."
-            ),
+            "name": "get_contact",
+            "description": "Busca un contacto existente por su teléfono o email.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {
+                    "identifier": {
                         "type": "string",
-                        "description": "Término de búsqueda o descripción del producto.",
+                        "description": "Teléfono o email del contacto.",
                     }
                 },
-                "required": ["query"],
+                "required": ["identifier"],
             },
         },
     },
     {
         "type": "function",
         "function": {
-            "name": "check_products_stock",
-            "description": "Consulta el inventario real de productos por sus IDs.",
+            "name": "manage_contact",
+            "description": "Crea o actualiza la información de un contacto (nombre, email, dirección, documento, etc).",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "product_ids": {
-                        "type": "array",
-                        "items": {"type": "integer"},
-                        "description": "Lista de IDs de productos.",
-                    }
+                    "action": {"type": "string", "enum": ["create", "update"]},
+                    "contact_id": {"type": "integer", "description": "Requerido para update."},
+                    "name": {"type": "string"},
+                    "email": {"type": "string"},
+                    "phone": {"type": "string"},
+                    "address": {"type": "string"},
+                    "tax_id": {"type": "string", "description": "NIT o ID tributario"},
+                    "document_type": {"type": "string", "enum": ["CC", "NIT", "TI", "PASAPORTE"]},
+                    "document_number": {"type": "string"},
                 },
-                "required": ["product_ids"],
+                "required": ["action"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_order",
+            "description": "Crea un pedido oficial. Llama a esto cuando el cliente confirme la compra.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "customer_id": {"type": "integer"},
+                    "notes": {"type": "string"},
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "productId": {"type": "integer"},
+                                "productName": {"type": "string"},
+                                "quantity": {"type": "integer"},
+                                "unitPrice": {"type": "number"},
+                            },
+                            "required": ["productId", "productName", "quantity", "unitPrice"],
+                        },
+                    },
+                },
+                "required": ["customer_id", "items"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_order",
+            "description": "Consulta detalles de un pedido previo.",
+            "parameters": {
+                "type": "object",
+                "properties": {"order_id": {"type": "integer"}},
+                "required": ["order_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "modify_order",
+            "description": "Modifica un pedido existente.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "order_id": {"type": "integer"},
+                    "items": {"type": "array", "items": {"type": "object"}},
+                    "notes": {"type": "string"},
+                },
+                "required": ["order_id", "items"],
             },
         },
     },
@@ -91,6 +147,18 @@ _TOOLS: List[Dict[str, Any]] = [
                     "stage_id": {"type": "integer"},
                 },
                 "required": ["contact_id", "stage_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_contact_pipeline",
+            "description": "Consulta todas las etapas disponibles del pipeline para un contacto.",
+            "parameters": {
+                "type": "object",
+                "properties": {"contact_id": {"type": "integer"}},
+                "required": ["contact_id"],
             },
         },
     },
@@ -170,19 +238,17 @@ Descripción breve
 Precio: $X.XX
 Estado: Disponible (N unidades) / Agotado
 
-GESTIÓN AUTÓNOMA DEL PIPELINE (proceso interno silencioso):
-- Evalúa el contexto de la conversación y usa update_pipeline_stage si el contacto avanza.
-- Saludos / consulta inicial → etapa inicial.
-- Pregunta por precios o catálogo → etapa de cotización.
-- Pide método de pago o confirma compra → etapa de venta/cierre.
-- Usa update_pipeline_stage SOLO cuando el cambio esté claramente justificado.
+FLUJO DE CIERRE DE PEDIDO (OBLIGATORIO - CRÍTICO):
+1. Identifica los productos (EJ: 'Plan chatbot ventas gratis' ID: 42).
+2. Si el cliente da datos (Email, NIT, Dirección, etc), LLAMA OBLIGATORIAMENTE a manage_contact(action='update') para cada dato ANTES de seguir.
+3. Para confirmar la venta, LLAMA OBLIGATORIAMENTE a create_order. No basta con decir que lo harás, DEBES ejecutar la herramienta. Incluso si el plan es GRATIS, debes crear el pedido.
+4. Tras create_order, usa update_pipeline_stage para mover al contacto a la etapa de 'Venta' o 'Cierre'.
 
-PROHIBICIONES ABSOLUTAS:
-- JAMÁS menciones pipelines, IDs, etapas o procesos internos al usuario.
-- JAMÁS menciones errores técnicos. Si algo falla internamente, sigue respondiendo con normalidad.
-- JAMÁS pidas al usuario que visite páginas externas de registro.
-
-Responde siempre en el idioma del cliente."""
+REGLAS DE ORO:
+- Cada vez que el usuario te dé información personal, usa manage_contact.
+- Cada vez que el usuario acepte un pedido, usa create_order.
+- NO menciones que estás usando herramientas o procesos internos.
+- Responde siempre en el idioma del cliente."""
 
     # ── OpenAI Call (with retries) ─────────────────────────────────────────
 
@@ -212,19 +278,34 @@ Responde siempre en el idioma del cliente."""
         contact_id: int,
     ) -> str:
         """Dispatch a tool call to its implementation. Returns a JSON string."""
+        logger.info(f"Executing tool: {function_name}", extra={"args": function_args, "tenant_id": tenant_id})
         try:
             if function_name == "search_products_semantically":
                 return await self._search_products(function_args["query"], tenant_id)
             elif function_name == "check_products_stock":
                 return self._check_stock(function_args["product_ids"], tenant_id)
             elif function_name == "update_pipeline_stage":
-                # Note: actual async DB call deferred — we return success optimistically.
-                # The orchestrator (main.py) handles the real async DB update.
                 return json.dumps({
                     "action": "update_pipeline_stage",
                     "contact_id": function_args["contact_id"],
                     "stage_id": function_args["stage_id"],
                 })
+            elif function_name == "get_contact_pipeline":
+                return await self._get_contact_pipeline(function_args["contact_id"], tenant_id)
+            elif function_name == "get_contact":
+                return await self._get_contact(function_args["identifier"], tenant_id)
+            elif function_name == "manage_contact":
+                return await self._manage_contact(function_args, tenant_id)
+            elif function_name == "create_order":
+                return self._create_order(
+                    function_args["customer_id"], function_args["items"], tenant_id, function_args.get("notes")
+                )
+            elif function_name == "get_order":
+                return self._get_order(function_args["order_id"], tenant_id)
+            elif function_name == "modify_order":
+                return self._modify_order(
+                    function_args["order_id"], function_args["items"], tenant_id, function_args.get("notes")
+                )
             elif function_name == "transfer_to_human":
                 return self._transfer_to_human(function_args["reason"])
             else:
@@ -370,7 +451,7 @@ Responde siempre en el idioma del cliente."""
     def _check_stock(self, product_ids: List[int], tenant_id: int) -> str:
         try:
             ids_str = ",".join(map(str, product_ids))
-            url = f"{config.qdrant_host}/productos/stock/multiple?ids={ids_str}&tenantId={tenant_id}"
+            url = f"{config.java_api_url}/productos/stock/multiple?ids={ids_str}&tenantId={tenant_id}"
             res = requests.get(url, timeout=5)
             if res.status_code == 200:
                 data = res.json()
@@ -382,5 +463,110 @@ Responde siempre en el idioma del cliente."""
             return json.dumps({"error": f"API {res.status_code}"})
         except Exception as exc:
             logger.error("Stock check failed", extra={"error": str(exc)})
+            return json.dumps({"error": str(exc)})
+
+    async def _get_contact(self, identifier: str, tenant_id: int) -> str:
+        contact = await self._db.get_contact(identifier, tenant_id)
+        if not contact:
+            return json.dumps({"error": "Contact not found"})
+        # Stringify dates for JSON
+        for k, v in contact.items():
+            if hasattr(v, "isoformat"):
+                contact[k] = v.isoformat()
+        return json.dumps(contact)
+
+    async def _manage_contact(self, args: Dict[str, Any], tenant_id: int) -> str:
+        action = args.pop("action")
+        if action == "create":
+            new_id = await self._db.create_contact(tenant_id, args)
+            return json.dumps({"success": True, "id": new_id, "message": "Contact created"})
+        elif action == "update":
+            cid = args.pop("contact_id", None)
+            if not cid:
+                return json.dumps({"error": "contact_id required for update"})
+            success = await self._db.update_contact(cid, tenant_id, args)
+            return json.dumps({"success": success})
+        return json.dumps({"error": "Invalid action"})
+
+    async def _get_contact_pipeline(self, contact_id: int, tenant_id: int) -> str:
+        state = await self._db.get_contact_pipeline_state(contact_id, tenant_id)
+        if not state:
+            return json.dumps({"error": "No pipeline assigned or contact not found"})
+        return json.dumps({
+            "pipeline_id": state.pipeline_id,
+            "pipeline_name": state.pipeline_name,
+            "current_stage_id": state.current_stage_id,
+            "stages": [
+                {"id": s.id, "name": s.name, "position": s.position, "color": s.color}
+                for s in state.stages
+            ]
+        })
+
+    def _create_order(self, customer_id: int, items: List[Dict], tenant_id: int, notes: str = None) -> str:
+        logger.info(f"Creating order for customer {customer_id} (Tenant: {tenant_id})")
+        try:
+            order_items = []
+            for item in items:
+                qty = item.get("quantity", 0)
+                price = item.get("unitPrice", 0)
+                order_items.append({
+                    "productId": item.get("productId"),
+                    "productName": item.get("productName"),
+                    "quantity": qty,
+                    "unitPrice": price,
+                    "discount": 0,
+                    "subtotal": qty * price
+                })
+
+            payload = {
+                "customerId": customer_id,
+                "status": "PROCESANDO",
+                "notes": notes,
+                "items": order_items
+            }
+
+            url = f"{config.java_api_url}/orders?tenantId={tenant_id}"
+            res = requests.post(url, json=payload, timeout=10)
+            if res.status_code in [200, 201]:
+                return json.dumps(res.json())
+            return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
+        except Exception as exc:
+            logger.error("Order creation failed", extra={"error": str(exc)})
+            return json.dumps({"error": str(exc)})
+
+    def _get_order(self, order_id: int, tenant_id: int) -> str:
+        try:
+            url = f"{config.java_api_url}/orders/{order_id}?tenantId={tenant_id}"
+            res = requests.get(url, timeout=5)
+            if res.status_code == 200:
+                return json.dumps(res.json())
+            return json.dumps({"error": f"API {res.status_code}"})
+        except Exception as exc:
+            logger.error("Fetch order failed", extra={"error": str(exc)})
+            return json.dumps({"error": str(exc)})
+
+    def _modify_order(self, order_id: int, items: List[Dict], tenant_id: int, notes: str = None) -> str:
+        try:
+            order_items = []
+            for item in items:
+                qty = item.get("quantity", 0)
+                price = item.get("unitPrice", 0)
+                order_items.append({
+                    "productId": item.get("productId"),
+                    "productName": item.get("productName"),
+                    "quantity": qty,
+                    "unitPrice": price,
+                    "discount": 0,
+                    "subtotal": qty * price
+                })
+
+            payload = {"notes": notes, "items": order_items}
+            url = f"{config.java_api_url}/orders/{order_id}?tenantId={tenant_id}"
+            res = requests.put(url, json=payload, timeout=10)
+            if res.status_code == 200:
+                return json.dumps(res.json())
+            return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
+        except Exception as exc:
+            logger.error("Modify order failed", extra={"error": str(exc)})
             return json.dumps({"error": str(exc)})
 
