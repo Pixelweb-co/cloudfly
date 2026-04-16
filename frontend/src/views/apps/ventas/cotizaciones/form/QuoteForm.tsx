@@ -188,24 +188,16 @@ const QuoteForm = () => {
                 }))
             }
 
-            const url = id
-                ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/quotes` // Debería ser PUT pero el controller usa POST para crear. Necesito revisar si hice PUT.
-                // Revisando QuoteController, no hice PUT. Solo POST para crear. 
-                // Voy a asumir creación por ahora. Si es edición, debería implementar PUT en backend.
-                : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/quotes`
-
-            // Nota: Mi QuoteController actual solo tiene POST (create) y GET. Falta PUT.
-            // Voy a usar POST para crear. Para editar, necesito agregar PUT al backend.
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+            const url = id ? `${baseUrl}/quotes/${id}` : `${baseUrl}/quotes`
 
             if (id) {
-                toast.error('La edición aún no está implementada en el backend')
-                setLoading(false)
-                return
+                await axiosInstance.put(url, payload)
+            } else {
+                await axiosInstance.post(url, payload)
             }
 
-            await axiosInstance.post(url, payload)
-
-            toast.success('Cotización guardada exitosamente')
+            toast.success(id ? 'Cotización actualizada exitosamente' : 'Cotización guardada exitosamente')
             router.push('/ventas/cotizaciones/list')
         } catch (error) {
             console.error('Error saving quote:', error)
