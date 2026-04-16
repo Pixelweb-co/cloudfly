@@ -90,7 +90,7 @@
       },
       {
         "label": "Pedidos",
-        "href": "/ventas/pedidos"
+        "href": "/ventas/pedidos/list"
       },
       {
         "label": "Facturas",

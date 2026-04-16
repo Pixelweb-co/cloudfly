@@ -1,0 +1,369 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: cloud_master
+      MYSQL_PASSWORD: widowmaker
+      MYSQL_ROOT_PASSWORD: widowmaker
+    volumes:
+      - persistent_master:/var/lib/mysql
+    networks:
+      - default
+      - kafka-net
+      - app-net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: zookeeper
+    restart: always
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - kafka-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: kafka
+    restart: always
+    depends_on:
+      - zookeeper
+    # ports:
+    #   - "9092:9092"
+    #   - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT_INTERNAL://0.0.0.0:9092,PLAINTEXT_EXTERNAL://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_INTERNAL://kafka:9092,PLAINTEXT_EXTERNAL://109.205.182.94:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT_INTERNAL:PLAINTEXT,PLAINTEXT_EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - kafka-net
+
+  backend-api:
+    image: cloudfly-backend-api:latest
+    container_name: backend-api
+    build:
+      context: ./backend_new
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./uploads:/uploads
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=cloud_master
+      - DB_USERNAME=root
+      - DB_PASSWORD=widowmaker
+      - KAFKA_HOST=kafka
+      - SPRING_PROFILES_ACTIVE=production
+      - EVOLUTION_API_URL=http://evolution-api:8080
+      - EVOLUTION_API_KEY=CAMBIA_ESTA_LLAVE_LARGA_Y_UNICA
+      - JWT_SECRET=${JWT_SECRET}
+    networks:
+      - app-net
+      - kafka-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.cloudfly.com.co`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=le"
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+      - "traefik.docker.network=cloudfly_app-net"
+
+  notification-service:
+    build:
+      context: ./notifications
+      dockerfile: Dockerfile
+    container_name: notification-service
+    restart: always
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_PROFILES_ACTIVE=production
+    networks:
+      - kafka-net
+      - app-net
+    depends_on:
+      - kafka
+
+  frontend-react:
+    build:
+      context: ./frontend_new
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co
+        - NEXT_PUBLIC_BASE_URL=https://dashboard.cloudfly.com.co
+    container_name: frontend-react
+    restart: always
+    environment:
+      - NEXTAUTH_URL=https://dashboard.cloudfly.com.co
+      - NEXTAUTH_SECRET=cloudfly-prod-secret-change-later
+      - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co
+      - NEXT_PUBLIC_BASE_URL=https://dashboard.cloudfly.com.co
+      - NEXT_PUBLIC_FRONTEND_URL=https://dashboard.cloudfly.com.co
+      - ENVIRONMENT=production
+      - NODE_ENV=production
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`dashboard.cloudfly.com.co`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=le"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+      - "traefik.docker.network=cloudfly_app-net"
+    networks:
+      - app-net
+
+  redis:
+    image: redis:latest
+    container_name: redis_server
+    restart: always
+    
+    networks:
+      - app-net
+    command: redis-server --requirepass Elian2020#
+  
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: always
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    environment:
+      TZ: America/Bogota
+    networks:
+      - app-net
+
+
+  postgresql:
+    image: pgvector/pgvector:pg15
+    container_name: postgres_server
+    restart: always
+    environment:
+      POSTGRES_DB: chatbotdb
+      POSTGRES_USER: chatbot_user
+      POSTGRES_PASSWORD: chatbot_pass
+    
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
+
+
+  # ====================
+  # EVOLUTION API (WhatsApp)
+  # ====================
+
+  evolution-api:
+    image: evoapicloud/evolution-api:latest
+    container_name: evolution_api
+    restart: always
+    extra_hosts:
+      - "chat.cloudfly.com.co:172.18.0.1"
+      - "api.cloudfly.com.co:172.18.0.1"
+    ports:
+      - "8082:8080"  # Puerto para acceso local/desarrollo
+    environment:
+      - CACHE_REDIS_URI=redis://:Elian2020%23@redis:6379/2
+    env_file:
+      - .env
+    volumes:
+      - evolution_instances:/evolution/instances
+    networks:
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.eapi.rule=Host(`eapi.cloudfly.com.co`)"
+      - "traefik.http.routers.eapi.entrypoints=websecure"
+      - "traefik.http.routers.eapi.tls.certresolver=le"
+      - "traefik.http.services.eapi.loadbalancer.server.port=8080"
+  
+  
+  chat-socket-service:
+    build:
+      context: ./chat-socket-service
+      dockerfile: Dockerfile
+    container_name: chat_socket
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3001
+      - FRONTEND_URL=${FRONTEND_URL:-https://dashboard.cloudfly.com.co}
+      - JAVA_API_URL=${JAVA_API_URL:-https://api.cloudfly.com.co}
+      - JWT_SECRET=${JWT_SECRET}
+      - N8N_SECRET_KEY=${N8N_SECRET_KEY}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=cloud_master
+      - DB_USER=root
+      - DB_PASSWORD=widowmaker
+      - EVOLUTION_API_URL=http://evolution_api:8080
+      - EVOLUTION_API_KEY=CAMBIA_ESTA_LLAVE_LARGA_Y_UNICA
+      # AI-Ready Infrastructure
+      - REDIS_HOST=redis_server
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=Elian2020#
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - kafka
+      - redis
+      - db
+    networks:
+      - app-net
+      - kafka-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chatsocket.rule=Host(`chat.cloudfly.com.co`)"
+      - "traefik.http.routers.chatsocket.entrypoints=websecure"
+      - "traefik.http.routers.chatsocket.tls.certresolver=le"
+      - "traefik.http.services.chatsocket.loadbalancer.server.port=3001"
+
+  ai-agent:
+    build:
+      context: ./ai-agent
+      dockerfile: Dockerfile
+    container_name: ai_agent
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - REDIS_HOST=redis_server
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=Elian2020#
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASSWORD=widowmaker
+      - DB_NAME=cloud_master
+    networks:
+      - app-net
+      - kafka-net
+    depends_on:
+      - kafka
+      - redis
+      - db
+    volumes:
+      - ./uploads:/app/uploads
+
+  ai-vector-worker:
+    build:
+      context: ./ai-agent
+      dockerfile: Dockerfile
+    container_name: ai_vector_worker
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - REDIS_HOST=redis_server
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=Elian2020#
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASSWORD=widowmaker
+      - DB_NAME=cloud_master
+    networks:
+      - app-net
+      - kafka-net
+    depends_on:
+      - kafka
+      - db
+    command: ["python", "vector_worker.py"]
+
+
+  # ====================
+  # N8N (Automatización)
+  # ====================
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8nserver.com
+    restart: always
+    environment:
+      - N8N_HOST=autobot.cloudfly.com.co
+      - N8N_PROTOCOL=https
+      - N8N_PORT=5678
+      - WEBHOOK_URL=https://autobot.cloudfly.com.co/
+      - N8N_EDITOR_BASE_URL=https://autobot.cloudfly.com.co
+      - NODE_ENV=production
+      - N8N_SECURE_COOKIE=true
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`autobot.cloudfly.com.co`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls.certresolver=le"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    restart: always
+    ports:
+      - "6333:6333"
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    networks:
+      - app-net
+
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    command:
+      - "--log.level=DEBUG"
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--certificatesresolvers.le.acme.email=web@cloudfly.com.co"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.le.acme.httpchallenge=true"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik:/letsencrypt
+    networks:
+      - app-net
+
+volumes:
+  persistent_master:
+  traefik_certs:
+  postgres_data:
+  portainer_data:
+  evolution_instances:
+  n8n_data:
+  qdrant_storage:
+
+networks:
+  app-net:
+    driver: bridge
+  kafka-net:
+    driver: bridge
+  default:
+    driver: bridge
