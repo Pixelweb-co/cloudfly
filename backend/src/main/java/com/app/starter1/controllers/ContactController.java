@@ -34,8 +34,12 @@ public class ContactController {
     public ResponseEntity<List<ContactResponseDTO>> search(
             @RequestParam Integer tenantId,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) String phone) {
+            @RequestParam(required = false) String phone,
+            @RequestParam(required = false) String query) {
 
+        if (query != null && !query.isEmpty()) {
+            return ResponseEntity.ok(contactService.searchContacts(tenantId, query));
+        }
         if (name != null && !name.isEmpty()) {
             return ResponseEntity.ok(contactService.searchByName(tenantId, name));
         }
