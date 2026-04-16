@@ -34,12 +34,8 @@ public class ContactController {
     public ResponseEntity<List<ContactResponseDTO>> search(
             @RequestParam Integer tenantId,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) String phone,
-            @RequestParam(required = false) String query) {
+            @RequestParam(required = false) String phone) {
 
-        if (query != null && !query.isEmpty()) {
-            return ResponseEntity.ok(contactService.searchContacts(tenantId, query));
-        }
         if (name != null && !name.isEmpty()) {
             return ResponseEntity.ok(contactService.searchByName(tenantId, name));
         }
@@ -62,7 +58,8 @@ public class ContactController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ContactResponseDTO> update(@PathVariable Long id, @Valid @RequestBody ContactRequestDTO request) {
+    public ResponseEntity<ContactResponseDTO> update(@PathVariable Long id,
+            @Valid @RequestBody ContactRequestDTO request) {
         return ResponseEntity.ok(contactService.update(id, request));
     }
 

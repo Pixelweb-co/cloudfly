@@ -40,7 +40,8 @@ public class ContactService {
         contact.setUuid(java.util.UUID.randomUUID().toString());
         contact.setCreatedAt(LocalDateTime.now());
         contact.setUpdatedAt(LocalDateTime.now());
-        if (contact.getStage() == null) contact.setStage("LEAD");
+        if (contact.getStage() == null)
+            contact.setStage("LEAD");
 
         return validateContactUniqueness(contact, tenantId, companyId)
                 .then(Mono.defer(() -> {
@@ -51,16 +52,22 @@ public class ContactService {
 
     private Mono<Void> validateContactUniqueness(ContactEntity contact, Long tenantId, Long companyId) {
         Mono<Void> phoneCheck = existsByPhone(tenantId, companyId, contact.getPhone())
-                .flatMap(exists -> exists ? Mono.error(new RuntimeException("El número de teléfono ya está registrado.")) : Mono.empty());
-        
+                .flatMap(
+                        exists -> exists ? Mono.error(new RuntimeException("El número de teléfono ya está registrado."))
+                                : Mono.empty());
+
         Mono<Void> emailCheck = (contact.getEmail() != null && !contact.getEmail().isEmpty())
                 ? existsByEmail(tenantId, companyId, contact.getEmail())
-                        .flatMap(exists -> exists ? Mono.error(new RuntimeException("El correo electrónico ya está registrado.")) : Mono.empty())
+                        .flatMap(exists -> exists
+                                ? Mono.error(new RuntimeException("El correo electrónico ya está registrado."))
+                                : Mono.empty())
                 : Mono.empty();
-        
+
         Mono<Void> docCheck = (contact.getDocumentNumber() != null && !contact.getDocumentNumber().isEmpty())
-                ? contactRepository.findByTenantIdAndCompanyIdAndDocumentNumber(tenantId, companyId, contact.getDocumentNumber())
-                        .flatMap(existing -> Mono.error(new RuntimeException("El número de documento ya está registrado.")))
+                ? contactRepository
+                        .findByTenantIdAndCompanyIdAndDocumentNumber(tenantId, companyId, contact.getDocumentNumber())
+                        .flatMap(existing -> Mono
+                                .error(new RuntimeException("El número de documento ya está registrado.")))
                 : Mono.empty();
 
         return Mono.when(phoneCheck, emailCheck, docCheck);
@@ -69,41 +76,46 @@ public class ContactService {
     public Mono<ContactEntity> update(Long id, ContactEntity contact, Long tenantId, Long companyId) {
         String cleanPhone = contact.getPhone() != null ? contact.getPhone().replaceAll("\\D", "") : "";
         String cleanEmail = contact.getEmail() != null ? contact.getEmail().trim().toLowerCase() : null;
-        
+
         return contactRepository.findById(id)
-                .filter(existing -> existing.getTenantId().equals(tenantId) && existing.getCompanyId().equals(companyId))
+                .filter(existing -> existing.getTenantId().equals(tenantId)
+                        && existing.getCompanyId().equals(companyId))
                 .flatMap(existing -> {
-                    String existingCleanPhone = existing.getPhone() != null ? existing.getPhone().replaceAll("\\D", "") : "";
-                    String existingCleanEmail = existing.getEmail() != null ? existing.getEmail().trim().toLowerCase() : null;
+                    String existingCleanPhone = existing.getPhone() != null ? existing.getPhone().replaceAll("\\D", "")
+                            : "";
+                    String existingCleanEmail = existing.getEmail() != null ? existing.getEmail().trim().toLowerCase()
+                            : null;
 
                     boolean phoneChanged = !cleanPhone.equals(existingCleanPhone);
                     boolean emailChanged = (cleanEmail != null && !cleanEmail.equals(existingCleanEmail));
 
-                    Mono<Boolean> phoneExists = phoneChanged ? 
-                        contactRepository.existsByPhoneAndCompanyIdAndIdNot(cleanPhone, companyId, id, tenantId) : 
-                        Mono.just(false);
+                    Mono<Boolean> phoneExists = phoneChanged
+                            ? contactRepository.existsByPhoneAndCompanyIdAndIdNot(cleanPhone, companyId, id, tenantId)
+                            : Mono.just(false);
 
-                    Mono<Boolean> emailExists = emailChanged ? 
-                        contactRepository.existsByEmailAndCompanyIdAndIdNot(cleanEmail, companyId, id, tenantId) : 
-                        Mono.just(false);
+                    Mono<Boolean> emailExists = emailChanged
+                            ? contactRepository.existsByEmailAndCompanyIdAndIdNot(cleanEmail, companyId, id, tenantId)
+                            : Mono.just(false);
 
                     return Mono.zip(phoneExists, emailExists)
-                        .flatMap(tuple -> {
-                            if (tuple.getT1()) {
-                                return Mono.error(new RuntimeException("Este número ya está registrado en esta compañía"));
-                            }
-                            if (tuple.getT2()) {
-                                return Mono.error(new RuntimeException("El correo electrónico ya está registrado en esta compañía"));
-                            }
-                            return performUpdate(existing, contact, cleanPhone);
-                        });
+                            .flatMap(tuple -> {
+                                if (tuple.getT1()) {
+                                    return Mono.error(
+                                            new RuntimeException("Este número ya está registrado en esta compañía"));
+                                }
+                                if (tuple.getT2()) {
+                                    return Mono.error(new RuntimeException(
+                                            "El correo electrónico ya está registrado en esta compañía"));
+                                }
+                                return performUpdate(existing, contact, cleanPhone);
+                            });
                 });
     }
 
     private Mono<ContactEntity> performUpdate(ContactEntity existing, ContactEntity contact, String cleanPhone) {
-        log.info("Updating Contact ID: {}. Name: {}, PipelineID: {}, StageID: {}, StageName: {}", 
+        log.info("Updating Contact ID: {}. Name: {}, PipelineID: {}, StageID: {}, StageName: {}",
                 existing.getId(), contact.getName(), contact.getPipelineId(), contact.getStageId(), contact.getStage());
-        
+
         existing.setName(contact.getName());
         existing.setEmail(contact.getEmail());
         existing.setPhone(cleanPhone);
@@ -117,29 +129,33 @@ public class ContactService {
         existing.setDocumentNumber(contact.getDocumentNumber());
         existing.setIsActive(contact.getIsActive());
         existing.setUpdatedAt(LocalDateTime.now());
-        
+
         return contactRepository.save(existing)
-                .doOnSuccess(saved -> log.info("Successfully saved Contact ID: {}. Persisted PipelineID: {}, StageID: {}", 
-                        saved.getId(), saved.getPipelineId(), saved.getStageId()))
-                .doOnError(err -> log.error("FALTA AL GUARDAR CONTACTO ID: {}. Error: {}", existing.getId(), err.getMessage(), err));
+                .doOnSuccess(
+                        saved -> log.info("Successfully saved Contact ID: {}. Persisted PipelineID: {}, StageID: {}",
+                                saved.getId(), saved.getPipelineId(), saved.getStageId()))
+                .doOnError(err -> log.error("FALTA AL GUARDAR CONTACTO ID: {}. Error: {}", existing.getId(),
+                        err.getMessage(), err));
     }
 
     public Mono<Void> delete(Long id, Long tenantId, Long companyId) {
         return contactRepository.findById(id)
-                .filter(existing -> existing.getTenantId().equals(tenantId) && existing.getCompanyId().equals(companyId))
+                .filter(existing -> existing.getTenantId().equals(tenantId)
+                        && existing.getCompanyId().equals(companyId))
                 .flatMap(contactRepository::delete);
     }
 
     public Mono<ContactEntity> getOrCreateContact(Long tenantId, Long companyId, String phone, String name) {
         String cleanPhone = phone.replaceAll("[^0-9]", "");
-        log.info("🔍 Looking for contact with phone: {} in tenant: {} and company: {}", cleanPhone, tenantId, companyId);
+        log.info("🔍 Looking for contact with phone: {} in tenant: {} and company: {}", cleanPhone, tenantId,
+                companyId);
 
         return contactRepository.findByTenantIdAndCompanyIdAndPhone(tenantId, companyId, cleanPhone)
                 .switchIfEmpty(Mono.defer(() -> {
-                    String contactName = (name != null && !name.trim().isEmpty()) 
+                    String contactName = (name != null && !name.trim().isEmpty())
                             ? name + " (" + cleanPhone + ")"
                             : "Nuevo Contacto " + cleanPhone;
-                            
+
                     ContactEntity newContact = ContactEntity.builder()
                             .uuid(java.util.UUID.randomUUID().toString())
                             .tenantId(tenantId)
@@ -157,20 +173,17 @@ public class ContactService {
     }
 
     public Mono<Boolean> existsByPhone(Long tenantId, Long companyId, String phone) {
-        if (phone == null || phone.isEmpty()) return Mono.just(false);
+        if (phone == null || phone.isEmpty())
+            return Mono.just(false);
         String cleanPhone = phone.replaceAll("[^0-9]", "");
         return contactRepository.countByTenantIdAndCompanyIdAndPhone(tenantId, companyId, cleanPhone)
                 .map(count -> count > 0);
     }
 
     public Mono<Boolean> existsByEmail(Long tenantId, Long companyId, String email) {
-        if (email == null || email.isEmpty()) return Mono.just(false);
+        if (email == null || email.isEmpty())
+            return Mono.just(false);
         return contactRepository.countByTenantIdAndCompanyIdAndEmail(tenantId, companyId, email)
                 .map(count -> count > 0);
-    }
-
-    public Flux<ContactEntity> searchContacts(Long tenantId, String query) {
-        log.info("Searching contacts with query: {} for tenant: {}", query, tenantId);
-        return contactRepository.searchContacts(tenantId, query);
     }
 }

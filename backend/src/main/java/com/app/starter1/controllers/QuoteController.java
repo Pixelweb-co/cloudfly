@@ -31,11 +31,6 @@ public class QuoteController {
         return ResponseEntity.ok(quoteService.getQuoteById(id));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<QuoteResponseDTO> updateQuote(@PathVariable Long id, @RequestBody QuoteRequestDTO request) {
-        return ResponseEntity.ok(quoteService.updateQuote(id, request));
-    }
-
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteQuote(@PathVariable Long id) {
         quoteService.deleteQuote(id);
