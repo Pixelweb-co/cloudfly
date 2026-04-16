@@ -51,4 +51,10 @@ public interface ContactRepository extends ReactiveCrudRepository<ContactEntity,
 
     @Query("SELECT COUNT(*) > 0 FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND phone = :phone AND id != :id")
     Mono<Boolean> existsByPhoneAndCompanyIdAndIdNot(String phone, Long companyId, Long id, Long tenantId);
+
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (" +
+           "LOWER(name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "phone LIKE CONCAT('%', :query, '%') OR " +
+           "document_number LIKE CONCAT('%', :query, '%'))")
+    Flux<ContactEntity> searchContacts(Long tenantId, String query);
 }

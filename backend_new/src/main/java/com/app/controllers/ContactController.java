@@ -129,4 +129,11 @@ public class ContactController {
         return getCurrentUserContext(headers)
                 .flatMap(ctx -> contactService.existsByEmail(ctx.tenantId(), ctx.companyId(), email));
     }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
+    public Flux<ContactEntity> searchContacts(@RequestParam String query, @RequestHeader Map<String, String> headers) {
+        return getCurrentUserContext(headers)
+                .flatMapMany(ctx -> contactService.searchContacts(ctx.tenantId(), query));
+    }
 }

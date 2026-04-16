@@ -168,4 +168,9 @@ public class ContactService {
         return contactRepository.countByTenantIdAndCompanyIdAndEmail(tenantId, companyId, email)
                 .map(count -> count > 0);
     }
+
+    public Flux<ContactEntity> searchContacts(Long tenantId, String query) {
+        log.info("Searching contacts with query: {} for tenant: {}", query, tenantId);
+        return contactRepository.searchContacts(tenantId, query);
+    }
 }

@@ -97,6 +97,11 @@ public class QuoteController {
         return quoteService.getById(id);
     }
 
+    @PutMapping("/{id}")
+    public Mono<QuoteResponseDTO> updateQuote(@PathVariable Long id, @RequestBody QuoteRequestDTO request) {
+        return quoteService.updateQuote(id, request);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> delete(@PathVariable Long id) {
