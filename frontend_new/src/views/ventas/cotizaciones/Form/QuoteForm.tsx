@@ -18,7 +18,9 @@ import {
     TableRow,
     Paper,
     MenuItem,
-    Divider
+    Divider,
+    Autocomplete,
+    CircularProgress
 } from '@mui/material'
 import CustomTextField from '@core/components/mui/TextField'
 import { toast } from 'react-hot-toast'
@@ -28,6 +30,7 @@ import { contactService } from '@/services/marketing/contactService'
 import type { Contact } from '@/types/marketing/contactTypes'
 import type { Product } from '@/types/ventas/productTypes'
 import type { QuoteType, QuoteItemType } from '@/types/ventas/quoteTypes'
+import { useDebounce } from 'use-debounce'
 
 const QuoteForm = () => {
     const router = useRouter()
@@ -35,9 +38,15 @@ const QuoteForm = () => {
     const id = params?.id
 
     const [loading, setLoading] = useState(false)
-    const [customers, setCustomers] = useState<Contact[]>([])
     const [products, setProducts] = useState<Product[]>([])
     const [searchTerm, setSearchTerm] = useState('')
+
+    // Typeahead state for customers
+    const [openCustomers, setOpenCustomers] = useState(false)
+    const [customerOptions, setCustomerOptions] = useState<Contact[]>([])
+    const [customerLoading, setCustomerLoading] = useState(false)
+    const [customerSearch, setCustomerSearch] = useState('')
+    const [debouncedCustomerSearch] = useDebounce(customerSearch, 500)
 
     // Form State
     const [formData, setFormData] = useState({
@@ -59,18 +68,49 @@ const QuoteForm = () => {
         }
     }, [id])
 
+    // Search customers when debounced input changes
+    useEffect(() => {
+        if (debouncedCustomerSearch.length > 1) {
+            handleSearchCustomers(debouncedCustomerSearch)
+        } else if (debouncedCustomerSearch === '') {
+            // Cargar iniciales si está vacío
+            loadInitialContacts()
+        }
+    }, [debouncedCustomerSearch])
+
     const loadInitialData = async () => {
         try {
-            const [contactsData, productsData] = await Promise.all([
-                contactService.getAllContacts(),
-                productService.getAllProducts()
-            ])
-
-            setCustomers(contactsData.filter(c => c.type === 'CUSTOMER' || c.type === 'LEAD'))
+            const productsData = await productService.getAllProducts()
             setProducts(productsData)
+            loadInitialContacts()
         } catch (error) {
             console.error('Error loading initial data:', error)
             toast.error('Error al cargar datos iniciales')
+        }
+    }
+
+    const loadInitialContacts = async () => {
+        try {
+            const contactsData = await contactService.getAllContacts()
+            setCustomerOptions(contactsData.filter(c => c.type === 'CUSTOMER' || c.type === 'LEAD').slice(0, 10))
+        } catch (error) {
+            console.error('Error loading initial contacts:', error)
+        }
+    }
+
+    const handleSearchCustomers = async (query: string) => {
+        try {
+            setCustomerLoading(true)
+            const res = await axiosInstance.get(`/api/v1/contacts/search`, {
+                params: {
+                    query: query
+                }
+            })
+            setCustomerOptions(res.data.filter((c: any) => c.type === 'CUSTOMER' || c.type === 'LEAD'))
+        } catch (error) {
+            console.error('Error searching customers:', error)
+        } finally {
+            setCustomerLoading(false)
         }
     }
 
@@ -90,13 +130,18 @@ const QuoteForm = () => {
                 tax: quote.tax || 0
             })
 
+            // Para que el Autocomplete muestre el cliente actual en edición
+            if (quote.customerId) {
+                const customerRes = await axiosInstance.get(`/api/v1/contacts/${quote.customerId}`)
+                setCustomerOptions([customerRes.data])
+            }
+
             setItems(quote.items.map(item => ({
                 productId: item.productId,
                 productName: item.productName,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
                 discount: item.discount,
-                subtotal: item.subtotal,
                 total: item.total
             })))
         } catch (error) {
@@ -192,17 +237,12 @@ const QuoteForm = () => {
             }
 
             if (id) {
-                // Como mencioné en el análisis, el backend original solo usaba POST para crear.
-                // Implementé QuoteController en backend_new con POST. 
-                // Para edición real necesitaría un endpoint PUT. 
-                // Por ahora, lanzaremos un toast informando que es modo lectura o implementación pendiente.
-                toast.error('La edición se habilitará en la próxima actualización del backend')
-                return
+                await axiosInstance.put(`/quotes/${id}`, payload)
+            } else {
+                await axiosInstance.post('/quotes', payload)
             }
 
-            await axiosInstance.post('/quotes', payload)
-
-            toast.success('Cotización guardada exitosamente')
+            toast.success(id ? 'Cotización actualizada exitosamente' : 'Cotización guardada exitosamente')
             router.push('/ventas/cotizaciones/list')
         } catch (error) {
             console.error('Error saving quote:', error)
@@ -227,13 +267,13 @@ const QuoteForm = () => {
                         <IconButton onClick={() => router.push('/ventas/cotizaciones/list')}>
                             <i className='tabler-arrow-left' />
                         </IconButton>
-                        <Typography variant="h4">{id ? 'Ver Cotización' : 'Nueva Cotización'}</Typography>
+                        <Typography variant="h4">{id ? 'Editar Cotización' : 'Nueva Cotización'}</Typography>
                     </div>
                     <Button
                         variant="contained"
                         startIcon={<i className='tabler-device-floppy' />}
                         onClick={handleSubmit}
-                        disabled={loading || !!id}
+                        disabled={loading}
                     >
                         {loading ? 'Guardando...' : 'Guardar Cotización'}
                     </Button>
@@ -246,19 +286,38 @@ const QuoteForm = () => {
                     <CardHeader title="Información General" />
                     <Divider />
                     <CardContent className="flex flex-col gap-5">
-                        <CustomTextField
-                            select
-                            fullWidth
-                            label="Cliente"
-                            value={formData.customerId}
-                            onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
-                        >
-                            {customers.map((customer) => (
-                                <MenuItem key={customer.id} value={customer.id}>
-                                    {customer.name}
-                                </MenuItem>
-                            ))}
-                        </CustomTextField>
+                        <Autocomplete
+                            open={openCustomers}
+                            onOpen={() => setOpenCustomers(true)}
+                            onClose={() => setOpenCustomers(false)}
+                            isOptionEqualToValue={(option, value) => option.id === value.id}
+                            getOptionLabel={(option) => `${option.name} (${option.documentNumber || 'Sin ID'}) - ${option.phone || ''}`}
+                            options={customerOptions}
+                            loading={customerLoading}
+                            value={customerOptions.find(c => c.id === Number(formData.customerId)) || null}
+                            onChange={(event, newValue) => {
+                                setFormData({ ...formData, customerId: newValue ? newValue.id.toString() : '' })
+                            }}
+                            onInputChange={(event, newInputValue) => {
+                                setCustomerSearch(newInputValue)
+                            }}
+                            renderInput={(params) => (
+                                <CustomTextField
+                                    {...params}
+                                    label="Cliente"
+                                    placeholder="Buscar por nombre, ID o teléfono..."
+                                    InputProps={{
+                                        ...params.InputProps,
+                                        endAdornment: (
+                                            <React.Fragment>
+                                                {customerLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                                                {params.InputProps.endAdornment}
+                                            </React.Fragment>
+                                        ),
+                                    }}
+                                />
+                            )}
+                        />
 
                         <CustomTextField
                             type="date"
