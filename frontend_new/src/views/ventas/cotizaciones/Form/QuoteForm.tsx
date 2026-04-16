@@ -170,20 +170,24 @@ const QuoteForm = () => {
         try {
             setLoading(true)
 
+            const totals = calculateTotals()
             const payload = {
                 customerId: Number(formData.customerId),
                 expirationDate: formData.expirationDate ? new Date(formData.expirationDate).toISOString() : null,
                 status: formData.status,
                 notes: formData.notes,
                 terms: formData.terms,
-                discount: calculateTotals().discount,
+                subtotal: totals.subtotal,
+                discount: totals.discount,
                 tax: 0,
+                total: totals.total,
                 items: items.map(item => ({
                     productId: item.productId,
                     productName: item.productName,
                     quantity: item.quantity,
                     unitPrice: item.unitPrice,
-                    discount: item.discount
+                    discount: item.discount,
+                    subtotal: item.subtotal
                 }))
             }
 
