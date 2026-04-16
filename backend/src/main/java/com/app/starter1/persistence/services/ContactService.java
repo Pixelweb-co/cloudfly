@@ -48,12 +48,6 @@ public class ContactService {
                 .collect(Collectors.toList());
     }
 
-    public List<ContactResponseDTO> searchContacts(Integer tenantId, String query) {
-        return contactRepository.searchContacts(tenantId, query).stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
-    }
-
     public List<ContactResponseDTO> getByType(Integer tenantId, ContactType type) {
         return contactRepository.findByTenantIdAndType(tenantId, type).stream()
                 .map(this::mapToDTO)
@@ -70,9 +64,9 @@ public class ContactService {
     public ContactResponseDTO update(Long id, ContactRequestDTO request) {
         Contact contact = contactRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Contact not found"));
-        
+
         BeanUtils.copyProperties(request, contact, "id", "createdAt", "tenantId");
-        
+
         Contact savedContact = contactRepository.save(contact);
         return mapToDTO(savedContact);
     }

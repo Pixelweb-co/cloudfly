@@ -25,7 +25,8 @@ public class QuoteController {
 
     private final QuoteService quoteService;
 
-    private record UserContext(Long tenantId, Long companyId, Set<String> roles) {}
+    private record UserContext(Long tenantId, Long companyId, Set<String> roles) {
+    }
 
     private Mono<UserContext> getCurrentUserContext(Map<String, String> headers) {
         return ReactiveSecurityContextHolder.getContext()
@@ -67,7 +68,7 @@ public class QuoteController {
                             }
                         } else {
                             // Si es Manager/Admin y NO envía cabecera de compañía, ve TODO (nulo)
-                            finalCompanyId = null; 
+                            finalCompanyId = null;
                         }
                     }
 
@@ -95,11 +96,6 @@ public class QuoteController {
     @GetMapping("/{id}")
     public Mono<QuoteResponseDTO> getById(@PathVariable Long id) {
         return quoteService.getById(id);
-    }
-
-    @PutMapping("/{id}")
-    public Mono<QuoteResponseDTO> updateQuote(@PathVariable Long id, @RequestBody QuoteRequestDTO request) {
-        return quoteService.updateQuote(id, request);
     }
 
     @DeleteMapping("/{id}")

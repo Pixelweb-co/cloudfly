@@ -40,76 +40,50 @@ public class QuoteService {
         quote.setTerms(request.getTerms());
         quote.setQuoteNumber("QT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
 
-        updateQuoteData(quote, request);
-
-        Quote savedQuote = quoteRepository.save(quote);
-        return mapToDTO(savedQuote);
-    }
-
-    @Transactional
-    public QuoteResponseDTO updateQuote(Long id, QuoteRequestDTO request) {
-        Quote quote = quoteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Quote not found"));
-
-        quote.setCustomerId(request.getCustomerId());
-        quote.setExpirationDate(request.getExpirationDate());
-        quote.setStatus(request.getStatus() != null ? request.getStatus() : quote.getStatus());
-        quote.setNotes(request.getNotes());
-        quote.setTerms(request.getTerms());
-        quote.setUpdatedAt(LocalDateTime.now());
-
-        updateQuoteData(quote, request);
-
-        Quote savedQuote = quoteRepository.save(quote);
-        return mapToDTO(savedQuote);
-    }
-
-    private void updateQuoteData(Quote quote, QuoteRequestDTO request) {
-        quote.getItems().clear();
         BigDecimal orderSubtotal = BigDecimal.ZERO;
-        BigDecimal totalDiscount = BigDecimal.ZERO;
-        BigDecimal totalTax = BigDecimal.ZERO;
 
-        if (request.getItems() != null) {
-            for (QuoteRequestDTO.QuoteItemRequestDTO itemRequest : request.getItems()) {
-                QuoteItem item = new QuoteItem();
-                item.setQuote(quote);
-                item.setProductId(itemRequest.getProductId());
+        // Procesar items
+        for (QuoteRequestDTO.QuoteItemRequestDTO itemRequest : request.getItems()) {
+            QuoteItem item = new QuoteItem();
+            item.setQuote(quote);
+            item.setProductId(itemRequest.getProductId());
 
-                if (itemRequest.getProductName() == null || itemRequest.getProductName().isEmpty()) {
-                    productRepository.findById(itemRequest.getProductId())
-                            .ifPresent(p -> item.setProductName(p.getProductName()));
-                } else {
-                    item.setProductName(itemRequest.getProductName());
-                }
-
-                item.setQuantity(itemRequest.getQuantity());
-                item.setUnitPrice(itemRequest.getUnitPrice());
-                item.setDiscount(itemRequest.getDiscount() != null ? itemRequest.getDiscount() : BigDecimal.ZERO);
-                item.setTax(BigDecimal.ZERO); // Simplificado a 0
-
-                BigDecimal itemSubtotal = item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
-                item.setSubtotal(itemSubtotal);
-
-                BigDecimal itemTotal = itemSubtotal.subtract(item.getDiscount()).add(item.getTax());
-                item.setTotal(itemTotal);
-
-                quote.getItems().add(item);
-                
-                orderSubtotal = orderSubtotal.add(itemSubtotal);
-                totalDiscount = totalDiscount.add(item.getDiscount());
-                totalTax = totalTax.add(item.getTax());
+            // Si no viene el nombre, buscarlo (opcional)
+            if (itemRequest.getProductName() == null || itemRequest.getProductName().isEmpty()) {
+                productRepository.findById(itemRequest.getProductId())
+                        .ifPresent(p -> item.setProductName(p.getProductName()));
+            } else {
+                item.setProductName(itemRequest.getProductName());
             }
+
+            item.setQuantity(itemRequest.getQuantity());
+            item.setUnitPrice(itemRequest.getUnitPrice());
+            item.setDiscount(itemRequest.getDiscount() != null ? itemRequest.getDiscount() : BigDecimal.ZERO);
+
+            // Cálculos por item
+            BigDecimal itemSubtotal = item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+            item.setSubtotal(itemSubtotal);
+
+            // Impuesto por item (simplificado a 0 por ahora, o lógica personalizada)
+            item.setTax(BigDecimal.ZERO);
+
+            BigDecimal itemTotal = itemSubtotal.subtract(item.getDiscount()).add(item.getTax());
+            item.setTotal(itemTotal);
+
+            quote.getItems().add(item);
+            orderSubtotal = orderSubtotal.add(itemTotal);
         }
 
         quote.setSubtotal(orderSubtotal);
-        // Si el request trae un descuento global, lo usamos. Si no, usamos la suma de descuentos de items.
-        // En este diseño, asumimos que el descuento enviado es el total a restar del subtotal.
-        quote.setDiscount(request.getDiscount() != null ? request.getDiscount() : totalDiscount);
-        quote.setTax(request.getTax() != null ? request.getTax() : totalTax);
+        quote.setDiscount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO);
+        quote.setTax(request.getTax() != null ? request.getTax() : BigDecimal.ZERO);
 
-        BigDecimal finalTotal = orderSubtotal.subtract(quote.getDiscount()).add(quote.getTax());
-        quote.setTotal(finalTotal);
+        // Total final
+        BigDecimal total = orderSubtotal.subtract(quote.getDiscount()).add(quote.getTax());
+        quote.setTotal(total);
+
+        Quote savedQuote = quoteRepository.save(quote);
+        return mapToDTO(savedQuote);
     }
 
     @Transactional

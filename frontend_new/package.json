@@ -88,6 +88,7 @@
     "socket.io-client": "^4.6.1",
     "uuid": "^11.0.5",
     "valibot": "0.36.0",
+    "use-debounce": "^10.0.4",
     "xlsx": "^0.18.5",
     "yup": "^1.4.0"
   },

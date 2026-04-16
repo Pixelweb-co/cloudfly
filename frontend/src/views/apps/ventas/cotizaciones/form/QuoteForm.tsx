@@ -18,9 +18,7 @@ import {
     TableRow,
     Paper,
     MenuItem,
-    Box,
-    Autocomplete,
-    CircularProgress
+    Box
 } from '@mui/material'
 import CustomTextField from '@core/components/mui/TextField'
 import { toast } from 'react-hot-toast'
@@ -30,7 +28,6 @@ import { userMethods } from '@/utils/userMethods'
 import { ProductService, ContactService } from '@/views/apps/pos/services/api'
 import { Contact } from '@/views/apps/pos/types'
 import { ProductType } from '@/types/apps/productType'
-import { useDebounce } from 'use-debounce'
 
 const QuoteForm = () => {
     const router = useRouter()
@@ -41,13 +38,6 @@ const QuoteForm = () => {
     const [customers, setCustomers] = useState<Contact[]>([])
     const [products, setProducts] = useState<ProductType[]>([])
     const [searchTerm, setSearchTerm] = useState('')
-
-    // Typeahead state for customers
-    const [openCustomers, setOpenCustomers] = useState(false)
-    const [customerOptions, setCustomerOptions] = useState<Contact[]>([])
-    const [customerLoading, setCustomerLoading] = useState(false)
-    const [customerSearch, setCustomerSearch] = useState('')
-    const [debouncedCustomerSearch] = useDebounce(customerSearch, 500)
 
     // Form State
     const [formData, setFormData] = useState({
@@ -67,49 +57,21 @@ const QuoteForm = () => {
         }
     }, [id])
 
-    // Search customers when debounced input changes
-    useEffect(() => {
-        if (debouncedCustomerSearch.length > 1) {
-            handleSearchCustomers(debouncedCustomerSearch)
-        } else if (debouncedCustomerSearch === '') {
-            setCustomerOptions([])
-        }
-    }, [debouncedCustomerSearch])
-
     const loadInitialData = async () => {
         try {
             const user = userMethods.getUserLogin()
             const tenantId = user.tenantId || (user.customer ? user.customer.id : 1)
 
-            const productsData = await ProductService.getAll()
+            const [contactsData, productsData] = await Promise.all([
+                ContactService.getAll(tenantId),
+                ProductService.getAll()
+            ])
+
+            setCustomers(contactsData.filter(c => c.type === 'CUSTOMER'))
             setProducts(productsData)
-            
-            // Cargar una lista inicial de clientes sugeridos
-            const initialContacts = await ContactService.getAll(tenantId)
-            setCustomerOptions(initialContacts.filter(c => c.type === 'CUSTOMER').slice(0, 10))
         } catch (error) {
             console.error('Error loading initial data:', error)
-            toast.error('Error al cargar productos')
-        }
-    }
-
-    const handleSearchCustomers = async (query: string) => {
-        try {
-            setCustomerLoading(true)
-            const user = userMethods.getUserLogin()
-            const tenantId = user.tenantId || (user.customer ? user.customer.id : 1)
-
-            const res = await axiosInstance.get(`/contacts/search`, {
-                params: {
-                    tenantId,
-                    query: query
-                }
-            })
-            setCustomerOptions(res.data.filter((c: any) => c.type === 'CUSTOMER'))
-        } catch (error) {
-            console.error('Error searching customers:', error)
-        } finally {
-            setCustomerLoading(false)
+            toast.error('Error al cargar datos')
         }
     }
 
@@ -127,18 +89,13 @@ const QuoteForm = () => {
                 terms: quote.terms || ''
             })
 
-            // Para que el Autocomplete muestre el cliente actual en edición
-            if (quote.customerId) {
-                const customerRes = await axiosInstance.get(`/contacts/${quote.customerId}`)
-                setCustomerOptions([customerRes.data])
-            }
-
             setItems(quote.items.map((item: any) => ({
                 productId: item.productId,
                 productName: item.productName,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
                 discount: item.discount,
+                subtotal: item.subtotal,
                 total: item.total
             })))
         } catch (error) {
@@ -231,16 +188,24 @@ const QuoteForm = () => {
                 }))
             }
 
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-            const url = id ? `${baseUrl}/quotes/${id}` : `${baseUrl}/quotes`
+            const url = id
+                ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/quotes` // Debería ser PUT pero el controller usa POST para crear. Necesito revisar si hice PUT.
+                // Revisando QuoteController, no hice PUT. Solo POST para crear. 
+                // Voy a asumir creación por ahora. Si es edición, debería implementar PUT en backend.
+                : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/quotes`
+
+            // Nota: Mi QuoteController actual solo tiene POST (create) y GET. Falta PUT.
+            // Voy a usar POST para crear. Para editar, necesito agregar PUT al backend.
 
             if (id) {
-                await axiosInstance.put(url, payload)
-            } else {
-                await axiosInstance.post(url, payload)
+                toast.error('La edición aún no está implementada en el backend')
+                setLoading(false)
+                return
             }
 
-            toast.success(id ? 'Cotización actualizada exitosamente' : 'Cotización guardada exitosamente')
+            await axiosInstance.post(url, payload)
+
+            toast.success('Cotización guardada exitosamente')
             router.push('/ventas/cotizaciones/list')
         } catch (error) {
             console.error('Error saving quote:', error)
@@ -287,38 +252,19 @@ const QuoteForm = () => {
                 <Card>
                     <CardHeader title="Información General" />
                     <CardContent className="flex flex-col gap-4">
-                        <Autocomplete
-                            open={openCustomers}
-                            onOpen={() => setOpenCustomers(true)}
-                            onClose={() => setOpenCustomers(false)}
-                            isOptionEqualToValue={(option, value) => option.id === value.id}
-                            getOptionLabel={(option) => `${option.name} (${option.documentNumber || 'Sin ID'}) - ${option.phone || ''}`}
-                            options={customerOptions}
-                            loading={customerLoading}
-                            value={customerOptions.find(c => c.id === Number(formData.customerId)) || null}
-                            onChange={(event, newValue) => {
-                                setFormData({ ...formData, customerId: newValue ? newValue.id.toString() : '' })
-                            }}
-                            onInputChange={(event, newInputValue) => {
-                                setCustomerSearch(newInputValue)
-                            }}
-                            renderInput={(params) => (
-                                <CustomTextField
-                                    {...params}
-                                    label="Cliente"
-                                    placeholder="Buscar por nombre, ID o teléfono..."
-                                    InputProps={{
-                                        ...params.InputProps,
-                                        endAdornment: (
-                                            <React.Fragment>
-                                                {customerLoading ? <CircularProgress color="inherit" size={20} /> : null}
-                                                {params.InputProps.endAdornment}
-                                            </React.Fragment>
-                                        ),
-                                    }}
-                                />
-                            )}
-                        />
+                        <CustomTextField
+                            select
+                            fullWidth
+                            label="Cliente"
+                            value={formData.customerId}
+                            onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
+                        >
+                            {customers.map((customer) => (
+                                <MenuItem key={customer.id} value={customer.id}>
+                                    {customer.name}
+                                </MenuItem>
+                            ))}
+                        </CustomTextField>
 
                         <CustomTextField
                             type="date"
