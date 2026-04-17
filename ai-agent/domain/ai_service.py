@@ -200,9 +200,12 @@ class AIService:
 
     def _build_system_prompt(
         self,
+        tenant_id: int,
+        contact_id: int,
         company_info: Dict[str, Any],
         agent_config: Dict[str, Any],
         pipeline_state: Optional[ContactPipelineState],
+        contact_data: Optional[Dict[str, Any]] = None,
     ) -> str:
         company_block = (
             f"Empresa: {company_info.get('name', 'CloudFly')}\n"
@@ -215,7 +218,9 @@ class AIService:
         pipeline_block = ""
         if pipeline_state:
             pipeline_block = f"""
-[ESTADO INTERNO DEL PIPELINE - SOLO PARA TU USO, NO MENCIONAR AL USUARIO]
+[ESTADO INTERNO DEL PIPELINE - SOLO PARA TU USO]
+ID del Contacto: {contact_id}
+Tenant ID: {tenant_id}
 Pipeline: {pipeline_state.pipeline_name}
 Etapa actual: {pipeline_state.current_stage_name} (ID: {pipeline_state.current_stage_id})
 
@@ -223,12 +228,20 @@ Etapas disponibles (usa estos IDs con update_pipeline_stage):
 {pipeline_state.stages_prompt()}
 """
 
-        return f"""Eres un asistente de ventas profesional de CloudFly.
+        return f"""Eres un asistente de ventas profesional de {company_info.get('name', 'CloudFly')}.
 Ayuda al cliente de forma entusiasta, directa y natural.
 
 INFORMACIÓN DE LA EMPRESA:
 {company_block}
 {custom_block}
+
+[DATOS ACTUALES DEL CONTACTO]
+ID: {contact_id}
+Nombre: {contact_data.get('name') if contact_data else 'No registrado'}
+Email: {contact_data.get('email') if contact_data else 'No registrado'}
+Teléfono: {contact_data.get('phone') if contact_data else 'No registrado'}
+Dirección: {contact_data.get('address') if contact_data else 'No registrado'}
+
 {pipeline_block}
 
 FORMATO OBLIGATORIO PARA PRODUCTOS:
@@ -240,14 +253,29 @@ Estado: Disponible (N unidades) / Agotado
 
 FLUJO DE CIERRE DE PEDIDO (OBLIGATORIO - CRÍTICO):
 1. Identifica los productos (EJ: 'Plan chatbot ventas gratis' ID: 42).
-2. Si el cliente da datos (Email, NIT, Dirección, etc), LLAMA OBLIGATORIAMENTE a manage_contact(action='update') para cada dato ANTES de seguir.
-3. Para confirmar la venta, LLAMA OBLIGATORIAMENTE a create_order. No basta con decir que lo harás, DEBES ejecutar la herramienta. Incluso si el plan es GRATIS, debes crear el pedido.
-4. Tras create_order, usa update_pipeline_stage para mover al contacto a la etapa de 'Venta' o 'Cierre'.
+2. VALIDACIÓN DE DATOS (MANDATORIO): Antes de crear cualquier pedido, revisa los [DATOS ACTUALES DEL CONTACTO]. 
+   Si falta el Nombre completo, Email, Teléfono o Dirección, PÍDELOS de forma amable.
+   Una vez que el cliente te los dé, LLAMA OBLIGATORIAMENTE a manage_contact(action='update') para guardarlos.
+3. Para confirmar la venta, LLAMA OBLIGATORIAMENTE a create_order. No basta con decir que lo harás, DEBES ejecutar la herramienta en el MISMO turno. 
+   NUNCA digas que el pedido está hecho si create_order no ha devuelto un éxito.
+
+[EJEMPLO DE CIERRE CORRECTO]
+Usuario: "Quiero el chatbot gratis"
+Asistente: "¡Excelente elección! Para registrar tu pedido necesito confirmar unos datos: ¿Cuál es tu dirección y nombre completo?"
+Usuario: "Calle 123 y soy Juan Perez"
+Asistente: [LLAMA A manage_contact(action='update', name='Juan Perez', address='Calle 123')]
+Herramienta: {"success": true}
+Asistente: [LLAMA A create_order(customer_id=56, items=[{"productId": 42, "productName": "Plan chatbot ventas gratis", "quantity": 1, "unitPrice": 0}])]
+Herramienta: {"id": 123, "status": "PROCESANDO"}
+Asistente: [LLAMA A update_pipeline_stage(contact_id=56, stage_id=302)]
+Herramienta: {"success": true}
+Asistente: "¡Perfecto Juan! Tu pedido #123 ha sido confirmado. Recibirás un correo en breve..."
 
 REGLAS DE ORO:
+- Tu ID interno para este cliente es {contact_id}. Úsalo en todas las herramientas.
 - Cada vez que el usuario te dé información personal, usa manage_contact.
 - Cada vez que el usuario acepte un pedido, usa create_order.
-- NO menciones que estás usando herramientas o procesos internos.
+- NO menciones que estás usando herramientas.
 - Responde siempre en el idioma del cliente."""
 
     # ── OpenAI Call (with retries) ─────────────────────────────────────────
@@ -332,8 +360,9 @@ REGLAS DE ORO:
         # Fetch context from DB
         company_info = await self._db.get_company_info(tenant_id)
         agent_config = await self._db.get_tenant_agent_config(tenant_id)
+        contact_data = await self._db.get_contact_by_id(contact_id, tenant_id)
 
-        system_prompt = self._build_system_prompt(company_info, agent_config, pipeline_state)
+        system_prompt = self._build_system_prompt(tenant_id, contact_id, company_info, agent_config, pipeline_state, contact_data)
 
         messages: List[Dict] = [{"role": "system", "content": system_prompt}]
         for h in history:

@@ -283,6 +283,13 @@ class AsyncMySQLClient:
             await cur.execute(sql, (identifier, identifier, tenant_id))
             return await cur.fetchone()
 
+    async def get_contact_by_id(self, contact_id: int, tenant_id: int) -> Optional[Dict[str, Any]]:
+        """Busca un contacto por su ID único."""
+        sql = "SELECT * FROM contacts WHERE id = %s AND tenant_id = %s LIMIT 1"
+        async with self.readonly() as cur:
+            await cur.execute(sql, (contact_id, tenant_id))
+            return await cur.fetchone()
+
     async def create_contact(self, tenant_id: int, data: Dict[str, Any]) -> int:
         """Crea un contacto y devuelve su ID."""
         fields = ["tenant_id", "created_at", "updated_at", "is_active"]
