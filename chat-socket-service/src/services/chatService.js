@@ -38,7 +38,8 @@ class ChatService {
             }
         }
 
-        logger.info(`📥 [WEBHOOK] Processing message from ${pushName} (${remoteJid}) on instance ${instance}`);
+        let messagePreview = body ? (body.length > 50 ? body.substring(0, 50) + '...' : body) : '[No Content]';
+        logger.info(`📥 [WEBHOOK] Processing message from ${pushName} (${remoteJid}) on instance ${instance}. Body: "${messagePreview}"`);
 
         try {
             // 1. Encontrar el canal (Channel) para obtener tenantId y companyId
@@ -115,7 +116,7 @@ class ChatService {
                     );
 
                     if (buffered) {
-                        logger.info(`📦 [WEBHOOK] Message ${messageId} buffered for AI processing (chatbot=ON)`);
+                        logger.info(`📦 [WEBHOOK] Message ${messageId} buffered for AI processing (chatbot=ON). Contact: ${contact.id}, Phone: ${contact.phone}`);
                     } else {
                         logger.warn(`⚠️ [WEBHOOK] Buffer failed for message ${messageId}, continuing without Kafka`);
                     }
@@ -326,7 +327,8 @@ class ChatService {
     async processAiResponse(payload) {
         const { tenantId, contactId, conversationId, respuesta } = payload;
         
-        logger.info(`🤖 [AI-RESPONSE] Processing response for contact ${contactId} in conv ${conversationId.substring(0, 8)}...`);
+        let resPreview = respuesta ? (respuesta.length > 50 ? respuesta.substring(0, 50) + '...' : respuesta) : '[Empty]';
+        logger.info(`🤖 [AI-RESPONSE] Processing response for contact ${contactId} in conv ${conversationId.substring(0, 8)}... Content: "${resPreview}"`);
 
         try {
             // 1. Obtener información del contacto para notificar al frontend y canal
