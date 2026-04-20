@@ -11,6 +11,7 @@ Design decisions:
   - Tool execution is a simple dispatcher pattern — easy to extend.
   - Token usage is logged on every call for cost monitoring.
 """
+import hashlib
 import json
 import logging
 from typing import Any, Dict, List, Optional
@@ -304,9 +305,11 @@ REGLAS DE ORO:
         function_args: Dict[str, Any],
         tenant_id: int,
         contact_id: int,
+        message_id: str = "unknown",
     ) -> str:
         """Dispatch a tool call to its implementation. Returns a JSON string."""
-        logger.info(f"Executing tool: {function_name}", extra={"args": function_args, "tenant_id": tenant_id})
+        log_ctx = {"tool": function_name, "args": function_args, "tenant_id": tenant_id, "contact_id": contact_id, "message_id": message_id}
+        logger.info(f"Executing tool: {function_name}", extra=log_ctx)
         try:
             if function_name == "search_products_semantically":
                 return await self._search_products(function_args["query"], tenant_id)
@@ -326,7 +329,11 @@ REGLAS DE ORO:
                 return await self._manage_contact(function_args, tenant_id)
             elif function_name == "create_order":
                 return self._create_order(
-                    function_args["customer_id"], function_args["items"], tenant_id, function_args.get("notes")
+                    function_args["customer_id"], 
+                    function_args["items"], 
+                    tenant_id, 
+                    function_args.get("notes"),
+                    message_id
                 )
             elif function_name == "get_order":
                 return self._get_order(function_args["order_id"], tenant_id)
@@ -402,7 +409,7 @@ REGLAS DE ORO:
                 fn_name = tool_call.function.name
                 fn_args = json.loads(tool_call.function.arguments)
 
-                tool_result = await self._execute_tool(fn_name, fn_args, tenant_id, contact_id)
+                tool_result = await self._execute_tool(fn_name, fn_args, tenant_id, contact_id, conversation_id)
                 tool_data = json.loads(tool_result)
 
                 # Capture pipeline update intent (executed async by orchestrator)
@@ -531,8 +538,18 @@ REGLAS DE ORO:
             ]
         })
 
-    def _create_order(self, customer_id: int, items: List[Dict], tenant_id: int, notes: str = None) -> str:
-        logger.info(f"Creating order for customer {customer_id} (Tenant: {tenant_id})")
+    def _create_order(self, customer_id: int, items: List[Dict], tenant_id: int, notes: str = None, message_id: str = "unknown") -> str:
+        # Idempotency: generate a hash of the critical order data + message_id
+        order_hash_data = f"{customer_id}-{json.dumps(items, sort_keys=True)}-{message_id}"
+        idempotency_key = hashlib.sha256(order_hash_data.encode()).hexdigest()
+
+        log_ctx = {
+            "customer_id": customer_id,
+            "tenant_id": tenant_id,
+            "idempotency_key": idempotency_key,
+            "message_id": message_id
+        }
+        logger.info(f"Creating order for customer {customer_id}", extra=log_ctx)
         try:
             order_items = []
             for item in items:
@@ -551,7 +568,8 @@ REGLAS DE ORO:
                 "customerId": customer_id,
                 "status": "PROCESANDO",
                 "notes": notes,
-                "items": order_items
+                "items": order_items,
+                "externalReference": idempotency_key # Used for idempotency in the backend
             }
 
             url = f"{config.java_api_url}/orders?tenantId={tenant_id}"

@@ -109,6 +109,7 @@ class AIAgentApp:
             "contact_id": payload.contact_id,
             "conversation_id": payload.conversation_id,
             "message_id": payload.message_id,
+            "message_text": payload.message_text[:100],  # Log first 100 chars
         }
 
         # ① Idempotency
@@ -144,6 +145,7 @@ class AIAgentApp:
                 payload.message_text,
                 history,
                 pipeline_state,
+                payload.message_id,
             )
 
             # ⑦ Execute pipeline stage update if LLM requested one
@@ -185,7 +187,7 @@ class AIAgentApp:
                 response_text,
                 is_bot_handoff=is_handoff,
             )
-            logger.info("Response sent", extra=log_ctx)
+            logger.info("Response sent", extra={**log_ctx, "response_text": response_text[:100]})
 
         except RateLimitExceededError:
             raise  # propagate — don't DLQ rate limit errors
