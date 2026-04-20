@@ -14,10 +14,10 @@ class ChatService {
         const type = (payload.event || '').toUpperCase().replace(/\./g, '_');
         const instance = payload.instance;
 
-        logger.info(`📥 [WEBHOOK] Received event: ${payload.event} (normalized: ${type}) from instance: ${instance}`);
+        logger.info(`📥 [WEBHOOK_START] Incoming event: ${payload.event} | Instance: ${instance}`);
 
         if (type !== 'MESSAGES_UPSERT') {
-            logger.debug(`[WEBHOOK] Skipping non-upsert event: ${type}`);
+            logger.debug(`[WEBHOOK_SKIP] Event ${type} is not MESSAGES_UPSERT. Ignoring.`);
             return;
         }
 
@@ -39,17 +39,18 @@ class ChatService {
         }
 
         let messagePreview = body ? (body.length > 50 ? body.substring(0, 50) + '...' : body) : '[No Content]';
-        logger.info(`📥 [WEBHOOK] Processing message from ${pushName} (${remoteJid}) on instance ${instance}. Body: "${messagePreview}"`);
+        logger.info(`📥 [WEBHOOK_DATA] From: ${pushName} (${remoteJid}) | Body: "${messagePreview}"`);
 
         try {
             // 1. Encontrar el canal (Channel) para obtener tenantId y companyId
+            logger.info(`🔍 [WEBHOOK_STEP_1] Searching channel for instance: ${instance}`);
             const [channels] = await db.execute(
                 'SELECT id, tenant_id, company_id FROM channels WHERE instance_name = ? LIMIT 1',
                 [instance]
             );
 
             if (channels.length === 0) {
-                logger.warn(`⚠️ [WEBHOOK] No channel found for instance: ${instance}`);
+                logger.warn(`⚠️ [WEBHOOK_ABORT] No channel configured in DB for instance: ${instance}. Check your Channels configuration in dashboard.`);
                 return;
             }
 
@@ -58,15 +59,20 @@ class ChatService {
             const companyId = channel.company_id;
             const channelId = channel.id;
 
-            logger.info(`[WEBHOOK] Channel found: ID=${channelId}, Tenant=${tenantId}, Company=${companyId}`);
+            logger.info(`✅ [WEBHOOK_STEP_1_OK] Channel found: ID=${channelId} | Tenant=${tenantId} | Company=${companyId}`);
 
             // 2. Buscar o crear el contacto
+            logger.info(`🔍 [WEBHOOK_STEP_2] Resolving contact: ${remoteJid}`);
             let contact = await this.getOrCreateContact(tenantId, companyId, remoteJid, pushName);
+            logger.info(`✅ [WEBHOOK_STEP_2_OK] Contact: ${contact.name} (ID: ${contact.id})`);
 
             // 3. Obtener o crear conversation_id (UUID, 30 min gap)
+            logger.info(`🔍 [WEBHOOK_STEP_3] Resolving conversation ID for contact ${contact.id}`);
             const conversationId = await conversationService.getOrCreateConversationId(tenantId, contact.id, channelId);
+            logger.info(`✅ [WEBHOOK_STEP_3_OK] Conversation: ${conversationId.substring(0, 8)}...`);
             
             // 4. Guardar el mensaje CON conversation_id
+            logger.info(`💾 [WEBHOOK_STEP_4] Saving message to DB...`);
             const [result] = await db.execute(
                 `INSERT INTO omni_channel_messages 
                 (tenant_id, channel_id, contact_id, direction, content, status, external_msg_id, conversation_id, created_at) 
@@ -75,7 +81,7 @@ class ChatService {
             );
 
             const messageId = result.insertId;
-            logger.info(`✅ [WEBHOOK] Message saved to DB (ID: ${messageId}, Group: ${conversationId.substring(0, 8)}...) content: "${body.substring(0, 20)}..."`);
+            logger.info(`✅ [WEBHOOK_STEP_4_OK] Message saved (ID: ${messageId})`);
 
             // 5. Obtener últimos 10 mensajes
             const [history] = await db.execute(
@@ -88,6 +94,8 @@ class ChatService {
             // 6. Emitir por Socket.IO (SIEMPRE, independiente del chatbot gate)
             const phoneDigits = remoteJid.split('@')[0].replace(/\D/g, '');
             const roomName = `tenant_${tenantId}_contact_${phoneDigits}`;
+            logger.info(`📡 [WEBHOOK_STEP_6] Emitting to Socket.io room: ${roomName}`);
+            
             const eventPayload = {
                 message: {
                     id: messageId,
@@ -102,13 +110,15 @@ class ChatService {
             };
 
             io.to(roomName).emit('new-message', eventPayload);
-            logger.info(`📡 [WEBHOOK] Socket event emitted to room: ${roomName}`);
+            logger.info(`✅ [WEBHOOK_STEP_6_OK] Socket event emitted.`);
 
             // 7. CHATBOT GATE: Check if chatbot is enabled for this contact
+            logger.info(`🛡️ [WEBHOOK_STEP_7] Checking Chatbot Gate for Contact: ${contact.id}`);
             try {
                 const chatbotEnabled = await chatbotGateService.isChatbotEnabled(tenantId, contact.id);
 
                 if (chatbotEnabled) {
+                    logger.info(`🤖 [WEBHOOK_GATE] Chatbot is ENABLED. Buffering for AI agent...`);
                     // Buffer the message (3s debounce → Kafka)
                     const buffered = await messageBufferService.bufferMessage(
                         tenantId, companyId, contact.id, conversationId,
@@ -116,22 +126,22 @@ class ChatService {
                     );
 
                     if (buffered) {
-                        logger.info(`📦 [WEBHOOK] Message ${messageId} buffered for AI processing (chatbot=ON). Contact: ${contact.id}, Phone: ${contact.phone}`);
+                        logger.info(`📦 [WEBHOOK_STEP_7_OK] Message ${messageId} successfully buffered. AI response pending.`);
                     } else {
-                        logger.warn(`⚠️ [WEBHOOK] Buffer failed for message ${messageId}, continuing without Kafka`);
+                        logger.warn(`⚠️ [WEBHOOK_STEP_7_FAIL] Buffer failed for message ${messageId}. Message will not reach AI agent.`);
                     }
                 } else {
-                    logger.info(`👤 [WEBHOOK] Chatbot OFF for contact ${contact.id} — human-only mode (no buffer/Kafka)`);
+                    logger.info(`👤 [WEBHOOK_GATE] Chatbot is DISABLED. Human-only mode.`);
                 }
             } catch (gateError) {
-                // Fallback: if gate/buffer fails, the message is already saved and emitted via socket
-                logger.error(`❌ [WEBHOOK] Chatbot gate/buffer error (non-fatal): ${gateError.message}`);
+                logger.error(`❌ [WEBHOOK_GATE_ERROR] Chatbot gate/buffer failed: ${gateError.message}`);
             }
 
         } catch (error) {
-            logger.error(`❌ [WEBHOOK] Error processing webhook logic: ${error.message}`);
+            logger.error(`❌ [WEBHOOK_CRITICAL_ERROR] ${error.message}`);
             logger.error(error.stack);
         }
+    }
     }
 
 

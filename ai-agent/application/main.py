@@ -97,10 +97,11 @@ class AIAgentApp:
         Non-retryable errors go to DLQ. Retryable errors are re-raised
         (Kafka consumer will not commit the offset on failure if needed).
         """
+        logger.info("🆕 [KAFKA_RECEIVED] Incoming raw message from messages.in")
         try:
             payload = MessagePayload.from_dict(raw_payload)
         except (KeyError, ValueError) as exc:
-            logger.error("Invalid payload — skipping", extra={"error": str(exc), "raw": str(raw_payload)[:200]})
+            logger.error("❌ [KAFKA_PARSE_ERROR] Invalid payload — skipping", extra={"error": str(exc), "raw": str(raw_payload)[:200]})
             self.producer.send_to_dlq(raw_payload, f"Invalid payload: {exc}")
             return
 
@@ -109,35 +110,39 @@ class AIAgentApp:
             "contact_id": payload.contact_id,
             "conversation_id": payload.conversation_id,
             "message_id": payload.message_id,
-            "message_text": payload.message_text[:100],  # Log first 100 chars
         }
 
         # ① Idempotency
         if await self.redis.is_already_processed(payload.message_id):
-            logger.info("Duplicate message — skipping", extra=log_ctx)
+            logger.info("♻️ [AI_STEP_1] Duplicate message detected in Redis — skipping", extra=log_ctx)
             return
 
-        logger.info("Processing message", extra=log_ctx)
+        logger.info(f"⚙️ [AI_START] Processing message: \"{payload.message_text[:50]}...\"", extra=log_ctx)
 
         # ② Rate limiting
         if not await self.redis.check_and_increment_rate_limit(payload.tenant_id):
+            logger.error("🚫 [AI_RATE_LIMIT] Daily quota exceeded for tenant", extra=log_ctx)
             raise RateLimitExceededError(f"Tenant {payload.tenant_id} rate limit exceeded")
 
         try:
             # ③ Ensure pipeline assigned (atomic, race-condition safe)
+            logger.info("🔍 [AI_STEP_3] Ensuring pipeline assigned", extra=log_ctx)
             await self.db.ensure_pipeline_assigned(payload.tenant_id, payload.contact_id)
 
             # ④ Load history
+            logger.info("📚 [AI_STEP_4] Loading conversation history from Redis", extra=log_ctx)
             history = await self.redis.get_memory(
                 payload.tenant_id, payload.contact_id, payload.conversation_id
             )
 
             # ⑤ Fetch current pipeline state (for prompt injection)
+            logger.info("📊 [AI_STEP_5] Fetching current pipeline state from DB", extra=log_ctx)
             pipeline_state = await self.db.get_contact_pipeline_state(
                 payload.contact_id, payload.tenant_id
             )
 
             # ⑥ Generate AI response
+            logger.info("🤖 [AI_STEP_6] calling LLM (OpenAI)...", extra=log_ctx)
             response_text, pipeline_update, handoff_request, token_usage = await self.ai.generate_response(
                 payload.tenant_id,
                 payload.contact_id,
@@ -147,11 +152,11 @@ class AIAgentApp:
                 pipeline_state,
                 payload.message_id,
             )
+            logger.info(f"✅ [AI_STEP_6_OK] LLM responded. Tokens: {token_usage}", extra=log_ctx)
 
             # ⑦ Execute pipeline stage update if LLM requested one
             if pipeline_update:
-                # Security/Logic fix: Always use the contact_id from the original payload
-                # to prevent the AI from accidentally updating a different contact (or getting IDs mixed up).
+                logger.info(f"📈 [AI_STEP_7] Pipeline update requested: stage_id {pipeline_update['stage_id']}", extra=log_ctx)
                 await self.db.update_stage(
                     contact_id=payload.contact_id,
                     stage_id=pipeline_update["stage_id"],
@@ -162,14 +167,12 @@ class AIAgentApp:
             is_handoff = False
             if handoff_request:
                 is_handoff = True
+                logger.info("👤 [AI_HANDOFF] AI requested handoff to human", extra=log_ctx)
                 await self.db.disable_chatbot(payload.contact_id, payload.tenant_id)
                 await self.redis.invalidate_chatbot_cache(payload.tenant_id, payload.contact_id)
-                logger.info(
-                    "Handoff triggered by AI",
-                    extra={**log_ctx, "reason": handoff_request.get("reason")},
-                )
 
             # ⑧ Persist conversation turns
+            logger.info("💾 [AI_STEP_8] Saving user and assistant messages to history/Redis", extra=log_ctx)
             await self.redis.save_message(
                 payload.tenant_id, payload.contact_id, payload.conversation_id,
                 "user", payload.message_text,
@@ -180,6 +183,7 @@ class AIAgentApp:
             )
 
             # ⑨ Publish reply
+            logger.info("📡 [AI_SENDING] Publishing response to Kafka (messages.out)", extra=log_ctx)
             self.producer.send_response(
                 payload.tenant_id,
                 payload.contact_id,
@@ -187,18 +191,18 @@ class AIAgentApp:
                 response_text,
                 is_bot_handoff=is_handoff,
             )
-            logger.info("Response sent", extra={**log_ctx, "response_text": response_text[:100]})
+            logger.info("🏁 [AI_FINISHED] Message processing complete", extra=log_ctx)
 
         except RateLimitExceededError:
             raise  # propagate — don't DLQ rate limit errors
         except NonRetryableError as exc:
-            logger.error("Non-retryable error", extra={**log_ctx, "error": str(exc)})
+            logger.error("❌ [AI_ERROR_NONRETRY] Critical failure", extra={**log_ctx, "error": str(exc)})
             self.producer.send_to_dlq(raw_payload, str(exc))
         except RetryableError as exc:
-            logger.warning("Retryable error — re-raising", extra={**log_ctx, "error": str(exc)})
+            logger.warning("⚠️ [AI_ERROR_RETRY] Retriable failure — reraising...", extra={**log_ctx, "error": str(exc)})
             raise
         except Exception as exc:
-            logger.error("Unexpected error", extra={**log_ctx, "error": str(exc)})
+            logger.error("💥 [AI_ERROR_UNEXPECTED] Crash in AI logic", extra={**log_ctx, "error": str(exc)})
             self.producer.send_to_dlq(raw_payload, f"Unexpected: {exc}")
 
     # ── Run ───────────────────────────────────────────────────────────────
