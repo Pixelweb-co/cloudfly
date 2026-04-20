@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 _OPENAI_RETRYABLE = (RateLimitError, APITimeoutError, APIConnectionError)
 
 # Tool definitions exposed to the LLM
+TOOLS = [
     {
         "type": "function",
         "function": {
