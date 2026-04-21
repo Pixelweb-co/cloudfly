@@ -120,12 +120,12 @@ const ChannelPage = () => {
             </Grid>
 
             {/* Dialogs */}
-            {session?.user?.accessToken && (
+            {session?.accessToken && (
                 <>
                     <WhatsAppActivationDialog 
                         open={openWhatsAppDialog}
                         onClose={() => setOpenWhatsAppDialog(false)}
-                        accessToken={session.user.accessToken}
+                        accessToken={session.accessToken as string}
                         onComplete={fetchChannels}
                     />
                     <WhatsAppManagementDialog
@@ -136,7 +136,7 @@ const ChannelPage = () => {
                     <FacebookActivationDialog
                         open={openFacebookDialog}
                         onClose={() => setOpenFacebookDialog(false)}
-                        accessToken={session.user.accessToken}
+                        accessToken={session.accessToken as string}
                         onComplete={fetchChannels}
                     />
                 </>
