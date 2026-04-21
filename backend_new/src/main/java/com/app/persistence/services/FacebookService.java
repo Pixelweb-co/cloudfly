@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -51,7 +52,7 @@ public class FacebookService {
                         .queryParam("fb_exchange_token", shortLivedToken)
                         .build())
                 .retrieve()
-                .bodyToMono(Map.class)
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                 .map(response -> (String) response.get("access_token"));
     }
 
@@ -62,7 +63,7 @@ public class FacebookService {
                         .queryParam("access_token", userAccessToken)
                         .build())
                 .retrieve()
-                .bodyToMono(Map.class)
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                 .map(response -> (List<Map<String, Object>>) response.get("data"));
     }
 
@@ -74,7 +75,7 @@ public class FacebookService {
                         .queryParam("access_token", pageAccessToken)
                         .build(pageId))
                 .retrieve()
-                .bodyToMono(Map.class)
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                 .map(response -> Boolean.TRUE.equals(response.get("success")))
                 .onErrorResume(e -> {
                     log.error("Error subscribing app to page {}: {}", pageId, e.getMessage());
@@ -145,7 +146,7 @@ public class FacebookService {
                             .contentType(MediaType.APPLICATION_JSON)
                             .bodyValue(body)
                             .retrieve()
-                            .bodyToMono(Map.class);
+                            .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {});
                 } catch (Exception e) {
                     return Mono.error(e);
                 }
