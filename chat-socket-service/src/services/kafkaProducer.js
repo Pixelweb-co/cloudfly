@@ -4,7 +4,8 @@ const logger = require('../utils/logger');
 let producer = null;
 let isConnected = false;
 
-const TOPIC = 'messages.in';
+const MESSAGES_IN_TOPIC = 'messages.in';
+const EMAIL_TOPIC = 'email-notifications';
 
 async function initKafkaProducer() {
     try {
@@ -25,7 +26,7 @@ async function initKafkaProducer() {
         isConnected = true;
 
         logger.info(`✅ [KAFKA] Producer connected to brokers: ${brokers.join(', ')}`);
-        logger.info(`✅ [KAFKA] Target topic: ${TOPIC}`);
+        logger.info(`✅ [KAFKA] Target topics: ${MESSAGES_IN_TOPIC}, ${EMAIL_TOPIC}`);
 
         producer.on('producer.disconnect', () => {
             isConnected = false;
@@ -63,17 +64,42 @@ async function publishToKafka(tenantId, companyId, contactId, conversationId, co
 
     try {
         await producer.send({
-            topic: TOPIC,
+            topic: MESSAGES_IN_TOPIC,
             messages: [{
                 key,
                 value: JSON.stringify(value)
             }]
         });
 
-        logger.info(`📤 [KAFKA] Published to ${TOPIC} | key=${key} | msgs=${messageCount} | len=${concatenatedMessage.length} chars`);
+        logger.info(`📤 [KAFKA] Published to ${MESSAGES_IN_TOPIC} | key=${key} | msgs=${messageCount} | len=${concatenatedMessage.length} chars`);
         return true;
     } catch (error) {
         logger.error(`❌ [KAFKA] Failed to publish: ${error.message}`);
+        return false;
+    }
+}
+
+/**
+ * Publish an email notification to Kafka.
+ */
+async function publishToEmailTopic(notification) {
+    if (!isConnected || !producer) {
+        logger.error('❌ [KAFKA] Producer not connected. Email notification dropped.');
+        return false;
+    }
+
+    try {
+        await producer.send({
+            topic: EMAIL_TOPIC,
+            messages: [{
+                value: JSON.stringify(notification)
+            }]
+        });
+
+        logger.info(`📤 [KAFKA] Email notification published to ${EMAIL_TOPIC} for: ${notification.to}`);
+        return true;
+    } catch (error) {
+        logger.error(`❌ [KAFKA] Failed to publish email notification: ${error.message}`);
         return false;
     }
 }
@@ -90,4 +116,10 @@ function isKafkaAvailable() {
     return isConnected && producer !== null;
 }
 
-module.exports = { initKafkaProducer, publishToKafka, disconnectKafka, isKafkaAvailable };
+module.exports = { 
+    initKafkaProducer, 
+    publishToKafka, 
+    publishToEmailTopic,
+    disconnectKafka, 
+    isKafkaAvailable 
+};

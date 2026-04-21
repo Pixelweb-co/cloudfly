@@ -4,6 +4,7 @@ const conversationService = require('./conversationService');
 const chatbotGateService = require('./chatbotGateService');
 const messageBufferService = require('./messageBufferService');
 const evolutionClient = require('./evolutionClient');
+const kafkaProducer = require('./kafkaProducer');
 
 class ChatService {
     /**
@@ -15,6 +16,11 @@ class ChatService {
         const instance = payload.instance;
 
         logger.info(`📥 [WEBHOOK_START] Incoming event: ${payload.event} | Instance: ${instance}`);
+
+        if (type === 'CONNECTION_UPDATE') {
+            await this._handleConnectionUpdate(payload);
+            return;
+        }
 
         if (type !== 'MESSAGES_UPSERT') {
             logger.debug(`[WEBHOOK_SKIP] Event ${type} is not MESSAGES_UPSERT. Ignoring.`);
@@ -142,8 +148,6 @@ class ChatService {
             logger.error(error.stack);
         }
     }
-    }
-
 
     /**
      * Lógica de obtener o crear contacto (con UUID y protección contra duplicados)
@@ -418,6 +422,82 @@ class ChatService {
         } catch (error) {
             logger.error(`❌ [AI-RESPONSE] Critical error: ${error.message}`);
             throw error;
+        }
+    }
+
+    /**
+     * Manejar actualizaciones de estado de conexión (Evolution API)
+     */
+    async _handleConnectionUpdate(payload) {
+        const { instance, data } = payload;
+        const state = data.state;
+        const statusReason = data.statusReason;
+
+        logger.info(`🔄 [CONN_UPDATE] Instance: ${instance} | State: ${state} | Reason: ${statusReason || 'N/A'}`);
+
+        // Detectar estados de desconexión crítica
+        // Código 428 suele ser "refused" (desvinculado)
+        if (state === 'refused' || state === 'close' || statusReason === 428) {
+            logger.warn(`⚠️ [CONN_LOST] Instance ${instance} is DISCONNECTED. Triggering admin notification...`);
+            await this._notifyAdminDisconnection(instance);
+        }
+    }
+
+    /**
+     * Buscar administrador y enviar correo de alerta
+     */
+    async _notifyAdminDisconnection(instance) {
+        try {
+            // 1. Encontrar tenantId y companyId
+            const [channels] = await db.execute(
+                'SELECT tenant_id, company_id, name FROM channels WHERE instance_name = ? LIMIT 1',
+                [instance]
+            );
+
+            if (channels.length === 0) return;
+            const { tenant_id: tenantId, name: channelName } = channels[0];
+
+            // 2. Encontrar Admin Email, Nombre y Nombre de Compañía
+            // Priorizamos rol ADMIN, luego MANAGER
+            const [admins] = await db.execute(`
+                SELECT u.email, u.nombres, c.nombre_cliente 
+                FROM users u 
+                JOIN user_roles ur ON u.id = ur.user_id 
+                JOIN roles r ON ur.role_id = r.id 
+                JOIN clientes c ON u.customer_id = c.id
+                WHERE u.customer_id = ? AND r.role_name IN ('ADMIN', 'MANAGER')
+                ORDER BY CASE WHEN r.role_name = 'ADMIN' THEN 1 ELSE 2 END
+                LIMIT 1
+            `, [tenantId]);
+
+            if (admins.length === 0) {
+                logger.warn(`⚠️ [NOTIFY_FAIL] No admin found for tenant ${tenantId}. Cannot send disconnection email.`);
+                return;
+            }
+
+            const admin = admins[0];
+
+            // 3. Preparar mensaje para Kafka (email-notifications)
+            const notification = {
+                to: admin.email,
+                subject: `⚠️ Alerta: WhatsApp Desconectado - ${admin.nombre_cliente}`,
+                username: admin.nombres,
+                type: 'whatsapp-disconnection',
+                templateData: {
+                    name: admin.nombres,
+                    companyName: admin.nombre_cliente,
+                    instanceName: channelName || instance
+                }
+            };
+
+            // 4. Publicar en Kafka
+            const sent = await kafkaProducer.publishToEmailTopic(notification);
+            if (sent) {
+                logger.info(`📧 [NOTIFY_OK] Disconnection email scheduled for ${admin.email}`);
+            }
+
+        } catch (error) {
+            logger.error(`❌ [NOTIFY_ERROR] Failed during disconnection handling: ${error.message}`);
         }
     }
 }

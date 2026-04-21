@@ -1,1 +1,8 @@
-{"event":"MESSAGES_UPSERT","instance":"test","data":{"key":{"remoteJid":"573001234567@s.whatsapp.net"},"pushName":"Test User","message":{"conversation":"test webhook"}}}
+{
+  "event": "connection.update",
+  "instance": "cloudfly_t1_c1",
+  "data": {
+    "state": "refused",
+    "statusReason": 428
+  }
+}
