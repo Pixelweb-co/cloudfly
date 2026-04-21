@@ -7,6 +7,7 @@ import type { Channel } from '@/types/marketing'
 import ChannelCardList, { PlatformInfo } from '@/views/marketing/channels/ChannelCardList'
 import WhatsAppActivationDialog from '@/views/marketing/channels/WhatsAppActivationDialog'
 import WhatsAppManagementDialog from '@/views/marketing/channels/WhatsAppManagementDialog'
+import FacebookActivationDialog from '@/views/marketing/channels/FacebookActivationDialog'
 import { Grid, Typography, Box, CircularProgress, Alert, Button } from '@mui/material'
 
 const ChannelPage = () => {
@@ -18,6 +19,7 @@ const ChannelPage = () => {
     // State for Activation Dialogs
     const [activePlatform, setActivePlatform] = useState<PlatformInfo | null>(null)
     const [openWhatsAppDialog, setOpenWhatsAppDialog] = useState(false)
+    const [openFacebookDialog, setOpenFacebookDialog] = useState(false)
     const [openManageDialog, setOpenManageDialog] = useState(false)
     const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null)
 
@@ -46,8 +48,10 @@ const ChannelPage = () => {
     const handleActivate = (platform: PlatformInfo) => {
         if (platform.platform === 'WHATSAPP' && platform.provider === 'EVOLUTION_API') {
             setOpenWhatsAppDialog(true)
+        } else if (platform.platform === 'FACEBOOK') {
+            setOpenFacebookDialog(true)
         } else {
-            // Future platforms logic here (Facebook, etc.)
+            // Future platforms logic here (Instagram, etc.)
             console.log('Activating', platform.platform)
         }
     }
@@ -127,6 +131,12 @@ const ChannelPage = () => {
                     <WhatsAppManagementDialog
                         open={openManageDialog}
                         onClose={() => setOpenManageDialog(false)}
+                        onComplete={fetchChannels}
+                    />
+                    <FacebookActivationDialog
+                        open={openFacebookDialog}
+                        onClose={() => setOpenFacebookDialog(false)}
+                        accessToken={session.user.accessToken}
                         onComplete={fetchChannels}
                     />
                 </>
