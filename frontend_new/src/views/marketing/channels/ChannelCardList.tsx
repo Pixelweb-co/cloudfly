@@ -37,8 +37,7 @@ export const AVAILABLE_PLATFORMS: PlatformInfo[] = [
         color: '#0084FF',
         platform: 'FACEBOOK',
         provider: 'META_API',
-        description: 'Integrar mensajes de tu Fan Page',
-        disabled: true
+        description: 'Integrar mensajes de tu Fan Page'
     },
     {
         title: 'Instagram',
