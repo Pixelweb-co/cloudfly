@@ -53,7 +53,12 @@ const FacebookSetupForm = ({ accessToken, onComplete, onCancel }: Props) => {
                 }
             })
             
-            setPages(pagesRes.data)
+            if (pagesRes.data && Array.isArray(pagesRes.data)) {
+                setPages(pagesRes.data)
+            } else {
+                setPages([])
+                setError('No se encontraron páginas vinculadas a esta cuenta de Facebook.')
+            }
             setStep(2)
         } catch (err: any) {
             console.error('FB Login Error:', err)
@@ -131,30 +136,36 @@ const FacebookSetupForm = ({ accessToken, onComplete, onCancel }: Props) => {
                     {error && <Alert severity='error' sx={{ mb: 4 }}>{error}</Alert>}
 
                     <List sx={{ border: 1, borderColor: 'divider', borderRadius: 1, mb: 6, maxHeight: 300, overflow: 'auto' }}>
-                        {pages.map((page) => (
-                            <ListItem 
-                                key={page.id}
-                                secondaryAction={
-                                    <Radio
-                                        checked={selectedPageId === page.id}
-                                        onChange={() => setSelectedPageId(page.id)}
-                                        value={page.id}
+                        {pages && Array.isArray(pages) && pages.length > 0 ? (
+                            pages.map((page) => (
+                                <ListItem 
+                                    key={page.id}
+                                    secondaryAction={
+                                        <Radio
+                                            checked={selectedPageId === page.id}
+                                            onChange={() => setSelectedPageId(page.id)}
+                                            value={page.id}
+                                        />
+                                    }
+                                    sx={{ '&:hover': { bgcolor: 'action.hover' }, cursor: 'pointer' }}
+                                    onClick={() => setSelectedPageId(page.id)}
+                                >
+                                    <ListItemAvatar>
+                                        <Avatar src={page.picture?.data?.url}>
+                                            <i className='tabler-brand-facebook' />
+                                        </Avatar>
+                                    </ListItemAvatar>
+                                    <ListItemText 
+                                        primary={page.name} 
+                                        secondary={page.category} 
                                     />
-                                }
-                                sx={{ '&:hover': { bgcolor: 'action.hover' }, cursor: 'pointer' }}
-                                onClick={() => setSelectedPageId(page.id)}
-                            >
-                                <ListItemAvatar>
-                                    <Avatar src={page.picture?.data?.url}>
-                                        <i className='tabler-brand-facebook' />
-                                    </Avatar>
-                                </ListItemAvatar>
-                                <ListItemText 
-                                    primary={page.name} 
-                                    secondary={page.category} 
-                                />
+                                </ListItem>
+                            ))
+                        ) : (
+                            <ListItem>
+                                <ListItemText primary="No se encontraron páginas disponibles" />
                             </ListItem>
-                        ))}
+                        )}
                     </List>
 
                     <Divider sx={{ mb: 6 }} />

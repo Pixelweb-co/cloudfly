@@ -64,7 +64,10 @@ public class FacebookService {
                         .build())
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                .map(response -> (List<Map<String, Object>>) response.get("data"));
+                .map(response -> {
+                    List<Map<String, Object>> data = (List<Map<String, Object>>) response.get("data");
+                    return data != null ? data : List.of();
+                });
     }
 
     public Mono<Boolean> subscribeAppToPage(String pageId, String pageAccessToken) {
