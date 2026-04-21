@@ -219,12 +219,12 @@ public class UserService {
 
         public Mono<Boolean> checkUsernameAvailability(String username) {
                 return userRepository.existsByUsername(username)
-                                .map(exists -> !exists);
+                                .map(count -> count == 0);
         }
 
         public Mono<Boolean> checkEmailAvailability(String email) {
                 return userRepository.existsByEmail(email)
-                                .map(exists -> !exists);
+                                .map(count -> count == 0);
         }
 
         public Mono<UserEntity> findByUsername(String username) {

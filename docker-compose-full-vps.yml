@@ -43,6 +43,9 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT_INTERNAL:PLAINTEXT,PLAINTEXT_EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     networks:
       - kafka-net
 
@@ -200,23 +203,7 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - NODE_ENV=${NODE_ENV:-production}
-      - PORT=3001
-      - FRONTEND_URL=${FRONTEND_URL:-https://dashboard.cloudfly.com.co}
-      - JAVA_API_URL=${JAVA_API_URL:-https://api.cloudfly.com.co}
-      - JWT_SECRET=${JWT_SECRET}
-      - N8N_SECRET_KEY=${N8N_SECRET_KEY}
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_NAME=cloud_master
-      - DB_USER=root
-      - DB_PASSWORD=widowmaker
-      - EVOLUTION_API_URL=http://evolution_api:8080
-      - EVOLUTION_API_KEY=CAMBIA_ESTA_LLAVE_LARGA_Y_UNICA
       # AI-Ready Infrastructure
-      - REDIS_HOST=redis_server
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=Elian2020#
       - KAFKA_BROKER=kafka:9092
     depends_on:
       - kafka
@@ -242,13 +229,10 @@ services:
       - .env
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - REDIS_HOST=redis_server
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=Elian2020#
-      - DB_HOST=mysql
-      - DB_USER=root
-      - DB_PASSWORD=widowmaker
-      - DB_NAME=cloud_master
+      - DB_HOST=${MYSQL_HOST:-mysql}
+      - DB_USER=${MYSQL_USER:-root}
+      - DB_PASSWORD=${MYSQL_PASSWORD:-widowmaker}
+      - DB_NAME=${MYSQL_DATABASE:-cloud_master}
     networks:
       - app-net
       - kafka-net
@@ -269,13 +253,10 @@ services:
       - .env
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - REDIS_HOST=redis_server
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=Elian2020#
-      - DB_HOST=mysql
-      - DB_USER=root
-      - DB_PASSWORD=widowmaker
-      - DB_NAME=cloud_master
+      - DB_HOST=${MYSQL_HOST:-mysql}
+      - DB_USER=${MYSQL_USER:-root}
+      - DB_PASSWORD=${MYSQL_PASSWORD:-widowmaker}
+      - DB_NAME=${MYSQL_DATABASE:-cloud_master}
     networks:
       - app-net
       - kafka-net

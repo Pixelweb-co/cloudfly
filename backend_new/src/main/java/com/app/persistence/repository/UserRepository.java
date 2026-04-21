@@ -18,11 +18,11 @@ public interface UserRepository extends ReactiveCrudRepository<UserEntity, Long>
     @Query("SELECT * FROM users WHERE recovery_token = :token")
     Mono<UserEntity> findByRecoveryToken(String token);
 
-    @Query("SELECT COUNT(*) > 0 FROM users WHERE username = :username")
-    Mono<Boolean> existsByUsername(String username);
+    @Query("SELECT COUNT(*) FROM users WHERE username = :username")
+    Mono<Long> existsByUsername(String username);
 
-    @Query("SELECT COUNT(*) > 0 FROM users WHERE email = :email")
-    Mono<Boolean> existsByEmail(String email);
+    @Query("SELECT COUNT(*) FROM users WHERE email = :email")
+    Mono<Long> existsByEmail(String email);
 
     @org.springframework.data.r2dbc.repository.Modifying
     @Query("UPDATE users SET is_enabled = true, verification_token = NULL WHERE verification_token = :token")
