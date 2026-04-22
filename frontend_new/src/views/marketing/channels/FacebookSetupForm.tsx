@@ -54,17 +54,36 @@ const FacebookSetupForm: React.FC<FacebookSetupFormProps> = ({ accessToken, onCo
     useEffect(() => {
         const fetchConfig = async () => {
             try {
+                console.log('Fetching FB config...')
                 const res = await axiosInstance.get('/api/channels/facebook/config')
+                console.log('FB Config received:', res.data)
                 setFbAppId(res.data.appId)
             } catch (err) {
                 console.error('Error fetching FB config:', err)
+                setError('No se pudo obtener la configuración de Facebook desde el servidor.')
             }
         }
         fetchConfig()
     }, [])
 
     useEffect(() => {
-        if (!fbAppId) return
+        if (!fbAppId) {
+            console.warn('Waiting for fbAppId before loading SDK...')
+            return
+        }
+
+        console.log('Initializing FB SDK with App ID:', fbAppId)
+
+        window.fbAsyncInit = function() {
+            console.log('FB SDK Async Init running...')
+            window.FB.init({
+                appId: fbAppId,
+                cookie: true,
+                xfbml: true,
+                version: 'v19.0'
+            })
+            console.log('FB SDK Initialized!')
+        }
 
         if (!document.getElementById('facebook-jssdk')) {
             const script = document.createElement('script')
@@ -73,15 +92,15 @@ const FacebookSetupForm: React.FC<FacebookSetupFormProps> = ({ accessToken, onCo
             script.async = true
             script.defer = true
             document.body.appendChild(script)
-
-            window.fbAsyncInit = function() {
-                window.FB.init({
-                    appId: fbAppId,
-                    cookie: true,
-                    xfbml: true,
-                    version: 'v19.0'
-                })
-            }
+            console.log('FB SDK Script injected.')
+        } else if (window.FB) {
+            // Si el script ya existe y FB está listo, re-inicializar si es necesario
+            window.FB.init({
+                appId: fbAppId,
+                cookie: true,
+                xfbml: true,
+                version: 'v19.0'
+            })
         }
     }, [fbAppId])
 
