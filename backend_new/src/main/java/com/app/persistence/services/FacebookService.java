@@ -159,4 +159,26 @@ public class FacebookService {
                 }
             });
     }
+
+    public Mono<Map<String, Object>> validatePageToken(String pageAccessToken) {
+        String appAccessToken = fbAppId + "|" + fbAppSecret;
+        return webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/debug_token")
+                        .queryParam("input_token", pageAccessToken)
+                        .queryParam("access_token", appAccessToken)
+                        .build())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                .map(response -> {
+                    if (response.containsKey("data")) {
+                        return (Map<String, Object>) response.get("data");
+                    }
+                    return Map.<String, Object>of("is_valid", false);
+                })
+                .onErrorResume(e -> {
+                    log.warn("Error validating Facebook Page Token: {}", e.getMessage());
+                    return Mono.just(Map.of("is_valid", false, "error", e.getMessage()));
+                });
+    }
 }

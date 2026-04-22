@@ -71,4 +71,19 @@ public class FacebookAuthController {
                     return Mono.just(ResponseEntity.internalServerError().build());
                 });
     }
+
+    @PostMapping("/validate-token")
+    public Mono<ResponseEntity<Map<String, Object>>> validateToken(@RequestBody Map<String, String> request) {
+        String pageAccessToken = request.get("pageAccessToken");
+        if (pageAccessToken == null) {
+            return Mono.just(ResponseEntity.badRequest().build());
+        }
+
+        return facebookService.validatePageToken(pageAccessToken)
+                .map(ResponseEntity::ok)
+                .onErrorResume(e -> {
+                    log.error("Error validating token: {}", e.getMessage());
+                    return Mono.just(ResponseEntity.internalServerError().build());
+                });
+    }
 }
