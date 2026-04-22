@@ -150,6 +150,124 @@ class ChatService {
     }
 
     /**
+     * Procesar webhook general de Facebook
+     */
+    async processFacebookWebhook(io, payload) {
+        if (payload.object !== 'page') return;
+
+        if (payload.entry) {
+            for (const entry of payload.entry) {
+                const pageId = entry.id;
+                
+                if (entry.messaging) {
+                    for (const webhookEvent of entry.messaging) {
+                        if (webhookEvent.message && !webhookEvent.message.is_echo) {
+                            await this._handleFacebookMessage(io, pageId, webhookEvent);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Procesar un mensaje entrante de Facebook Messenger
+     * FLOW: Save → Conversation ID → Socket.IO → Chatbot Gate → Buffer/Kafka
+     */
+    async _handleFacebookMessage(io, pageId, event) {
+        const senderId = event.sender.id;
+        const message = event.message;
+        const body = message.text || '[Multimedia]';
+        const messageIdStr = message.mid;
+
+        let messagePreview = body ? (body.length > 50 ? body.substring(0, 50) + '...' : body) : '[No Content]';
+        logger.info(`📥 [FB_WEBHOOK] From: ${senderId} to Page: ${pageId} | Body: "${messagePreview}"`);
+
+        try {
+            // 1. Encontrar el canal de FB usando el pageId
+            const [channels] = await db.execute(
+                `SELECT id, tenant_id, company_id FROM channels 
+                 WHERE platform = 'FACEBOOK' AND JSON_EXTRACT(settings_json, '$.pageId') = ? LIMIT 1`,
+                [pageId]
+            );
+
+            if (channels.length === 0) {
+                logger.warn(`⚠️ [FB_WEBHOOK_ABORT] No channel configured for pageId: ${pageId}`);
+                return;
+            }
+
+            const channel = channels[0];
+            const tenantId = channel.tenant_id;
+            const companyId = channel.company_id;
+            const channelId = channel.id;
+
+            // 2. Buscar o crear contacto usando el Sender ID (PSID)
+            const contact = await this.getOrCreateContact(tenantId, companyId, senderId, 'Usuario Facebook');
+
+            // 3. Obtener o crear conversation_id
+            const conversationId = await conversationService.getOrCreateConversationId(tenantId, contact.id, channelId);
+
+            // 4. Guardar mensaje
+            const [result] = await db.execute(
+                `INSERT INTO omni_channel_messages 
+                (tenant_id, channel_id, contact_id, direction, content, status, external_msg_id, conversation_id, created_at) 
+                VALUES (?, ?, ?, 'INBOUND', ?, 'RECEIVED', ?, ?, NOW())`,
+                [tenantId, channelId, contact.id, body, messageIdStr, conversationId]
+            );
+
+            const internalMessageId = result.insertId;
+
+            // 5. Historial reciente
+            const [history] = await db.execute(
+                `SELECT * FROM omni_channel_messages 
+                WHERE tenant_id = ? AND contact_id = ? 
+                ORDER BY created_at DESC LIMIT 10`,
+                [tenantId, contact.id]
+            );
+
+            // 6. Emitir por Socket.IO (La sala usa contact.phone que internamente es el Sender ID)
+            const roomName = `tenant_${tenantId}_contact_${contact.phone}`;
+            
+            const eventPayload = {
+                message: {
+                    id: internalMessageId,
+                    content: body,
+                    direction: 'INBOUND',
+                    status: 'RECEIVED',
+                    conversationId: conversationId,
+                    createdAt: new Date()
+                },
+                contact: contact,
+                history: history.reverse()
+            };
+
+            io.to(roomName).emit('new-message', eventPayload);
+            logger.info(`✅ [FB_WEBHOOK] Socket event emitted to: ${roomName}`);
+
+            // 7. CHATBOT GATE
+            try {
+                const chatbotEnabled = await chatbotGateService.isChatbotEnabled(tenantId, contact.id);
+
+                if (chatbotEnabled) {
+                    logger.info(`🤖 [FB_WEBHOOK_GATE] Chatbot is ENABLED. Buffering for AI agent...`);
+                    await messageBufferService.bufferMessage(
+                        tenantId, companyId, contact.id, conversationId,
+                        { body, messageId: internalMessageId, timestamp: new Date().toISOString() }
+                    );
+                } else {
+                    logger.info(`👤 [FB_WEBHOOK_GATE] Chatbot is DISABLED. Human-only mode.`);
+                }
+            } catch (gateError) {
+                logger.error(`❌ [FB_WEBHOOK_GATE_ERROR] Chatbot gate/buffer failed: ${gateError.message}`);
+            }
+
+        } catch (error) {
+            logger.error(`❌ [FB_WEBHOOK_CRITICAL_ERROR] ${error.message}`);
+            logger.error(error.stack);
+        }
+    }
+
+    /**
      * Lógica de obtener o crear contacto (con UUID y protección contra duplicados)
      */
     async getOrCreateContact(tenantId, companyId, jid, name) {
