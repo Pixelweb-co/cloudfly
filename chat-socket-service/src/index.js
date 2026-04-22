@@ -79,7 +79,9 @@ app.get('/webhook/facebook', (req, res) => {
 app.post('/webhook/facebook', async (req, res) => {
     try {
         const io = app.get('io');
-        // Responder 200 INMEDIATAMENTE como requiere Meta (si no, desactivan el webhook)
+        logger.info(`📩 [FB-WEBHOOK] POST received from ${req.ip}`);
+        
+        // Responder 200 INMEDIATAMENTE como requiere Meta
         res.status(200).send('EVENT_RECEIVED');
         
         // Ejecutar en segundo plano
@@ -88,7 +90,6 @@ app.post('/webhook/facebook', async (req, res) => {
         });
     } catch (error) {
         logger.error(`Error in FB webhook route: ${error.message}`);
-        // Ya hemos respondido 200 idealmente, esto es solo por si falla antes del send
         if (!res.headersSent) {
             res.status(500).send('Error');
         }
