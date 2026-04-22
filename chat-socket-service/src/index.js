@@ -60,6 +60,41 @@ app.post('/webhook/evolution', async (req, res) => {
     }
 });
 
+// Meta (Facebook Messenger) Webhook Challenge Verification
+app.get('/webhook/facebook', (req, res) => {
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode === 'subscribe' && token === 'cloudfly_verify_token') {
+        logger.info('✅ [FB-WEBHOOK] Webhook verified successfully!');
+        res.status(200).send(challenge);
+    } else {
+        logger.warn('❌ [FB-WEBHOOK] Verification failed.');
+        res.sendStatus(403);
+    }
+});
+
+// Meta (Facebook Messenger) Message Reception
+app.post('/webhook/facebook', async (req, res) => {
+    try {
+        const io = app.get('io');
+        // Responder 200 INMEDIATAMENTE como requiere Meta (si no, desactivan el webhook)
+        res.status(200).send('EVENT_RECEIVED');
+        
+        // Ejecutar en segundo plano
+        chatService.processFacebookWebhook(io, req.body).catch(err => {
+            logger.error(`Error in async FB Webhook processing: ${err.message}`);
+        });
+    } catch (error) {
+        logger.error(`Error in FB webhook route: ${error.message}`);
+        // Ya hemos respondido 200 idealmente, esto es solo por si falla antes del send
+        if (!res.headersSent) {
+            res.status(500).send('Error');
+        }
+    }
+});
+
 /**
  * Obtener últimos mensajes de un contacto por UUID
  * GET /api/chat/messages/:contactUuid?tenantId=X&limit=10
