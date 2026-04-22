@@ -42,6 +42,10 @@ public class FacebookService {
         this.webClient = webClientBuilder.baseUrl("https://graph.facebook.com/v19.0").build();
     }
 
+    public String getAppId() {
+        return fbAppId;
+    }
+
     public Mono<String> exchangeForLongLivedToken(String shortLivedToken) {
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder

@@ -41,3 +41,9 @@ services:
   socket:
     url: ${SOCKET_URL:http://chat-socket-service:3001}
     secret: ${N8N_SECRET_KEY:cloudfly_secret_key_2024}
+
+facebook:
+  app:
+    id: ${FACEBOOK_APP_ID:}
+    secret: ${FACEBOOK_APP_SECRET:}
+    version: v19.0
