@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Avatar, Box, Card, CircularProgress, Divider, IconButton, InputBase, Switch, Tooltip, Typography } from '@mui/material'
+import { Avatar, Box, Card, CircularProgress, IconButton, InputBase, Switch, Tooltip, Typography, Tabs, Tab } from '@mui/material'
 import { Contact } from '@/types/marketing/contactTypes'
 import { Icon } from '@iconify/react'
 import { chatService, ChatMessage } from '@/services/marketing/chatService'
@@ -22,6 +22,7 @@ export default function ChatInterface({ contact, isNew }: Props) {
   const [loading, setLoading] = useState(false)
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
+  const [activeTab, setActiveTab] = useState<'WHATSAPP' | 'FACEBOOK'>('WHATSAPP')
   const [chatbotEnabled, setChatbotEnabled] = useState<boolean>(
     contact?.chatbotEnabled !== undefined ? contact.chatbotEnabled : true
   )
@@ -115,7 +116,7 @@ export default function ChatInterface({ contact, isNew }: Props) {
         conversationId: contact.phone,
         contactId: Number(contact.id),
         body: newMessage,
-        platform: 'WHATSAPP'
+        platform: activeTab
       })
 
       // Update local state (socket will also broadcast but current user needs it immediately if socket delay occurs)
@@ -194,9 +195,9 @@ export default function ChatInterface({ contact, isNew }: Props) {
             <Typography variant="h6" sx={{ lineHeight: 1.2 }}>
               {contact.name}
             </Typography>
-            <Typography variant="body2" sx={{ color: 'success.main', display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'success.main' }} />
-              WhatsApp Online
+            <Typography variant="body2" sx={{ color: activeTab === 'WHATSAPP' ? 'success.main' : 'info.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: activeTab === 'WHATSAPP' ? 'success.main' : 'info.main' }} />
+              {activeTab === 'WHATSAPP' ? 'WhatsApp Online' : 'Facebook Online'}
             </Typography>
           </Box>
         </Box>
@@ -224,6 +225,30 @@ export default function ChatInterface({ contact, isNew }: Props) {
             <Icon icon="tabler:dots-vertical" />
           </IconButton>
         </Box>
+      </Box>
+
+      {/* Channel Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper', px: 2 }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          aria-label="channel tabs"
+        >
+          <Tab 
+            label="WhatsApp" 
+            value="WHATSAPP" 
+            icon={<Icon icon="tabler:brand-whatsapp" fontSize={20} />} 
+            iconPosition="start" 
+            sx={{ minHeight: 48 }}
+          />
+          <Tab 
+            label="Facebook Messenger" 
+            value="FACEBOOK" 
+            icon={<Icon icon="tabler:brand-messenger" fontSize={20} />} 
+            iconPosition="start" 
+            sx={{ minHeight: 48 }}
+          />
+        </Tabs>
       </Box>
 
       {/* Chat Body (Messages) */}
