@@ -1,55 +1,126 @@
-'use client'
-
-import { useState, useEffect } from 'react'
-import { Box, Button, Typography, CircularProgress, Alert, List, ListItem, ListItemText, ListItemAvatar, Avatar, Radio, Divider } from '@mui/material'
-import axios from 'axios'
+import React, { useState, useEffect } from 'react'
+import { 
+    Button, 
+    Typography, 
+    Box, 
+    Stepper, 
+    Step, 
+    StepLabel, 
+    CircularProgress, 
+    Alert,
+    List,
+    ListItem,
+    ListItemAvatar,
+    Avatar,
+    ListItemText,
+    Radio,
+    Divider
+} from '@mui/material'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 interface Page {
     id: string
     name: string
     access_token: string
     category: string
-    picture?: { data: { url: string } }
+    picture?: {
+        data: {
+            url: string
+        }
+    }
 }
 
-interface Props {
+interface FacebookSetupFormProps {
     accessToken: string
     onComplete: () => void
-    onCancel: () => void
 }
 
-const FacebookSetupForm = ({ accessToken, onComplete, onCancel }: Props) => {
-    const [step, setStep] = useState<1 | 2>(1)
+declare global {
+    interface Window {
+        FB: any
+        fbAsyncInit: () => void
+    }
+}
+
+const FacebookSetupForm: React.FC<FacebookSetupFormProps> = ({ accessToken, onComplete }) => {
+    const [activeStep, setStep] = useState(0)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [pages, setPages] = useState<Page[]>([])
     const [selectedPageId, setSelectedPageId] = useState<string | null>(null)
-    const [userAccessToken, setUserAccessToken] = useState<string | null>(null)
+    const [longLivedToken, setLongLivedToken] = useState<string | null>(null)
+    const [fbAppId, setFbAppId] = useState<string | null>(null)
 
-    // Mock para simular el inicio de sesión con Facebook si no está el SDK cargado
+    useEffect(() => {
+        const fetchConfig = async () => {
+            try {
+                const res = await axiosInstance.get('/api/channels/facebook/config')
+                setFbAppId(res.data.appId)
+            } catch (err) {
+                console.error('Error fetching FB config:', err)
+            }
+        }
+        fetchConfig()
+    }, [])
+
+    useEffect(() => {
+        if (!fbAppId) return
+
+        if (!document.getElementById('facebook-jssdk')) {
+            const script = document.createElement('script')
+            script.id = 'facebook-jssdk'
+            script.src = "https://connect.facebook.net/en_US/sdk.js"
+            script.async = true
+            script.defer = true
+            document.body.appendChild(script)
+
+            window.fbAsyncInit = function() {
+                window.FB.init({
+                    appId: fbAppId,
+                    cookie: true,
+                    xfbml: true,
+                    version: 'v19.0'
+                })
+            }
+        }
+    }, [fbAppId])
+
     const handleFacebookLogin = async () => {
+        if (!window.FB) {
+            setError('El SDK de Facebook no se ha cargado correctamente.')
+            return
+        }
+
         setLoading(true)
         setError(null)
         
+        window.FB.login((response: any) => {
+            if (response.authResponse) {
+                const shortLivedToken = response.authResponse.accessToken
+                exchangeToken(shortLivedToken)
+            } else {
+                setLoading(false)
+                setError('El usuario canceló el inicio de sesión o no autorizó la aplicación.')
+            }
+        }, { 
+            scope: 'pages_messaging,pages_show_list,pages_manage_metadata,public_profile',
+            return_scopes: true 
+        })
+    }
+
+    const exchangeToken = async (shortLivedToken: string) => {
         try {
-            // En una implementación real, aquí llamaríamos a window.FB.login()
-            // y obtendríamos el shortLivedToken.
-            const mockShortLivedToken = 'MOCK_FB_TOKEN_' + Math.random().toString(36).substring(7)
+            const res = await axiosInstance.post('/api/channels/facebook/exchange-token', {
+                shortLivedToken
+            })
             
-            // 1. Intercambiar por Long Lived Token
-            const exchangeRes = await axios.post('/api/channels/facebook/exchange-token', 
-                { shortLivedToken: mockShortLivedToken },
-                { headers: { Authorization: `Bearer ${accessToken}` } }
-            )
+            const longToken = res.data.accessToken
+            setLongLivedToken(longToken)
             
-            const longLivedToken = exchangeRes.data.accessToken
-            setUserAccessToken(longLivedToken)
-            
-            // 2. Obtener páginas
-            const pagesRes = await axios.get('/api/channels/facebook/pages', {
+            // Cargar páginas
+            const pagesRes = await axiosInstance.get('/api/channels/facebook/pages', {
                 headers: { 
-                    Authorization: `Bearer ${accessToken}`,
-                    'X-FB-User-Token': longLivedToken
+                    'X-FB-User-Token': longToken
                 }
             })
             
@@ -61,78 +132,78 @@ const FacebookSetupForm = ({ accessToken, onComplete, onCancel }: Props) => {
             }
             setStep(2)
         } catch (err: any) {
-            console.error('FB Login Error:', err)
-            setError('Error al conectar con Facebook. Verifica la configuración de tu aplicación Meta.')
+            console.error('FB Exchange Error:', err)
+            setError('Error al procesar la autenticación con Facebook.')
         } finally {
             setLoading(false)
         }
     }
 
-    const handleRegisterPage = async () => {
-        if (!selectedPageId || !userAccessToken) return
+    const handleConfirm = async () => {
+        if (!selectedPageId || !longLivedToken) return
         
         setLoading(true)
+        setError(null)
+        
         const selectedPage = pages.find(p => p.id === selectedPageId)
         
         try {
-            await axios.post('/api/channels/facebook/register', {
-                pageId: selectedPage?.id,
+            await axiosInstance.post('/api/channels/facebook/register', {
+                pageId: selectedPageId,
                 pageName: selectedPage?.name,
                 pageAccessToken: selectedPage?.access_token,
-                userAccessToken: userAccessToken
-            }, {
-                headers: { Authorization: `Bearer ${accessToken}` }
+                userAccessToken: longLivedToken
             })
             
             onComplete()
-        } catch (err) {
-            setError('Error al registrar la página en el sistema.')
-        } finally {
+        } catch (err: any) {
+            setError('Error al vincular la página de Facebook.')
             setLoading(false)
         }
     }
 
+    const steps = ['Autenticación', 'Cargar Páginas', 'Vincular']
+
     return (
-        <Box sx={{ py: 4 }}>
-            {step === 1 && (
-                <Box sx={{ textAlign: 'center' }}>
-                    <Box sx={{ mb: 6, display: 'flex', justifyContent: 'center' }}>
-                        <Avatar sx={{ width: 80, height: 80, bgcolor: '#0084FF15', color: '#0084FF' }}>
-                            <i className='tabler-brand-facebook text-5xl' />
-                        </Avatar>
-                    </Box>
-                    <Typography variant='h5' sx={{ mb: 2, fontWeight: 600 }}>Conectar Facebook Messenger</Typography>
-                    <Typography variant='body1' color='text.secondary' sx={{ mb: 8 }}>
-                        Vincula tu Fan Page para recibir y responder mensajes directamente desde Cloudfly. 
-                        Necesitarás iniciar sesión con tu cuenta de Facebook personal que administra las páginas.
+        <Box sx={{ width: '100%', py: 2 }}>
+            <Stepper activeStep={activeStep} sx={{ mb: 6 }}>
+                {steps.map((label) => (
+                    <Step key={label}>
+                        <StepLabel>{label}</StepLabel>
+                    </Step>
+                ))}
+            </Stepper>
+
+            {activeStep === 0 && (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant='h6' sx={{ mb: 2 }}>
+                        Conecta tu cuenta de Facebook
                     </Typography>
-                    
+                    <Typography variant='body2' sx={{ mb: 6, color: 'text.secondary' }}>
+                        Necesitamos permisos para gestionar tus mensajes y ver tus páginas.
+                    </Typography>
                     {error && <Alert severity='error' sx={{ mb: 4 }}>{error}</Alert>}
-                    
-                    <Box sx={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                        <Button variant='outlined' color='secondary' onClick={onCancel} disabled={loading}>
-                            Cancelar
-                        </Button>
-                        <Button 
-                            variant='contained' 
-                            sx={{ bgcolor: '#1877F2', '&:hover': { bgcolor: '#166fe5' } }}
-                            onClick={handleFacebookLogin}
-                            disabled={loading}
-                            startIcon={loading ? <CircularProgress size={20} color='inherit' /> : <i className='tabler-brand-facebook' />}
-                        >
-                            Continuar con Facebook
-                        </Button>
-                    </Box>
+                    <Button 
+                        variant='contained' 
+                        startIcon={loading ? <CircularProgress size={20} color='inherit' /> : <i className='tabler-brand-facebook' />}
+                        onClick={handleFacebookLogin}
+                        disabled={loading}
+                        sx={{ bgcolor: '#1877F2', '&:hover': { bgcolor: '#166fe5' } }}
+                    >
+                        {loading ? 'Cargando...' : 'Iniciar Sesión con Facebook'}
+                    </Button>
                 </Box>
             )}
 
-            {step === 2 && (
+            {activeStep === 2 && (
                 <Box>
-                    <Typography variant='h6' sx={{ mb: 4, fontWeight: 600 }}>Selecciona la Página a Vincular</Typography>
-                    <Typography variant='body2' color='text.secondary' sx={{ mb: 4 }}>
+                    <Typography variant='h6' sx={{ mb: 2 }}>
+                        Selecciona la Página a Vincular
+                    </Typography>
+                    <Typography variant='body2' sx={{ mb: 4, color: 'text.secondary' }}>
                         Estas son las páginas que administras. Selecciona una para integrarla con el ERP.
                     </Typography>
-
+                    
                     {error && <Alert severity='error' sx={{ mb: 4 }}>{error}</Alert>}
 
                     <List sx={{ border: 1, borderColor: 'divider', borderRadius: 1, mb: 6, maxHeight: 300, overflow: 'auto' }}>
@@ -170,17 +241,16 @@ const FacebookSetupForm = ({ accessToken, onComplete, onCancel }: Props) => {
 
                     <Divider sx={{ mb: 6 }} />
 
-                    <Box sx={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                        <Button variant='outlined' color='secondary' onClick={() => setStep(1)} disabled={loading}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                        <Button onClick={() => setStep(0)} disabled={loading}>
                             Atrás
                         </Button>
                         <Button 
                             variant='contained' 
-                            onClick={handleRegisterPage}
-                            disabled={loading || !selectedPageId}
-                            startIcon={loading && <CircularProgress size={20} color='inherit' />}
+                            onClick={handleConfirm}
+                            disabled={!selectedPageId || loading}
                         >
-                            Confirmar y Vincular
+                            {loading ? <CircularProgress size={20} color='inherit' /> : 'Confirmar y Vincular'}
                         </Button>
                     </Box>
                 </Box>

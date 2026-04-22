@@ -19,6 +19,11 @@ public class FacebookAuthController {
 
     private final FacebookService facebookService;
 
+    @GetMapping("/config")
+    public Mono<ResponseEntity<Map<String, String>>> getConfig() {
+        return Mono.just(ResponseEntity.ok(Map.of("appId", facebookService.getAppId())));
+    }
+
     @PostMapping("/exchange-token")
     public Mono<ResponseEntity<Map<String, String>>> exchangeToken(@RequestBody Map<String, String> request) {
         String shortLivedToken = request.get("shortLivedToken");
@@ -47,8 +52,8 @@ public class FacebookAuthController {
     @PostMapping("/register")
     public Mono<ResponseEntity<ChannelEntity>> registerPage(
             @RequestBody Map<String, Object> request,
-            @RequestHeader("X-Tenant-ID") Long tenantId,
-            @RequestHeader("X-Company-ID") Long companyId) {
+            @RequestHeader("X-Tenant-Id") Long tenantId,
+            @RequestHeader("X-Company-Id") Long companyId) {
             
         String pageId = (String) request.get("pageId");
         String pageName = (String) request.get("pageName");
