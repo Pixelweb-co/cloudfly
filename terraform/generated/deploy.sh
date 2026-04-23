@@ -11,7 +11,7 @@ set -e
 
 APP_DIR="/apps/cloudfly"
 BRANCH="main"
-COMPOSE_FILE="docker-compose-full.yml"
+COMPOSE_FILE="docker-compose-full-vps.yml"
 
 cd "$APP_DIR"
 
