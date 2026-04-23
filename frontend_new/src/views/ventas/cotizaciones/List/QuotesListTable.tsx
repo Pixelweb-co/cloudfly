@@ -99,6 +99,18 @@ const QuotesListTable = ({ tableData, onReload }: { tableData: QuoteType[], onRe
         }
     }
 
+    const convertToOrder = async (id: number) => {
+        try {
+            await axiosInstance.post(`/quotes/${id}/convert-to-order`)
+            toast.success('Cotización convertida a pedido correctamente')
+            onReload()
+            router.push('/ventas/pedidos/list')
+        } catch (error: any) {
+            console.error('Error al convertir cotización:', error)
+            toast.error(error.response?.data?.message || 'No se pudo convertir la cotización')
+        }
+    }
+
     const getStatusColor = (status: string) => {
         const colors: Record<string, any> = {
             DRAFT: 'secondary',
@@ -176,6 +188,13 @@ const QuotesListTable = ({ tableData, onReload }: { tableData: QuoteType[], onRe
                 header: 'Acciones',
                 cell: ({ row }) => (
                     <div className='flex items-center'>
+                        {row.original.status !== 'ACCEPTED' && (
+                            <Tooltip title='Convertir a Pedido'>
+                                <IconButton onClick={() => convertToOrder(row.original.id)}>
+                                    <i className='tabler-shopping-cart text-textSecondary' />
+                                </IconButton>
+                            </Tooltip>
+                        )}
                         <Tooltip title='Editar'>
                             <IconButton onClick={() => router.push(`/ventas/cotizaciones/form/${row.original.id}`)}>
                                 <i className='tabler-edit text-textSecondary' />

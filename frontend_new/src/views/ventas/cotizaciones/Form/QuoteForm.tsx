@@ -192,17 +192,13 @@ const QuoteForm = () => {
             }
 
             if (id) {
-                // Como mencioné en el análisis, el backend original solo usaba POST para crear.
-                // Implementé QuoteController en backend_new con POST. 
-                // Para edición real necesitaría un endpoint PUT. 
-                // Por ahora, lanzaremos un toast informando que es modo lectura o implementación pendiente.
-                toast.error('La edición se habilitará en la próxima actualización del backend')
-                return
+                await axiosInstance.put(`/quotes/${id}`, payload)
+                toast.success('Cotización actualizada exitosamente')
+            } else {
+                await axiosInstance.post('/quotes', payload)
+                toast.success('Cotización guardada exitosamente')
             }
 
-            await axiosInstance.post('/quotes', payload)
-
-            toast.success('Cotización guardada exitosamente')
             router.push('/ventas/cotizaciones/list')
         } catch (error) {
             console.error('Error saving quote:', error)
@@ -233,7 +229,7 @@ const QuoteForm = () => {
                         variant="contained"
                         startIcon={<i className='tabler-device-floppy' />}
                         onClick={handleSubmit}
-                        disabled={loading || !!id}
+                        disabled={loading}
                     >
                         {loading ? 'Guardando...' : 'Guardar Cotización'}
                     </Button>

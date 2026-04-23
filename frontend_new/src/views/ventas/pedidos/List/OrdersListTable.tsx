@@ -101,11 +101,10 @@ const OrdersListTable = ({ tableData, onReload }: { tableData: OrderType[], onRe
 
     const getStatusColor = (status: string) => {
         const colors: Record<string, any> = {
-            PROCESANDO: 'secondary',
+            PROCESANDO: 'warning',
             DESPACHADO: 'info',
-            FACTURADO: 'success',
-            PROCESANDO: 'error',
-            PROCESANDO: 'warning'
+            ENTREGADO: 'success',
+            FACTURADO: 'success'
         }
         return colors[status] || 'secondary'
     }
@@ -151,11 +150,9 @@ const OrdersListTable = ({ tableData, onReload }: { tableData: OrderType[], onRe
                 cell: ({ row }) => (
                     <div className={classnames('flex items-center gap-2')}>
                          <i className={classnames('tabler-circle-filled text-[10px]', {
-                            'text-secondary': row.original.status === 'PROCESANDO',
-                            'text-info': row.original.status === 'DESPACHADO',
-                            'text-success': row.original.status === 'FACTURADO',
-                            'text-error': row.original.status === 'PROCESANDO',
                             'text-warning': row.original.status === 'PROCESANDO',
+                            'text-info': row.original.status === 'DESPACHADO',
+                            'text-success': row.original.status === 'ENTREGADO' || row.original.status === 'FACTURADO',
                          })} />
                         <Typography color='text.primary'>
                             {getStatusLabel(row.original.status)}
