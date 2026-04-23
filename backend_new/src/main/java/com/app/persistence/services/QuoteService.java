@@ -2,10 +2,15 @@ package com.app.persistence.services;
 
 import com.app.dto.QuoteRequestDTO;
 import com.app.dto.QuoteResponseDTO;
+import com.app.persistence.entity.OrderEntity;
+import com.app.persistence.entity.OrderItemEntity;
+import com.app.persistence.entity.OrderStatus;
 import com.app.persistence.entity.QuoteEntity;
 import com.app.persistence.entity.QuoteItemEntity;
 import com.app.persistence.entity.QuoteStatus;
 import com.app.persistence.repository.ContactRepository;
+import com.app.persistence.repository.OrderRepository;
+import com.app.persistence.repository.OrderItemRepository;
 import com.app.persistence.repository.ProductRepository;
 import com.app.persistence.repository.QuoteItemRepository;
 import com.app.persistence.repository.QuoteRepository;
@@ -31,6 +36,8 @@ public class QuoteService {
     private final QuoteItemRepository quoteItemRepository;
     private final ProductRepository productRepository;
     private final ContactRepository contactRepository;
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
 
     public Flux<QuoteResponseDTO> listByTenant(Long tenantId, Long companyId) {
         Flux<QuoteEntity> quotes;
@@ -100,9 +107,102 @@ public class QuoteService {
     }
 
     @Transactional
+    public Mono<QuoteResponseDTO> updateQuote(Long id, QuoteRequestDTO request) {
+        return quoteRepository.findById(id)
+                .flatMap(existingQuote -> {
+                    existingQuote.setCustomerId(request.getCustomerId());
+                    existingQuote.setCustomerName(request.getCustomerName());
+                    existingQuote.setNotes(request.getNotes());
+                    existingQuote.setTerms(request.getTerms());
+                    existingQuote.setExpirationDate(request.getExpirationDate());
+                    existingQuote.setStatus(request.getStatus());
+                    existingQuote.setUpdatedAt(LocalDateTime.now());
+                    existingQuote.setSubtotal(request.getSubtotal());
+                    existingQuote.setTax(request.getTax());
+                    existingQuote.setDiscount(request.getDiscount());
+                    existingQuote.setTotal(request.getTotal());
+
+                    return quoteItemRepository.deleteByQuoteId(id)
+                            .thenMany(Flux.fromIterable(request.getItems()))
+                            .map(itemReq -> {
+                                QuoteItemEntity item = new QuoteItemEntity();
+                                item.setQuoteId(id);
+                                item.setProductId(itemReq.getProductId());
+                                item.setProductName(itemReq.getProductName());
+                                item.setQuantity(itemReq.getQuantity());
+                                item.setUnitPrice(itemReq.getUnitPrice());
+                                item.setDiscount(itemReq.getDiscount());
+                                item.setSubtotal(itemReq.getSubtotal());
+                                item.setTenantId(existingQuote.getTenantId());
+                                item.setTax(BigDecimal.ZERO);
+                                item.setTotal(itemReq.getSubtotal());
+                                return item;
+                            })
+                            .collectList()
+                            .flatMap(newItems -> quoteItemRepository.saveAll(newItems).collectList())
+                            .then(quoteRepository.save(existingQuote))
+                            .flatMap(this::enrichWithItemsAndCustomer);
+                });
+    }
+
+    @Transactional
     public Mono<Void> deleteQuote(Long id) {
         return quoteItemRepository.deleteByQuoteId(id)
                 .then(quoteRepository.deleteById(id));
+    }
+
+    @Transactional
+    public Mono<OrderEntity> convertToOrder(Long quoteId) {
+        log.info("🚀 [QUOTE-SERVICE] Converting quote {} to order", quoteId);
+        return quoteRepository.findById(quoteId)
+                .flatMap(quote -> {
+                    if (quote.getStatus() == QuoteStatus.ACCEPTED) {
+                        return Mono.error(new RuntimeException("Esta cotización ya fue convertida a pedido"));
+                    }
+
+                    OrderEntity order = OrderEntity.builder()
+                            .tenantId(quote.getTenantId())
+                            .companyId(quote.getCompanyId())
+                            .customerId(quote.getCustomerId())
+                            .customerName(quote.getCustomerName())
+                            .orderNumber("ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                            .orderDate(LocalDateTime.now())
+                            .expirationDate(quote.getExpirationDate())
+                            .status(OrderStatus.PROCESANDO)
+                            .subtotal(quote.getSubtotal())
+                            .tax(quote.getTax())
+                            .discount(quote.getDiscount())
+                            .total(quote.getTotal())
+                            .notes(quote.getNotes())
+                            .terms(quote.getTerms())
+                            .createdAt(LocalDateTime.now())
+                            .updatedAt(LocalDateTime.now())
+                            .build();
+
+                    return orderRepository.save(order)
+                            .flatMap(savedOrder -> quoteItemRepository.findByQuoteId(quoteId)
+                                    .map(quoteItem -> OrderItemEntity.builder()
+                                            .orderId(savedOrder.getId())
+                                            .tenantId(quoteItem.getTenantId())
+                                            .companyId(quoteItem.getCompanyId())
+                                            .productId(quoteItem.getProductId())
+                                            .productName(quoteItem.getProductName())
+                                            .quantity(quoteItem.getQuantity())
+                                            .unitPrice(quoteItem.getUnitPrice())
+                                            .discount(quoteItem.getDiscount())
+                                            .subtotal(quoteItem.getSubtotal())
+                                            .tax(quoteItem.getTax())
+                                            .total(quoteItem.getTotal())
+                                            .build())
+                                    .collectList()
+                                    .flatMap(orderItems -> orderItemRepository.saveAll(orderItems).collectList())
+                                    .then(Mono.defer(() -> {
+                                        quote.setStatus(QuoteStatus.ACCEPTED);
+                                        quote.setUpdatedAt(LocalDateTime.now());
+                                        return quoteRepository.save(quote);
+                                    }))
+                                    .thenReturn(savedOrder));
+                });
     }
 
     private Mono<QuoteResponseDTO> enrichWithItemsAndCustomer(QuoteEntity quote) {

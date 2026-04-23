@@ -2,6 +2,7 @@ package com.app.controllers;
 
 import com.app.dto.QuoteRequestDTO;
 import com.app.dto.QuoteResponseDTO;
+import com.app.persistence.entity.OrderEntity;
 import com.app.persistence.services.QuoteService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -87,6 +88,16 @@ public class QuoteController {
                 });
     }
 
+    @PutMapping("/{id}")
+    public Mono<QuoteResponseDTO> update(@PathVariable Long id, @RequestBody QuoteRequestDTO quote, @RequestHeader Map<String, String> headers) {
+        return getCurrentUserContext(headers)
+                .flatMap(ctx -> {
+                    quote.setTenantId(ctx.tenantId());
+                    quote.setCompanyId(ctx.companyId());
+                    return quoteService.updateQuote(id, quote);
+                });
+    }
+
     @GetMapping
     public Flux<QuoteResponseDTO> findAll(@RequestHeader Map<String, String> headers) {
         return getCurrentUserContext(headers)
@@ -102,5 +113,10 @@ public class QuoteController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> delete(@PathVariable Long id) {
         return quoteService.deleteQuote(id);
+    }
+
+    @PostMapping("/{id}/convert-to-order")
+    public Mono<OrderEntity> convertToOrder(@PathVariable Long id) {
+        return quoteService.convertToOrder(id);
     }
 }

@@ -220,7 +220,8 @@ class AIService:
                 "customerId": customer_id,
                 "status": "PROCESANDO",
                 "notes": notes,
-                "items": order_items
+                "items": order_items,
+                "total": sum(item["subtotal"] for item in order_items)
             }
 
             url = f"{config.JAVA_API_URL}/orders?tenantId={tenant_id}"
@@ -230,6 +231,51 @@ class AIService:
             return json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})
         except Exception as e:
             logger.error(f"Error creating order: {e}")
+            return json.dumps({"error": str(e)})
+
+    def create_quote(self, customer_id: int, items: list, tenant_id: int, notes: str = None):
+        """Crea una cotización en el sistema."""
+        logger.info(f"Creating quote for customer {customer_id} (Tenant: {tenant_id})")
+        try:
+            quote_items = []
+            for item in items:
+                quote_items.append({
+                    "productId": item.get("productId"),
+                    "productName": item.get("productName"),
+                    "quantity": item.get("quantity"),
+                    "unitPrice": item.get("unitPrice"),
+                    "discount": item.get("discount", 0),
+                    "subtotal": item.get("quantity", 0) * item.get("unitPrice", 0)
+                })
+
+            payload = {
+                "customerId": customer_id,
+                "status": "PENDING",
+                "notes": notes,
+                "items": quote_items,
+                "total": sum(item["subtotal"] for item in quote_items)
+            }
+
+            url = f"{config.JAVA_API_URL}/quotes?tenantId={tenant_id}"
+            res = requests.post(url, json=payload, timeout=10)
+            if res.status_code in [200, 201]:
+                return json.dumps(res.json())
+            return json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})
+        except Exception as e:
+            logger.error(f"Error creating quote: {e}")
+            return json.dumps({"error": str(e)})
+
+    def convert_quote_to_order(self, quote_id: int, tenant_id: int):
+        """Convierte una cotización en un pedido oficial."""
+        logger.info(f"Converting quote {quote_id} to order (Tenant: {tenant_id})")
+        try:
+            url = f"{config.JAVA_API_URL}/quotes/{quote_id}/convert-to-order?tenantId={tenant_id}"
+            res = requests.post(url, timeout=10)
+            if res.status_code in [200, 201]:
+                return json.dumps(res.json())
+            return json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})
+        except Exception as e:
+            logger.error(f"Error converting quote to order: {e}")
             return json.dumps({"error": str(e)})
 
     def get_order(self, order_id: int, tenant_id: int):
@@ -471,9 +517,10 @@ GESTIÓN AUTÓNOMA DEL PIPELINE (PROCESO INTERNO - NUNCA MENCIONAR AL USUARIO):
 - FLUJO DE CIERRE DE PEDIDO (IMPORTANTE):
   1. Identifica los productos que el cliente quiere.
   2. Confirma si sus datos de contacto (Nombre, Email, NIT, Dirección, etc.) están actualizados usando get_contact. Si falta información o es incorrecta, usa manage_contact(action='update').
-  3. Procesa el pedido usando create_order.
-  4. Una vez creado el pedido, usa update_pipeline_stage para mover al contacto a la etapa de "Facturado" o "Cierre de Venta" (usa get_contact_pipeline para saber el ID correcto de la etapa).
-  5. Informa amigablemente al cliente que su pedido ha sido procesado.
+  3. Si el cliente solo está pidiendo un presupuesto o precio total, usa create_quote.
+  4. Si el cliente confirma la compra o acepta una cotización previa, usa create_order (para pedido directo) o convert_quote_to_order (si ya existe una cotización).
+  5. Una vez creado el pedido, usa update_pipeline_stage para mover al contacto a la etapa de "Facturado" o "Cierre de Venta" (usa get_contact_pipeline para saber el ID correcto de la etapa).
+  6. Informa amigablemente al cliente que su pedido o cotización ha sido procesado.
 
 - FLUJO DE RECTIFICACIÓN:
   1. Si un cliente quiere corregir algo en su pedido actual o previo, usa get_order para ver los detalles.
@@ -645,6 +692,48 @@ OTRAS REGLAS:
             {
                 "type": "function",
                 "function": {
+                    "name": "create_quote",
+                    "description": "Crea una cotización (proforma) de productos para un cliente. Úsalo cuando el cliente pregunte por precios o solicite un presupuesto sin confirmar la compra final.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "customer_id": { "type": "integer" },
+                            "notes": { "type": "string" },
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "productId": { "type": "integer" },
+                                        "productName": { "type": "string" },
+                                        "quantity": { "type": "integer" },
+                                        "unitPrice": { "type": "number" }
+                                    },
+                                    "required": ["productId", "productName", "quantity", "unitPrice"]
+                                }
+                            }
+                        },
+                        "required": ["customer_id", "items"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "convert_quote_to_order",
+                    "description": "Convierte una cotización existente en un pedido oficial. Llama a esta función cuando el cliente acepte una cotización previa.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "quote_id": { "type": "integer" }
+                        },
+                        "required": ["quote_id"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
                     "name": "get_order",
                     "description": "Obtiene el detalle de un pedido existente por su ID. Úsalo para rectificar o confirmar datos de un pedido previo.",
                     "parameters": {
@@ -742,6 +831,18 @@ OTRAS REGLAS:
                             function_args.get("items"),
                             int(tenant_id),
                             notes=function_args.get("notes")
+                        )
+                    elif function_name == "create_quote":
+                        function_response = self.create_quote(
+                            function_args.get("customer_id"),
+                            function_args.get("items"),
+                            int(tenant_id),
+                            notes=function_args.get("notes")
+                        )
+                    elif function_name == "convert_quote_to_order":
+                        function_response = self.convert_quote_to_order(
+                            function_args.get("quote_id"),
+                            int(tenant_id)
                         )
                     elif function_name == "get_order":
                         function_response = self.get_order(

@@ -198,8 +198,6 @@ const OrderForm = () => {
                 await axiosInstance.post('/orders', payload)
                 toast.success('Pedido guardado exitosamente')
             }
-
-            toast.success('Pedido guardado exitosamente')
             router.push('/ventas/pedidos/list')
         } catch (error) {
             console.error('Error saving order:', error)
@@ -230,7 +228,7 @@ const OrderForm = () => {
                         variant="contained"
                         startIcon={<i className='tabler-device-floppy' />}
                         onClick={handleSubmit}
-                        disabled={loading || !!id}
+                        disabled={loading}
                     >
                         {loading ? 'Guardando...' : 'Guardar Pedido'}
                     </Button>
