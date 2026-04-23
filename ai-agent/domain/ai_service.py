@@ -167,6 +167,46 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "create_quote",
+            "description": "Crea una cotización (proforma). Úsalo cuando el cliente pida precios o un presupuesto sin confirmar la compra.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "customer_id": {"type": "integer"},
+                    "notes": {"type": "string"},
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "productId": {"type": "integer"},
+                                "productName": {"type": "string"},
+                                "quantity": {"type": "integer"},
+                                "unitPrice": {"type": "number"},
+                            },
+                            "required": ["productId", "productName", "quantity", "unitPrice"],
+                        },
+                    },
+                },
+                "required": ["customer_id", "items"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "convert_quote_to_order",
+            "description": "Convierte una cotización previa en un pedido oficial.",
+            "parameters": {
+                "type": "object",
+                "properties": {"quote_id": {"type": "integer"}},
+                "required": ["quote_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "transfer_to_human",
             "description": (
                 "Transfiere la conversación a un asesor humano cuando no puedas ayudar al cliente, "
@@ -344,6 +384,16 @@ REGLAS DE ORO:
                 )
             elif function_name == "transfer_to_human":
                 return self._transfer_to_human(function_args["reason"])
+            elif function_name == "create_quote":
+                return self._create_quote(
+                    function_args["customer_id"],
+                    function_args["items"],
+                    tenant_id,
+                    function_args.get("notes"),
+                    message_id
+                )
+            elif function_name == "convert_quote_to_order":
+                return self._convert_quote_to_order(function_args["quote_id"], tenant_id)
             else:
                 return json.dumps({"error": f"Unknown tool: {function_name}"})
         except Exception as exc:
@@ -360,6 +410,7 @@ REGLAS DE ORO:
         message: str,
         history: List[ChatMessage],
         pipeline_state: Optional[ContactPipelineState],
+        message_id: str = "unknown",
     ) -> tuple[str, Optional[Dict], Optional[Dict], TokenUsage]:
         """
         Builds the prompt and calls OpenAI in a tool execution loop.
@@ -618,3 +669,43 @@ REGLAS DE ORO:
             logger.error("Modify order failed", extra={"error": str(exc)})
             return json.dumps({"error": str(exc)})
 
+    def _create_quote(self, customer_id: int, items: List[Dict], tenant_id: int, notes: str = None, message_id: str = "unknown") -> str:
+        try:
+            quote_items = []
+            for item in items:
+                qty = item.get("quantity", 0)
+                price = item.get("unitPrice", 0)
+                quote_items.append({
+                    "productId": item.get("productId"),
+                    "productName": item.get("productName"),
+                    "quantity": qty,
+                    "unitPrice": price,
+                    "subtotal": qty * price
+                })
+
+            payload = {
+                "customerId": customer_id,
+                "notes": notes,
+                "items": quote_items,
+                "status": "PENDING"
+            }
+
+            url = f"{config.java_api_url}/quotes?tenantId={tenant_id}"
+            res = requests.post(url, json=payload, timeout=10)
+            if res.status_code in [200, 201]:
+                return json.dumps(res.json())
+            return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
+        except Exception as exc:
+            logger.error("Quote creation failed", extra={"error": str(exc)})
+            return json.dumps({"error": str(exc)})
+
+    def _convert_quote_to_order(self, quote_id: int, tenant_id: int) -> str:
+        try:
+            url = f"{config.java_api_url}/quotes/{quote_id}/convert-to-order?tenantId={tenant_id}"
+            res = requests.post(url, timeout=10)
+            if res.status_code in [200, 201]:
+                return json.dumps(res.json())
+            return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
+        except Exception as exc:
+            logger.error("Quote conversion failed", extra={"error": str(exc)})
+            return json.dumps({"error": str(exc)})
