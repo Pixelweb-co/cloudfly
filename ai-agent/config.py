@@ -29,5 +29,6 @@ DB_NAME = os.getenv("DB_NAME", "cloud_master")
 
 # API Services
 JAVA_API_URL = os.getenv("JAVA_API_URL", "http://backend-api:8080")
+AI_API_SECRET = os.getenv("AI_API_SECRET", "cloudfly_ai_secret_2026")
 QDRANT_HOST = os.getenv("QDRANT_HOST", "qdrant")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
