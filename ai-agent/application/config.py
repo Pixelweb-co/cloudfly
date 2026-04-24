@@ -18,6 +18,7 @@ class AppConfig:
     topic_messages_in: str
     topic_messages_out: str
     topic_dlq: str
+    topic_product_updates: str
     consumer_group_id: str
 
     # ── Redis ──────────────────────────────────────────────────────────────
@@ -63,6 +64,7 @@ def load_config() -> AppConfig:
         topic_messages_in=os.getenv("TOPIC_MESSAGES_IN", "messages.in"),
         topic_messages_out=os.getenv("TOPIC_MESSAGES_OUT", "messages.out"),
         topic_dlq=os.getenv("TOPIC_DLQ", "ai-agent-dlq"),
+        topic_product_updates=os.getenv("TOPIC_PRODUCT_UPDATES", "product.updates"),
         consumer_group_id=os.getenv("CONSUMER_GROUP_ID", "ai-agents"),
 
         redis_host=os.getenv("REDIS_HOST", "redis_server"),

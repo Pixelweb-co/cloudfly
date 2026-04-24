@@ -26,13 +26,15 @@ class AsyncKafkaConsumer:
 
     def __init__(
         self,
+        topic: str,
         callback: Callable[[dict], Awaitable[None]],
         max_workers: int = 10,
     ) -> None:
+        self._topic = topic
         self._callback = callback
         self._max_workers = max_workers
         self._consumer: Consumer | None = None
-        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="kafka-poller")
+        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix=f"poller-{topic}")
         self._running = False
 
     def _build_consumer(self) -> Consumer:
@@ -48,9 +50,9 @@ class AsyncKafkaConsumer:
     async def start(self) -> None:
         """Subscribe and begin consuming messages."""
         self._consumer = self._build_consumer()
-        self._consumer.subscribe([config.topic_messages_in])
+        self._consumer.subscribe([self._topic])
         self._running = True
-        logger.info("Kafka consumer started", extra={"topic": config.topic_messages_in})
+        logger.info("Kafka consumer started", extra={"topic": self._topic})
 
         loop = asyncio.get_running_loop()
         # Run the blocking poll loop in an executor so we don't block asyncio

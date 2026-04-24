@@ -103,8 +103,10 @@ public class ProductService {
     }
 
     public Mono<Void> delete(Long id) {
-        return productCategoryRepository.deleteByProductId(id)
-                .then(productRepository.deleteById(id));
+        return productRepository.findById(id)
+                .flatMap(product -> productCategoryRepository.deleteByProductId(id)
+                        .then(productRepository.deleteById(id))
+                        .then(productEventProducer.publishProductDelete(id, product.getTenantId())));
     }
 
     public Mono<ProductCreateRequest> getByBarcode(String barcode, Long tenantId) {
