@@ -84,11 +84,14 @@ class AsyncKafkaConsumer:
     async def _dispatch(self, payload: dict | str) -> None:
         """Async wrapper that catches and logs processing errors."""
         # Handle cases where JSON might be double-encoded or received as string
-        if isinstance(payload, str):
+        while isinstance(payload, str):
             try:
-                payload = json.loads(payload)
+                decoded = json.loads(payload)
+                if decoded == payload: # Prevent infinite loop if string doesn't change
+                    break
+                payload = decoded
             except Exception:
-                pass
+                break
 
         tenant_id = None
         contact_id = None

@@ -20,10 +20,21 @@ class VectorSyncWorker:
         self._qdrant = qdrant
         self._openai = AsyncOpenAI(api_key=config.openai_api_key)
 
-    async def handle_product_update(self, payload: Dict):
+    async def handle_product_update(self, payload: dict | str):
         """
         Processes a product update or delete event.
         """
+        if isinstance(payload, str):
+            try:
+                payload = json.loads(payload)
+            except Exception as e:
+                logger.error(f"❌ Received product update as invalid JSON string: {payload[:100]}... Error: {e}")
+                return
+
+        if not isinstance(payload, dict):
+            logger.error(f"❌ Received product update with invalid type {type(payload)}: {payload}")
+            return
+
         product_id = payload.get("id")
         tenant_id = payload.get("tenantId")
         operation = payload.get("operation")
