@@ -225,7 +225,7 @@ class AIService:
             }
 
             url = f"{config.JAVA_API_URL}/orders?tenantId={tenant_id}"
-            res = requests.post(url, json=payload, timeout=10)
+            res = requests.post(url, json=payload, headers={"X-AI-Secret": config.AI_API_SECRET}, timeout=10)
             if res.status_code in [200, 201]:
                 return json.dumps(res.json())
             return json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})
@@ -257,7 +257,7 @@ class AIService:
             }
 
             url = f"{config.JAVA_API_URL}/quotes?tenantId={tenant_id}"
-            res = requests.post(url, json=payload, timeout=10)
+            res = requests.post(url, json=payload, headers={"X-AI-Secret": config.AI_API_SECRET}, timeout=10)
             if res.status_code in [200, 201]:
                 return json.dumps(res.json())
             return json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})
@@ -270,7 +270,7 @@ class AIService:
         logger.info(f"Converting quote {quote_id} to order (Tenant: {tenant_id})")
         try:
             url = f"{config.JAVA_API_URL}/quotes/{quote_id}/convert-to-order?tenantId={tenant_id}"
-            res = requests.post(url, timeout=10)
+            res = requests.post(url, headers={"X-AI-Secret": config.AI_API_SECRET}, timeout=10)
             if res.status_code in [200, 201]:
                 return json.dumps(res.json())
             return json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})
@@ -283,7 +283,7 @@ class AIService:
         logger.info(f"Fetching order {order_id} (Tenant: {tenant_id})")
         try:
             url = f"{config.JAVA_API_URL}/orders/{order_id}?tenantId={tenant_id}"
-            res = requests.get(url, timeout=5)
+            res = requests.get(url, headers={"X-AI-Secret": config.AI_API_SECRET}, timeout=5)
             if res.status_code == 200:
                 return json.dumps(res.json())
             return json.dumps({"error": f"API returned {res.status_code}"})
@@ -312,7 +312,7 @@ class AIService:
             }
 
             url = f"{config.JAVA_API_URL}/orders/{order_id}?tenantId={tenant_id}"
-            res = requests.put(url, json=payload, timeout=10)
+            res = requests.put(url, json=payload, headers={"X-AI-Secret": config.AI_API_SECRET}, timeout=10)
             if res.status_code == 200:
                 return json.dumps(res.json())
             return json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})

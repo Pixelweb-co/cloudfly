@@ -39,6 +39,36 @@ public class JwtAuthenticationFilter implements WebFilter {
             return chain.filter(exchange);
         }
 
+        // --- AI Internal Auth Bypass ---
+        String aiSecret = exchange.getRequest().getHeaders().getFirst("X-AI-Secret");
+        String expectedSecret = System.getenv("AI_API_SECRET");
+        
+        if (aiSecret != null && expectedSecret != null && aiSecret.equals(expectedSecret)) {
+            log.info("🤖 [JWT-FILTER] Internal AI secret valid. Path: {}", path);
+            
+            List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
+            
+            String tenantIdStr = exchange.getRequest().getQueryParams().getFirst("tenantId");
+            Long tenantId = 1L;
+            if (tenantIdStr != null) {
+                try {
+                    tenantId = Long.parseLong(tenantIdStr);
+                } catch (Exception e) {
+                    log.warn("⚠️ [JWT-FILTER] Invalid tenantId in query: {}", tenantIdStr);
+                }
+            }
+
+            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken("ai-agent", null, authorities);
+            java.util.Map<String, Object> details = new java.util.HashMap<>();
+            details.put("customer_id", tenantId);
+            details.put("company_id", null);
+            auth.setDetails(details);
+
+            return chain.filter(exchange)
+                    .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth));
+        }
+        // -------------------------------
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             log.debug("🛡️ [JWT-FILTER] No 'Bearer' token found for path: {}", path);
             return chain.filter(exchange);
