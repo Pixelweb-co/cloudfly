@@ -68,12 +68,38 @@ def get_category_names(category_ids):
 def process_product_update(msg_value):
     try:
         product = json.loads(msg_value)
+        # Handle double encoding
+        while isinstance(product, str):
+            try:
+                decoded = json.loads(product)
+                if decoded == product:
+                    break
+                product = decoded
+            except Exception:
+                break
+
+        if not isinstance(product, dict):
+            logger.error(f"Invalid product payload type: {type(product)}")
+            return
+
         # Handle deletes if status == DELETED or similar
-        
+        operation = product.get("operation")
         product_id = product.get("id")
         tenant_id = product.get("tenantId")
         if not product_id:
             logger.error("Product ID missing in event")
+            return
+
+        if operation == "DELETE":
+            logger.info(f"🗑️ Deleting product {product_id} from Qdrant")
+            try:
+                qdrant.delete(
+                    collection_name=COLLECTION_NAME,
+                    points_selector=[product_id]
+                )
+                logger.info(f"✅ Product {product_id} deleted from Qdrant")
+            except Exception as e:
+                logger.error(f"❌ Error deleting product {product_id}: {e}")
             return
 
         # Fetch category names if present
