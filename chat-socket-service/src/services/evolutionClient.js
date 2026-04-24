@@ -62,6 +62,9 @@ class EvolutionClient {
             return response.data;
         } catch (error) {
             logger.error(`❌ Error sending Evolution media: ${error.message}`);
+            if (error.response) {
+                logger.error('Error response data:', error.response.data);
+            }
             throw error;
         }
     }
