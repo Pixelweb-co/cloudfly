@@ -33,6 +33,7 @@ from qdrant_client import QdrantClient
 
 from application.config import config
 from application.logger import setup_logging
+from application.vector_worker import VectorSyncWorker
 from domain.ai_service import AIService
 from domain.exceptions import NonRetryableError, RetryableError, RateLimitExceededError
 from domain.models import MessagePayload
@@ -55,6 +56,8 @@ class AIAgentApp:
         self.redis = AsyncRedisClient()
         self.producer = AsyncKafkaProducer()
         self.consumer: AsyncKafkaConsumer | None = None
+        self.vector_worker: VectorSyncWorker | None = None
+        self.vector_consumer: AsyncKafkaConsumer | None = None
         self.ai: AIService | None = None
         self._shutdown_event = asyncio.Event()
 
@@ -77,13 +80,23 @@ class AIAgentApp:
             logger.warning("Qdrant unavailable — product search disabled", extra={"error": str(exc)})
 
         self.ai = AIService(db=self.db, qdrant=qdrant)
-        self.consumer = AsyncKafkaConsumer(callback=self._process_message)
+        self.consumer = AsyncKafkaConsumer(topic=config.topic_messages_in, callback=self._process_message)
+        
+        if qdrant:
+            self.vector_worker = VectorSyncWorker(qdrant=qdrant)
+            self.vector_consumer = AsyncKafkaConsumer(
+                topic=config.topic_product_updates, 
+                callback=self.vector_worker.handle_product_update
+            )
+            
         logger.info("AI Agent started")
 
     async def shutdown(self) -> None:
         logger.info("Shutting down AI Agent...")
         if self.consumer:
             await self.consumer.stop()
+        if self.vector_consumer:
+            await self.vector_consumer.stop()
         await self.db.close()
         await self.redis.close()
         self.producer.flush()
@@ -215,10 +228,17 @@ class AIAgentApp:
             loop.add_signal_handler(sig, self._shutdown_event.set)
 
         consumer_task = asyncio.create_task(self.consumer.start())
+        tasks = {consumer_task}
+        
+        if self.vector_consumer:
+            vector_task = asyncio.create_task(self.vector_consumer.start())
+            tasks.add(vector_task)
+            
         shutdown_task = asyncio.create_task(self._shutdown_event.wait())
+        tasks.add(shutdown_task)
 
         done, pending = await asyncio.wait(
-            {consumer_task, shutdown_task},
+            tasks,
             return_when=asyncio.FIRST_COMPLETED,
         )
 
