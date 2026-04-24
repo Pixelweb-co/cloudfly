@@ -48,7 +48,8 @@ export default function EditProductPage() {
     manageStock: true,
     status: 'PUBLISHED',
     categoryIds: [] as number[],
-    imageUrls: [] as string[]
+    imageUrls: [] as string[],
+    imageIds: [] as number[]
   })
   const [addingCategory, setAddingCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
@@ -81,7 +82,8 @@ export default function EditProductPage() {
           manageStock: product.manageStock ?? true,
           status: product.status || 'PUBLISHED',
           categoryIds: (product as any).categoryIds || [],
-          imageUrls: product.imageUrls || []
+          imageUrls: product.imageUrls || [],
+          imageIds: (product as any).imageIds || []
         })
       }
     } catch (e) {
@@ -436,7 +438,8 @@ export default function EditProductPage() {
         onSelect={(media: Media) => {
           setFormData(prev => ({
             ...prev,
-            imageUrls: [media.url]
+            imageUrls: [media.url],
+            imageIds: [media.id]
           }))
         }}
       />

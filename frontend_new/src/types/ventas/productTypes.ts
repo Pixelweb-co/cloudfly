@@ -22,6 +22,7 @@ export interface Product {
   model?: string;
   categoryIds?: number[];
   imageUrls?: string[]; // Para la visualización frontend
+  imageIds?: number[];
 }
 
 export interface ProductCreateRequest extends Omit<Product, 'id'> {

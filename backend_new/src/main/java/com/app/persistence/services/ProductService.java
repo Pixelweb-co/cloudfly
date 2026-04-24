@@ -3,9 +3,13 @@ package com.app.persistence.services;
 import com.app.dto.ProductCreateRequest;
 import com.app.persistence.entity.Product;
 import com.app.persistence.entity.ProductCategory;
+import com.app.persistence.entity.ProductImage;
+import com.app.persistence.entity.Media;
 import com.app.events.ProductEventProducer;
 import com.app.persistence.repository.ProductCategoryRepository;
 import com.app.persistence.repository.ProductRepository;
+import com.app.persistence.repository.ProductImageRepository;
+import com.app.persistence.repository.MediaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,6 +18,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -22,6 +27,8 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductCategoryRepository productCategoryRepository;
+    private final ProductImageRepository productImageRepository;
+    private final MediaRepository mediaRepository;
     private final ProductEventProducer productEventProducer;
 
     public Mono<ProductCreateRequest> saveProduct(ProductCreateRequest request) {
@@ -63,16 +70,30 @@ public class ProductService {
                 .flatMap(savedProduct -> {
                     log.info("Product saved successfully with ID: {}", savedProduct.getId());
                     request.setId(savedProduct.getId());
-                    if (request.getCategoryIds() == null || request.getCategoryIds().isEmpty()) {
-                        return Mono.just(request);
+                    
+                    Mono<Void> categoryUpdate = Mono.empty();
+                    if (request.getCategoryIds() != null) {
+                        categoryUpdate = productCategoryRepository.deleteByProductId(savedProduct.getId())
+                                .thenMany(Flux.fromIterable(request.getCategoryIds()))
+                                .flatMap(catId -> productCategoryRepository.save(ProductCategory.builder()
+                                        .productId(savedProduct.getId())
+                                        .categoryId(catId)
+                                        .build()))
+                                .then();
                     }
-                    return productCategoryRepository.deleteByProductId(savedProduct.getId())
-                            .thenMany(Flux.fromIterable(request.getCategoryIds()))
-                            .flatMap(catId -> productCategoryRepository.save(ProductCategory.builder()
-                                    .productId(savedProduct.getId())
-                                    .categoryId(catId)
-                                    .build()))
-                            .then(Mono.just(request));
+
+                    Mono<Void> imageUpdate = Mono.empty();
+                    if (request.getImageIds() != null) {
+                        imageUpdate = productImageRepository.deleteByProductId(savedProduct.getId())
+                                .thenMany(Flux.fromIterable(request.getImageIds()))
+                                .flatMap(imgId -> productImageRepository.save(ProductImage.builder()
+                                        .productId(savedProduct.getId())
+                                        .mediaId(imgId)
+                                        .build()))
+                                .then();
+                    }
+
+                    return Mono.when(categoryUpdate, imageUpdate).then(Mono.just(request));
                 })
                 .flatMap(req -> productEventProducer.publishProductChange(req).thenReturn(req))
                 .doOnError(e -> log.error("Error in saveProduct for tenant {}: {}", request.getTenantId(), e.getMessage(), e));
@@ -80,49 +101,60 @@ public class ProductService {
 
     public Mono<ProductCreateRequest> getById(Long id) {
         return productRepository.findById(id)
-                .flatMap(product -> productCategoryRepository.findByProductId(product.getId())
-                        .map(ProductCategory::getCategoryId)
-                        .collectList()
-                        .map(categoryIds -> mapToRequest(product, categoryIds)));
+                .flatMap(this::enrichProduct);
     }
 
     public Flux<ProductCreateRequest> listByTenant(Long tenantId) {
         return productRepository.findByTenantId(tenantId)
-                .flatMap(product -> productCategoryRepository.findByProductId(product.getId())
-                        .map(ProductCategory::getCategoryId)
-                        .collectList()
-                        .map(categoryIds -> mapToRequest(product, categoryIds)));
+                .flatMap(this::enrichProduct);
     }
 
     public Flux<ProductCreateRequest> findAll() {
         return productRepository.findAll()
-                .flatMap(product -> productCategoryRepository.findByProductId(product.getId())
-                        .map(ProductCategory::getCategoryId)
-                        .collectList()
-                        .map(categoryIds -> mapToRequest(product, categoryIds)));
+                .flatMap(this::enrichProduct);
     }
 
     public Mono<Void> delete(Long id) {
         return productRepository.findById(id)
                 .flatMap(product -> productCategoryRepository.deleteByProductId(id)
+                        .then(productImageRepository.deleteByProductId(id))
                         .then(productRepository.deleteById(id))
                         .then(productEventProducer.publishProductDelete(id, product.getTenantId())));
     }
 
     public Mono<ProductCreateRequest> getByBarcode(String barcode, Long tenantId) {
         return productRepository.findByBarcodeAndTenantId(barcode, tenantId)
-                .flatMap(product -> productCategoryRepository.findByProductId(product.getId())
-                        .map(ProductCategory::getCategoryId)
-                        .collectList()
-                        .map(categoryIds -> mapToRequest(product, categoryIds)));
+                .flatMap(this::enrichProduct);
     }
 
     public Flux<ProductCreateRequest> searchByName(String query, Long tenantId) {
         return productRepository.findByProductNameContainingIgnoreCaseAndTenantId(query, tenantId)
-                .flatMap(product -> productCategoryRepository.findByProductId(product.getId())
-                        .map(ProductCategory::getCategoryId)
-                        .collectList()
-                        .map(categoryIds -> mapToRequest(product, categoryIds)));
+                .flatMap(this::enrichProduct);
+    }
+
+    private Mono<ProductCreateRequest> enrichProduct(Product product) {
+        Mono<List<Long>> categoriesMono = productCategoryRepository.findByProductId(product.getId())
+                .map(ProductCategory::getCategoryId)
+                .collectList();
+
+        Mono<List<Long>> imageIdsMono = productImageRepository.findByProductId(product.getId())
+                .map(ProductImage::getMediaId)
+                .collectList();
+
+        return Mono.zip(categoriesMono, imageIdsMono)
+                .flatMap(tuple -> {
+                    List<Long> categoryIds = tuple.getT1();
+                    List<Long> imageIds = tuple.getT2();
+                    
+                    if (imageIds.isEmpty()) {
+                        return Mono.just(mapToRequest(product, categoryIds, imageIds, List.of()));
+                    }
+                    
+                    return mediaRepository.findAllById(imageIds)
+                            .map(Media::getUrl)
+                            .collectList()
+                            .map(urls -> mapToRequest(product, categoryIds, imageIds, urls));
+                });
     }
 
     public Mono<Boolean> validateStock(Long productId, Integer quantity) {
@@ -139,10 +171,7 @@ public class ProductService {
 
     public Flux<ProductCreateRequest> validateStockMultiple(List<Long> productIds, Long tenantId) {
         return productRepository.findByIdInAndTenantId(productIds, tenantId)
-                .flatMap(product -> productCategoryRepository.findByProductId(product.getId())
-                        .map(ProductCategory::getCategoryId)
-                        .collectList()
-                        .map(categoryIds -> mapToRequest(product, categoryIds)));
+                .flatMap(this::enrichProduct);
     }
 
     public Mono<ProductCreateRequest> reduceStock(Long productId, Integer quantity) {
@@ -162,13 +191,10 @@ public class ProductService {
                     }
                     return productRepository.save(product);
                 })
-                .flatMap(product -> productCategoryRepository.findByProductId(product.getId())
-                        .map(ProductCategory::getCategoryId)
-                        .collectList()
-                        .map(categoryIds -> mapToRequest(product, categoryIds)));
+                .flatMap(this::enrichProduct);
     }
 
-    private ProductCreateRequest mapToRequest(Product product, List<Long> categoryIds) {
+    private ProductCreateRequest mapToRequest(Product product, List<Long> categoryIds, List<Long> imageIds, List<String> imageUrls) {
         return ProductCreateRequest.builder()
                 .id(product.getId())
                 .tenantId(product.getTenantId())
@@ -192,6 +218,8 @@ public class ProductService {
                 .brand(product.getBrand())
                 .model(product.getModel())
                 .categoryIds(categoryIds)
+                .imageIds(imageIds)
+                .imageUrls(imageUrls)
                 .build();
     }
 }
