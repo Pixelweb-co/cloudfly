@@ -349,7 +349,7 @@ REGLAS DE ORO:
         message_id: str = "unknown",
     ) -> str:
         """Dispatch a tool call to its implementation. Returns a JSON string."""
-        log_ctx = {"tool": function_name, "args": function_args, "tenant_id": tenant_id, "contact_id": contact_id, "message_id": message_id}
+        log_ctx = {"tool": function_name, "func_args": function_args, "tenant_id": tenant_id, "contact_id": contact_id, "message_id": message_id}
         logger.info(f"Executing tool: {function_name}", extra=log_ctx)
         try:
             if function_name == "search_products_semantically":
