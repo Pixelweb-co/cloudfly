@@ -121,6 +121,13 @@ def process_product_update(msg_value):
         vector = get_embedding(searchable_text.strip())
 
         # Construct payload (metadata)
+        image_urls = product.get("imageUrls", [])
+        image_url = ""
+        if image_urls and len(image_urls) > 0:
+            image_url = image_urls[0]
+            if image_url.startswith("/"):
+                image_url = f"https://api.cloudfly.com.co{image_url}"
+
         payload = {
             "product_id": product_id,
             "tenant_id": tenant_id,
@@ -130,7 +137,7 @@ def process_product_update(msg_value):
             "stock": product.get("inventoryQty", 0),
             "manage_stock": product.get("manageStock", False),
             "categories": category_names,
-            "image_url": "" # Simplifica: tomar la primera si existiera en un arreglo, o null
+            "image_url": image_url
         }
         
         # In java, we might pass categoryIds or imageUrls, if present we can add them here

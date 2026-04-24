@@ -79,6 +79,13 @@ class VectorSyncWorker:
             )
             vector = response.data[0].embedding
 
+            image_urls = payload.get("imageUrls", [])
+            image_url = ""
+            if image_urls and len(image_urls) > 0:
+                image_url = image_urls[0]
+                if image_url.startswith("/"):
+                    image_url = f"https://api.cloudfly.com.co{image_url}"
+
             qdrant_payload = {
                 "product_id": product_id,
                 "tenant_id": tenant_id,
@@ -87,7 +94,7 @@ class VectorSyncWorker:
                 "price": float(price or 0),
                 "stock": int(payload.get("inventoryQty") or 0),
                 "manage_stock": bool(payload.get("manageStock")),
-                "image_url": payload.get("imageUrl", "") # Not always present in backend DTO yet?
+                "image_url": image_url
             }
 
             self._qdrant.upsert(
