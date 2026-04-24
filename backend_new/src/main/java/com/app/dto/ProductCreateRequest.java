@@ -37,4 +37,5 @@ public class ProductCreateRequest {
     
     private List<Long> categoryIds;
     private List<Long> imageIds;
+    private List<String> imageUrls;
 }
