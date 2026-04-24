@@ -75,7 +75,7 @@ services:
     container_name: mysql-exporter
     restart: always
     environment:
-      - DATA_SOURCE_NAME=root:widowmaker@(mysql:3306)/
+      - DATA_SOURCE_NAME=root:widowmaker@tcp(mysql:3306)/
     networks:
       - app-net
 
