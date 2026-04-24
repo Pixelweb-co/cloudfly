@@ -436,7 +436,7 @@ REGLAS DE ORO:
         # Loop to handle sequential tool calls (max 5 iterations)
         for _ in range(5):
             try:
-                response = await self._call_openai(messages, _TOOLS)
+                response = await self._call_openai(messages, TOOLS)
             except _OPENAI_RETRYABLE as exc:
                 raise RetryableError(f"OpenAI transient error: {exc}") from exc
             except Exception as exc:
