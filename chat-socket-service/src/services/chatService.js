@@ -499,12 +499,13 @@ class ChatService {
                 let mediaUrl = null;
                 let textContent = respuesta;
                 
-                // Buscar [URL] en cualquier parte del mensaje.
-                const mediaRegex = /\[(https?:\/\/[^\]]+)\]/;
+                // Buscar [URL] o ![texto](URL) en cualquier parte del mensaje.
+                const mediaRegex = /!\[.*?\]\((https?:\/\/[^\)]+)\)|\[(https?:\/\/[^\]]+)\]/;
                 const match = respuesta.match(mediaRegex);
                 
                 if (match) {
-                    mediaUrl = match[1];
+                    // El grupo 1 es para formato markdown ![](), el grupo 2 para [URL]
+                    mediaUrl = match[1] || match[2];
                     // Remover el bloque [URL] del texto final
                     textContent = respuesta.replace(mediaRegex, '').trim();
                     // Limpiar posibles líneas vacías dobles resultantes
