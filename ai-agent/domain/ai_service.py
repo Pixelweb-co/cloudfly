@@ -42,6 +42,41 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "search_products_semantically",
+            "description": "Busca productos en el catálogo usando lenguaje natural. Úsalo para encontrar qué vendemos.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Descripción del producto o necesidad del cliente.",
+                    }
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "check_products_stock",
+            "description": "Verifica el stock y disponibilidad de uno o varios productos por sus IDs.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "product_ids": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": "Lista de IDs de productos a verificar.",
+                    }
+                },
+                "required": ["product_ids"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "get_contact",
             "description": "Busca un contacto existente por su teléfono o email.",
             "parameters": {
