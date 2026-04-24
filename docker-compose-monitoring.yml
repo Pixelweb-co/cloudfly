@@ -74,12 +74,10 @@ services:
     image: prom/mysqld-exporter:v0.15.0
     container_name: mysql-exporter
     restart: always
-    environment:
-      - DATA_SOURCE_NAME=root:widowmaker@tcp(mysql:3306)/
+    volumes:
+      - ./monitoring/mysql/.my.cnf:/.my.cnf:ro
     command:
-      - '--mysqld.address=mysql:3306'
-      - '--collect.info_schema.innodb_metrics'
-      - '--collect.all'
+      - '--config.my-cnf=/.my.cnf'
     networks:
       - app-net
 
