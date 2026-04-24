@@ -306,12 +306,25 @@ const QuoteForm = () => {
                                             className="p-3 hover:bg-actionHover cursor-pointer border-b flex justify-between items-center"
                                             onClick={() => handleAddItem(product)}
                                         >
-                                            <div>
-                                                <Typography className="font-bold">{product.productName}</Typography>
-                                                <Typography variant="caption" color="textSecondary">Stock: {product.inventoryQty || 0}</Typography>
+                                            <div className="flex items-center gap-3">
+                                                {product.imageUrls && product.imageUrls[0] ? (
+                                                    <img 
+                                                        src={product.imageUrls[0]} 
+                                                        alt={product.productName} 
+                                                        className="w-10 h-10 object-cover rounded shadow-sm"
+                                                    />
+                                                ) : (
+                                                    <div className="w-10 h-10 bg-actionHover flex items-center justify-center rounded">
+                                                        <i className="tabler-photo text-textSecondary" />
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <Typography className="font-bold">{product.productName}</Typography>
+                                                    <Typography variant="caption" color="textSecondary">Stock: {product.inventoryQty || 0}</Typography>
+                                                </div>
                                             </div>
                                             <Typography className="font-bold text-primary">
-                                                ${product.salePrice || product.price || 0}
+                                                ${(product.salePrice || product.price || 0).toLocaleString()}
                                             </Typography>
                                         </div>
                                     ))}
@@ -336,45 +349,61 @@ const QuoteForm = () => {
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {items.map((item, index) => (
-                                        <TableRow key={index}>
-                                            <TableCell>
-                                                <Typography variant="body2" className="font-medium">{item.productName}</Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <CustomTextField
-                                                    type="number"
-                                                    size="small"
-                                                    value={item.quantity}
-                                                    onChange={(e) => handleUpdateItem(index, 'quantity', Number(e.target.value))}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <CustomTextField
-                                                    type="number"
-                                                    size="small"
-                                                    value={item.unitPrice}
-                                                    onChange={(e) => handleUpdateItem(index, 'unitPrice', Number(e.target.value))}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <CustomTextField
-                                                    type="number"
-                                                    size="small"
-                                                    value={item.discount}
-                                                    onChange={(e) => handleUpdateItem(index, 'discount', Number(e.target.value))}
-                                                />
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Typography variant="body2" className="font-bold">${(item.total || 0).toLocaleString()}</Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <IconButton size="small" color="error" onClick={() => handleRemoveItem(index)}>
-                                                    <i className='tabler-trash' />
-                                                </IconButton>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                    {items.map((item, index) => {
+                                        const product = products.find(p => p.id === item.productId)
+                                        return (
+                                            <TableRow key={index}>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-3 py-1">
+                                                        {product?.imageUrls && product.imageUrls[0] ? (
+                                                            <img 
+                                                                src={product.imageUrls[0]} 
+                                                                alt={item.productName} 
+                                                                className="w-8 h-8 object-cover rounded shadow-sm"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-8 h-8 bg-actionHover flex items-center justify-center rounded">
+                                                                <i className="tabler-photo text-textSecondary text-xs" />
+                                                            </div>
+                                                        )}
+                                                        <Typography variant="body2" className="font-medium">{item.productName}</Typography>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <CustomTextField
+                                                        type="number"
+                                                        size="small"
+                                                        value={item.quantity}
+                                                        onChange={(e) => handleUpdateItem(index, 'quantity', Number(e.target.value))}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <CustomTextField
+                                                        type="number"
+                                                        size="small"
+                                                        value={item.unitPrice}
+                                                        onChange={(e) => handleUpdateItem(index, 'unitPrice', Number(e.target.value))}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <CustomTextField
+                                                        type="number"
+                                                        size="small"
+                                                        value={item.discount}
+                                                        onChange={(e) => handleUpdateItem(index, 'discount', Number(e.target.value))}
+                                                    />
+                                                </TableCell>
+                                                <TableCell align="right">
+                                                    <Typography variant="body2" className="font-bold">${(item.total || 0).toLocaleString()}</Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <IconButton size="small" color="error" onClick={() => handleRemoveItem(index)}>
+                                                        <i className='tabler-trash' />
+                                                    </IconButton>
+                                                </TableCell>
+                                            </TableRow>
+                                        )
+                                    })}
                                     {items.length === 0 && (
                                         <TableRow>
                                             <TableCell colSpan={6} align="center" className="py-12">
