@@ -496,13 +496,16 @@ class ChatService {
                 let mediaUrl = null;
                 let textContent = respuesta;
                 
-                // Buscar [URL] en la primera línea. \s* sirve para tolerar espacios extra
-                const mediaRegex = /^\[(https?:\/\/[^\]]+)\]\s*\n/;
+                // Buscar [URL] en cualquier parte del mensaje.
+                const mediaRegex = /\[(https?:\/\/[^\]]+)\]/;
                 const match = respuesta.match(mediaRegex);
                 
                 if (match) {
                     mediaUrl = match[1];
+                    // Remover el bloque [URL] del texto final
                     textContent = respuesta.replace(mediaRegex, '').trim();
+                    // Limpiar posibles líneas vacías dobles resultantes
+                    textContent = textContent.replace(/\n\s*\n/g, '\n\n');
                 }
 
                 if (mediaUrl) {
