@@ -466,7 +466,7 @@ class AIService:
             logger.error(f"Error generating chart: {e}")
             return json.dumps({"error": str(e)})
 
-    def generate_response(self, tenant_id, contact_id, conversation_id, message, history):
+    async def generate_response(self, tenant_id, contact_id, conversation_id, message, history, pipeline_state=None, message_id=None):
         company_info = self.get_company_context(tenant_id)
 
         # Fetch pipeline state for this contact
