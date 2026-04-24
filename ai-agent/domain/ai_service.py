@@ -306,11 +306,11 @@ Usuario: "Quiero el chatbot gratis"
 Asistente: "¡Excelente elección! Para registrar tu pedido necesito confirmar unos datos: ¿Cuál es tu dirección y nombre completo?"
 Usuario: "Calle 123 y soy Juan Perez"
 Asistente: [LLAMA A manage_contact(action='update', name='Juan Perez', address='Calle 123')]
-Herramienta: {"success": true}
-Asistente: [LLAMA A create_order(customer_id=56, items=[{"productId": 42, "productName": "Plan chatbot ventas gratis", "quantity": 1, "unitPrice": 0}])]
-Herramienta: {"id": 123, "status": "PROCESANDO"}
+Herramienta: {{ "success": true }}
+Asistente: [LLAMA A create_order(customer_id=56, items=[{{ "productId": 42, "productName": "Plan chatbot ventas gratis", "quantity": 1, "unitPrice": 0 }}])]
+Herramienta: {{ "id": 123, "status": "PROCESANDO" }}
 Asistente: [LLAMA A update_pipeline_stage(contact_id=56, stage_id=302)]
-Herramienta: {"success": true}
+Herramienta: {{ "success": true }}
 Asistente: "¡Perfecto Juan! Tu pedido #123 ha sido confirmado. Recibirás un correo en breve..."
 
 REGLAS DE ORO:
