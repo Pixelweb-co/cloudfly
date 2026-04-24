@@ -214,6 +214,7 @@ const QuoteForm = () => {
     ).slice(0, 5)
 
     const totals = calculateTotals()
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.cloudfly.com.co'
 
     return (
         <Grid container spacing={6}>
@@ -309,7 +310,7 @@ const QuoteForm = () => {
                                             <div className="flex items-center gap-3">
                                                 {product.imageUrls && product.imageUrls[0] ? (
                                                     <img 
-                                                        src={product.imageUrls[0]} 
+                                                        src={`${API_URL}${product.imageUrls[0]}`} 
                                                         alt={product.productName} 
                                                         className="w-10 h-10 object-cover rounded shadow-sm"
                                                     />
@@ -357,7 +358,7 @@ const QuoteForm = () => {
                                                     <div className="flex items-center gap-3 py-1">
                                                         {product?.imageUrls && product.imageUrls[0] ? (
                                                             <img 
-                                                                src={product.imageUrls[0]} 
+                                                                src={`${API_URL}${product.imageUrls[0]}`} 
                                                                 alt={item.productName} 
                                                                 className="w-8 h-8 object-cover rounded shadow-sm"
                                                             />
