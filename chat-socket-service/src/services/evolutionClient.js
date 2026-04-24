@@ -51,11 +51,10 @@ class EvolutionClient {
             const url = `/message/sendMedia/${instanceName}`;
             const body = {
                 number: remoteJid,
-                mediaMessage: {
-                    mediatype: type,
-                    caption: caption,
-                    media: mediaUrl
-                }
+                mediatype: type,
+                caption: caption,
+                media: mediaUrl,
+                fileName: mediaUrl.split('/').pop()
             };
 
             const response = await this.client.post(url, body);
