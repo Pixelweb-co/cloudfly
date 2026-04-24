@@ -81,15 +81,27 @@ class AsyncKafkaConsumer:
             except json.JSONDecodeError as exc:
                 logger.error("Invalid JSON from Kafka", extra={"error": str(exc)})
 
-    async def _dispatch(self, payload: dict) -> None:
+    async def _dispatch(self, payload: dict | str) -> None:
         """Async wrapper that catches and logs processing errors."""
-        tenant_id = payload.get("tenantId")
-        contact_id = payload.get("contactId")
-        logger.info(
-            "Message received",
-            extra={"tenant_id": tenant_id, "contact_id": contact_id},
-        )
+        # Handle cases where JSON might be double-encoded or received as string
+        if isinstance(payload, str):
+            try:
+                payload = json.loads(payload)
+            except Exception:
+                pass
+
+        tenant_id = None
+        contact_id = None
+        
         try:
+            if isinstance(payload, dict):
+                tenant_id = payload.get("tenantId") or payload.get("tenant_id")
+                contact_id = payload.get("contactId") or payload.get("contact_id")
+
+            logger.info(
+                "Processing Kafka message",
+                extra={"tenant_id": tenant_id, "contact_id": contact_id, "topic": self._topic},
+            )
             await self._callback(payload)
         except Exception as exc:
             logger.error(
@@ -97,6 +109,7 @@ class AsyncKafkaConsumer:
                 extra={
                     "tenant_id": tenant_id,
                     "contact_id": contact_id,
+                    "topic": self._topic,
                     "error": str(exc),
                 },
             )
