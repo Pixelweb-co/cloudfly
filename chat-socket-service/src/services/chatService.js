@@ -98,7 +98,8 @@ class ChatService {
             );
 
             // 6. Emitir por Socket.IO (SIEMPRE, independiente del chatbot gate)
-            const phoneDigits = remoteJid.split('@')[0].replace(/\D/g, '');
+            const isGroupJid = remoteJid.endsWith('@g.us');
+            const phoneDigits = isGroupJid ? remoteJid.split('@')[0] : remoteJid.split('@')[0].replace(/\D/g, '');
             const roomName = `tenant_${tenantId}_contact_${phoneDigits}`;
             logger.info(`📡 [WEBHOOK_STEP_6] Emitting to Socket.io room: ${roomName}`);
             
@@ -490,7 +491,9 @@ class ChatService {
 
             // 4. Enviar vía WhatsApp (Evolution API)
             try {
-                const remoteJid = `${contact.phone}@s.whatsapp.net`;
+                // Detectar si es un grupo (ID largo o contiene guión)
+                const isGroup = contact.phone.includes('-') || contact.phone.length > 15;
+                const remoteJid = isGroup ? `${contact.phone}@g.us` : `${contact.phone}@s.whatsapp.net`;
                 
                 // Interceptar MediaMessage format
                 let mediaUrl = null;
