@@ -31,9 +31,15 @@ public class OrderController {
         log.info("🔍 [ORDER-AUTH] Incoming Headers Keys: {}", headers.keySet());
         // --- AI Internal Secret Bypass (Redundancy) ---
         String expected = "cloudfly_ai_secret_2026";
-        boolean isAI = headers.values().stream().anyMatch(v -> v != null && v.contains(expected));
         
-        if (isAI) {
+        // Check headers (case-insensitive keys are already handled by Spring in the map)
+        boolean isAIInHeaders = headers.values().stream().anyMatch(v -> v != null && v.contains(expected));
+        
+        // We can't easily check query params here without exchange, 
+        // but the filter/firewall already checked them. 
+        // We'll trust the headers as primary here since they are always passed.
+        
+        if (isAIInHeaders) {
             log.info("🤖 [ORDER-AUTH] AI Internal Bypass active for Order operations");
             return Mono.just(new UserContext(1L, null, java.util.Set.of("ROLE_ADMIN")));
         }
