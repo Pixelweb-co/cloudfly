@@ -32,6 +32,7 @@ public class JwtAuthenticationFilter implements WebFilter {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
+        log.info("🚀 [JWT-FILTER] Hitting path: {}", path);
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
         // Skips auth paths
@@ -39,7 +40,9 @@ public class JwtAuthenticationFilter implements WebFilter {
             return chain.filter(exchange);
         }
 
-        log.info("🔍 [DEBUG] Headers for {}: {}", path, exchange.getRequest().getHeaders().toSingleValueMap());
+        exchange.getRequest().getHeaders().forEach((name, values) -> {
+            log.info("🔍 [HEADER] {}: {}", name, values);
+        });
 
         // --- AI Internal Auth Bypass ---
         String aiSecret = exchange.getRequest().getHeaders().getFirst("X-AI-Secret");
