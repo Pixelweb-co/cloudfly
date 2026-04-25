@@ -86,12 +86,20 @@ public class OrderController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Mono<OrderResponseDTO> save(@RequestBody OrderRequestDTO order, @RequestHeader Map<String, String> headers) {
+        log.info("🛒 [ORDER-CONTROLLER] INCOMING SAVE REQUEST. CustomerID: {}, Items: {}", order.getCustomerId(), 
+                order.getItems() != null ? order.getItems().size() : 0);
+        
         return getCurrentUserContext(headers)
                 .flatMap(ctx -> {
+                    log.info("🛒 [ORDER-CONTROLLER] Context Resolved: TenantID={}, Roles={}", ctx.tenantId(), ctx.roles());
                     order.setTenantId(ctx.tenantId());
                     order.setCompanyId(ctx.companyId());
-                    return orderService.createOrder(order);
-                });
+                    
+                    return orderService.createOrder(order)
+                            .doOnNext(saved -> log.info("🛒 [ORDER-CONTROLLER] SUCCESS! Order created with ID: {}", saved.getId()))
+                            .doOnError(err -> log.error("🛒 [ORDER-CONTROLLER] ERROR in orderService: {}", err.getMessage()));
+                })
+                .doOnError(err -> log.error("🛒 [ORDER-CONTROLLER] ERROR resolving context or calling service: {}", err.getMessage()));
     }
 
     @PutMapping("/{id}")
