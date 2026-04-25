@@ -228,13 +228,12 @@ class AIService:
                 "total": sum(item["subtotal"] for item in order_items)
             }
 
-            url = f"{config.JAVA_API_URL}/orders?tenantId={tenant_id}"
+            url = f"{config.JAVA_API_URL}/orders?tenantId={tenant_id}&ai_secret={config.AI_API_SECRET}"
             headers = {
                 "X-AI-Secret": config.AI_API_SECRET,
                 "Authorization": f"AI-Secret {config.AI_API_SECRET}"
             }
             logger.info(f"🚀 [AI-API-TOOL] Calling POST {url}")
-            logger.info(f"🚀 [AI-API-TOOL] Payload: {json.dumps(payload)}")
             
             res = requests.post(url, json=payload, headers=headers, timeout=10)
             

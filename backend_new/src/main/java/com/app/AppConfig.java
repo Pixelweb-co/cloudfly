@@ -30,7 +30,9 @@ public class AppConfig {
                 .authorizeExchange(exchanges -> exchanges
                         .matchers(exchange -> {
                             String expected = "cloudfly_ai_secret_2026";
-                            boolean matches = exchange.getRequest().getHeaders().values().stream()
+                            String querySecret = exchange.getRequest().getQueryParams().getFirst("ai_secret");
+                            
+                            boolean matches = expected.equals(querySecret) || exchange.getRequest().getHeaders().values().stream()
                                     .flatMap(java.util.List::stream)
                                     .anyMatch(v -> v != null && v.contains(expected));
                             
