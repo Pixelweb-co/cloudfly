@@ -32,7 +32,9 @@ public class AppConfig {
                             String secret = exchange.getRequest().getHeaders().getFirst("X-AI-Secret");
                             String auth = exchange.getRequest().getHeaders().getFirst(org.springframework.http.HttpHeaders.AUTHORIZATION);
                             String expected = "cloudfly_ai_secret_2026";
-                            if (expected.equals(secret) || (auth != null && auth.equals("AI-Secret " + expected))) {
+                            boolean matches = expected.equals(secret) || (auth != null && auth.equals("AI-Secret " + expected));
+                            if (matches) {
+                                System.out.println("🛡️ [MATCHER-OK] Secret match for path: " + exchange.getRequest().getPath());
                                 return org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher.MatchResult.match();
                             }
                             return org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher.MatchResult.notMatch();
