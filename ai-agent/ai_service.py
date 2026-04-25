@@ -225,8 +225,11 @@ class AIService:
             }
 
             url = f"{config.JAVA_API_URL}/orders?tenantId={tenant_id}"
-            headers = {"X-AI-Secret": config.AI_API_SECRET}
-            logger.info(f"🚀 [AI-API] Sending POST to {url} with headers: {list(headers.keys())}")
+            headers = {
+                "X-AI-Secret": config.AI_API_SECRET,
+                "Authorization": f"AI-Secret {config.AI_API_SECRET}"
+            }
+            logger.info(f"🚀 [AI-API] Sending POST to {url} with secret key: {config.AI_API_SECRET[:5]}...")
             res = requests.post(url, json=payload, headers=headers, timeout=10)
             if res.status_code in [200, 201]:
                 return json.dumps(res.json())
@@ -259,7 +262,11 @@ class AIService:
             }
 
             url = f"{config.JAVA_API_URL}/quotes?tenantId={tenant_id}"
-            res = requests.post(url, json=payload, headers={"X-AI-Secret": config.AI_API_SECRET}, timeout=10)
+            headers = {
+                "X-AI-Secret": config.AI_API_SECRET,
+                "Authorization": f"AI-Secret {config.AI_API_SECRET}"
+            }
+            res = requests.post(url, json=payload, headers=headers, timeout=10)
             if res.status_code in [200, 201]:
                 return json.dumps(res.json())
             return json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})
@@ -272,7 +279,11 @@ class AIService:
         logger.info(f"Converting quote {quote_id} to order (Tenant: {tenant_id})")
         try:
             url = f"{config.JAVA_API_URL}/quotes/{quote_id}/convert-to-order?tenantId={tenant_id}"
-            res = requests.post(url, headers={"X-AI-Secret": config.AI_API_SECRET}, timeout=10)
+            headers = {
+                "X-AI-Secret": config.AI_API_SECRET,
+                "Authorization": f"AI-Secret {config.AI_API_SECRET}"
+            }
+            res = requests.post(url, headers=headers, timeout=10)
             if res.status_code in [200, 201]:
                 return json.dumps(res.json())
             return json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})

@@ -46,10 +46,15 @@ public class JwtAuthenticationFilter implements WebFilter {
 
         // --- AI Internal Auth Bypass ---
         String aiSecret = exchange.getRequest().getHeaders().getFirst("X-AI-Secret");
-        String expectedSecret = "cloudfly_ai_secret_2026";
+        String authHeaderValue = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         
-        if (aiSecret != null && aiSecret.equals(expectedSecret)) {
-            log.info("🤖 [JWT-FILTER] Internal AI secret valid. Path: {}", path);
+        String expectedSecret = "cloudfly_ai_secret_2026";
+        boolean isValid = (aiSecret != null && aiSecret.equals(expectedSecret)) || 
+                         (authHeaderValue != null && authHeaderValue.equals("AI-Secret " + expectedSecret));
+
+        if (isValid) {
+            log.info("🤖 [JWT-FILTER] Internal AI secret valid (via {}). Path: {}", 
+                aiSecret != null ? "X-AI-Secret" : "Authorization", path);
             
             List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
             
