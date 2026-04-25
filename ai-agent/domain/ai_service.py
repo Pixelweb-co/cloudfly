@@ -574,8 +574,9 @@ REGLAS DE ORO:
     def _check_stock(self, product_ids: List[int], tenant_id: int) -> str:
         try:
             ids_str = ",".join(map(str, product_ids))
-            url = f"{config.java_api_url}/productos/stock/multiple?ids={ids_str}&tenantId={tenant_id}"
-            res = requests.get(url, timeout=5)
+            url = f"{config.java_api_url}/productos/stock/multiple?ids={ids_str}&tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
+            headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
+            res = requests.get(url, headers=headers, timeout=5)
             if res.status_code == 200:
                 data = res.json()
                 slim = [
@@ -659,8 +660,11 @@ REGLAS DE ORO:
                 "externalReference": idempotency_key # Used for idempotency in the backend
             }
 
-            url = f"{config.java_api_url}/orders?tenantId={tenant_id}"
-            res = requests.post(url, json=payload, timeout=10)
+            url = f"{config.java_api_url}/orders?tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
+            headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
+            logger.info(f"🚀 [AI-API-TOOL] Calling POST {url}", extra=log_ctx)
+            res = requests.post(url, json=payload, headers=headers, timeout=10)
+            logger.info(f"📥 [AI-API-TOOL] Response {res.status_code}: {res.text}", extra=log_ctx)
             if res.status_code in [200, 201]:
                 return json.dumps(res.json())
             return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
@@ -670,8 +674,9 @@ REGLAS DE ORO:
 
     def _get_order(self, order_id: int, tenant_id: int) -> str:
         try:
-            url = f"{config.java_api_url}/orders/{order_id}?tenantId={tenant_id}"
-            res = requests.get(url, timeout=5)
+            url = f"{config.java_api_url}/orders/{order_id}?tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
+            headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
+            res = requests.get(url, headers=headers, timeout=5)
             if res.status_code == 200:
                 return json.dumps(res.json())
             return json.dumps({"error": f"API {res.status_code}"})
@@ -695,8 +700,9 @@ REGLAS DE ORO:
                 })
 
             payload = {"notes": notes, "items": order_items}
-            url = f"{config.java_api_url}/orders/{order_id}?tenantId={tenant_id}"
-            res = requests.put(url, json=payload, timeout=10)
+            url = f"{config.java_api_url}/orders/{order_id}?tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
+            headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
+            res = requests.put(url, json=payload, headers=headers, timeout=10)
             if res.status_code == 200:
                 return json.dumps(res.json())
             return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
@@ -725,8 +731,9 @@ REGLAS DE ORO:
                 "status": "PENDING"
             }
 
-            url = f"{config.java_api_url}/quotes?tenantId={tenant_id}"
-            res = requests.post(url, json=payload, timeout=10)
+            url = f"{config.java_api_url}/quotes?tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
+            headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
+            res = requests.post(url, json=payload, headers=headers, timeout=10)
             if res.status_code in [200, 201]:
                 return json.dumps(res.json())
             return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
@@ -736,8 +743,9 @@ REGLAS DE ORO:
 
     def _convert_quote_to_order(self, quote_id: int, tenant_id: int) -> str:
         try:
-            url = f"{config.java_api_url}/quotes/{quote_id}/convert-to-order?tenantId={tenant_id}"
-            res = requests.post(url, timeout=10)
+            url = f"{config.java_api_url}/quotes/{quote_id}/convert-to-order?tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
+            headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
+            res = requests.post(url, headers=headers, timeout=10)
             if res.status_code in [200, 201]:
                 return json.dumps(res.json())
             return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
