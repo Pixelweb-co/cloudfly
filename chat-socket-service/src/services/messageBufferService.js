@@ -1,5 +1,6 @@
 const { getRedisClient, isRedisAvailable } = require('../utils/redisClient');
 const { publishToKafka, isKafkaAvailable } = require('./kafkaProducer');
+const evolutionClient = require('./evolutionClient');
 const logger = require('../utils/logger');
 
 const DEBOUNCE_MS = 1000;              // 1 second inactivity window
@@ -14,7 +15,7 @@ class MessageBufferService {
      * Buffer a message in Redis with a 3-second debounce timer.
      * Each new message resets the timer.
      */
-    async bufferMessage(tenantId, companyId, contactId, conversationId, messageData) {
+    async bufferMessage(tenantId, companyId, contactId, conversationId, messageData, extraMeta = {}) {
         if (!isRedisAvailable()) {
             logger.warn('⚠️ [BUFFER] Redis unavailable, message will NOT be buffered or processed by AI');
             return false;
@@ -41,7 +42,11 @@ class MessageBufferService {
             await redis.zadd(DEBOUNCE_ZSET, fireAt, bufferKey);
 
             // Store companyId for Kafka payload (metadata key)
-            await redis.setex(`meta:${bufferKey}`, BUFFER_EXPIRE_SECONDS, JSON.stringify({ companyId, tenantId, contactId, conversationId }));
+            await redis.setex(`meta:${bufferKey}`, BUFFER_EXPIRE_SECONDS, JSON.stringify({ 
+                companyId, tenantId, contactId, conversationId,
+                instance: extraMeta.instance,
+                remoteJid: extraMeta.remoteJid
+            }));
 
             const bufferLen = await redis.llen(bufferKey);
             logger.info(`📦 [BUFFER] Buffered msg for contact ${contactId} | conv=${conversationId.substring(0, 8)}... | queue_size=${bufferLen} | fire_in=${DEBOUNCE_MS}ms`);
@@ -137,6 +142,11 @@ class MessageBufferService {
 
                 if (success) {
                     logger.info(`⏱️ [DEBOUNCE] BUFFER FLUSHED: ${messageCount} messages for contact ${meta.contactId} published to Kafka topic "messages.in" ✅`);
+                    
+                    // 6. ENVIAR DOUBLE CHECK AZUL (Read Receipt)
+                    if (meta.instance && meta.remoteJid && meta.instance !== 'facebook') {
+                        await evolutionClient.markRead(meta.instance, meta.remoteJid);
+                    }
                 } else {
                     logger.error(`❌ [DEBOUNCE] Kafka publish failed for ${bufferKey}`);
                 }
