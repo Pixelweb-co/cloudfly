@@ -14,7 +14,13 @@ async function initKafkaConsumer(io) {
             logLevel: logLevel.WARN
         });
 
-        consumer = kafka.consumer({ groupId: 'chat-socket-responses' });
+        consumer = kafka.consumer({ 
+            groupId: 'chat-socket-responses',
+            sessionTimeout: 30000,
+            heartbeatInterval: 3000,
+            rebalanceTimeout: 60000,
+            allowAutoTopicCreation: true
+        });
         
         await consumer.connect();
         logger.info('✅ [KAFKA-CONSUMER] Connected to Kafka brokers');

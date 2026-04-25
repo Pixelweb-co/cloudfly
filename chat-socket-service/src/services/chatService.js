@@ -34,6 +34,17 @@ class ChatService {
         let remoteJid = data.key.remoteJid;
         const pushName = data.pushName;
 
+        // 0. FILTER: No groups
+        if (remoteJid && remoteJid.endsWith('@g.us')) {
+            logger.debug(`[WEBHOOK_SKIP] Group message detected (${remoteJid}). Ignoring as per user request.`);
+            return;
+        }
+
+        // 0.1 FILTER: No status updates
+        if (remoteJid === 'status@broadcast') {
+            return;
+        }
+
         // Extract body
         let body = '';
         if (message) {
@@ -272,8 +283,18 @@ class ChatService {
      * Lógica de obtener o crear contacto (con UUID y protección contra duplicados)
      */
     async getOrCreateContact(tenantId, companyId, jid, name) {
+        // Handle LIDs (WhatsApp Business IDs like 5731367867091585388297@s.whatsapp.net)
+        // If it's a LID, it doesn't have the phone format. We try to use it as is or clean it.
         const phone = jid.split('@')[0];
-        const cleanPhone = phone.replace(/[^0-9]/g, '');
+        
+        // If it's a LID (very long or contains letters/weird patterns), we still use it as the unique identifier
+        // but we might want to flag it or try to resolve it later.
+        const isLid = phone.length > 15 || /[a-zA-Z]/.test(phone);
+        const cleanPhone = isLid ? phone : phone.replace(/[^0-9]/g, '');
+
+        if (isLid) {
+            logger.info(`🆔 [WEBHOOK] LID detected: ${phone}. Using as unique identifier for contact.`);
+        }
 
         try {
             // 1. Buscar contacto existente por teléfono
