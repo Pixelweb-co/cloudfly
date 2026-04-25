@@ -233,8 +233,13 @@ class AIService:
                 "X-AI-Secret": config.AI_API_SECRET,
                 "Authorization": f"AI-Secret {config.AI_API_SECRET}"
             }
-            logger.info(f"🚀 [AI-API] Sending POST to {url} with secret key: {config.AI_API_SECRET[:5]}...")
+            logger.info(f"🚀 [AI-API-TOOL] Calling POST {url}")
+            logger.info(f"🚀 [AI-API-TOOL] Payload: {json.dumps(payload)}")
+            
             res = requests.post(url, json=payload, headers=headers, timeout=10)
+            
+            logger.info(f"📥 [AI-API-TOOL] Response Status: {res.status_code}")
+            logger.info(f"📥 [AI-API-TOOL] Response Body: {res.text}")
             if res.status_code in [200, 201]:
                 return json.dumps(res.json())
             return json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})
