@@ -25,7 +25,7 @@ async function initKafkaConsumer(io) {
         await consumer.run({
             eachMessage: async ({ topic, partition, message }) => {
                 const payload = JSON.parse(message.value.toString());
-                logger.info(`📥 [KAFKA-CONSUMER] Received AI response for contact ${payload.contactId}`);
+                logger.info(`📥 [KAFKA-CONSUMER] Received AI response payload: ${JSON.stringify(payload)}`);
 
                 try {
                     const eventPayload = await chatService.processAiResponse(payload);
