@@ -235,6 +235,7 @@ services:
       - DB_USER=${MYSQL_USER:-root}
       - DB_PASSWORD=${MYSQL_PASSWORD:-widowmaker}
       - DB_NAME=${MYSQL_DATABASE:-cloud_master}
+      - JAVA_API_URL=http://backend-api:8080
     networks:
       - app-net
       - kafka-net
