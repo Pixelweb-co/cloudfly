@@ -94,7 +94,11 @@ class AIService:
         try:
             ids_str = ",".join(map(str, product_ids))
             url = f"{config.JAVA_API_URL}/productos/stock/multiple?ids={ids_str}&tenantId={tenant_id}"
-            res = requests.get(url, timeout=5)
+            headers = {
+                "X-AI-Secret": config.AI_API_SECRET,
+                "Authorization": f"AI-Secret {config.AI_API_SECRET}"
+            }
+            res = requests.get(url, headers=headers, timeout=5)
             if res.status_code == 200:
                 data = res.json()
                 # return just stock and status to reduce output
@@ -296,7 +300,11 @@ class AIService:
         logger.info(f"Fetching order {order_id} (Tenant: {tenant_id})")
         try:
             url = f"{config.JAVA_API_URL}/orders/{order_id}?tenantId={tenant_id}"
-            res = requests.get(url, headers={"X-AI-Secret": config.AI_API_SECRET}, timeout=5)
+            headers = {
+                "X-AI-Secret": config.AI_API_SECRET,
+                "Authorization": f"AI-Secret {config.AI_API_SECRET}"
+            }
+            res = requests.get(url, headers=headers, timeout=5)
             if res.status_code == 200:
                 return json.dumps(res.json())
             return json.dumps({"error": f"API returned {res.status_code}"})
@@ -325,7 +333,11 @@ class AIService:
             }
 
             url = f"{config.JAVA_API_URL}/orders/{order_id}?tenantId={tenant_id}"
-            res = requests.put(url, json=payload, headers={"X-AI-Secret": config.AI_API_SECRET}, timeout=10)
+            headers = {
+                "X-AI-Secret": config.AI_API_SECRET,
+                "Authorization": f"AI-Secret {config.AI_API_SECRET}"
+            }
+            res = requests.put(url, json=payload, headers=headers, timeout=10)
             if res.status_code == 200:
                 return json.dumps(res.json())
             return json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})
