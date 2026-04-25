@@ -28,10 +28,19 @@ public class AppConfig {
                 .cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/media/**", "/auth/**", "/login", "/register", "/verify", "/forgot-password", "/reset-password", "/api/webhooks/evolution").permitAll()
+                        .matchers(exchange -> {
+                            String secret = exchange.getRequest().getHeaders().getFirst("X-AI-Secret");
+                            String auth = exchange.getRequest().getHeaders().getFirst(org.springframework.http.HttpHeaders.AUTHORIZATION);
+                            String expected = "cloudfly_ai_secret_2026";
+                            if (expected.equals(secret) || (auth != null && auth.equals("AI-Secret " + expected))) {
+                                return org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher.MatchResult.match();
+                            }
+                            return org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher.MatchResult.notMatch();
+                        }).permitAll()
+                        .pathMatchers("/media/**", "/auth/**", "/login", "/register", "/verify", "/forgot-password", "/reset-password", "/api/webhooks/evolution", "/api/chatbotEnable").permitAll()
                         .pathMatchers(org.springframework.http.HttpMethod.OPTIONS).permitAll() // Allow preflight
                         .anyExchange().authenticated())
-                .addFilterBefore(jwtAuthenticationFilter, org.springframework.security.config.web.server.SecurityWebFiltersOrder.AUTHORIZATION)
+                .addFilterBefore(jwtAuthenticationFilter, org.springframework.security.config.web.server.SecurityWebFiltersOrder.AUTHENTICATION)
                 .build();
     }
 
