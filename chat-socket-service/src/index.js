@@ -98,7 +98,6 @@ app.post('/webhook/facebook', async (req, res) => {
 
 // Chatbot Toggle (invalidates Redis cache + updates DB)
 const chatbotGateService = require('./services/chatbotGateService');
-const db = require('./utils/db');
 app.post('/api/contacts/:contactId/chatbot-toggle', async (req, res) => {
     try {
         const { contactId } = req.params;
