@@ -219,13 +219,7 @@ public class EvolutionService {
         webhookData.put("base64", true); // Permitir media en base64 (nombre correcto para v2)
         webhookData.put("events", new String[]{
             "MESSAGES_UPSERT",
-            "MESSAGES_UPDATE",
-            "MESSAGES_DELETE",
-            "SEND_MESSAGE",
-            "CONNECTION_UPDATE",
-            "TYPEBOT_START",
-            "TYPEBOT_CHANGE_STATUS",
-            "REMOVE_INSTANCE"
+            "CONNECTION_UPDATE"
         });
 
         Map<String, Object> body = new HashMap<>();
