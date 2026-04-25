@@ -28,6 +28,7 @@ public class OrderController {
     }
 
     private Mono<UserContext> getCurrentUserContext(Map<String, String> headers) {
+        log.info("🔍 [ORDER-AUTH] Incoming Headers: {}", headers.keySet());
         // --- AI Internal Secret Bypass (Redundancy) ---
         String aiSecret = headers.get("x-ai-secret");
         String authHeader = headers.get("authorization");
