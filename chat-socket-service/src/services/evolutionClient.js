@@ -67,6 +67,23 @@ class EvolutionClient {
             throw error;
         }
     }
+    /**
+     * Marcar mensaje como leído (Doble check azul)
+     */
+    async markRead(instanceName, remoteJid) {
+        try {
+            const url = `/chat/markMessageAsRead/${instanceName}`;
+            const body = {
+                number: remoteJid,
+                read: true
+            };
+
+            await this.client.post(url, body);
+            logger.debug(`🔵 Read receipt sent to ${remoteJid}`);
+        } catch (error) {
+            logger.warn(`⚠️ Could not send read receipt: ${error.message}`);
+        }
+    }
 }
 
 module.exports = new EvolutionClient();

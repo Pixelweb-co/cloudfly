@@ -140,7 +140,8 @@ class ChatService {
                     // Buffer the message (3s debounce → Kafka)
                     const buffered = await messageBufferService.bufferMessage(
                         tenantId, companyId, contact.id, conversationId,
-                        { body, messageId, timestamp: new Date().toISOString() }
+                        { body, messageId, timestamp: new Date().toISOString() },
+                        { instance, remoteJid }
                     );
 
                     if (buffered) {
@@ -264,7 +265,8 @@ class ChatService {
                     logger.info(`🤖 [FB_WEBHOOK_GATE] Chatbot is ENABLED. Buffering for AI agent...`);
                     await messageBufferService.bufferMessage(
                         tenantId, companyId, contact.id, conversationId,
-                        { body, messageId: internalMessageId, timestamp: new Date().toISOString() }
+                        { body, messageId: internalMessageId, timestamp: new Date().toISOString() },
+                        { instance: 'facebook', remoteJid: senderId }
                     );
                 } else {
                     logger.info(`👤 [FB_WEBHOOK_GATE] Chatbot is DISABLED. Human-only mode.`);
