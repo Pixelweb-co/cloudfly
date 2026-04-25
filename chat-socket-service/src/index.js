@@ -96,7 +96,38 @@ app.post('/webhook/facebook', async (req, res) => {
     }
 });
 
+// Chatbot Toggle (invalidates Redis cache + updates DB)
+const chatbotGateService = require('./services/chatbotGateService');
+const db = require('./utils/db');
+app.post('/api/contacts/:contactId/chatbot-toggle', async (req, res) => {
+    try {
+        const { contactId } = req.params;
+        const { enabled, tenantId } = req.body;
+
+        if (enabled === undefined) {
+            return res.status(400).json({ error: "Field 'enabled' is required" });
+        }
+
+        // 1. Update DB
+        await db.execute(
+            'UPDATE contacts SET chatbot_enabled = ? WHERE id = ?',
+            [enabled ? 1 : 0, contactId]
+        );
+
+        // 2. Invalidate Redis cache
+        const tid = tenantId || 1;
+        await chatbotGateService.invalidateCache(tid, contactId);
+
+        logger.info(`🤖 [CHATBOT-TOGGLE] Contact ${contactId} chatbot → ${enabled} (cache invalidated)`);
+        res.json({ contactId: Number(contactId), chatbotEnabled: enabled });
+    } catch (error) {
+        logger.error(`❌ [CHATBOT-TOGGLE] Error: ${error.message}`);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 /**
+
  * Obtener últimos mensajes de un contacto por UUID
  * GET /api/chat/messages/:contactUuid?tenantId=X&limit=10
  */
