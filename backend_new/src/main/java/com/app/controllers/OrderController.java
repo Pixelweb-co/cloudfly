@@ -28,14 +28,14 @@ public class OrderController {
     }
 
     private Mono<UserContext> getCurrentUserContext(Map<String, String> headers) {
-        log.info("🔍 [ORDER-AUTH] Incoming Headers: {}", headers.keySet());
+        log.info("🔍 [ORDER-AUTH] Incoming Headers Keys: {}", headers.keySet());
         // --- AI Internal Secret Bypass (Redundancy) ---
-        String aiSecret = headers.get("x-ai-secret");
-        String authHeader = headers.get("authorization");
         String expected = "cloudfly_ai_secret_2026";
-        if (expected.equals(aiSecret) || (authHeader != null && authHeader.contains("AI-Secret " + expected))) {
-            log.info("🤖 [ORDER-AUTH] AI Internal Bypass active for Order creation");
-            return Mono.just(new UserContext(1L, null, Set.of("ROLE_ADMIN")));
+        boolean isAI = headers.values().stream().anyMatch(v -> v != null && v.contains(expected));
+        
+        if (isAI) {
+            log.info("🤖 [ORDER-AUTH] AI Internal Bypass active for Order operations");
+            return Mono.just(new UserContext(1L, null, java.util.Set.of("ROLE_ADMIN")));
         }
 
         return ReactiveSecurityContextHolder.getContext()
