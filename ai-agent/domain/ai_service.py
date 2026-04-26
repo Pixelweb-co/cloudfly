@@ -519,6 +519,9 @@ class AIService:
         if not final_text.strip() and not pipeline_update_request:
              final_text = "Entendido. ¿En qué más puedo ayudarte?"
 
+        # 4. Final Formatting (WhatsApp Optimization)
+        final_text = self._format_output_for_whatsapp(final_text)
+
         logger.info(
             "AI response generated",
             extra={
@@ -529,10 +532,43 @@ class AIService:
                 "completion_tokens": usage.completion_tokens,
                 "total_tokens": usage.total_tokens,
                 "pipeline_update": pipeline_update_request is not None,
+                "mode": mode
             },
         )
 
         return final_text, pipeline_update_request, handoff_request, usage
+
+    # ── Output Formatting ───────────────────────────────────────────────
+
+    def _format_output_for_whatsapp(self, text: str) -> str:
+        """
+        Cleans the AI output to be more human-like and compatible with WhatsApp.
+        Inspired by n8n 'Verificador de Respuesta' logic.
+        """
+        if not text:
+            return text
+
+        # 1. Remove Markdown headers and bold markers
+        # WhatsApp supports *bold*, but OpenAI often uses it excessively for labels.
+        # We'll remove '#' and keep '*' only if the user specifically wants it, 
+        # but for now, following n8n logic of total cleanup:
+        text = text.replace("#", "")
+        text = text.replace("*", "")
+
+        # 2. Punctuation cleanup (Simplified chat style)
+        text = text.replace("¿", "")
+        text = text.replace("¡", "")
+
+        # 3. Remove internal thinking artifacts or meta-commentary
+        # (Though prompts should handle this, this is a safety net)
+        text = text.replace("Utilizando la herramienta", "")
+        text = text.replace("He consultado", "Ya revisé")
+
+        # 4. Cleanup white spaces and multiple newlines
+        lines = [line.strip() for line in text.split("\n")]
+        text = "\n".join(filter(None, lines))
+
+        return text.strip()
 
     # ── Tool Implementations ──────────────────────────────────────────────
 
