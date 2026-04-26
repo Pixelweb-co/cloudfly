@@ -55,6 +55,7 @@ class AppConfig:
 
     # ── Observability ─────────────────────────────────────────────────────
     log_level: str
+    ai_api_secret: str
 
 
 def load_config() -> AppConfig:
@@ -93,6 +94,7 @@ def load_config() -> AppConfig:
 
         java_api_url=os.getenv("JAVA_API_URL", "http://backend:8080/api"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
+        ai_api_secret=os.getenv("AI_API_SECRET", "cloudfly_ai_secret_2026")
     )
 
 
