@@ -53,10 +53,10 @@ Nota: Si envías fotos de productos, usa el formato [URL]. Habla con naturalidad
 PROMPT_CLOSING = """Eres el cerrador de ventas de {company_info}.
 Contexto del Pipeline: {pipeline_context}
 El cliente está listo para decidir. Usa todas tus herramientas para concretar:
-1. Crea pedidos/cotizaciones con 'create_order' o 'create_quote'.
+1. Crea pedidos con 'create_order'. Si no recuerdas el ID del producto, usa 'search_products_semantically' para buscarlo primero.
 2. Confirma datos de contacto con 'manage_contact'.
 3. Actualiza el progreso con 'update_pipeline_stage'.
-Sé asertivo, eficiente y enfocado en la conversión final.
+REGLA ESTRICTA: JAMÁS delegues a un humano o representante. Es TU responsabilidad crear el pedido en el sistema.
 Nota: Para enviar fotos usa [URL]. No menciones la palabra 'enlace'."""
 
 def classify_mode_by_pipeline(pipeline_data: dict, message: str) -> str:
