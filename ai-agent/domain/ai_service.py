@@ -62,24 +62,24 @@ Nota: Para enviar fotos usa [URL]. No menciones la palabra 'enlace'."""
 def classify_mode_by_pipeline(pipeline_data: dict, message: str) -> str:
     msg = message.lower()
     
-    # Intent-based overrides
-    if any(k in msg for k in ["comprar", "lo quiero", "confirmo", "pedido", "orden"]):
+    # Priority 1: Direct Purchase/Order Intent -> Always CLOSING (Tools enabled)
+    if any(k in msg for k in ["comprar", "lo quiero", "confirmo", "pedido", "orden", "haz el pedido"]):
         return "CLOSING"
+    
+    # Priority 2: Product/Price Interest -> Always INTENT (Tools enabled)
     if any(k in msg for k in ["precio", "producto", "catalogo", "catálogo", "cuánto", "cuanto", "valen", "vale"]):
         return "INTENT"
 
-    # Pipeline-based classification
+    # Priority 3: Pipeline-based classification
     if not pipeline_data:
         return "EXPLORE"
         
     stage_name = pipeline_data.get("current_stage_name", "").lower()
     
-    if any(s in stage_name for s in ["lead", "nuevo", "prospecto"]):
-        return "EXPLORE"
-    if any(s in stage_name for s in ["interes", "interés", "cotizacion", "cotización"]):
-        return "INTENT"
     if any(s in stage_name for s in ["negociacion", "negociación", "cierre", "venta", "cliente"]):
         return "CLOSING"
+    if any(s in stage_name for s in ["interes", "interés", "cotizacion", "cotización"]):
+        return "INTENT"
         
     return "EXPLORE"
 
