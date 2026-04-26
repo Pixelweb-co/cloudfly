@@ -37,6 +37,50 @@ logger = logging.getLogger(__name__)
 # Transient OpenAI errors that are worth retrying
 _OPENAI_RETRYABLE = (RateLimitError, APITimeoutError, APIConnectionError)
 
+# --- Dynamic Prompt Constants ---
+
+PROMPT_EXPLORE = """Eres un asistente de ventas para {company_info}.
+Tu objetivo es saludar amablemente y detectar necesidades básicas. 
+Sé breve, usa pocos tokens y mantén un tono profesional.
+No intentes cerrar la venta aún, solo genera interés."""
+
+PROMPT_INTENT = """Eres un experto comercial de {company_info}. 
+El cliente muestra interés. Destaca beneficios de productos/servicios y resuelve dudas.
+Tu objetivo es perfilar la venta y guiar al cliente hacia una cotización o pedido.
+Usa herramientas de búsqueda si es necesario."""
+
+PROMPT_CLOSING = """Eres el cerrador de ventas de {company_info}.
+Contexto del Pipeline: {pipeline_context}
+El cliente está listo para decidir. Usa todas tus herramientas para concretar:
+1. Crea pedidos/cotizaciones con 'create_order' o 'create_quote'.
+2. Confirma datos de contacto con 'manage_contact'.
+3. Actualiza el progreso con 'update_pipeline_stage'.
+Sé asertivo, eficiente y enfocado en la conversión final."""
+
+def classify_mode_by_pipeline(pipeline_data: dict, message: str) -> str:
+    msg = message.lower()
+    
+    # Intent-based overrides
+    if any(k in msg for k in ["comprar", "lo quiero", "confirmo", "sí", "si"]):
+        return "CLOSING"
+    if any(k in msg for k in ["precio", "producto", "catalogo", "catálogo"]):
+        return "INTENT"
+
+    # Pipeline-based classification
+    if not pipeline_data:
+        return "EXPLORE"
+        
+    stage_name = pipeline_data.get("current_stage_name", "").lower()
+    
+    if any(s in stage_name for s in ["lead", "nuevo", "prospecto"]):
+        return "EXPLORE"
+    if any(s in stage_name for s in ["interes", "interés", "cotizacion", "cotización"]):
+        return "INTENT"
+    if any(s in stage_name for s in ["negociacion", "negociación", "cierre"]):
+        return "CLOSING"
+        
+    return "EXPLORE"
+
 # Tool definitions exposed to the LLM
 TOOLS = [
     {
@@ -270,90 +314,8 @@ class AIService:
 
     def __init__(self, db, qdrant: Optional[QdrantClient] = None) -> None:
         self._openai = AsyncOpenAI(api_key=config.openai_api_key)
-        self._db = db          # infrastructure.mysql_client.AsyncMySQLClient
+        self._db = db
         self._qdrant = qdrant
-
-    # ── System Prompt Builder ─────────────────────────────────────────────
-
-    def _build_system_prompt(
-        self,
-        tenant_id: int,
-        contact_id: int,
-        company_info: Dict[str, Any],
-        agent_config: Dict[str, Any],
-        pipeline_state: Optional[ContactPipelineState],
-        contact_data: Optional[Dict[str, Any]] = None,
-    ) -> str:
-        company_block = (
-            f"Empresa: {company_info.get('name', 'CloudFly')}\n"
-            f"NIT: {company_info.get('nit', 'N/A')}\n"
-            f"Dirección: {company_info.get('address', 'N/A')}\n"
-            f"Teléfono: {company_info.get('phone', 'N/A')}"
-        )
-        custom_block = agent_config.get("company_specific_context", "")
-
-        pipeline_block = ""
-        if pipeline_state:
-            pipeline_block = f"""
-[ESTADO INTERNO DEL PIPELINE - SOLO PARA TU USO]
-ID del Contacto: {contact_id}
-Tenant ID: {tenant_id}
-Pipeline: {pipeline_state.pipeline_name}
-Etapa actual: {pipeline_state.current_stage_name} (ID: {pipeline_state.current_stage_id})
-
-Etapas disponibles (usa estos IDs con update_pipeline_stage):
-{pipeline_state.stages_prompt()}
-"""
-
-        return f"""Eres un asistente de ventas profesional de {company_info.get('name', 'CloudFly')}.
-Ayuda al cliente de forma entusiasta, directa y natural.
-
-INFORMACIÓN DE LA EMPRESA:
-{company_block}
-{custom_block}
-
-[DATOS ACTUALES DEL CONTACTO]
-ID: {contact_id}
-Nombre: {contact_data.get('name') if contact_data else 'No registrado'}
-Email: {contact_data.get('email') if contact_data else 'No registrado'}
-Teléfono: {contact_data.get('phone') if contact_data else 'No registrado'}
-Dirección: {contact_data.get('address') if contact_data else 'No registrado'}
-
-{pipeline_block}
-
-FORMATO OBLIGATORIO PARA PRODUCTOS:
-Si tienes imagen: escribe la URL en la primera línea. Si no, omítela.
-*Nombre del Producto*
-Descripción breve
-Precio: $X.XX
-Estado: Disponible (N unidades) / Agotado
-
-FLUJO DE CIERRE DE PEDIDO (OBLIGATORIO - CRÍTICO):
-1. Identifica los productos (EJ: 'Plan chatbot ventas gratis' ID: 42).
-2. VALIDACIÓN DE DATOS (MANDATORIO): Antes de crear cualquier pedido, revisa los [DATOS ACTUALES DEL CONTACTO]. 
-   Si falta el Nombre completo, Email, Teléfono o Dirección, PÍDELOS de forma amable.
-   Una vez que el cliente te los dé, LLAMA OBLIGATORIAMENTE a manage_contact(action='update') para guardarlos.
-3. Para confirmar la venta, LLAMA OBLIGATORIAMENTE a create_order. No basta con decir que lo harás, DEBES ejecutar la herramienta en el MISMO turno. 
-   NUNCA digas que el pedido está hecho si create_order no ha devuelto un éxito.
-
-[EJEMPLO DE CIERRE CORRECTO]
-Usuario: "Quiero el chatbot gratis"
-Asistente: "¡Excelente elección! Para registrar tu pedido necesito confirmar unos datos: ¿Cuál es tu dirección y nombre completo?"
-Usuario: "Calle 123 y soy Juan Perez"
-Asistente: [LLAMA A manage_contact(action='update', name='Juan Perez', address='Calle 123')]
-Herramienta: {{ "success": true }}
-Asistente: [LLAMA A create_order(customer_id=56, items=[{{ "productId": 42, "productName": "Plan chatbot ventas gratis", "quantity": 1, "unitPrice": 0 }}])]
-Herramienta: {{ "id": 123, "status": "PROCESANDO" }}
-Asistente: [LLAMA A update_pipeline_stage(contact_id=56, stage_id=302)]
-Herramienta: {{ "success": true }}
-Asistente: "¡Perfecto Juan! Tu pedido #123 ha sido confirmado. Recibirás un correo en breve..."
-
-REGLAS DE ORO:
-- Tu ID interno para este cliente es {contact_id}. Úsalo en todas las herramientas.
-- Cada vez que el usuario te dé información personal, usa manage_contact.
-- Cada vez que el usuario acepte un pedido, usa create_order.
-- NO menciones que estás usando herramientas.
-- Responde siempre en el idioma del cliente."""
 
     # ── OpenAI Call (with retries) ─────────────────────────────────────────
 
@@ -364,12 +326,12 @@ REGLAS DE ORO:
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
-    async def _call_openai(self, messages: List[Dict], tools: List[Dict]) -> Any:
+    async def _call_openai_dynamic(self, messages: List[Dict], tools: Optional[List[Dict]], temperature: float) -> Any:
         return await self._openai.chat.completions.create(
             model=config.openai_model,
             messages=messages,
-            tools=tools,
-            temperature=config.openai_temperature,
+            tools=tools if tools else None,
+            temperature=temperature,
             timeout=config.openai_timeout_seconds,
         )
 
@@ -452,12 +414,35 @@ REGLAS DE ORO:
         Builds the prompt and calls OpenAI in a tool execution loop.
         Returns (final_text, pipeline_update_request, handoff_request, token_usage)
         """
-        # Fetch context from DB
-        company_info = await self._db.get_company_info(tenant_id, company_id)
-        agent_config = await self._db.get_tenant_agent_config(tenant_id)
-        contact_data = await self._db.get_contact_by_id(contact_id, tenant_id)
+        # 1. Fetch Context and Pipeline State
+        company_info_data = await self._db.get_company_info(tenant_id, company_id)
+        company_info_str = f"{company_info_data.get('name')} (NIT: {company_info_data.get('nit')})"
+        
+        pipeline_data = {}
+        try:
+            # Reusing internal tool implementation to fetch full pipeline JSON
+            pipeline_json = await self._get_contact_pipeline(contact_id, tenant_id)
+            pipeline_data = json.loads(pipeline_json) if not "error" in pipeline_json else {}
+        except Exception as e:
+            logger.warning(f"Could not fetch pipeline data: {e}", extra=log_ctx)
 
-        system_prompt = self._build_system_prompt(tenant_id, contact_id, company_info, agent_config, pipeline_state, contact_data)
+        # 2. Classify Mode and Set Dynamic Parameters
+        mode = classify_mode_by_pipeline(pipeline_data, message)
+        logger.info(f"AI Mode: {mode}", extra=log_ctx)
+
+        if mode == "EXPLORE":
+            system_prompt = PROMPT_EXPLORE.format(company_info=company_info_str)
+            temp = 0.7
+            active_tools = None
+        elif mode == "INTENT":
+            system_prompt = PROMPT_INTENT.format(company_info=company_info_str)
+            temp = 0.5
+            active_tools = TOOLS
+        else: # CLOSING
+            pipeline_context = json.dumps(pipeline_data, indent=2)
+            system_prompt = PROMPT_CLOSING.format(company_info=company_info_str, pipeline_context=pipeline_context)
+            temp = 0.3
+            active_tools = TOOLS
 
         messages: List[Dict] = [{"role": "system", "content": system_prompt}]
         for h in history:
@@ -472,7 +457,7 @@ REGLAS DE ORO:
         # Loop to handle sequential tool calls (max 5 iterations)
         for _ in range(5):
             try:
-                response = await self._call_openai(messages, TOOLS)
+                response = await self._call_openai_dynamic(messages, active_tools, temp)
             except _OPENAI_RETRYABLE as exc:
                 raise RetryableError(f"OpenAI transient error: {exc}") from exc
             except Exception as exc:
