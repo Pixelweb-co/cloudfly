@@ -76,7 +76,7 @@ def classify_mode_by_pipeline(pipeline_data: dict, message: str) -> str:
         return "EXPLORE"
     if any(s in stage_name for s in ["interes", "interés", "cotizacion", "cotización"]):
         return "INTENT"
-    if any(s in stage_name for s in ["negociacion", "negociación", "cierre"]):
+    if any(s in stage_name for s in ["negociacion", "negociación", "cierre", "venta", "cliente"]):
         return "CLOSING"
         
     return "EXPLORE"
