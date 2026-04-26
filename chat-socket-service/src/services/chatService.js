@@ -528,8 +528,8 @@ class ChatService {
                 let mediaUrl = null;
                 let textContent = respuesta;
                 
-                // Buscar [URL] o ![texto](URL) en cualquier parte del mensaje.
-                const mediaRegex = /!\[.*?\]\((https?:\/\/[^\)]+)\)|\[(https?:\/\/[^\]]+)\]/;
+                // Buscar [URL] o [texto](URL) o ![texto](URL)
+                const mediaRegex = /!?\[.*?\]\((https?:\/\/[^\)]+)\)|\[(https?:\/\/[^\]]+)\]/;
                 const match = respuesta.match(mediaRegex);
                 
                 if (match) {
