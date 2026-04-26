@@ -440,6 +440,7 @@ REGLAS DE ORO:
     async def generate_response(
         self,
         tenant_id: int,
+        company_id: Optional[int],
         contact_id: int,
         conversation_id: str,
         message: str,
@@ -452,7 +453,7 @@ REGLAS DE ORO:
         Returns (final_text, pipeline_update_request, handoff_request, token_usage)
         """
         # Fetch context from DB
-        company_info = await self._db.get_company_info(tenant_id)
+        company_info = await self._db.get_company_info(tenant_id, company_id)
         agent_config = await self._db.get_tenant_agent_config(tenant_id)
         contact_data = await self._db.get_contact_by_id(contact_id, tenant_id)
 
