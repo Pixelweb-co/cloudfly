@@ -88,6 +88,24 @@ class EvolutionClient {
             logger.warn(`⚠️ Could not send read receipt to ${remoteJid}: ${error.message}`);
         }
     }
+
+    /**
+     * Establecer estado de presencia (escribiendo, grabado, etc.)
+     */
+    async setPresence(instanceName, remoteJid, presence = 'composing') {
+        try {
+            const url = `/chat/sendPresence/${instanceName}`;
+            const body = {
+                number: remoteJid,
+                presence: presence,
+                delay: 0
+            };
+            await this.client.post(url, body);
+            logger.info(`✍️ Presence set to '${presence}' for ${remoteJid}`);
+        } catch (error) {
+            logger.warn(`⚠️ Could not set presence for ${remoteJid}: ${error.message}`);
+        }
+    }
 }
 
 module.exports = new EvolutionClient();
