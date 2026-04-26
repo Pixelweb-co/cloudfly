@@ -2,6 +2,7 @@ package com.app.controllers;
 
 import com.app.dto.DashboardStatsDTO;
 import com.app.dto.PipelineStatsDTO;
+import com.app.dto.SalesChartDataDTO;
 import com.app.persistence.services.DashboardService;
 import com.app.persistence.services.UserService;
 import lombok.RequiredArgsConstructor;
@@ -89,6 +90,23 @@ public class DashboardController {
                 .flatMap(tenantId -> {
                     log.info("📊 [DASHBOARD] Fetching Pipeline Stats - Tenant: {}, Company: {}", tenantId, effectiveCompanyId);
                     return dashboardService.getPipelineStats(tenantId, effectiveCompanyId);
+                });
+    }
+
+    @GetMapping("/sales")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
+    public Mono<SalesChartDataDTO> getSalesChart(
+            ServerHttpRequest request,
+            @RequestParam(required = false, defaultValue = "7d") String period,
+            @RequestParam(required = false) Long companyId) {
+        
+        Long effectiveCompanyId = getEffectiveCompanyId(request, companyId);
+        
+        return getEffectiveTenantId(request)
+                .flatMap(tenantId -> {
+                    log.info("📊 [DASHBOARD] Fetching Sales Chart - Tenant: {}, Company: {}, Period: {}", 
+                            tenantId, effectiveCompanyId, period);
+                    return dashboardService.getSalesChart(tenantId, effectiveCompanyId, period);
                 });
     }
 }

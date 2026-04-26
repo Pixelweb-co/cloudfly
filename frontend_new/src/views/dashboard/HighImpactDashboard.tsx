@@ -28,23 +28,28 @@ const HighImpactDashboard = () => {
     // Hooks
     const { hasModule } = usePermissions()
     const [stats, setStats] = useState<DashboardStats | null>(null)
+    const [salesChart, setSalesChart] = useState<SalesChartData | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-
+ 
     useEffect(() => {
         const fetchStats = async () => {
             const user = userMethods.getUserLogin()
             const currentCompanyId = user?.activeCompanyId || user?.company_id
-
+ 
             try {
                 setLoading(true)
-                const data = await dashboardService.getStats(currentCompanyId)
-
-                setStats(data)
+                const [statsData, salesData] = await Promise.all([
+                    dashboardService.getStats(currentCompanyId),
+                    dashboardService.getSalesChart('7d')
+                ])
+ 
+                setStats(statsData)
+                setSalesChart(salesData)
             } catch (err) {
                 console.error('Error fetching dashboard stats:', err)
-                setError('No se pudieron cargar las estadísticas. Mostrando datos de ejemplo.')
-
+                setError('No se pudieron cargar las estadísticas reales. Mostrando datos de ejemplo.')
+ 
                 // Mock data fallback if API fails
                 setStats({
                     totalRevenue: 24500,
@@ -62,15 +67,22 @@ const HighImpactDashboard = () => {
                 setLoading(false)
             }
         }
-
+ 
         fetchStats()
     }, [])
-
-    // Provide default mock series for visual appeal since API doesn't return history yet
-    const mockSeriesRequest = [{ name: 'Requests', data: [20, 40, 60, 40, 80, 20, 80] }]
-    const mockSeriesSales = [{ name: 'Sales', data: [100, 120, 180, 150, 250, 190, 300] }]
-    const mockSeriesUsers = [{ name: 'Users', data: [10, 25, 15, 40, 20, 60, 50] }]
-    const mockSeriesRevenue = [{ name: 'Revenue', data: [1000, 2500, 1500, 4000, 3000, 6000, 5500] }]
+ 
+    // Fallback series if API doesn't return enough data yet
+    const mockSeriesRequest = [{ name: 'Conversaciones', data: [2, 5, 3, 8, 5, 7, 5] }]
+    const mockSeriesUsers = [{ name: 'Usuarios', data: [10, 25, 15, 40, 20, 60, 50] }]
+    
+    // Real or mock series for key metrics
+    const ordersSeries = salesChart?.series.find(s => s.name === 'Pedidos') 
+        ? [{ name: 'Pedidos', data: salesChart.series.find(s => s.name === 'Pedidos')!.data }]
+        : [{ name: 'Pedidos', data: [100, 120, 180, 150, 250, 190, 300] }]
+        
+    const revenueSeries = salesChart?.series.find(s => s.name === 'Ingresos')
+        ? [{ name: 'Ingresos', data: salesChart.series.find(s => s.name === 'Ingresos')!.data }]
+        : [{ name: 'Ingresos', data: [1000, 2500, 1500, 4000, 3000, 6000, 5500] }]
 
     return (
         <Grid container spacing={6}>
@@ -98,7 +110,7 @@ const HighImpactDashboard = () => {
                             avatarIcon='tabler-currency-dollar'
                             avatarSize={42}
                             avatarColor='primary'
-                            chartSeries={mockSeriesRevenue}
+                            chartSeries={revenueSeries}
                             chartColor='primary'
                         />
                     </Grid>
@@ -109,7 +121,7 @@ const HighImpactDashboard = () => {
                             avatarIcon='tabler-shopping-cart'
                             avatarSize={42}
                             avatarColor='success'
-                            chartSeries={mockSeriesSales}
+                            chartSeries={ordersSeries}
                             chartColor='success'
                         />
                     </Grid>
