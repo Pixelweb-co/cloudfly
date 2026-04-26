@@ -404,7 +404,7 @@ REGLAS DE ORO:
             elif function_name == "manage_contact":
                 return await self._manage_contact(function_args, tenant_id)
             elif function_name == "create_order":
-                return self._create_order(
+                return await self._create_order(
                     function_args["customer_id"], 
                     function_args["items"], 
                     tenant_id, 
@@ -412,15 +412,15 @@ REGLAS DE ORO:
                     message_id
                 )
             elif function_name == "get_order":
-                return self._get_order(function_args["order_id"], tenant_id)
+                return await self._get_order(function_args["order_id"], tenant_id)
             elif function_name == "modify_order":
-                return self._modify_order(
+                return await self._modify_order(
                     function_args["order_id"], function_args["items"], tenant_id, function_args.get("notes")
                 )
             elif function_name == "transfer_to_human":
                 return self._transfer_to_human(function_args["reason"])
             elif function_name == "create_quote":
-                return self._create_quote(
+                return await self._create_quote(
                     function_args["customer_id"],
                     function_args["items"],
                     tenant_id,
@@ -428,7 +428,7 @@ REGLAS DE ORO:
                     message_id
                 )
             elif function_name == "convert_quote_to_order":
-                return self._convert_quote_to_order(function_args["quote_id"], tenant_id)
+                return await self._convert_quote_to_order(function_args["quote_id"], tenant_id)
             else:
                 return json.dumps({"error": f"Unknown tool: {function_name}"})
         except Exception as exc:
@@ -626,7 +626,7 @@ REGLAS DE ORO:
             ]
         })
 
-    def _create_order(self, customer_id: int, items: List[Dict], tenant_id: int, notes: str = None, message_id: str = "unknown") -> str:
+    async def _create_order(self, customer_id: int, items: List[Dict], tenant_id: int, notes: str = None, message_id: str = "unknown") -> str:
         # Idempotency: generate a hash of the critical order data + message_id
         order_hash_data = f"{customer_id}-{json.dumps(items, sort_keys=True)}-{message_id}"
         idempotency_key = hashlib.sha256(order_hash_data.encode()).hexdigest()
@@ -639,30 +639,39 @@ REGLAS DE ORO:
         }
         logger.info(f"Creating order for customer {customer_id}", extra=log_ctx)
         try:
+            # 1. Fetch contact to get company_id (important for multitenancy/multicompany)
+            contact = await self._db.get_contact_by_id(customer_id, tenant_id)
+            company_id = contact.get("company_id") if contact else None
+
             order_items = []
+            total_sum = 0
             for item in items:
                 qty = item.get("quantity", 0)
                 price = item.get("unitPrice", 0)
+                subtotal = qty * price
+                total_sum += subtotal
                 order_items.append({
                     "productId": item.get("productId"),
                     "productName": item.get("productName"),
                     "quantity": qty,
                     "unitPrice": price,
                     "discount": 0,
-                    "subtotal": qty * price
+                    "subtotal": subtotal
                 })
 
             payload = {
                 "customerId": customer_id,
+                "companyId": company_id,
                 "status": "PROCESANDO",
                 "notes": notes,
                 "items": order_items,
+                "total": total_sum,
                 "externalReference": idempotency_key # Used for idempotency in the backend
             }
 
             url = f"{config.java_api_url}/orders?tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
             headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
-            logger.info(f"🚀 [AI-API-TOOL] Calling POST {url}", extra=log_ctx)
+            logger.info(f"🚀 [AI-API-TOOL] Calling POST {url} for company {company_id}", extra=log_ctx)
             res = requests.post(url, json=payload, headers=headers, timeout=10)
             logger.info(f"📥 [AI-API-TOOL] Response {res.status_code}: {res.text}", extra=log_ctx)
             if res.status_code in [200, 201]:
@@ -672,7 +681,7 @@ REGLAS DE ORO:
             logger.error("Order creation failed", extra={"error": str(exc)})
             return json.dumps({"error": str(exc)})
 
-    def _get_order(self, order_id: int, tenant_id: int) -> str:
+    async def _get_order(self, order_id: int, tenant_id: int) -> str:
         try:
             url = f"{config.java_api_url}/orders/{order_id}?tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
             headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
@@ -684,7 +693,7 @@ REGLAS DE ORO:
             logger.error("Fetch order failed", extra={"error": str(exc)})
             return json.dumps({"error": str(exc)})
 
-    def _modify_order(self, order_id: int, items: List[Dict], tenant_id: int, notes: str = None) -> str:
+    async def _modify_order(self, order_id: int, items: List[Dict], tenant_id: int, notes: str = None) -> str:
         try:
             order_items = []
             for item in items:
@@ -710,24 +719,33 @@ REGLAS DE ORO:
             logger.error("Modify order failed", extra={"error": str(exc)})
             return json.dumps({"error": str(exc)})
 
-    def _create_quote(self, customer_id: int, items: List[Dict], tenant_id: int, notes: str = None, message_id: str = "unknown") -> str:
+    async def _create_quote(self, customer_id: int, items: List[Dict], tenant_id: int, notes: str = None, message_id: str = "unknown") -> str:
         try:
+            # Fetch contact to get company_id
+            contact = await self._db.get_contact_by_id(customer_id, tenant_id)
+            company_id = contact.get("company_id") if contact else None
+
             quote_items = []
+            total_sum = 0
             for item in items:
                 qty = item.get("quantity", 0)
                 price = item.get("unitPrice", 0)
+                subtotal = qty * price
+                total_sum += subtotal
                 quote_items.append({
                     "productId": item.get("productId"),
                     "productName": item.get("productName"),
                     "quantity": qty,
                     "unitPrice": price,
-                    "subtotal": qty * price
+                    "subtotal": subtotal
                 })
 
             payload = {
                 "customerId": customer_id,
+                "companyId": company_id,
                 "notes": notes,
                 "items": quote_items,
+                "total": total_sum,
                 "status": "PENDING"
             }
 
@@ -741,7 +759,7 @@ REGLAS DE ORO:
             logger.error("Quote creation failed", extra={"error": str(exc)})
             return json.dumps({"error": str(exc)})
 
-    def _convert_quote_to_order(self, quote_id: int, tenant_id: int) -> str:
+    async def _convert_quote_to_order(self, quote_id: int, tenant_id: int) -> str:
         try:
             url = f"{config.java_api_url}/quotes/{quote_id}/convert-to-order?tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
             headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
