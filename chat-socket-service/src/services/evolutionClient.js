@@ -73,15 +73,19 @@ class EvolutionClient {
     async markRead(instanceName, remoteJid) {
         try {
             const url = `/chat/markMessageAsRead/${instanceName}`;
+            // Evolution API v2+ uses this structure
             const body = {
-                number: remoteJid,
-                read: true
+                readMessages: [
+                    {
+                        remoteJid: remoteJid
+                    }
+                ]
             };
 
             await this.client.post(url, body);
-            logger.debug(`🔵 Read receipt sent to ${remoteJid}`);
+            logger.info(`🔵 Read receipt sent to ${remoteJid}`);
         } catch (error) {
-            logger.warn(`⚠️ Could not send read receipt: ${error.message}`);
+            logger.warn(`⚠️ Could not send read receipt to ${remoteJid}: ${error.message}`);
         }
     }
 }
