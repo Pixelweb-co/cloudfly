@@ -3,6 +3,7 @@ package com.app.persistence.services;
 import com.app.dto.DashboardStatsDTO;
 import com.app.dto.PipelineStageStatsDTO;
 import com.app.dto.PipelineStatsDTO;
+import com.app.dto.SalesChartDataDTO;
 import com.app.persistence.entity.ContactEntity;
 import com.app.persistence.entity.PipelineEntity;
 import com.app.persistence.repository.*;
@@ -25,23 +26,55 @@ public class DashboardService {
     private final ProductRepository productRepository;
     private final PipelineRepository pipelineRepository;
     private final PipelineStageRepository pipelineStageRepository;
+    private final OrderRepository orderRepository;
 
     public Mono<DashboardStatsDTO> getStats(Long tenantId, Long companyId) {
         log.info("Fetching dashboard stats for tenant: {} and company: {}", tenantId, companyId);
         
         Mono<Long> totalCustomers = contactRepository.countTotalContacts(tenantId, companyId);
         Mono<Long> totalProducts = productRepository.countByTenantId(tenantId);
+        Mono<Long> totalOrders = orderRepository.countByTenantIdAndCompanyId(tenantId, companyId);
+        Mono<Double> totalRevenue = orderRepository.sumTotalByTenantIdAndCompanyId(tenantId, companyId);
         
-        return Mono.zip(totalCustomers, totalProducts)
+        return Mono.zip(totalCustomers, totalProducts, totalOrders, totalRevenue)
                 .map(tuple -> DashboardStatsDTO.builder()
                         .totalCustomers(tuple.getT1().intValue())
                         .totalProducts(tuple.getT2().intValue())
-                        .totalRevenue(24500.0) // Mock
-                        .revenueChange(12.0)
-                        .totalOrders(156)
-                        .activeConversations(5)
-                        .lowStockProducts(3)
+                        .totalOrders(tuple.getT3().intValue())
+                        .totalRevenue(tuple.getT4())
+                        .revenueChange(12.0) // Future: calculate from previous period
+                        .activeConversations(5) // Future: count from messages table
+                        .lowStockProducts(3) // Future: check stock levels
                         .build());
+    }
+
+    public Mono<SalesChartDataDTO> getSalesChart(Long tenantId, Long companyId, String period) {
+        int days = period.equals("30d") ? 30 : 7;
+        LocalDateTime since = LocalDateTime.now().minusDays(days);
+        
+        return orderRepository.getSalesHistory(tenantId, companyId, since)
+                .collectList()
+                .map(rows -> {
+                    List<String> categories = rows.stream()
+                            .map(r -> r.get("date").toString())
+                            .collect(Collectors.toList());
+                    
+                    List<Long> orderCounts = rows.stream()
+                            .map(r -> ((Number) r.get("count")).longValue())
+                            .collect(Collectors.toList());
+                            
+                    List<Double> revenueSums = rows.stream()
+                            .map(r -> ((Number) r.get("total")).doubleValue())
+                            .collect(Collectors.toList());
+
+                    return com.app.dto.SalesChartDataDTO.builder()
+                            .categories(categories)
+                            .series(List.of(
+                                com.app.dto.SalesChartDataDTO.Series.builder().name("Pedidos").data(orderCounts.stream().map(Long::doubleValue).collect(Collectors.toList())).build(),
+                                com.app.dto.SalesChartDataDTO.Series.builder().name("Ingresos").data(revenueSums).build()
+                            ))
+                            .build();
+                });
     }
 
     public Mono<PipelineStatsDTO> getPipelineStats(Long tenantId, Long companyId) {
