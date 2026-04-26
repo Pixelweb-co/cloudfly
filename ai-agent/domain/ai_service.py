@@ -414,6 +414,12 @@ class AIService:
         Builds the prompt and calls OpenAI in a tool execution loop.
         Returns (final_text, pipeline_update_request, handoff_request, token_usage)
         """
+        log_ctx = {
+            "tenant_id": tenant_id,
+            "contact_id": contact_id,
+            "conversation_id": conversation_id,
+            "message_id": message_id
+        }
         # 1. Fetch Context and Pipeline State
         company_info_data = await self._db.get_company_info(tenant_id, company_id)
         company_info_str = f"{company_info_data.get('name')} (NIT: {company_info_data.get('nit')})"
