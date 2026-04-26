@@ -196,15 +196,27 @@ class AIAgentApp:
                 "assistant", response_text,
             )
 
-            # ⑨ Publish reply
-            logger.info("📡 [AI_SENDING] Publishing response to Kafka (messages.out)", extra=log_ctx)
-            self.producer.send_response(
-                payload.tenant_id,
-                payload.contact_id,
-                payload.conversation_id,
-                response_text,
-                is_bot_handoff=is_handoff,
-            )
+            # ⑨ Publish reply (with Human-like fragmentation)
+            logger.info("📡 [AI_SENDING] Fragmenting and publishing response to Kafka", extra=log_ctx)
+            
+            fragments = self.ai.split_text_for_whatsapp(response_text)
+            
+            for i, fragment in enumerate(fragments):
+                # 9.1 Send the fragment
+                self.producer.send_response(
+                    payload.tenant_id,
+                    payload.contact_id,
+                    payload.conversation_id,
+                    fragment,
+                    is_bot_handoff=(is_handoff and i == len(fragments) - 1), # Only mark handoff on last fragment
+                )
+                
+                # 9.2 If there are more fragments, wait (Simulate writing time)
+                if i < len(fragments) - 1:
+                    delay = 1.5 + (len(fragment) * 0.015) # n8n inspired formula
+                    logger.info(f"⏳ [AI_DELAY] Waiting {delay:.2f}s before next fragment", extra=log_ctx)
+                    await asyncio.sleep(delay)
+
             logger.info("🏁 [AI_FINISHED] Message processing complete", extra=log_ctx)
 
         except RateLimitExceededError:
