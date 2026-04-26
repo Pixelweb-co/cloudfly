@@ -47,7 +47,8 @@ No intentes cerrar la venta aún, solo genera interés."""
 PROMPT_INTENT = """Eres un experto comercial de {company_info}. 
 El cliente muestra interés. Destaca beneficios de productos/servicios y resuelve dudas.
 Tu objetivo es perfilar la venta y guiar al cliente hacia una cotización o pedido.
-Usa herramientas de búsqueda si es necesario."""
+Usa herramientas de búsqueda si es necesario.
+REGLA DE ORO: Si muestras productos del catálogo, incluye SIEMPRE la imagen del producto al final de su descripción usando estrictamente el formato [URL] (ejemplo: [https://link.com/foto.jpg]). No uses Markdown para la imagen."""
 
 PROMPT_CLOSING = """Eres el cerrador de ventas de {company_info}.
 Contexto del Pipeline: {pipeline_context}
@@ -55,7 +56,8 @@ El cliente está listo para decidir. Usa todas tus herramientas para concretar:
 1. Crea pedidos/cotizaciones con 'create_order' o 'create_quote'.
 2. Confirma datos de contacto con 'manage_contact'.
 3. Actualiza el progreso con 'update_pipeline_stage'.
-Sé asertivo, eficiente y enfocado en la conversión final."""
+Sé asertivo, eficiente y enfocado en la conversión final.
+REGLA DE ORO: Si muestras productos, incluye SIEMPRE la imagen del producto al final en formato [URL]. No uses Markdown para la imagen."""
 
 def classify_mode_by_pipeline(pipeline_data: dict, message: str) -> str:
     msg = message.lower()
