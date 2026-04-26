@@ -441,7 +441,7 @@ class AIService:
         if mode == "EXPLORE":
             system_prompt = PROMPT_EXPLORE.format(company_info=company_info_str)
             temp = 0.7
-            active_tools = None
+            active_tools = TOOLS
         elif mode == "INTENT":
             system_prompt = PROMPT_INTENT.format(company_info=company_info_str)
             temp = 0.5
