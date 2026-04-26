@@ -240,13 +240,19 @@ class AsyncMySQLClient:
         )
         return True
 
-    async def get_company_info(self, tenant_id: int) -> Dict[str, Any]:
+    async def get_company_info(self, tenant_id: int, company_id: Optional[int] = None) -> Dict[str, Any]:
         """Returns name and other details of the company for the system prompt."""
         async with self.readonly() as cur:
-            await cur.execute(
-                "SELECT name, nit, address, phone FROM companies WHERE tenant_id = %s LIMIT 1",
-                (tenant_id,),
-            )
+            if company_id:
+                await cur.execute(
+                    "SELECT name, nit, address, phone FROM companies WHERE id = %s AND tenant_id = %s LIMIT 1",
+                    (company_id, tenant_id),
+                )
+            else:
+                await cur.execute(
+                    "SELECT name, nit, address, phone FROM companies WHERE tenant_id = %s LIMIT 1",
+                    (tenant_id,),
+                )
             row = await cur.fetchone()
             return row or {}
 

@@ -12,6 +12,7 @@ from typing import Optional, List
 class MessagePayload:
     """Kafka inbound message from chat-socket-service."""
     tenant_id: int
+    company_id: Optional[int]
     contact_id: int
     conversation_id: str
     message_text: str
@@ -26,6 +27,7 @@ class MessagePayload:
         """
         return cls(
             tenant_id=int(data["tenantId"]),
+            company_id=int(data["companyId"]) if data.get("companyId") is not None else None,
             contact_id=int(data["contactId"]),
             conversation_id=str(data["conversationId"]),
             message_text=str(data["mensaje"]),

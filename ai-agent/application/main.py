@@ -158,6 +158,7 @@ class AIAgentApp:
             logger.info("🤖 [AI_STEP_6] calling LLM (OpenAI)...", extra=log_ctx)
             response_text, pipeline_update, handoff_request, token_usage = await self.ai.generate_response(
                 payload.tenant_id,
+                payload.company_id,
                 payload.contact_id,
                 payload.conversation_id,
                 payload.message_text,
