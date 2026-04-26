@@ -137,6 +137,12 @@ class ChatService {
 
                 if (chatbotEnabled) {
                     logger.info(`🤖 [WEBHOOK_GATE] Chatbot is ENABLED. Buffering for AI agent...`);
+                    
+                    // Trigger 'typing...' status immediately
+                    evolutionClient.setPresence(instance, remoteJid, 'composing').catch(e => {
+                        logger.warn(`Failed to set presence: ${e.message}`);
+                    });
+
                     // Buffer the message (3s debounce → Kafka)
                     const buffered = await messageBufferService.bufferMessage(
                         tenantId, companyId, contact.id, conversationId,
