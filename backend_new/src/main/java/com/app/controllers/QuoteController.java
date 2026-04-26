@@ -91,8 +91,8 @@ public class QuoteController {
     public Mono<QuoteResponseDTO> save(@RequestBody QuoteRequestDTO quote, @RequestHeader Map<String, String> headers) {
         return getCurrentUserContext(headers)
                 .flatMap(ctx -> {
-                    quote.setTenantId(ctx.tenantId());
-                    quote.setCompanyId(ctx.companyId());
+                    if (quote.getTenantId() == null) quote.setTenantId(ctx.tenantId());
+                    if (quote.getCompanyId() == null) quote.setCompanyId(ctx.companyId());
                     return quoteService.createQuote(quote);
                 });
     }

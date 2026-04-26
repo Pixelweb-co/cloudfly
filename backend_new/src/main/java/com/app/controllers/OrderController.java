@@ -98,8 +98,10 @@ public class OrderController {
         return getCurrentUserContext(headers)
                 .flatMap(ctx -> {
                     log.info("🛒 [ORDER-CONTROLLER] Context Resolved: TenantID={}, Roles={}", ctx.tenantId(), ctx.roles());
-                    order.setTenantId(ctx.tenantId());
-                    order.setCompanyId(ctx.companyId());
+                    
+                    // Respect payload data if provided (AI bypass case)
+                    if (order.getTenantId() == null) order.setTenantId(ctx.tenantId());
+                    if (order.getCompanyId() == null) order.setCompanyId(ctx.companyId());
                     
                     return orderService.createOrder(order)
                             .doOnNext(saved -> log.info("🛒 [ORDER-CONTROLLER] SUCCESS! Order created with ID: {}", saved.getId()))
