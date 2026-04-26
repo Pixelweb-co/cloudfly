@@ -98,7 +98,7 @@ class EvolutionClient {
             const body = {
                 number: remoteJid,
                 presence: presence,
-                delay: 0
+                delay: 5000
             };
             await this.client.post(url, body);
             logger.info(`✍️ Presence set to '${presence}' for ${remoteJid}`);
