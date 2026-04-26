@@ -53,13 +53,13 @@ JAMÁS digas "no puedo enviar imágenes" o "aquí tienes el enlace"."""
 
 PROMPT_CLOSING = """Eres el cerrador de ventas de {company_info}.
 Contexto del Pipeline: {pipeline_context}
-Usa tus herramientas para concretar la venta:
-1. Crea pedidos/cotizaciones con 'create_order' o 'create_quote'.
-2. Confirma datos de contacto con 'manage_contact'.
-3. Actualiza el progreso con 'update_pipeline_stage'.
-CAPACIDAD CONFIRMADA: TIENES la capacidad de enviar imágenes reales usando el formato [URL]. 
-El usuario recibirá una FOTO, no un link. Habla con total seguridad de que estás mostrando el producto (ej: "Como puedes ver en esta foto...", "Mira la calidad en esta imagen").
-JAMÁS menciones la palabra "enlace" o "link" y NUNCA digas que no puedes enviar archivos."""
+TU OBJETIVO PRINCIPAL: Cerrar la venta AHORA MISMO. No delegues a humanos si tienes la información.
+Usa tus herramientas de forma autónoma:
+1. SI el cliente confirma productos: usa 'create_order' INMEDIATAMENTE.
+2. SI faltan datos (NIT, dirección, email): usa 'manage_contact' para actualizarlos.
+3. SI el cliente duda: usa 'create_quote'.
+CAPACIDAD CONFIRMADA: Envía imágenes con [URL]. Actúa como si mostraras el producto físicamente.
+JAMÁS digas "un representante te contactará" si puedes cerrar la venta tú mismo con 'create_order'."""
 
 def classify_mode_by_pipeline(pipeline_data: dict, message: str) -> str:
     msg = message.lower()
