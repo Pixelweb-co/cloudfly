@@ -570,6 +570,34 @@ class AIService:
 
         return text.strip()
 
+    def split_text_for_whatsapp(self, text: str, max_chars: int = 450) -> List[str]:
+        """
+        Splits a long message into multiple fragments, trying to respect newlines.
+        """
+        if not text or len(text) <= max_chars:
+            return [text] if text else []
+
+        fragments = []
+        current_fragment = []
+        current_length = 0
+
+        # Split by lines to preserve structure
+        lines = text.split("\n")
+        
+        for line in lines:
+            if current_length + len(line) > max_chars and current_fragment:
+                fragments.append("\n".join(current_fragment))
+                current_fragment = []
+                current_length = 0
+            
+            current_fragment.append(line)
+            current_length += len(line) + 1 # +1 for the newline
+
+        if current_fragment:
+            fragments.append("\n".join(current_fragment))
+
+        return fragments
+
     # ── Tool Implementations ──────────────────────────────────────────────
 
     def _transfer_to_human(self, reason: str) -> str:
