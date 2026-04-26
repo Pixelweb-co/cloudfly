@@ -659,6 +659,13 @@ class AIService:
 
     async def _manage_contact(self, args: Dict[str, Any], tenant_id: int) -> str:
         action = args.pop("action")
+        
+        # Ensure company_id is present if not provided (Default to principal company)
+        if "company_id" not in args:
+            comp = await self._db.get_company_info(tenant_id)
+            if comp.get("id"):
+                args["company_id"] = comp["id"]
+                
         if action == "create":
             new_id = await self._db.create_contact(tenant_id, args)
             return json.dumps({"success": True, "id": new_id, "message": "Contact created"})
@@ -700,6 +707,11 @@ class AIService:
             # 1. Fetch contact to get company_id (important for multitenancy/multicompany)
             contact = await self._db.get_contact_by_id(customer_id, tenant_id)
             company_id = contact.get("company_id") if contact else None
+            
+            # Fallback to default company for the tenant if contact doesn't have one
+            if not company_id:
+                comp = await self._db.get_company_info(tenant_id)
+                company_id = comp.get("id")
 
             order_items = []
             total_sum = 0

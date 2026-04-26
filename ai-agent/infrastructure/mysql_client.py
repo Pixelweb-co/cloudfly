@@ -245,12 +245,12 @@ class AsyncMySQLClient:
         async with self.readonly() as cur:
             if company_id:
                 await cur.execute(
-                    "SELECT name, nit, address, phone FROM companies WHERE id = %s AND tenant_id = %s LIMIT 1",
+                    "SELECT id, name, nit, address, phone FROM companies WHERE id = %s AND tenant_id = %s LIMIT 1",
                     (company_id, tenant_id),
                 )
             else:
                 await cur.execute(
-                    "SELECT name, nit, address, phone FROM companies WHERE tenant_id = %s LIMIT 1",
+                    "SELECT id, name, nit, address, phone FROM companies WHERE tenant_id = %s LIMIT 1",
                     (tenant_id,),
                 )
             row = await cur.fetchone()
@@ -302,7 +302,7 @@ class AsyncMySQLClient:
         values = [tenant_id, "NOW()", "NOW()", 1]
         
         # Mapeo de campos permitidos
-        allowed = ["name", "email", "phone", "address", "tax_id", "document_type", "document_number", "pipeline_id", "stage_id"]
+        allowed = ["name", "email", "phone", "address", "tax_id", "document_type", "document_number", "pipeline_id", "stage_id", "company_id"]
         for k, v in data.items():
             if k in allowed and v is not None:
                 fields.append(k)
@@ -319,7 +319,7 @@ class AsyncMySQLClient:
 
     async def update_contact(self, contact_id: int, tenant_id: int, data: Dict[str, Any]) -> bool:
         """Actualiza campos de un contacto."""
-        allowed = ["name", "email", "phone", "address", "tax_id", "document_type", "document_number", "stage_id", "pipeline_id"]
+        allowed = ["name", "email", "phone", "address", "tax_id", "document_type", "document_number", "stage_id", "pipeline_id", "company_id"]
         updates = []
         params = []
         
