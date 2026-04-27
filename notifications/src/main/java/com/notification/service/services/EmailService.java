@@ -86,6 +86,12 @@ public class EmailService {
             // Los demás datos vienen de templateData
         }
 
+        // Para notificaciones genéricas
+        if (notification.getType().equals("notification")) {
+            model.put("body", notification.getBody());
+            model.put("subject", notification.getSubject());
+        }
+
         // Cargar la plantilla dependiendo del tipo
         Template template = freemarkerConfig.getTemplate(notification.getType() + ".ftl");
 
