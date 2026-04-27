@@ -55,6 +55,26 @@ public class CalendarEventService {
         return calendarEventRepository.findById(id).map(this::mapToDto);
     }
 
+    public Mono<CalendarEventDto> updateEvent(Long id, CalendarEventDto dto) {
+        return calendarEventRepository.findById(id)
+                .flatMap(entity -> {
+                    entity.setTitle(dto.getTitle());
+                    entity.setDescription(dto.getDescription());
+                    entity.setStartTime(dto.getStartTime());
+                    entity.setEndTime(dto.getEndTime());
+                    entity.setAllDay(dto.getAllDay());
+                    entity.setPayload(dto.getPayload());
+                    entity.setRecurrence(dto.getRecurrence());
+                    entity.setUpdatedAt(LocalDateTime.now());
+                    return calendarEventRepository.save(entity);
+                })
+                .map(this::mapToDto);
+    }
+
+    public Mono<Void> deleteEvent(Long id) {
+        return calendarEventRepository.deleteById(id);
+    }
+
     private CalendarEventDto mapToDto(CalendarEventEntity entity) {
         return CalendarEventDto.builder()
                 .id(entity.getId())
