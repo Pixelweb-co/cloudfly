@@ -11,10 +11,9 @@ import Button from '@mui/material/Button'
 import MenuItem from '@mui/material/MenuItem'
 import IconButton from '@mui/material/IconButton'
 import Typography from '@mui/material/Typography'
-import Divider from '@mui/material/Divider'
 import useMediaQuery from '@mui/material/useMediaQuery'
-import FormControl from '@mui/material/FormControl'
 import FormControlLabel from '@mui/material/FormControlLabel'
+import Divider from '@mui/material/Divider'
 import type { Theme } from '@mui/material/styles'
 
 // Third-party Imports
@@ -33,7 +32,6 @@ import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
 interface PickerProps {
   label?: string
   error?: boolean
-  registername?: string
 }
 
 interface DefaultStateType {
@@ -220,7 +218,8 @@ const AddEventSidebar = (props: Props) => {
               render={({ field: { value, onChange } }) => (
                 <CustomTextField
                   fullWidth
-                  label='Title'
+                  label='Event Title'
+                  placeholder='Enter event title'
                   value={value}
                   onChange={onChange}
                   {...(errors.title && { error: true, helperText: 'This field is required' })}
@@ -231,7 +230,7 @@ const AddEventSidebar = (props: Props) => {
             <CustomTextField
               select
               fullWidth
-              label='Calendar'
+              label='Category'
               value={values.calendar}
               onChange={e => setValues({ ...values, calendar: e.target.value })}
             >
@@ -252,26 +251,21 @@ const AddEventSidebar = (props: Props) => {
             />
 
             <AppReactDatepicker
-              selectsStart
               id='event-start-date'
-              endDate={values.endDate}
               selected={values.startDate}
-              startDate={values.startDate}
               showTimeSelect={!values.allDay}
               dateFormat={!values.allDay ? 'yyyy-MM-dd hh:mm aa' : 'yyyy-MM-dd'}
-              customInput={<PickersComponent label='Start Date' registername='startDate' />}
+              customInput={<PickersComponent label='Start Date' />}
               onChange={(date: Date | null) => date && setValues({ ...values, startDate: date })}
             />
+            
             <AppReactDatepicker
-              selectsEnd
               id='event-end-date'
-              endDate={values.endDate}
               selected={values.endDate}
               minDate={values.startDate}
-              startDate={values.startDate}
               showTimeSelect={!values.allDay}
               dateFormat={!values.allDay ? 'yyyy-MM-dd hh:mm aa' : 'yyyy-MM-dd'}
-              customInput={<PickersComponent label='End Date' registername='endDate' />}
+              customInput={<PickersComponent label='End Date' />}
               onChange={(date: Date | null) => date && setValues({ ...values, endDate: date })}
             />
             
@@ -282,7 +276,7 @@ const AddEventSidebar = (props: Props) => {
 
             <CustomTextField
               fullWidth
-              label='URL'
+              label='External URL (Optional)'
               value={values.url}
               onChange={e => setValues({ ...values, url: e.target.value })}
             />
@@ -297,7 +291,7 @@ const AddEventSidebar = (props: Props) => {
             />
 
             <Divider />
-            <Typography variant='body2' color='textSecondary'>Advanced Scheduler Settings</Typography>
+            <Typography variant='body2' color='textSecondary' className='mbs-2'>Advanced Scheduler Settings</Typography>
 
             <CustomTextField
               select
@@ -334,7 +328,7 @@ const AddEventSidebar = (props: Props) => {
               onChange={e => setValues({ ...values, payload: e.target.value })}
             />
 
-            <div className='flex gap-4'>
+            <div className='flex gap-4 mbs-4'>
               <Button type='submit' variant='contained'>
                 {calendarStore.selectedEvent ? 'Update' : 'Add'}
               </Button>
