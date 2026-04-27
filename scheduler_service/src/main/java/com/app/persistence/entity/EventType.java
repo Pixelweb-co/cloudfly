@@ -6,5 +6,6 @@ public enum EventType {
     SUBSCRIPTION,
     MARKETING,
     SYSTEM,
-    REST_ACTION
+    REST_ACTION,
+    NOTIFICATION
 }

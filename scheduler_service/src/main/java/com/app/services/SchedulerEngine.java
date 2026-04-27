@@ -53,6 +53,10 @@ public class SchedulerEngine {
                         return executeRestAction(event)
                                 .then(scheduledJobRepository.updateStatusIf(job.getId(), JobStatus.RUNNING.name(), JobStatus.DONE.name()))
                                 .flatMap(rows -> handleRecurrence(event, job));
+                    } else if (event.getEventType() == com.app.persistence.entity.EventType.NOTIFICATION) {
+                        return publishToNotificationService(event)
+                                .then(scheduledJobRepository.updateStatusIf(job.getId(), JobStatus.RUNNING.name(), JobStatus.DONE.name()))
+                                .flatMap(rows -> handleRecurrence(event, job));
                     } else {
                         Map<String, Object> message = buildKafkaMessage(event);
                         return kafkaTemplate.send(SCHEDULER_TOPIC, event.getTenantId().toString(), message)
@@ -107,6 +111,18 @@ public class SchedulerEngine {
 
         return calendarEventRepository.save(event)
                 .flatMap(jobGeneratorService::generateJobsForEvent);
+    }
+
+    private Mono<Void> publishToNotificationService(CalendarEventEntity event) {
+        try {
+            // Assume payload is a JSON that matches NotificationMessage DTO
+            Map<String, Object> notification = objectMapper.readValue(event.getPayload(), Map.class);
+            return kafkaTemplate.send("email-notifications", (String) notification.getOrDefault("to", "system"), notification)
+                    .doOnSuccess(result -> log.info("Notification sent to Kafka for event {}", event.getId()))
+                    .then();
+        } catch (Exception e) {
+            return Mono.error(e);
+        }
     }
 
     private Mono<Integer> handleJobError(ScheduledJobEntity job, Throwable e) {
