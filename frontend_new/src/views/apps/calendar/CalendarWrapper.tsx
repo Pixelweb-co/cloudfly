@@ -73,13 +73,19 @@ const AppCalendar = () => {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedTenantId = localStorage.getItem('tenantId')
-      const storedCompanyId = localStorage.getItem('activeCompanyId') || localStorage.getItem('companyId')
-      
-      if (storedTenantId) setTenantId(parseInt(storedTenantId))
-      if (storedCompanyId) setCompanyId(parseInt(storedCompanyId))
+      const updateIds = () => {
+        const storedTenantId = localStorage.getItem('tenantId')
+        const storedCompanyId = localStorage.getItem('activeCompanyId') || localStorage.getItem('companyId')
+        
+        if (storedTenantId && parseInt(storedTenantId) !== tenantId) setTenantId(parseInt(storedTenantId))
+        if (storedCompanyId && parseInt(storedCompanyId) !== companyId) setCompanyId(parseInt(storedCompanyId))
+      }
+
+      updateIds()
+      const interval = setInterval(updateIds, 2000) // Poll every 2s for context switches
+      return () => clearInterval(interval)
     }
-  }, [])
+  }, [tenantId, companyId])
 
   const handleLeftSidebarToggle = () => setLeftSidebarOpen(!leftSidebarOpen)
   const handleAddEventSidebarToggle = () => setAddEventSidebarOpen(!addEventSidebarOpen)
@@ -118,8 +124,10 @@ const AppCalendar = () => {
     try {
       await calendarService.createEvent({ ...eventData, tenantId, companyId })
       fetchEvents()
+      alert("Evento guardado correctamente")
     } catch (error) {
       console.error('Error creating event:', error)
+      alert("Error al guardar el evento")
     }
   }
 
@@ -127,6 +135,7 @@ const AppCalendar = () => {
     try {
       await calendarService.updateEvent(eventData.id, eventData)
       fetchEvents()
+      alert("Evento actualizado")
     } catch (error) {
       console.error('Error updating event:', error)
     }
@@ -136,6 +145,7 @@ const AppCalendar = () => {
     try {
       await calendarService.deleteEvent(id)
       fetchEvents()
+      alert("Evento eliminado")
     } catch (error) {
       console.error('Error deleting event:', error)
     }
