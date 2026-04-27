@@ -65,10 +65,10 @@ const Calendar = (props: CalenderProps) => {
   const calendarOptions: CalendarOptions = {
     events: calendarStore.events as any,
     plugins: [interactionPlugin, dayGridPlugin, timeGridPlugin, listPlugin],
-    initialView: 'listMonth',
+    initialView: 'dayGridMonth',
     headerToolbar: {
       start: 'sidebarToggle, prev, next, title',
-      end: 'listMonth'
+      end: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
     },
     views: {
       week: {
@@ -180,7 +180,35 @@ const Calendar = (props: CalenderProps) => {
     direction: theme.direction
   }
 
-  return <FullCalendar {...calendarOptions} />
+  return (
+    <>
+      <style jsx global>{`
+        .fc .fc-button-primary {
+          background-color: var(--mui-palette-primary-main) !important;
+          border-color: var(--mui-palette-primary-main) !important;
+          color: var(--mui-palette-primary-contrastText) !important;
+        }
+        .fc .fc-button-primary:hover {
+          background-color: var(--mui-palette-primary-dark) !important;
+          border-color: var(--mui-palette-primary-dark) !important;
+        }
+        .fc .fc-button-primary:disabled {
+          background-color: var(--mui-palette-primary-main) !important;
+          border-color: var(--mui-palette-primary-main) !important;
+          opacity: 0.65;
+        }
+        .fc .fc-button-active {
+          background-color: var(--mui-palette-primary-dark) !important;
+          border-color: var(--mui-palette-primary-dark) !important;
+        }
+        .fc .fc-toolbar-title {
+          font-size: 1.25rem !important;
+          font-weight: 600 !important;
+        }
+      `}</style>
+      <FullCalendar {...calendarOptions} />
+    </>
+  )
 }
 
 export default Calendar

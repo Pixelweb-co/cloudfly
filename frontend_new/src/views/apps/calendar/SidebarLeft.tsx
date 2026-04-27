@@ -1,6 +1,7 @@
 'use client'
 
 // MUI Imports
+import Button from '@mui/material/Button'
 import Drawer from '@mui/material/Drawer'
 import Divider from '@mui/material/Divider'
 import Checkbox from '@mui/material/Checkbox'
@@ -26,6 +27,7 @@ type Props = {
   selectedCalendars: string[]
   onFilterChange: (label: string) => void
   onFilterAll: (val: boolean) => void
+  handleAddEventSidebarToggle: () => void
 }
 
 const SidebarLeft = (props: Props) => {
@@ -38,7 +40,8 @@ const SidebarLeft = (props: Props) => {
     calendarsColor,
     selectedCalendars,
     onFilterChange,
-    onFilterAll
+    onFilterAll,
+    handleAddEventSidebarToggle
   } = props
 
   const colorsArr = Object.entries(calendarsColor)
@@ -72,6 +75,20 @@ const SidebarLeft = (props: Props) => {
         }
       }}
     >
+      <div className='p-6 is-full'>
+        <Button
+          fullWidth
+          variant='contained'
+          onClick={() => {
+            handleLeftSidebarToggle()
+            handleAddEventSidebarToggle()
+          }}
+          startIcon={<i className='tabler-plus' />}
+        >
+          Add Event
+        </Button>
+      </div>
+      <Divider className='is-full' />
       <AppReactDatepicker
         inline
         onChange={date => calendarApi?.gotoDate(date)}
