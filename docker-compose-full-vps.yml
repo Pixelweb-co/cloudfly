@@ -125,6 +125,8 @@ services:
       - DB_DATABASE=cloud_master
       - DB_USERNAME=root
       - DB_PASSWORD=widowmaker
+      - EVOLUTION_API_URL=http://evolution-api:8080
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
     networks:
       - kafka-net
       - app-net

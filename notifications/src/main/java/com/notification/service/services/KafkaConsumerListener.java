@@ -31,10 +31,10 @@ public class KafkaConsumerListener {
     @Autowired
     private EmailService emailService;
 
-    @Value("${evolution.api.url:http://evolution-api:8080}")
+    @Value("${EVOLUTION_API_URL:http://evolution-api:8080}")
     private String evolutionApiUrl;
 
-    @Value("${evolution.api.key:B6D711FCDE4D4FD5936544120E713976}")
+    @Value("${EVOLUTION_API_KEY:B6D711FCDE4D4FD5936544120E713976}")
     private String evolutionApiKey;
 
     @Value("${evolution.api.instance:gm2}")
