@@ -14,6 +14,7 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import type { CalendarOptions } from '@fullcalendar/core'
+import axios from 'axios'
 
 // Type Imports
 import type { CalendarColors, CalendarType } from '@/types/apps/calendarTypes'
@@ -29,6 +30,7 @@ type CalenderProps = {
   onDateClick: (info: any) => void
   onEventDrop: (info: any) => void
   onEventResize: (info: any) => void
+  refreshEvents: () => void
 }
 
 const Calendar = (props: CalenderProps) => {
@@ -38,12 +40,12 @@ const Calendar = (props: CalenderProps) => {
     calendarApi,
     setCalendarApi,
     calendarsColor,
-    handleAddEventSidebarToggle,
     handleLeftSidebarToggle,
     onEventClick,
     onDateClick,
     onEventDrop,
-    onEventResize
+    onEventResize,
+    refreshEvents
   } = props
 
   // Refs
@@ -63,10 +65,10 @@ const Calendar = (props: CalenderProps) => {
   const calendarOptions: CalendarOptions = {
     events: calendarStore.events as any,
     plugins: [interactionPlugin, dayGridPlugin, timeGridPlugin, listPlugin],
-    initialView: 'dayGridMonth',
+    initialView: 'listMonth',
     headerToolbar: {
       start: 'sidebarToggle, prev, next, title',
-      end: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
+      end: 'listMonth'
     },
     views: {
       week: {
@@ -87,21 +89,69 @@ const Calendar = (props: CalenderProps) => {
 
     eventContent: (eventInfo) => {
       const { event } = eventInfo
-      const type = event.extendedProps.eventType
+      const props = event.extendedProps
       
+      // Si tiene datos de mantenimiento, usar el layout viejo
+      if (props.nombreCliente || props.nombreProducto) {
+        const statusColor = props.status === 'COMPLETED' || props.status === 'INACTIVE' ? 'bg-green-500' : 'bg-red-500'
+        return (
+          <div className="items-center justify-between w-full pr-2">
+            <div><b>Cliente:</b> {props.nombreCliente}</div>
+            <div><b>Equipo:</b> {props.nombreProducto}</div>
+            <div className='flex items-center justify-between'>
+              <span><b>Marca: </b> {props.brand} </span> <span><b> Modelo: </b> {props.model} </span>
+            </div>
+            <div className='flex items-center justify-between'>
+              <span><b> Serial: </b> {props.licencePlate} </span>
+              <span className={`w-3 h-3 rounded-full ${statusColor}`}></span>
+            </div>
+          </div>
+        )
+      }
+
+      // Layout genérico para nuevos eventos
       return (
         <div className="flex flex-col w-full p-1 overflow-hidden text-xs">
           <div className="font-bold truncate">{event.title}</div>
-          {type && <div className="opacity-75">[{type}]</div>}
-          {event.extendedProps.description && (
-            <div className="truncate italic">{event.extendedProps.description}</div>
+          <div className="opacity-75">[{props.eventType || 'EVENT'}]</div>
+          {props.description && (
+            <div className="truncate italic">{props.description}</div>
           )}
         </div>
       )
     },
 
-    eventClick({ event }: any) {
-      onEventClick(event)
+    async eventClick({ event: clickedEvent, jsEvent }: any) {
+      // Lógica vieja de confirmación de mantenimiento si aplica
+      if (clickedEvent.extendedProps.nombreCliente) {
+        if (clickedEvent.extendedProps.status === 'COMPLETED' || clickedEvent.extendedProps.status === 'INACTIVE') {
+          alert("El mantenimiento ya ha sido confirmado!")
+          return
+        }
+
+        if (confirm("Deseas confirmar el mantenimiento?")) {
+          try {
+            const token = localStorage.getItem('AuthToken') || localStorage.getItem('jwt')
+            if (!token) throw new Error('No session token found')
+
+            const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/schedule/set_mantenimiento`, 
+              { id: clickedEvent.id },
+              { headers: { Authorization: `Bearer ${token}` } }
+            )
+
+            if (response.data.result === 'success') {
+              alert("Mantenimiento confirmado correctamente!")
+              refreshEvents()
+            }
+          } catch (error) {
+            console.error('Error confirming maintenance:', error)
+          }
+          return
+        }
+      }
+
+      // Si no es mantenimiento, usar la lógica normal (abrir sidebar)
+      onEventClick(clickedEvent)
     },
 
     dateClick(info: any) {

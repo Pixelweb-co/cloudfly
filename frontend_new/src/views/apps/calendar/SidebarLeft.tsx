@@ -84,11 +84,11 @@ const SidebarLeft = (props: Props) => {
 
       <div className='flex flex-col p-6 is-full'>
         <Typography variant='h5' className='mbe-4'>
-          Event Filters
+          Filtrar por etiqueta
         </Typography>
         <FormControlLabel
           className='mbe-1'
-          label='View All'
+          label='Ver todos'
           control={
             <Checkbox
               color='secondary'

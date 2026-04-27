@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 
 // MUI Imports
 import { useMediaQuery } from '@mui/material'
@@ -16,14 +16,37 @@ import SidebarLeft from './SidebarLeft'
 import AddEventSidebar from './AddEventSidebar'
 
 // Service Imports
-import calendarService, { CalendarEvent } from '@/services/calendarService'
+import calendarService from '@/services/calendarService'
 import { useSession } from 'next-auth/react'
 
 // CalendarColors Object
 const calendarsColor: CalendarColors = {
+  Equipos: 'danger',
   NOTIFICATION: 'primary',
   REST_ACTION: 'warning',
-  WHATSAPP_CAMPAIGN: 'success'
+  WHATSAPP_CAMPAIGN: 'success',
+  Personal: 'danger',
+  Business: 'primary',
+  Family: 'warning',
+  Holiday: 'success',
+  ETC: 'info'
+}
+
+// Aux function to parse maintenance payload
+const parsePayload = (payload: string) => {
+  try {
+    if (!payload) return {}
+    const data = JSON.parse(payload)
+    return {
+      nombreCliente: data.nombreCliente || '',
+      nombreProducto: data.nombreProducto || '',
+      brand: data.brand || '',
+      model: data.model || '',
+      licencePlate: data.licencePlate || ''
+    }
+  } catch (e) {
+    return {}
+  }
 }
 
 const AppCalendar = () => {
@@ -31,7 +54,7 @@ const AppCalendar = () => {
   const [calendarApi, setCalendarApi] = useState<null | any>(null)
   const [leftSidebarOpen, setLeftSidebarOpen] = useState<boolean>(false)
   const [addEventSidebarOpen, setAddEventSidebarOpen] = useState<boolean>(false)
-  const [selectedCalendars, setSelectedCalendars] = useState<string[]>(['NOTIFICATION', 'REST_ACTION', 'WHATSAPP_CAMPAIGN'])
+  const [selectedCalendars, setSelectedCalendars] = useState<string[]>(['Equipos', 'NOTIFICATION', 'REST_ACTION', 'WHATSAPP_CAMPAIGN'])
   
   const [calendarStore, setCalendarStore] = useState<CalendarType>({
     events: [],
@@ -44,7 +67,7 @@ const AppCalendar = () => {
   const { data: session } = useSession()
   const mdAbove = useMediaQuery((theme: Theme) => theme.breakpoints.up('md'))
 
-  // IDs del usuario (Default 1 para demo si no hay sesión)
+  // IDs del usuario
   const tenantId = 1
   const companyId = (session?.user as any)?.activeCompanyId || 1
 
@@ -59,14 +82,16 @@ const AppCalendar = () => {
         id: event.id?.toString(),
         title: event.title,
         start: event.startTime,
-        end: event.endTime,
+        end: event.endTime || new Date(new Date(event.startTime).getTime() + 3600000).toISOString(),
         allDay: event.allDay,
         extendedProps: {
-          calendar: event.eventType,
+          calendar: (event.eventType === 'REST_ACTION' && event.eventSubtype === 'MAINTENANCE') ? 'Equipos' : (event.eventType || 'Business'),
           description: event.description,
           eventType: event.eventType,
+          status: event.status,
           payload: event.payload,
-          recurrence: event.recurrence
+          recurrence: event.recurrence,
+          ...parsePayload(event.payload || '')
         }
       }))
       setCalendarStore(prev => ({ ...prev, events: mappedEvents, loading: false }))
@@ -113,7 +138,6 @@ const AppCalendar = () => {
 
   const handleDateClick = (info: any) => {
     setCalendarStore(prev => ({ ...prev, selectedEvent: null }))
-    // Set default start/end in state if needed, but the sidebar handles 'new' well
     setAddEventSidebarOpen(true)
   }
 
@@ -124,10 +148,9 @@ const AppCalendar = () => {
   }
 
   const handleFilterAll = (val: boolean) => {
-    setSelectedCalendars(val ? ['NOTIFICATION', 'REST_ACTION', 'WHATSAPP_CAMPAIGN'] : [])
+    setSelectedCalendars(val ? ['Equipos', 'NOTIFICATION', 'REST_ACTION', 'WHATSAPP_CAMPAIGN'] : [])
   }
 
-  // Filtrado local de eventos
   const filteredEvents = calendarStore.events.filter(event => 
     selectedCalendars.includes(event.extendedProps?.calendar)
   )
@@ -156,6 +179,7 @@ const AppCalendar = () => {
           onDateClick={handleDateClick}
           onEventDrop={handleUpdateEvent}
           onEventResize={handleUpdateEvent}
+          refreshEvents={fetchEvents}
         />
       </div>
       <AddEventSidebar
