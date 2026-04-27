@@ -102,6 +102,9 @@ public class SchedulerEngine {
     private Mono<Void> publishToNotificationService(CalendarEventEntity event) {
         try {
             Map<String, Object> notification = objectMapper.readValue(event.getPayload(), Map.class);
+            notification.put("tenantId", event.getTenantId());
+            notification.put("companyId", event.getCompanyId());
+            
             return kafkaTemplate.send("email-notifications", (String) notification.getOrDefault("to", "system"), notification)
                     .doOnSuccess(result -> log.info("Notification sent to Kafka for event {}", event.getId()))
                     .then();

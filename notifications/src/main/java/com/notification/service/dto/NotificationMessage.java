@@ -11,6 +11,8 @@ public class NotificationMessage {
     private String body;
     private String type;
     private String username;
+    private Long tenantId;
+    private Long companyId;
 
     // Campos para adjuntos PDF
     private String pdfAttachment; // PDF en Base64
@@ -82,6 +84,22 @@ public class NotificationMessage {
 
     public void setTemplateData(Map<String, Object> templateData) {
         this.templateData = templateData;
+    }
+
+    public Long getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(Long tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    public Long getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(Long companyId) {
+        this.companyId = companyId;
     }
 
     /**

@@ -13,11 +13,16 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.*;
 
+import org.springframework.jdbc.core.JdbcTemplate;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 
 @Configuration
 public class KafkaConsumerListener {
+    
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private Logger LOGGER = LoggerFactory.getLogger(KafkaConsumerListener.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -41,10 +46,46 @@ public class KafkaConsumerListener {
 
         try {
             NotificationMessage notification = objectMapper.readValue(message, NotificationMessage.class);
-            emailService.sendEmail(notification);
+            
+            if ("whatsapp".equalsIgnoreCase(notification.getType())) {
+                sendWhatsAppNotification(notification);
+            } else {
+                emailService.sendEmail(notification);
+            }
         } catch (Exception e) {
-            LOGGER.error("Error while processing or sending email: ", e);
+            LOGGER.error("Error while processing or sending notification: ", e);
         }
+    }
+
+    private void sendWhatsAppNotification(NotificationMessage notification) {
+        String instance = findInstanceFor(notification.getTenantId(), notification.getCompanyId());
+        LOGGER.info("Sending WhatsApp notification using instance: " + instance);
+        
+        String formattedPhone = formatPhoneNumber(notification.getTo());
+        boolean sent = sendWhatsAppTextWithInstance(formattedPhone, notification.getBody(), instance, evolutionApiKey);
+        
+        if (sent) {
+            LOGGER.info("WhatsApp notification sent successfully to " + formattedPhone);
+        } else {
+            LOGGER.error("Failed to send WhatsApp notification to " + formattedPhone);
+        }
+    }
+
+    private String findInstanceFor(Long tenantId, Long companyId) {
+        if (tenantId == null || companyId == null) return instanceName;
+        
+        try {
+            String sql = "SELECT instance_name FROM channels WHERE tenant_id = ? AND company_id = ? AND platform = 'WHATSAPP' AND instance_name IS NOT NULL LIMIT 1";
+            List<String> results = jdbcTemplate.queryForList(sql, String.class, tenantId, companyId);
+            
+            if (!results.isEmpty() && results.get(0) != null) {
+                return results.get(0);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error looking up instance for tenant {} company {}: {}", tenantId, companyId, e.getMessage());
+        }
+        
+        return instanceName;
     }
 
     @KafkaListener(topics = "register-user", groupId = "notification-service-register")
