@@ -158,12 +158,19 @@ const Calendar = (props: CalenderProps) => {
       onDateClick(info)
     },
 
-    eventDrop(info: any) {
-      onEventDrop(info)
+    eventDrop: (info: any) => {
+      if (window.confirm('¿Desea actualizar la fecha de este evento?')) {
+        onEventDrop(info.event)
+      } else {
+        info.revert()
+      }
     },
-
-    eventResize(info: any) {
-      onEventResize(info)
+    eventResize: (info: any) => {
+      if (window.confirm('¿Desea actualizar la duración de este evento?')) {
+        onEventResize(info.event)
+      } else {
+        info.revert()
+      }
     },
 
     customButtons: {
