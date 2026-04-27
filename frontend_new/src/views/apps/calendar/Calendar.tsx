@@ -1,10 +1,16 @@
 'use client'
 
 // React Imports
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // MUI Imports
 import { useTheme } from '@mui/material/styles'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
+import Button from '@mui/material/Button'
+import DialogContentText from '@mui/material/DialogContentText'
 
 // Third-party imports
 import 'bootstrap-icons/font/bootstrap-icons.css'
@@ -54,12 +60,31 @@ const Calendar = (props: CalenderProps) => {
   // Hooks
   const theme = useTheme()
 
+  // Confirmation Dialog State
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmData, setConfirmData] = useState<{
+    title: string;
+    content: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+  } | null>(null)
+
   useEffect(() => {
     if (calendarApi === null) {
       // @ts-ignore
       setCalendarApi(calendarRef.current?.getApi())
     }
   }, [calendarApi, setCalendarApi])
+
+  const handleConfirmAction = (confirm: boolean) => {
+    if (confirm && confirmData) {
+      confirmData.onConfirm()
+    } else if (confirmData) {
+      confirmData.onCancel()
+    }
+    setConfirmOpen(false)
+    setConfirmData(null)
+  }
 
   // calendarOptions(Props)
   const calendarOptions: CalendarOptions = {
@@ -91,25 +116,23 @@ const Calendar = (props: CalenderProps) => {
       const { event } = eventInfo
       const props = event.extendedProps
       
-      // Si tiene datos de mantenimiento, usar el layout viejo
       if (props.nombreCliente || props.nombreProducto) {
         const statusColor = props.status === 'COMPLETED' || props.status === 'INACTIVE' ? 'bg-green-500' : 'bg-red-500'
         return (
           <div className="items-center justify-between w-full pr-2">
             <div><b>Cliente:</b> {props.nombreCliente}</div>
             <div><b>Equipo:</b> {props.nombreProducto}</div>
-            <div className='flex items-center justify-between'>
-              <span><b>Marca: </b> {props.brand} </span> <span><b> Modelo: </b> {props.model} </span>
+            <div className='flex items-center justify-between text-[10px]'>
+              <span><b>Marca: </b> {props.brand} </span> <span><b> Mod: </b> {props.model} </span>
             </div>
-            <div className='flex items-center justify-between'>
-              <span><b> Serial: </b> {props.licencePlate} </span>
+            <div className='flex items-center justify-between text-[10px]'>
+              <span><b> Ser: </b> {props.licencePlate} </span>
               <span className={`w-3 h-3 rounded-full ${statusColor}`}></span>
             </div>
           </div>
         )
       }
 
-      // Layout genérico para nuevos eventos
       return (
         <div className="flex flex-col w-full p-1 overflow-hidden text-xs">
           <div className="font-bold truncate">{event.title}</div>
@@ -121,36 +144,40 @@ const Calendar = (props: CalenderProps) => {
       )
     },
 
-    async eventClick({ event: clickedEvent, jsEvent }: any) {
-      // Lógica vieja de confirmación de mantenimiento si aplica
+    async eventClick({ event: clickedEvent }: any) {
       if (clickedEvent.extendedProps.nombreCliente) {
         if (clickedEvent.extendedProps.status === 'COMPLETED' || clickedEvent.extendedProps.status === 'INACTIVE') {
           alert("El mantenimiento ya ha sido confirmado!")
           return
         }
 
-        if (confirm("Deseas confirmar el mantenimiento?")) {
-          try {
-            const token = localStorage.getItem('AuthToken') || localStorage.getItem('jwt')
-            if (!token) throw new Error('No session token found')
+        setConfirmData({
+          title: 'Confirmar Mantenimiento',
+          content: '¿Deseas confirmar la realización de este mantenimiento?',
+          onConfirm: async () => {
+            try {
+              const token = localStorage.getItem('AuthToken') || localStorage.getItem('jwt')
+              if (!token) throw new Error('No session token found')
 
-            const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/schedule/set_mantenimiento`, 
-              { id: clickedEvent.id },
-              { headers: { Authorization: `Bearer ${token}` } }
-            )
+              const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/schedule/set_mantenimiento`, 
+                { id: clickedEvent.id },
+                { headers: { Authorization: `Bearer ${token}` } }
+              )
 
-            if (response.data.result === 'success') {
-              alert("Mantenimiento confirmado correctamente!")
-              refreshEvents()
+              if (response.data.result === 'success') {
+                alert("Mantenimiento confirmado correctamente!")
+                refreshEvents()
+              }
+            } catch (error) {
+              console.error('Error confirming maintenance:', error)
             }
-          } catch (error) {
-            console.error('Error confirming maintenance:', error)
-          }
-          return
-        }
+          },
+          onCancel: () => {}
+        })
+        setConfirmOpen(true)
+        return
       }
 
-      // Si no es mantenimiento, usar la lógica normal (abrir sidebar)
       onEventClick(clickedEvent)
     },
 
@@ -159,18 +186,23 @@ const Calendar = (props: CalenderProps) => {
     },
 
     eventDrop: (info: any) => {
-      if (window.confirm('¿Desea actualizar la fecha de este evento?')) {
-        onEventDrop(info.event)
-      } else {
-        info.revert()
-      }
+      setConfirmData({
+        title: 'Actualizar Fecha',
+        content: '¿Desea actualizar la fecha de este evento?',
+        onConfirm: () => onEventDrop(info.event),
+        onCancel: () => info.revert()
+      })
+      setConfirmOpen(true)
     },
+
     eventResize: (info: any) => {
-      if (window.confirm('¿Desea actualizar la duración de este evento?')) {
-        onEventResize(info.event)
-      } else {
-        info.revert()
-      }
+      setConfirmData({
+        title: 'Actualizar Duración',
+        content: '¿Desea actualizar la duración de este evento?',
+        onConfirm: () => onEventResize(info.event),
+        onCancel: () => info.revert()
+      })
+      setConfirmOpen(true)
     },
 
     customButtons: {
@@ -213,7 +245,32 @@ const Calendar = (props: CalenderProps) => {
           font-weight: 600 !important;
         }
       `}</style>
+      
       <FullCalendar {...calendarOptions} />
+
+      <Dialog
+        open={confirmOpen}
+        onClose={() => handleConfirmAction(false)}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">
+          {confirmData?.title}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            {confirmData?.content}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => handleConfirmAction(false)} color="secondary">
+            Cancelar
+          </Button>
+          <Button onClick={() => handleConfirmAction(true)} variant="contained" autoFocus>
+            Aceptar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }
