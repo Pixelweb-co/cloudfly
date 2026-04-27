@@ -84,7 +84,7 @@ services:
       - "traefik.docker.network=cloudfly_app-net"
 
   scheduler-service:
-    image: cloudfly-backend-api:latest
+    image: cloudfly-scheduler-service:latest
     container_name: scheduler-service
     restart: always
     build:
