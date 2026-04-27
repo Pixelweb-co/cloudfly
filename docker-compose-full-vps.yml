@@ -83,6 +83,32 @@ services:
       - "traefik.http.services.api.loadbalancer.server.port=8080"
       - "traefik.docker.network=cloudfly_app-net"
 
+  scheduler-service:
+    image: cloudfly-backend-api:latest
+    container_name: scheduler-service
+    restart: always
+    build:
+      context: ./scheduler_service
+      dockerfile: Dockerfile
+    volumes:
+      - ./uploads:/uploads
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=cloud_master
+      - DB_USERNAME=root
+      - DB_PASSWORD=widowmaker
+      - KAFKA_HOST=kafka
+      - SPRING_PROFILES_ACTIVE=production
+    networks:
+      - app-net
+      - kafka-net
+    depends_on:
+      - db
+      - kafka
+
   notification-service:
     build:
       context: ./notifications

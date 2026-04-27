@@ -25,11 +25,6 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 })
 public class BackendNewApplication {
 
-    @jakarta.annotation.PostConstruct
-    public void init() {
-        java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("UTC"));
-    }
-
     public static void main(String[] args) {
         SpringApplication.run(BackendNewApplication.class, args);
     }
