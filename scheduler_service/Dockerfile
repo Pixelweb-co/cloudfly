@@ -1,12 +1,14 @@
-FROM maven:3.8-openjdk-17-slim AS build
+FROM maven:3.9.4-eclipse-temurin-17
 WORKDIR /app
-COPY pom.xml .
-RUN mvn dependency:go-offline
-COPY src ./src
-RUN mvn package -DskipTests
 
-FROM openjdk:17-slim
-WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+# Cache dependencies
+COPY pom.xml .
+RUN mvn dependency:go-offline -B || true
+
+# Copy source and build
+COPY src ./src
+RUN mvn clean package -DskipTests -B
+
+# Execute JAR
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "target/scheduler-service-0.0.1-SNAPSHOT.jar"]
