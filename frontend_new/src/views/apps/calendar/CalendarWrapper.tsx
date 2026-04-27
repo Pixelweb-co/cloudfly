@@ -176,6 +176,7 @@ const AppCalendar = () => {
         selectedCalendars={selectedCalendars}
         onFilterChange={handleFilterChange}
         onFilterAll={handleFilterAll}
+        handleAddEventSidebarToggle={handleAddEventSidebarToggle}
       />
       <div className='p-6 pbe-0 flex-grow overflow-visible bg-backgroundPaper rounded'>
         <Calendar
