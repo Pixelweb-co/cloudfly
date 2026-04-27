@@ -14,32 +14,30 @@
   // Async Thunk para cargar eventos desde la API
   export const fetchEvents = createAsyncThunk<EventInput[]>('calendar/fetchEvents', async () => {
     try {
-      const response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_URL}/schedule`)
+      // Usar el nuevo endpoint del microservicio de scheduler
+      // Se asume tenantId=1 y companyId=1 por defecto para la vista master
+      const response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_URL}/api/events?tenantId=1&companyId=1`)
 
-      console.log("sh data ",response.data);
-      
+      console.log("scheduler data ", response.data);
 
-      const events: EventInput[] = response.data.map((schedule:any) => ({
-        id: schedule.id.toString(),
+      const events: EventInput[] = response.data.map((event: any) => ({
+        id: event.id.toString(),
         url: '',
-        status:schedule.status,
-        title: schedule.productName, // Nombre del producto asociado
-        start: schedule.date, // Fecha del evento
-        end: new Date(new Date(schedule.date).setDate(new Date(schedule.date).getDate() + 1)).toISOString().split('T')[0], // Siguiente día
-        allDay: false,
+        status: event.status,
+        title: event.title, // Ahora usamos el título directamente
+        start: event.startTime, // Antes era 'date'
+        end: event.endTime || new Date(new Date(event.startTime).getTime() + 3600000).toISOString(), // 1 hora después por defecto si no hay end
+        allDay: event.allDay || false,
         extendedProps: {
           calendar: 'Equipos',
           guests: [],
-          description: '',
-          nombreCliente: schedule.nombreCliente, // Nombre del cliente asociado
-          nombreProducto: schedule.nombreProducto, // Nombre del producto asociado
-          brand: schedule.brand, // Marca del producto
-          model: schedule.model, // Modelo del producto
-          licencePlate: schedule.placaProducto // Placa del producto
+          description: event.description || '',
+          eventType: event.eventType,
+          eventSubtype: event.eventSubtype,
+          // Mapeo inverso para compatibilidad con la vista de mantenimiento si los datos vienen en el payload
+          ...parsePayload(event.payload)
         }
       }))
-
-      console.log("events frm ",events);
 
       return events
     } catch (error) {
@@ -47,6 +45,23 @@
       throw error
     }
   })
+
+  // Función auxiliar para parsear el payload si contiene info de mantenimiento
+  const parsePayload = (payload: string) => {
+    try {
+      if (!payload) return {};
+      const data = JSON.parse(payload);
+      return {
+        nombreCliente: data.nombreCliente || '',
+        nombreProducto: data.nombreProducto || '',
+        brand: data.brand || '',
+        model: data.model || '',
+        licencePlate: data.licencePlate || ''
+      };
+    } catch (e) {
+      return {};
+    }
+  }
 
   // Estado inicial
   const initialState: CalendarType = {

@@ -110,6 +110,13 @@ services:
     depends_on:
       - db
       - kafka
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.scheduler.rule=Host(`calendar.cloudfly.com.co`)"
+      - "traefik.http.routers.scheduler.entrypoints=websecure"
+      - "traefik.http.routers.scheduler.tls.certresolver=le"
+      - "traefik.http.services.scheduler.loadbalancer.server.port=8080"
+      - "traefik.docker.network=cloudfly_app-net"
 
   notification-service:
     build:
