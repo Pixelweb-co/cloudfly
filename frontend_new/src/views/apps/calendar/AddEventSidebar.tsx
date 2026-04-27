@@ -36,21 +36,25 @@ interface PickerProps {
 }
 
 interface DefaultStateType {
+  url: string
   title: string
   allDay: boolean
+  calendar: string
   description: string
   endDate: Date
   startDate: Date
-  eventType: 'NOTIFICATION' | 'REST_ACTION' | 'WHATSAPP_CAMPAIGN'
+  eventType: string
   payload: string
   recurrence: string
 }
 
 const defaultState: DefaultStateType = {
+  url: '',
   title: '',
-  allDay: false,
+  allDay: true,
   description: '',
   endDate: new Date(),
+  calendar: 'Business',
   startDate: new Date(),
   eventType: 'NOTIFICATION',
   payload: '',
@@ -110,9 +114,11 @@ const AddEventSidebar = (props: Props) => {
       const event = calendarStore.selectedEvent
       setValue('title', event.title || '')
       setValues({
+        url: event.url || '',
         title: event.title || '',
         allDay: event.allDay || false,
         description: event.extendedProps?.description || '',
+        calendar: event.extendedProps?.calendar || 'Business',
         endDate: event.end ? new Date(event.end) : (event.start ? new Date(event.start) : new Date()),
         startDate: event.start ? new Date(event.start) : new Date(),
         eventType: event.extendedProps?.eventType || 'NOTIFICATION',
@@ -216,16 +222,20 @@ const AddEventSidebar = (props: Props) => {
                 />
               )}
             />
+            
             <CustomTextField
               select
               fullWidth
-              label='Event Type'
-              value={values.eventType}
-              onChange={e => setValues({ ...values, eventType: e.target.value as any })}
+              label='Calendar'
+              value={values.calendar}
+              onChange={e => setValues({ ...values, calendar: e.target.value })}
             >
-              <MenuItem value='NOTIFICATION'>Notification</MenuItem>
-              <MenuItem value='REST_ACTION'>REST Action</MenuItem>
-              <MenuItem value='WHATSAPP_CAMPAIGN'>WhatsApp Campaign</MenuItem>
+              <MenuItem value='Equipos'>Equipos</MenuItem>
+              <MenuItem value='Personal'>Personal</MenuItem>
+              <MenuItem value='Business'>Business</MenuItem>
+              <MenuItem value='Family'>Family</MenuItem>
+              <MenuItem value='Holiday'>Holiday</MenuItem>
+              <MenuItem value='ETC'>ETC</MenuItem>
             </CustomTextField>
 
             <AppReactDatepicker
@@ -259,6 +269,37 @@ const AddEventSidebar = (props: Props) => {
 
             <CustomTextField
               fullWidth
+              label='URL'
+              value={values.url}
+              onChange={e => setValues({ ...values, url: e.target.value })}
+            />
+
+            <CustomTextField
+              rows={4}
+              multiline
+              fullWidth
+              label='Description'
+              value={values.description}
+              onChange={e => setValues({ ...values, description: e.target.value })}
+            />
+
+            <Divider />
+            <Typography variant='body2' color='textSecondary'>Advanced Scheduler Settings</Typography>
+
+            <CustomTextField
+              select
+              fullWidth
+              label='Event Type'
+              value={values.eventType}
+              onChange={e => setValues({ ...values, eventType: e.target.value })}
+            >
+              <MenuItem value='NOTIFICATION'>Notification</MenuItem>
+              <MenuItem value='REST_ACTION'>REST Action</MenuItem>
+              <MenuItem value='WHATSAPP_CAMPAIGN'>WhatsApp Campaign</MenuItem>
+            </CustomTextField>
+
+            <CustomTextField
+              fullWidth
               select
               label='Recurrence'
               value={values.recurrence}
@@ -269,15 +310,6 @@ const AddEventSidebar = (props: Props) => {
               <MenuItem value='WEEKLY'>Weekly</MenuItem>
               <MenuItem value='MONTHLY'>Monthly</MenuItem>
             </CustomTextField>
-
-            <CustomTextField
-              rows={4}
-              multiline
-              fullWidth
-              label='Description'
-              value={values.description}
-              onChange={e => setValues({ ...values, description: e.target.value })}
-            />
 
             <CustomTextField
               rows={4}
