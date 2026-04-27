@@ -131,13 +131,22 @@ const AppCalendar = () => {
     }
   }
 
-  const handleUpdateEvent = async (eventData: any) => {
+  const handleUpdateEvent = async (event: any) => {
     try {
-      await calendarService.updateEvent(eventData.id, eventData)
+      const eventData = {
+        title: event.title,
+        startTime: event.start?.toISOString(),
+        endTime: event.end?.toISOString() || event.start?.toISOString(),
+        allDay: event.allDay,
+        ...event.extendedProps
+      }
+      
+      await calendarService.updateEvent(parseInt(event.id), eventData)
       fetchEvents()
       alert("Evento actualizado")
     } catch (error) {
       console.error('Error updating event:', error)
+      alert("Error al actualizar el evento")
     }
   }
 
