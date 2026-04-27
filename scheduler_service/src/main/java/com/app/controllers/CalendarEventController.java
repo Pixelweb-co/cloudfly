@@ -38,4 +38,14 @@ public class CalendarEventController {
     public Mono<CalendarEventDto> get(@PathVariable Long id) {
         return calendarEventService.getEvent(id);
     }
+
+    @PutMapping("/{id}")
+    public Mono<CalendarEventDto> update(@PathVariable Long id, @RequestBody CalendarEventDto dto) {
+        return calendarEventService.updateEvent(id, dto);
+    }
+
+    @DeleteMapping("/{id}")
+    public Mono<Void> delete(@PathVariable Long id) {
+        return calendarEventService.deleteEvent(id);
+    }
 }
