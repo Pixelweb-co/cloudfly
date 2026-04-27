@@ -40,6 +40,7 @@ interface DefaultStateType {
   title: string
   allDay: boolean
   calendar: string
+  calendarId: number
   description: string
   endDate: Date
   startDate: Date
@@ -55,6 +56,7 @@ const defaultState: DefaultStateType = {
   description: '',
   endDate: new Date(),
   calendar: 'Business',
+  calendarId: 1,
   startDate: new Date(),
   eventType: 'NOTIFICATION',
   payload: '',
@@ -119,6 +121,7 @@ const AddEventSidebar = (props: Props) => {
         allDay: event.allDay || false,
         description: event.extendedProps?.description || '',
         calendar: event.extendedProps?.calendar || 'Business',
+        calendarId: event.calendarId || 1,
         endDate: event.end ? new Date(event.end) : (event.start ? new Date(event.start) : new Date()),
         startDate: event.start ? new Date(event.start) : new Date(),
         eventType: event.extendedProps?.eventType || 'NOTIFICATION',
@@ -142,6 +145,7 @@ const AddEventSidebar = (props: Props) => {
   const onSubmit = (data: { title: string }) => {
     const eventData = {
       title: data.title,
+      calendarId: values.calendarId,
       startTime: values.startDate.toISOString(),
       endTime: values.endDate.toISOString(),
       allDay: values.allDay,
@@ -237,6 +241,14 @@ const AddEventSidebar = (props: Props) => {
               <MenuItem value='Holiday'>Holiday</MenuItem>
               <MenuItem value='ETC'>ETC</MenuItem>
             </CustomTextField>
+
+            <CustomTextField
+              fullWidth
+              type='number'
+              label='Calendar ID'
+              value={values.calendarId}
+              onChange={e => setValues({ ...values, calendarId: parseInt(e.target.value) })}
+            />
 
             <AppReactDatepicker
               selectsStart

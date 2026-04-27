@@ -67,9 +67,19 @@ const AppCalendar = () => {
   const { data: session } = useSession()
   const mdAbove = useMediaQuery((theme: Theme) => theme.breakpoints.up('md'))
 
-  // IDs del usuario
-  const tenantId = 1
-  const companyId = (session?.user as any)?.activeCompanyId || 1
+  // IDs del usuario desde localStorage
+  const [tenantId, setTenantId] = useState<number>(1)
+  const [companyId, setCompanyId] = useState<number>(1)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedTenantId = localStorage.getItem('tenantId')
+      const storedCompanyId = localStorage.getItem('activeCompanyId') || localStorage.getItem('companyId')
+      
+      if (storedTenantId) setTenantId(parseInt(storedTenantId))
+      if (storedCompanyId) setCompanyId(parseInt(storedCompanyId))
+    }
+  }, [])
 
   const handleLeftSidebarToggle = () => setLeftSidebarOpen(!leftSidebarOpen)
   const handleAddEventSidebarToggle = () => setAddEventSidebarOpen(!addEventSidebarOpen)
@@ -106,7 +116,7 @@ const AppCalendar = () => {
 
   const handleAddEvent = async (eventData: any) => {
     try {
-      await calendarService.createEvent({ ...eventData, tenantId, companyId, calendarId: 1 })
+      await calendarService.createEvent({ ...eventData, tenantId, companyId })
       fetchEvents()
     } catch (error) {
       console.error('Error creating event:', error)
