@@ -37,7 +37,10 @@ public class SchedulerEngine {
         LocalDateTime now = LocalDateTime.now();
         scheduledJobRepository.findPendingJobs(now)
                 .flatMap(this::processJob)
-                .subscribe();
+                .subscribe(
+                    null,
+                    error -> log.error("Error in scheduler loop: ", error)
+                );
     }
 
     private Mono<Void> processJob(ScheduledJobEntity job) {
@@ -49,23 +52,27 @@ public class SchedulerEngine {
     private Mono<Void> executeJobPublishing(ScheduledJobEntity job) {
         return calendarEventRepository.findById(job.getEventId())
                 .flatMap(event -> {
+                    Mono<Void> executionMono;
                     if (event.getEventType() == com.app.persistence.entity.EventType.REST_ACTION) {
-                        return executeRestAction(event)
-                                .then(scheduledJobRepository.updateStatusIf(job.getId(), JobStatus.RUNNING.name(), JobStatus.DONE.name()))
-                                .flatMap(rows -> handleRecurrence(event, job));
+                        executionMono = executeRestAction(event);
                     } else if (event.getEventType() == com.app.persistence.entity.EventType.NOTIFICATION) {
-                        return publishToNotificationService(event)
-                                .then(scheduledJobRepository.updateStatusIf(job.getId(), JobStatus.RUNNING.name(), JobStatus.DONE.name()))
-                                .flatMap(rows -> handleRecurrence(event, job));
+                        executionMono = publishToNotificationService(event);
                     } else {
-                        Map<String, Object> message = buildKafkaMessage(event);
-                        return kafkaTemplate.send(SCHEDULER_TOPIC, event.getTenantId().toString(), message)
-                                .doOnSuccess(result -> log.info("Published job {} to Kafka", job.getId()))
-                                .flatMap(result -> scheduledJobRepository.updateStatusIf(job.getId(), JobStatus.RUNNING.name(), JobStatus.DONE.name()))
-                                .flatMap(rows -> handleRecurrence(event, job));
+                        executionMono = publishToKafka(event);
                     }
+
+                    return executionMono
+                            .then(scheduledJobRepository.updateStatusIf(job.getId(), JobStatus.RUNNING.name(), JobStatus.DONE.name()))
+                            .flatMap(rows -> handleRecurrence(event, job));
                 })
-                .onErrorResume(e -> handleJobError(job, e))
+                .onErrorResume(e -> handleJobError(job, e).then())
+                .then();
+    }
+
+    private Mono<Void> publishToKafka(CalendarEventEntity event) {
+        Map<String, Object> message = buildKafkaMessage(event);
+        return kafkaTemplate.send(SCHEDULER_TOPIC, event.getTenantId().toString(), message)
+                .doOnSuccess(result -> log.info("Published to Kafka for event {}", event.getId()))
                 .then();
     }
 
@@ -86,7 +93,18 @@ public class SchedulerEngine {
             return requestSpec.retrieve()
                     .toBodilessEntity()
                     .doOnSuccess(response -> log.info("REST_ACTION for event {} completed: {}", event.getId(), response.getStatusCode()))
-                    .then(Mono.just(1));
+                    .then();
+        } catch (Exception e) {
+            return Mono.error(e);
+        }
+    }
+
+    private Mono<Void> publishToNotificationService(CalendarEventEntity event) {
+        try {
+            Map<String, Object> notification = objectMapper.readValue(event.getPayload(), Map.class);
+            return kafkaTemplate.send("email-notifications", (String) notification.getOrDefault("to", "system"), notification)
+                    .doOnSuccess(result -> log.info("Notification sent to Kafka for event {}", event.getId()))
+                    .then();
         } catch (Exception e) {
             return Mono.error(e);
         }
@@ -111,18 +129,6 @@ public class SchedulerEngine {
 
         return calendarEventRepository.save(event)
                 .flatMap(jobGeneratorService::generateJobsForEvent);
-    }
-
-    private Mono<Void> publishToNotificationService(CalendarEventEntity event) {
-        try {
-            // Assume payload is a JSON that matches NotificationMessage DTO
-            Map<String, Object> notification = objectMapper.readValue(event.getPayload(), Map.class);
-            return kafkaTemplate.send("email-notifications", (String) notification.getOrDefault("to", "system"), notification)
-                    .doOnSuccess(result -> log.info("Notification sent to Kafka for event {}", event.getId()))
-                    .then();
-        } catch (Exception e) {
-            return Mono.error(e);
-        }
     }
 
     private Mono<Integer> handleJobError(ScheduledJobEntity job, Throwable e) {
