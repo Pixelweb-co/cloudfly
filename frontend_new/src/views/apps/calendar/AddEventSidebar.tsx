@@ -115,12 +115,12 @@ const AddEventSidebar = (props: Props) => {
       const event = calendarStore.selectedEvent
       setValue('title', event.title || '')
       setValues({
-        url: event.url || '',
+        url: event.extendedProps?.url || '',
         title: event.title || '',
         allDay: event.allDay || false,
         description: event.extendedProps?.description || '',
         calendar: event.extendedProps?.calendar || 'Business',
-        calendarId: event.calendarId || 1,
+        calendarId: event.extendedProps?.calendarId || 1,
         endDate: event.end ? new Date(event.end) : (event.start ? new Date(event.start) : new Date()),
         startDate: event.start ? new Date(event.start) : new Date(),
         eventType: event.extendedProps?.eventType || 'NOTIFICATION',

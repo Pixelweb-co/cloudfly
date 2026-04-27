@@ -104,6 +104,7 @@ const AppCalendar = () => {
           calendar: (event.eventType === 'REST_ACTION' && event.eventSubtype === 'MAINTENANCE') ? 'Equipos' : (event.eventType || 'Business'),
           description: event.description,
           eventType: event.eventType,
+          calendarId: event.calendarId,
           status: event.status,
           payload: event.payload,
           recurrence: event.recurrence,
@@ -133,15 +134,28 @@ const AppCalendar = () => {
 
   const handleUpdateEvent = async (event: any) => {
     try {
-      const eventData = {
-        title: event.title,
-        startTime: event.start?.toISOString(),
-        endTime: event.end?.toISOString() || event.start?.toISOString(),
-        allDay: event.allDay,
-        ...event.extendedProps
+      let eventData: any = {}
+      let id: number
+
+      // Detect if it's a FullCalendar event object or a plain object from Sidebar
+      if (event.id && event._def) {
+        // FullCalendar Event
+        id = parseInt(event.id)
+        eventData = {
+          title: event.title,
+          startTime: event.start?.toISOString(),
+          endTime: event.end?.toISOString() || event.start?.toISOString(),
+          allDay: event.allDay,
+          ...event.extendedProps
+        }
+      } else {
+        // Plain object from Sidebar
+        id = parseInt(event.id)
+        eventData = { ...event }
+        delete eventData.id // Remove ID from payload body
       }
       
-      await calendarService.updateEvent(parseInt(event.id), eventData)
+      await calendarService.updateEvent(id, eventData)
       fetchEvents()
       alert("Evento actualizado")
     } catch (error) {
