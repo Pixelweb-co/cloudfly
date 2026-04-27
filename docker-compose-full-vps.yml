@@ -87,6 +87,8 @@ services:
     image: cloudfly-scheduler-service:latest
     container_name: scheduler-service
     restart: always
+    ports:
+      - "8085:8080"
     build:
       context: ./scheduler_service
       dockerfile: Dockerfile
