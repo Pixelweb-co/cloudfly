@@ -26,6 +26,7 @@ import type { Theme } from '@mui/material/styles'
 import { useForm, Controller } from 'react-hook-form'
 import PerfectScrollbar from 'react-perfect-scrollbar'
 import { useSession } from 'next-auth/react'
+import { format } from 'date-fns'
 
 // Type Imports
 import type { CalendarType } from '@/types/apps/calendarTypes'
@@ -263,8 +264,8 @@ const AddEventSidebar = (props: Props) => {
     const eventData = {
       title: data.title,
       calendarId: values.calendarId,
-      startTime: values.startDate.toISOString(),
-      endTime: values.endDate.toISOString(),
+      startTime: format(values.startDate, "yyyy-MM-dd'T'HH:mm:ss"),
+      endTime: format(values.endDate, "yyyy-MM-dd'T'HH:mm:ss"),
       allDay: values.allDay,
       description: values.description,
       eventType: 'NOTIFICATION',
@@ -366,6 +367,8 @@ const AddEventSidebar = (props: Props) => {
                   id='event-start-date'
                   selected={values.startDate}
                   showTimeSelect={!values.allDay}
+                  timeIntervals={5}
+                  todayButton='Hoy'
                   dateFormat={!values.allDay ? 'yyyy-MM-dd hh:mm aa' : 'yyyy-MM-dd'}
                   customInput={<PickersComponent label='Fecha Inicio' />}
                   onChange={(date: Date | null) => date && setValues({ ...values, startDate: date })}
@@ -376,6 +379,8 @@ const AddEventSidebar = (props: Props) => {
                   selected={values.endDate}
                   minDate={values.startDate}
                   showTimeSelect={!values.allDay}
+                  timeIntervals={5}
+                  todayButton='Hoy'
                   dateFormat={!values.allDay ? 'yyyy-MM-dd hh:mm aa' : 'yyyy-MM-dd'}
                   customInput={<PickersComponent label='Fecha Fin' />}
                   onChange={(date: Date | null) => date && setValues({ ...values, endDate: date })}

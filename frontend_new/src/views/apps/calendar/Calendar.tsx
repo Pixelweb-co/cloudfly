@@ -90,7 +90,7 @@ const Calendar = (props: CalenderProps) => {
   const calendarOptions: CalendarOptions = {
     events: calendarStore.events as any,
     plugins: [interactionPlugin, dayGridPlugin, timeGridPlugin, listPlugin],
-    initialView: 'dayGridMonth',
+    initialView: 'timeGridWeek',
     headerToolbar: {
       start: 'sidebarToggle, prev, next, title',
       end: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
@@ -103,8 +103,15 @@ const Calendar = (props: CalenderProps) => {
     editable: true,
     eventResizableFromStart: true,
     dragScroll: true,
-    dayMaxEvents: 2,
+    dayMaxEvents: 5,
     navLinks: true,
+    slotDuration: '00:15:00',
+    slotLabelInterval: '00:30:00',
+    eventTimeFormat: {
+      hour: 'numeric',
+      minute: '2-digit',
+      meridiem: 'short'
+    },
 
     eventClassNames({ event: calendarEvent }: any) {
       // @ts-ignore

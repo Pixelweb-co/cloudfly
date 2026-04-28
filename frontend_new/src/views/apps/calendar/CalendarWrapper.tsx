@@ -7,6 +7,9 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useMediaQuery } from '@mui/material'
 import type { Theme } from '@mui/material/styles'
 
+// Third-party Imports
+import { format } from 'date-fns'
+
 // Type Imports
 import type { CalendarColors, CalendarType } from '@/types/apps/calendarTypes'
 
@@ -143,8 +146,8 @@ const AppCalendar = () => {
         id = parseInt(event.id)
         eventData = {
           title: event.title,
-          startTime: event.start?.toISOString(),
-          endTime: event.end?.toISOString() || event.start?.toISOString(),
+          startTime: event.start ? format(event.start, "yyyy-MM-dd'T'HH:mm:ss") : null,
+          endTime: event.end ? format(event.end, "yyyy-MM-dd'T'HH:mm:ss") : (event.start ? format(event.start, "yyyy-MM-dd'T'HH:mm:ss") : null),
           allDay: event.allDay,
           ...event.extendedProps
         }
