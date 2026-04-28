@@ -135,6 +135,30 @@ class EvolutionClient {
             logger.warn(`⚠️ Could not set presence for ${remoteJid}: ${error.message}`);
         }
     }
+
+    /**
+     * Obtener base64 de un mensaje de media (descifrar audio/imagen)
+     */
+    async getBase64FromMediaMessage(instanceName, messageId) {
+        try {
+            const url = `/chat/getBase64FromMediaMessage/${instanceName}`;
+            const body = {
+                message: {
+                    key: {
+                        id: messageId
+                    }
+                },
+                convertToMp4: false
+            };
+
+            const response = await this.client.post(url, body);
+            // Evolution API retorna { base64: "..." }
+            return response.data.base64;
+        } catch (error) {
+            logger.error(`❌ Error fetching base64 from media message ${messageId}: ${error.message}`);
+            return null;
+        }
+    }
 }
 
 module.exports = new EvolutionClient();

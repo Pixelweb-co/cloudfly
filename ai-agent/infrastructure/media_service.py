@@ -11,17 +11,29 @@ class MediaService:
     def __init__(self, openai_client: AsyncOpenAI):
         self.openai = openai_client
 
-    async def transcribe_audio(self, audio_url: str, tenant_id: int) -> Optional[str]:
+    async def transcribe_audio(self, audio_data: str, tenant_id: int) -> Optional[str]:
         """
-        Downloads audio from a URL and transcribes it using OpenAI Whisper.
+        Takes audio data (URL or base64) and transcribes it using OpenAI Whisper.
         """
-        logger.info(f"🎙️ [AI_AUDIO_STT] Starting transcription for URL: {audio_url}")
+        logger.info(f"🎙️ [AI_AUDIO_STT] Starting transcription for tenant {tenant_id}")
         
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(audio_url, timeout=30.0)
-                response.raise_for_status()
-                audio_content = response.content
+            audio_content = None
+            if audio_data.startswith("http"):
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(audio_data, timeout=30.0)
+                    response.raise_for_status()
+                    audio_content = response.content
+            elif audio_data.startswith("data:") or len(audio_data) > 200:
+                # Assume base64
+                import base64
+                b64_str = audio_data
+                if "," in b64_str:
+                    b64_str = b64_str.split(",")[1]
+                audio_content = base64.b64decode(b64_str)
+            else:
+                logger.error("❌ [AI_AUDIO_STT] Invalid audio data format")
+                return None
 
             # Whisper requires a file-like object with a name
             with tempfile.NamedTemporaryFile(delete=False, suffix=".ogg") as tmp:
@@ -46,12 +58,18 @@ class MediaService:
             logger.error(f"❌ [AI_AUDIO_STT] Error transcribing audio: {e}")
             return None
 
-    async def analyze_image(self, image_url: str, tenant_id: int) -> Optional[str]:
+    async def analyze_image(self, image_data: str, tenant_id: int) -> Optional[str]:
         """
-        Analyzes an image using GPT-4o-mini Vision.
+        Analyzes an image (URL or base64) using GPT-4o-mini Vision.
         """
-        logger.info(f"🖼️ [AI_VISION] Starting image analysis for URL: {image_url}")
+        logger.info(f"🖼️ [AI_VISION] Starting image analysis for tenant {tenant_id}")
         
+        # Prepare the image URL for OpenAI
+        final_image_url = image_data
+        if not image_data.startswith("http") and not image_data.startswith("data:"):
+            # Assume it's raw base64, convert to data URL
+            final_image_url = f"data:image/jpeg;base64,{image_data}"
+
         prompt = (
             "Describe la imagen, si es un comprobante de pago del pulguero virtual obten el numero, "
             "la fecha, codigo de comprobante, monto nombre a quien se envia. "
@@ -68,7 +86,7 @@ class MediaService:
                             {"type": "text", "text": prompt},
                             {
                                 "type": "image_url",
-                                "image_url": {"url": image_url},
+                                "image_url": {"url": final_image_url},
                             },
                         ],
                     }
