@@ -100,8 +100,8 @@ const AppCalendar = () => {
       const mappedEvents = data.map(event => ({
         id: event.id?.toString(),
         title: event.title,
-        start: event.startTime.includes('Z') ? event.startTime : (event.startTime.includes('T') ? event.startTime + 'Z' : event.startTime.replace(' ', 'T') + 'Z'),
-        end: event.endTime ? (event.endTime.includes('Z') ? event.endTime : (event.endTime.includes('T') ? event.endTime + 'Z' : event.endTime.replace(' ', 'T') + 'Z')) : new Date(new Date(event.startTime).getTime() + 3600000).toISOString(),
+        start: event.startTime.includes('T') ? event.startTime : event.startTime.replace(' ', 'T'),
+        end: event.endTime ? (event.endTime.includes('T') ? event.endTime : event.endTime.replace(' ', 'T')) : new Date(new Date(event.startTime).getTime() + 3600000).toISOString().split('Z')[0],
         allDay: event.allDay,
         extendedProps: {
           calendar: (event.eventType === 'REST_ACTION' && event.eventSubtype === 'MAINTENANCE') ? 'Equipos' : (event.eventType || 'Business'),
@@ -124,10 +124,12 @@ const AppCalendar = () => {
     fetchEvents()
   }, [fetchEvents])
 
+  const handleCloseSidebar = () => setAddEventSidebarOpen(false)
+
   const handleAddEvent = async (eventData: any) => {
     try {
       await calendarService.createEvent({ ...eventData, tenantId, companyId })
-      fetchEvents()
+      await fetchEvents()
       alert("Evento guardado correctamente")
     } catch (error) {
       console.error('Error creating event:', error)
@@ -146,8 +148,8 @@ const AppCalendar = () => {
         id = parseInt(event.id)
         eventData = {
           title: event.title,
-          startTime: event.start?.toISOString().split('.')[0],
-          endTime: event.end?.toISOString().split('.')[0] || event.start?.toISOString().split('.')[0],
+          startTime: event.start ? format(event.start, "yyyy-MM-dd'T'HH:mm:ss") : '',
+          endTime: event.end ? format(event.end, "yyyy-MM-dd'T'HH:mm:ss") : (event.start ? format(event.start, "yyyy-MM-dd'T'HH:mm:ss") : ''),
           allDay: event.allDay,
           ...event.extendedProps
         }
@@ -159,7 +161,7 @@ const AppCalendar = () => {
       }
       
       await calendarService.updateEvent(id, eventData)
-      fetchEvents()
+      await fetchEvents()
       alert("Evento actualizado")
     } catch (error) {
       console.error('Error updating event:', error)
@@ -240,7 +242,7 @@ const AppCalendar = () => {
       <AddEventSidebar
         calendarStore={calendarStore}
         addEventSidebarOpen={addEventSidebarOpen}
-        handleAddEventSidebarToggle={handleAddEventSidebarToggle}
+        handleAddEventSidebarToggle={handleCloseSidebar}
         onAddEvent={handleAddEvent}
         onUpdateEvent={handleUpdateEvent}
         onDeleteEvent={handleDeleteEvent}

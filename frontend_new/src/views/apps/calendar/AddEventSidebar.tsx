@@ -264,8 +264,8 @@ const AddEventSidebar = (props: Props) => {
     const eventData = {
       title: data.title,
       calendarId: values.calendarId,
-      startTime: values.startDate.toISOString().split('.')[0],
-      endTime: values.endDate.toISOString().split('.')[0],
+      startTime: format(values.startDate, "yyyy-MM-dd'T'HH:mm:ss"),
+      endTime: format(values.endDate, "yyyy-MM-dd'T'HH:mm:ss"),
       allDay: values.allDay,
       description: values.description,
       eventType: 'NOTIFICATION',
@@ -274,10 +274,11 @@ const AddEventSidebar = (props: Props) => {
     }
 
     if (calendarStore.selectedEvent === null) {
-      onAddEvent(eventData).then(() => handleSidebarClose())
+      onAddEvent(eventData)
     } else {
-      onUpdateEvent({ ...eventData, id: calendarStore.selectedEvent.id }).then(() => handleSidebarClose())
+      onUpdateEvent({ ...eventData, id: calendarStore.selectedEvent.id })
     }
+    handleSidebarClose()
   }
 
   const handleDeleteButtonClick = () => {
