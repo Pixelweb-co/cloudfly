@@ -19,12 +19,31 @@ import java.util.List;
 public class JobGeneratorService {
 
     private final ScheduledJobRepository scheduledJobRepository;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     public Mono<Void> generateJobsForEvent(CalendarEventEntity event) {
         log.info("Generating jobs for event: {} (Type: {})", event.getId(), event.getEventType());
         List<ScheduledJobEntity> jobs = new ArrayList<>();
 
         switch (event.getEventType()) {
+            case NOTIFICATION:
+                // Check for custom reminder in payload
+                try {
+                    if (event.getPayload() != null) {
+                        java.util.Map<String, Object> config = objectMapper.readValue(event.getPayload(), java.util.Map.class);
+                        if (config.containsKey("remindBefore")) {
+                            Number amount = (Number) config.get("remindBefore");
+                            String unit = (String) config.getOrDefault("remindUnit", "MINUTES");
+                            LocalDateTime remindTime = calculateRemindTime(event.getStartTime(), amount.intValue(), unit);
+                            jobs.add(buildJob(event, remindTime));
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not parse payload for custom reminder: {}", e.getMessage());
+                }
+                jobs.add(buildJob(event, event.getStartTime()));
+                break;
+
             case APPOINTMENT:
                 // 1. Immediate confirmation
                 jobs.add(buildJob(event, LocalDateTime.now()));
@@ -74,6 +93,16 @@ public class JobGeneratorService {
         }
 
         return scheduledJobRepository.saveAll(validJobs).then();
+    }
+
+    private LocalDateTime calculateRemindTime(LocalDateTime start, int amount, String unit) {
+        switch (unit.toUpperCase()) {
+            case "MINUTES": return start.minusMinutes(amount);
+            case "HOURS": return start.minusHours(amount);
+            case "DAYS": return start.minusDays(amount);
+            case "WEEKS": return start.minusWeeks(amount);
+            default: return start.minusMinutes(amount);
+        }
     }
 
     private ScheduledJobEntity buildJob(CalendarEventEntity event, LocalDateTime executeAt) {
