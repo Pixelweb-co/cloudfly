@@ -14,4 +14,6 @@ public interface CalendarEventRepository extends ReactiveCrudRepository<Calendar
 
     @Query("SELECT * FROM calendar_events WHERE calendar_id = :calendarId")
     Flux<CalendarEventEntity> findByCalendarId(Long calendarId);
+    @Query("DELETE FROM calendar_events WHERE calendar_id = :calendarId")
+    Mono<Void> deleteByCalendarId(Long calendarId);
 }

@@ -21,4 +21,10 @@ public interface ScheduledJobRepository extends ReactiveCrudRepository<Scheduled
     @Modifying
     @Query("UPDATE scheduled_jobs SET status = :status, execute_at = :nextRun, retry_count = retry_count + 1, last_error = :error WHERE id = :id")
     Mono<Integer> markFailedWithRetry(Long id, String status, LocalDateTime nextRun, String error);
+    @Modifying
+    @Query("DELETE FROM scheduled_jobs WHERE event_id = :eventId")
+    Mono<Void> deleteByEventId(Long eventId);
+    @Modifying
+    @Query("DELETE FROM scheduled_jobs WHERE event_id IN (SELECT id FROM calendar_events WHERE calendar_id = :calendarId)")
+    Mono<Void> deleteByCalendarId(Long calendarId);
 }
