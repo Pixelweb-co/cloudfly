@@ -26,8 +26,14 @@ public class NotificationMessage {
         return to;
     }
 
-    public void setTo(String to) {
-        this.to = to;
+    @com.fasterxml.jackson.annotation.JsonSetter("to")
+    public void setTo(Object to) {
+        if (to instanceof java.util.List) {
+            java.util.List<?> list = (java.util.List<?>) to;
+            this.to = String.join(",", list.stream().map(Object::toString).toList());
+        } else {
+            this.to = to != null ? to.toString() : null;
+        }
     }
 
     public String getType() {
