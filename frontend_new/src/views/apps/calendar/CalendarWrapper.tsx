@@ -146,8 +146,8 @@ const AppCalendar = () => {
         id = parseInt(event.id)
         eventData = {
           title: event.title,
-          startTime: event.start ? format(event.start, "yyyy-MM-dd'T'HH:mm:ss") : null,
-          endTime: event.end ? format(event.end, "yyyy-MM-dd'T'HH:mm:ss") : (event.start ? format(event.start, "yyyy-MM-dd'T'HH:mm:ss") : null),
+          startTime: event.start?.toISOString(),
+          endTime: event.end?.toISOString() || event.start?.toISOString(),
           allDay: event.allDay,
           ...event.extendedProps
         }
