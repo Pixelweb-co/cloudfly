@@ -26,7 +26,9 @@ import type { Theme } from '@mui/material/styles'
 import { useForm, Controller } from 'react-hook-form'
 import PerfectScrollbar from 'react-perfect-scrollbar'
 import { useSession } from 'next-auth/react'
-import { format } from 'date-fns'
+import { format, addMinutes } from 'date-fns'
+import * as yup from 'yup'
+import { yupResolver } from '@hookform/resolvers/yup'
 
 // Type Imports
 import type { CalendarType } from '@/types/apps/calendarTypes'
@@ -80,6 +82,8 @@ type Props = {
   onAddEvent: (event: any) => void
   onUpdateEvent: (event: any) => void
   onDeleteEvent: (id: number) => void
+  tenantId: number
+  companyId: number
 }
 
 const AddEventSidebar = (props: Props) => {
@@ -90,11 +94,16 @@ const AddEventSidebar = (props: Props) => {
     handleAddEventSidebarToggle,
     onAddEvent,
     onUpdateEvent,
-    onDeleteEvent
+    onDeleteEvent,
+    tenantId,
+    companyId
   } = props
 
   // Session
   const { data: session } = useSession()
+  const userRole = (session?.user as any)?.role
+  
+  console.log('Current User Role:', userRole)
 
   // States
   const [values, setValues] = useState<DefaultStateType>(defaultState)
@@ -126,13 +135,63 @@ const AddEventSidebar = (props: Props) => {
   // Hooks
   const isBelowSmScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'))
 
+  const schema = yup.object().shape({
+    title: yup.string().required('El título es requerido'),
+    startDate: yup.date().required('La fecha de inicio es requerida'),
+    endDate: yup.date().required('La fecha de fin es requerida').min(
+      yup.ref('startDate'),
+      'La fecha de fin debe ser posterior a la de inicio'
+    ),
+    allDay: yup.boolean(),
+    description: yup.string(),
+    calendar: yup.string(),
+    remindBefore: yup.number().positive().required(),
+    remindUnit: yup.string().required(),
+    notifyVia: yup.string().oneOf(['email', 'whatsapp']).required()
+  })
+
   const {
     control,
     setValue,
     clearErrors,
     handleSubmit,
-    formState: { errors }
-  } = useForm({ defaultValues: { title: '' } })
+    formState: { errors },
+    watch,
+    reset
+  } = useForm({
+    mode: 'onBlur',
+    resolver: yupResolver(schema),
+    defaultValues: {
+      title: '',
+      startDate: new Date(),
+      endDate: addMinutes(new Date(), 30),
+      allDay: false,
+      description: '',
+      calendar: 'Business',
+      remindBefore: 15,
+      remindUnit: 'MINUTES',
+      notifyVia: 'email'
+    }
+  })
+
+  // Watch fields for dynamic behavior
+  const watchedStartDate = watch('startDate')
+  const watchedAllDay = watch('allDay')
+  const watchedNotifyVia = watch('notifyVia')
+  
+  useEffect(() => {
+    if (session?.user) {
+      console.log('Session User:', session.user)
+    }
+  }, [session])
+
+  const isAdminOrManager = (session?.user as any)?.role?.toLowerCase().includes('admin') || 
+                          (session?.user as any)?.role?.toLowerCase().includes('manager') ||
+                          (session?.user as any)?.roles?.some((r: any) => 
+                            r.name?.toLowerCase().includes('admin') || 
+                            r.name?.toLowerCase().includes('manager') || 
+                            r.role_name?.toLowerCase().includes('admin') || 
+                            r.role_name?.toLowerCase().includes('manager'))
 
   const fetchContacts = useCallback(async () => {
     setLoadingContacts(true)
@@ -185,6 +244,18 @@ const AddEventSidebar = (props: Props) => {
         startDate: event.start ? new Date(event.start) : new Date(),
         ...extra
       })
+      
+      const start = event.start ? new Date(event.start) : new Date()
+      const end = event.end ? new Date(event.end) : (event.start ? addMinutes(new Date(event.start), 30) : addMinutes(new Date(), 30))
+      
+      setValue('startDate', start)
+      setValue('endDate', end)
+      setValue('allDay', event.allDay || false)
+      setValue('description', event.extendedProps?.description || '')
+      setValue('calendar', event.extendedProps?.calendar || 'Business')
+      setValue('remindBefore', extra.remindBefore)
+      setValue('remindUnit', extra.remindUnit)
+      setValue('notifyVia', extra.notifyVia as any)
 
       // Try to resolve selected contacts from payload
       try {
@@ -200,9 +271,22 @@ const AddEventSidebar = (props: Props) => {
 
   const resetToEmptyValues = useCallback(() => {
     setValue('title', '')
+    setValue('startDate', new Date())
+    setValue('endDate', addMinutes(new Date(), 30))
     setValues(defaultState)
     setSelectedContacts([])
     setIsPastEvent(false)
+    reset({
+      title: '',
+      startDate: new Date(),
+      endDate: addMinutes(new Date(), 30),
+      allDay: false,
+      description: '',
+      calendar: 'Business',
+      remindBefore: 15,
+      remindUnit: 'MINUTES',
+      notifyVia: 'email'
+    })
   }, [setValue])
 
   const handleSidebarClose = () => {
@@ -230,13 +314,13 @@ const AddEventSidebar = (props: Props) => {
   }
 
   const validateContactData = (contact: Contact) => {
-    if (values.notifyVia === 'email' && !contact.email) {
+    if (watchedNotifyVia === 'email' && !contact.email) {
       setCurrentEditingContact(contact)
       setTempContactInfo({ email: '', phone: contact.phone || '' })
       setMissingInfoDialogOpen(true)
       return false
     }
-    if (values.notifyVia === 'whatsapp' && !contact.phone) {
+    if (watchedNotifyVia === 'whatsapp' && !contact.phone) {
       setCurrentEditingContact(contact)
       setTempContactInfo({ email: contact.email || '', phone: '' })
       setMissingInfoDialogOpen(true)
@@ -245,7 +329,7 @@ const AddEventSidebar = (props: Props) => {
     return true
   }
 
-  const onSubmit = (data: { title: string }) => {
+  const onSubmit = (data: any) => {
     // Construct payload
     const to = selectedContacts.map(c => c.email).filter(Boolean) as string[]
     const phones = selectedContacts.map(c => c.phone).filter(Boolean) as string[]
@@ -259,22 +343,24 @@ const AddEventSidebar = (props: Props) => {
       to,
       phones,
       subject: `Recordatorio: ${data.title}`,
-      body: values.description,
-      remindBefore: values.remindBefore,
-      remindUnit: values.remindUnit,
-      notifyVia: values.notifyVia
+      body: data.description,
+      remindBefore: data.remindBefore,
+      remindUnit: data.remindUnit,
+      notifyVia: data.notifyVia
     }
 
     const eventData = {
       title: data.title,
-      calendarId: values.calendarId,
-      startTime: format(values.startDate, "yyyy-MM-dd'T'HH:mm:ss"),
-      endTime: format(values.endDate, "yyyy-MM-dd'T'HH:mm:ss"),
-      allDay: values.allDay,
-      description: values.description,
+      calendarId: 1, // Default or selected
+      startTime: format(data.startDate, "yyyy-MM-dd'T'HH:mm:ss"),
+      endTime: format(data.endDate, "yyyy-MM-dd'T'HH:mm:ss"),
+      allDay: data.allDay,
+      description: data.description,
       eventType: 'NOTIFICATION',
       payload: JSON.stringify(payload),
-      status: 'SCHEDULED'
+      status: 'SCHEDULED',
+      tenantId,
+      companyId
     }
 
     if (calendarStore.selectedEvent === null) {
@@ -354,67 +440,102 @@ const AddEventSidebar = (props: Props) => {
                     value={value}
                     onChange={onChange}
                     disabled={isPastEvent}
-                    {...(errors.title && { error: true, helperText: 'Este campo es requerido' })}
+                    {...(errors.title && { error: true, helperText: errors.title.message })}
                   />
                 )}
               />
               
-              <CustomTextField
-                select
-                fullWidth
-                label='Calendario'
-                value={values.calendar}
-                onChange={e => setValues({ ...values, calendar: e.target.value })}
-                disabled={isPastEvent}
-              >
-                <MenuItem value='Business'>Business</MenuItem>
-                <MenuItem value='Personal'>Personal</MenuItem>
-                <MenuItem value='Family'>Family</MenuItem>
-                <MenuItem value='Holiday'>Holiday</MenuItem>
-                <MenuItem value='Equipos'>Equipos</MenuItem>
-              </CustomTextField>
-
-              <Box className='flex gap-4'>
-                <AppReactDatepicker
-                  id='event-start-date'
-                  selected={values.startDate}
-                  showTimeSelect={!values.allDay}
-                  timeIntervals={5}
-                  todayButton='Hoy'
-                  dateFormat={!values.allDay ? 'yyyy-MM-dd hh:mm aa' : 'yyyy-MM-dd'}
-                  customInput={<PickersComponent label='Fecha Inicio' disabled={isPastEvent} />}
-                  onChange={(date: Date | null) => date && setValues({ ...values, startDate: date })}
-                  disabled={isPastEvent}
-                />
-                
-                <AppReactDatepicker
-                  id='event-end-date'
-                  selected={values.endDate}
-                  minDate={values.startDate}
-                  showTimeSelect={!values.allDay}
-                  timeIntervals={5}
-                  todayButton='Hoy'
-                  dateFormat={!values.allDay ? 'yyyy-MM-dd hh:mm aa' : 'yyyy-MM-dd'}
-                  customInput={<PickersComponent label='Fecha Fin' disabled={isPastEvent} />}
-                  onChange={(date: Date | null) => date && setValues({ ...values, endDate: date })}
-                  disabled={isPastEvent}
-                />
-              </Box>
-              
-              <FormControlLabel
-                label='Todo el día'
-                control={<Switch checked={values.allDay} onChange={e => setValues({ ...values, allDay: e.target.checked })} disabled={isPastEvent} />}
+              <Controller
+                name='calendar'
+                control={control}
+                render={({ field }) => (
+                  <CustomTextField
+                    select
+                    fullWidth
+                    label='Calendario'
+                    {...field}
+                    disabled={isPastEvent}
+                  >
+                    <MenuItem value='Business'>Business</MenuItem>
+                    <MenuItem value='Personal'>Personal</MenuItem>
+                    <MenuItem value='Family'>Family</MenuItem>
+                    <MenuItem value='Holiday'>Holiday</MenuItem>
+                    <MenuItem value='Equipos'>Equipos</MenuItem>
+                  </CustomTextField>
+                )}
               />
 
-              <CustomTextField
-                rows={3}
-                multiline
-                fullWidth
-                label='Descripción'
-                placeholder='Detalles del recordatorio...'
-                value={values.description}
-                onChange={e => setValues({ ...values, description: e.target.value })}
-                disabled={isPastEvent}
+              <Box className='flex gap-4'>
+                <Controller
+                  name='startDate'
+                  control={control}
+                  render={({ field: { value, onChange } }) => (
+                    <AppReactDatepicker
+                      id='event-start-date'
+                      selected={value}
+                      showTimeSelect={!watchedAllDay}
+                      timeIntervals={5}
+                      todayButton='Hoy'
+                      dateFormat={!watchedAllDay ? 'yyyy-MM-dd hh:mm aa' : 'yyyy-MM-dd'}
+                      customInput={<PickersComponent label='Fecha Inicio' disabled={isPastEvent} error={!!errors.startDate} />}
+                      onChange={(date) => {
+                        onChange(date)
+                        if (date) {
+                          const newEndDate = addMinutes(new Date(date), 30)
+                          setValue('endDate', newEndDate)
+                        }
+                      }}
+                      disabled={isPastEvent}
+                    />
+                  )}
+                />
+                
+                <Controller
+                  name='endDate'
+                  control={control}
+                  render={({ field: { value, onChange } }) => (
+                    <AppReactDatepicker
+                      id='event-end-date'
+                      selected={value}
+                      minDate={watchedStartDate}
+                      showTimeSelect={!watchedAllDay}
+                      timeIntervals={5}
+                      todayButton='Hoy'
+                      dateFormat={!watchedAllDay ? 'yyyy-MM-dd hh:mm aa' : 'yyyy-MM-dd'}
+                      customInput={<PickersComponent label='Fecha Fin' disabled={isPastEvent} error={!!errors.endDate} />}
+                      onChange={onChange}
+                      disabled={isPastEvent}
+                    />
+                  )}
+                />
+              </Box>
+              {errors.endDate && <Typography color='error' variant='caption'>{errors.endDate.message}</Typography>}
+              
+              <Controller
+                name='allDay'
+                control={control}
+                render={({ field: { value, onChange } }) => (
+                  <FormControlLabel
+                    label='Todo el día'
+                    control={<Switch checked={value} onChange={onChange} disabled={isPastEvent} />}
+                  />
+                )}
+              />
+
+              <Controller
+                name='description'
+                control={control}
+                render={({ field }) => (
+                  <CustomTextField
+                    rows={3}
+                    multiline
+                    fullWidth
+                    label='Descripción'
+                    placeholder='Detalles del recordatorio...'
+                    {...field}
+                    disabled={isPastEvent}
+                  />
+                )}
               />
 
               <Divider />
@@ -448,46 +569,85 @@ const AddEventSidebar = (props: Props) => {
               />
 
               <Box className='flex items-center gap-4'>
-                <CustomTextField
-                  fullWidth
-                  type='number'
-                  label='Avisar antes'
-                  value={values.remindBefore}
-                  onChange={e => setValues({ ...values, remindBefore: parseInt(e.target.value) })}
-                  disabled={isPastEvent}
+                <Controller
+                  name='remindBefore'
+                  control={control}
+                  render={({ field }) => (
+                    <CustomTextField
+                      fullWidth
+                      type='number'
+                      label='Avisar antes'
+                      {...field}
+                      disabled={isPastEvent}
+                    />
+                  )}
                 />
-                <CustomTextField
-                  select
-                  fullWidth
-                  label='Unidad'
-                  value={values.remindUnit}
-                  onChange={e => setValues({ ...values, remindUnit: e.target.value })}
-                  disabled={isPastEvent}
-                >
-                  <MenuItem value='MINUTES'>Minutos</MenuItem>
-                  <MenuItem value='HOURS'>Horas</MenuItem>
-                  <MenuItem value='DAYS'>Días</MenuItem>
-                  <MenuItem value='WEEKS'>Semanas</MenuItem>
-                </CustomTextField>
+                <Controller
+                  name='remindUnit'
+                  control={control}
+                  render={({ field }) => (
+                    <CustomTextField
+                      select
+                      fullWidth
+                      label='Unidad'
+                      {...field}
+                      disabled={isPastEvent}
+                    >
+                      <MenuItem value='MINUTES'>Minutos</MenuItem>
+                      <MenuItem value='HOURS'>Horas</MenuItem>
+                      <MenuItem value='DAYS'>Días</MenuItem>
+                      <MenuItem value='WEEKS'>Semanas</MenuItem>
+                    </CustomTextField>
+                  )}
+                />
               </Box>
 
-              <CustomTextField
-                select
-                fullWidth
-                label='Enviar por'
-                value={values.notifyVia}
-                onChange={e => setValues({ ...values, notifyVia: e.target.value as any })}
-                disabled={isPastEvent}
-              >
-                <MenuItem value='email'>Email</MenuItem>
-                <MenuItem value='whatsapp'>WhatsApp</MenuItem>
-              </CustomTextField>
+              <Controller
+                name='notifyVia'
+                control={control}
+                render={({ field }) => (
+                  <CustomTextField
+                    select
+                    fullWidth
+                    label='Enviar por'
+                    {...field}
+                    disabled={isPastEvent}
+                  >
+                    <MenuItem value='email'>Email</MenuItem>
+                    <MenuItem value='whatsapp'>WhatsApp</MenuItem>
+                  </CustomTextField>
+                )}
+              />
 
               {isPastEvent && (
                 <Typography color='error' variant='body2' className='mbe-2'>
                   Este evento ya ha pasado y no puede ser editado.
                 </Typography>
               )}
+
+              <Box className='flex gap-4 mbs-4'>
+                {isAdminOrManager && (
+                  <>
+                    <CustomTextField
+                      fullWidth
+                      label='Tenant ID'
+                      value={tenantId}
+                      disabled
+                      variant='filled'
+                      size='small'
+                    />
+                    <CustomTextField
+                      fullWidth
+                      label='Company ID'
+                      value={companyId}
+                      disabled
+                      variant='filled'
+                      size='small'
+                    />
+                  </>
+                )}
+              </Box>
+              
               <div className='flex gap-4 mbs-4'>
                 {!isPastEvent && (
                   <Button type='submit' variant='contained'>
@@ -507,10 +667,10 @@ const AddEventSidebar = (props: Props) => {
         <DialogTitle>Información Faltante</DialogTitle>
         <DialogContent>
           <Typography className='mbe-4'>
-            El contacto <strong>{currentEditingContact?.name}</strong> no tiene {values.notifyVia === 'email' ? 'correo electrónico' : 'teléfono'} registrado.
+            El contacto <strong>{currentEditingContact?.name}</strong> no tiene {watchedNotifyVia === 'email' ? 'correo electrónico' : 'teléfono'} registrado.
           </Typography>
           <Box className='flex flex-col gap-4'>
-            {values.notifyVia === 'email' && (
+            {watchedNotifyVia === 'email' && (
               <CustomTextField
                 fullWidth
                 label='Email'
@@ -518,7 +678,7 @@ const AddEventSidebar = (props: Props) => {
                 onChange={e => setTempContactInfo({ ...tempContactInfo, email: e.target.value })}
               />
             )}
-            {values.notifyVia === 'whatsapp' && (
+            {watchedNotifyVia === 'whatsapp' && (
               <CustomTextField
                 fullWidth
                 label='Teléfono'

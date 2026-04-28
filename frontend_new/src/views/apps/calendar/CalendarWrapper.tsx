@@ -160,7 +160,7 @@ const AppCalendar = () => {
         delete eventData.id // Remove ID from payload body
       }
       
-      await calendarService.updateEvent(id, eventData)
+      await calendarService.updateEvent(id, { ...eventData, tenantId, companyId })
       await fetchEvents()
       alert("Evento actualizado")
     } catch (error) {
@@ -246,6 +246,8 @@ const AppCalendar = () => {
         onAddEvent={handleAddEvent}
         onUpdateEvent={handleUpdateEvent}
         onDeleteEvent={handleDeleteEvent}
+        tenantId={tenantId}
+        companyId={companyId}
       />
     </div>
   )
