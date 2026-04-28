@@ -28,42 +28,75 @@ export default function ChatInterface({ contact, isNew }: Props) {
   )
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Audio Recording States
+  // Audio Recording States & Refs
   const [isRecording, setIsRecording] = useState(false)
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([])
+  const [recordingTime, setRecordingTime] = useState(0)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const recorder = new MediaRecorder(stream)
-      const chunks: Blob[] = []
+      
+      audioChunksRef.current = []
+      mediaRecorderRef.current = recorder
 
       recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data)
+        if (e.data.size > 0) audioChunksRef.current.push(e.data)
       }
 
       recorder.onstop = async () => {
-        const audioBlob = new Blob(chunks, { type: 'audio/mpeg' })
-        await handleSendAudio(audioBlob)
+        // Solo enviamos si no fue cancelado (indicado por isRecording siendo falso antes de llamar a stop)
+        // Pero usamos una variable local para seguridad
         stream.getTracks().forEach(track => track.stop())
       }
 
-      setMediaRecorder(recorder)
-      setAudioChunks(chunks)
       recorder.start()
       setIsRecording(true)
+      setRecordingTime(0)
+      
+      // Iniciar cronómetro
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1)
+      }, 1000)
+
     } catch (err) {
       console.error('Error accessing microphone:', err)
-      alert('No se pudo acceder al micrófono')
+      alert('No se pudo acceder al micrófono. Asegúrate de estar en una conexión segura (HTTPS).')
     }
   }
 
-  const stopRecording = () => {
-    if (mediaRecorder && isRecording) {
-      mediaRecorder.stop()
+  const stopRecording = (shouldSend: boolean = true) => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+
+    if (mediaRecorderRef.current && isRecording) {
+      const recorder = mediaRecorderRef.current
+      
+      recorder.onstop = async () => {
+        if (shouldSend && audioChunksRef.current.length > 0) {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mpeg' })
+          await handleSendAudio(audioBlob)
+        }
+        // Cleanup stream
+        if (recorder.stream) {
+          recorder.stream.getTracks().forEach(track => track.stop())
+        }
+      }
+
+      recorder.stop()
       setIsRecording(false)
     }
+  }
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
   const handleSendAudio = async (blob: Blob) => {
@@ -71,7 +104,6 @@ export default function ChatInterface({ contact, isNew }: Props) {
     
     setSending(true)
     try {
-      // Convert blob to base64
       const reader = new FileReader()
       reader.readAsDataURL(blob)
       reader.onloadend = async () => {
@@ -86,7 +118,10 @@ export default function ChatInterface({ contact, isNew }: Props) {
           platform: activeTab
         })
 
-        setMessages(prev => [...prev, sentMsg])
+        setMessages(prev => {
+          if (prev.find(m => m.id === sentMsg.id)) return prev
+          return [...prev, sentMsg]
+        })
       }
     } catch (error) {
       console.error('Error sending audio:', error)
@@ -449,42 +484,51 @@ export default function ChatInterface({ contact, isNew }: Props) {
             px: 3
           }}
         >
+          {isRecording ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flex: 1, ml: 2 }}>
+              <Typography variant="body2" color="error" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box component="span" sx={{ 
+                  width: 10, height: 10, borderRadius: '50%', bgcolor: 'error.main',
+                  animation: 'pulse 1s infinite',
+                  '@keyframes pulse': { '0%': { opacity: 1 }, '50%': { opacity: 0.3 }, '100%': { opacity: 1 } }
+                }} />
+                GRABANDO {formatTime(recordingTime)}
+              </Typography>
+              <Box sx={{ flex: 1, height: 4, bgcolor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
+                <Box sx={{ 
+                  width: '100%', height: '100%', bgcolor: 'error.main', opacity: 0.2,
+                  animation: 'wave 2s infinite linear',
+                  '@keyframes wave': { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(100%)' } }
+                }} />
+              </Box>
+              <IconButton color="error" size="small" onClick={() => stopRecording(false)}>
+                <Icon icon="tabler:trash" />
+              </IconButton>
+            </Box>
+          ) : (
+            <InputBase
+              placeholder="Escribe un mensaje..."
+              fullWidth
+              multiline
+              maxRows={4}
+              value={newMessage}
+              disabled={sending}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSend()
+                }
+              }}
+              sx={{ ml: 1, flex: 1 }}
+            />
+          )}
+
           <IconButton 
-            color={isRecording ? 'error' : 'secondary'} 
+            color="primary"
             size="small"
-            onClick={isRecording ? stopRecording : startRecording}
-            sx={isRecording ? {
-              animation: 'pulse 1.5s infinite',
-              '@keyframes pulse': {
-                '0%': { transform: 'scale(1)', opacity: 1 },
-                '50%': { transform: 'scale(1.2)', opacity: 0.7 },
-                '100%': { transform: 'scale(1)', opacity: 1 }
-              }
-            } : {}}
-          >
-            <Icon icon={isRecording ? 'tabler:player-stop' : 'tabler:microphone'} />
-          </IconButton>
-
-          <InputBase
-            placeholder={isRecording ? 'Grabando audio...' : 'Escribe un mensaje...'}
-            fullWidth
-            multiline
-            maxRows={4}
-            value={newMessage}
-            disabled={sending || isRecording}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                handleSend()
-              }
-            }}
-            sx={{ ml: 1, flex: 1 }}
-          />
-
-          <IconButton color="primary"
-            onClick={handleSend}
-            disabled={sending || !newMessage.trim()}
+            onClick={isRecording ? () => stopRecording(true) : (newMessage.trim() ? handleSend : startRecording)}
+            disabled={sending}
             sx={{
               bgcolor: 'primary.main',
               color: 'white',
@@ -492,7 +536,7 @@ export default function ChatInterface({ contact, isNew }: Props) {
               '&.Mui-disabled': { bgcolor: 'action.disabledBackground', color: 'action.disabled' }
             }}
           >
-            {sending ? <CircularProgress size={20} color="inherit" /> : <Icon icon="tabler:send" />}
+            {sending ? <CircularProgress size={20} color="inherit" /> : <Icon icon={isRecording ? 'tabler:send' : (newMessage.trim() ? 'tabler:send' : 'tabler:microphone')} />}
           </IconButton>
         </Box>
       </Box>
