@@ -183,6 +183,14 @@ const AppCalendar = () => {
   }
 
   const handleDateClick = (info: any) => {
+    const clickedDate = new Date(info.date)
+    const now = new Date()
+    
+    if (clickedDate < now) {
+      alert("No se pueden programar eventos en el pasado")
+      return
+    }
+
     setCalendarStore(prev => ({ ...prev, selectedEvent: null }))
     setAddEventSidebarOpen(true)
   }

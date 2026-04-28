@@ -21,33 +21,49 @@ export interface CalendarEvent {
   recurrence?: string
 }
 
+const getAuthHeader = () => {
+  const token = typeof window !== 'undefined' ? (localStorage.getItem('AuthToken') || localStorage.getItem('jwt')) : null
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 const calendarService = {
   getEvents: async (tenantId: number, companyId: number, startDate?: string, endDate?: string) => {
     const params: any = { tenantId, companyId }
     if (startDate) params.startDate = startDate
     if (endDate) params.endDate = endDate
 
-    const response = await axios.get<CalendarEvent[]>(`${CALENDAR_API_URL}/api/events`, { params })
+    const response = await axios.get<CalendarEvent[]>(`${CALENDAR_API_URL}/api/events`, { 
+      params,
+      headers: getAuthHeader()
+    })
     return response.data
   },
 
   getEventById: async (id: number) => {
-    const response = await axios.get<CalendarEvent>(`${CALENDAR_API_URL}/api/events/${id}`)
+    const response = await axios.get<CalendarEvent>(`${CALENDAR_API_URL}/api/events/${id}`, {
+      headers: getAuthHeader()
+    })
     return response.data
   },
 
   createEvent: async (event: CalendarEvent) => {
-    const response = await axios.post<CalendarEvent>(`${CALENDAR_API_URL}/api/events`, event)
+    const response = await axios.post<CalendarEvent>(`${CALENDAR_API_URL}/api/events`, event, {
+      headers: getAuthHeader()
+    })
     return response.data
   },
 
   updateEvent: async (id: number, event: Partial<CalendarEvent>) => {
-    const response = await axios.put<CalendarEvent>(`${CALENDAR_API_URL}/api/events/${id}`, event)
+    const response = await axios.put<CalendarEvent>(`${CALENDAR_API_URL}/api/events/${id}`, event, {
+      headers: getAuthHeader()
+    })
     return response.data
   },
 
   deleteEvent: async (id: number) => {
-    await axios.delete(`${CALENDAR_API_URL}/api/events/${id}`)
+    await axios.delete(`${CALENDAR_API_URL}/api/events/${id}`, {
+      headers: getAuthHeader()
+    })
   }
 }
 

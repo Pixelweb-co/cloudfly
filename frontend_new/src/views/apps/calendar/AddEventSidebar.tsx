@@ -274,12 +274,10 @@ const AddEventSidebar = (props: Props) => {
     }
 
     if (calendarStore.selectedEvent === null) {
-      onAddEvent(eventData)
+      onAddEvent(eventData).then(() => handleSidebarClose())
     } else {
-      onUpdateEvent({ ...eventData, id: calendarStore.selectedEvent.id })
+      onUpdateEvent({ ...eventData, id: calendarStore.selectedEvent.id }).then(() => handleSidebarClose())
     }
-
-    handleSidebarClose()
   }
 
   const handleDeleteButtonClick = () => {
