@@ -8,7 +8,7 @@ Confluent Kafka producer with:
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from confluent_kafka import Producer, KafkaException
 
