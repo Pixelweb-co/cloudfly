@@ -5,6 +5,7 @@ import java.util.Map;
 /**
  * DTO para mensajes de notificación con soporte para adjuntos
  */
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
 public class NotificationMessage {
     private String to;
     private String subject;
