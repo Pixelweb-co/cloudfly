@@ -28,6 +28,7 @@ public class JobGeneratorService {
         switch (event.getEventType()) {
             case NOTIFICATION:
                 // Check for custom reminder in payload
+                boolean reminderAdded = false;
                 try {
                     if (event.getPayload() != null) {
                         java.util.Map<String, Object> config = objectMapper.readValue(event.getPayload(), java.util.Map.class);
@@ -36,12 +37,17 @@ public class JobGeneratorService {
                             String unit = (String) config.getOrDefault("remindUnit", "MINUTES");
                             LocalDateTime remindTime = calculateRemindTime(event.getStartTime(), amount.intValue(), unit);
                             jobs.add(buildJob(event, remindTime));
+                            reminderAdded = true;
                         }
                     }
                 } catch (Exception e) {
                     log.warn("Could not parse payload for custom reminder: {}", e.getMessage());
                 }
-                jobs.add(buildJob(event, event.getStartTime()));
+                
+                // Only add the start time execution if no reminder was configured
+                if (!reminderAdded) {
+                    jobs.add(buildJob(event, event.getStartTime()));
+                }
                 break;
 
             case APPOINTMENT:
