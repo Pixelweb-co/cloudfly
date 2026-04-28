@@ -241,6 +241,8 @@ class AIAgentApp:
                     )
                     logger.info("🏁 [AI_FINISHED] Audio message complete", extra=log_ctx)
                     return # Exit after sending audio
+                else:
+                    logger.warning("⚠️ [AI_TTS_FAIL] Audio generation failed, falling back to text response", extra=log_ctx)
 
             # Fallback to Text (Fragmented)
             fragments = self.ai.split_text_for_whatsapp(response_text)
