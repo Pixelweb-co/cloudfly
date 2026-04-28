@@ -8,9 +8,11 @@ import java.util.Map;
 @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
 public class NotificationMessage {
     private String to;
+    private String phones;
     private String subject;
     private String body;
     private String type;
+    private String notifyVia;
     private String username;
     private Long tenantId;
     private Long companyId;
@@ -37,9 +39,30 @@ public class NotificationMessage {
         }
     }
 
-    @com.fasterxml.jackson.annotation.JsonAlias({"notifyVia", "notify_via"})
+    public String getPhones() {
+        return phones;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonSetter("phones")
+    public void setPhones(Object phones) {
+        if (phones instanceof java.util.List) {
+            java.util.List<?> list = (java.util.List<?>) phones;
+            this.phones = String.join(",", list.stream().map(Object::toString).toList());
+        } else {
+            this.phones = phones != null ? phones.toString() : null;
+        }
+    }
+
+    public String getNotifyVia() {
+        return notifyVia;
+    }
+
+    public void setNotifyVia(String notifyVia) {
+        this.notifyVia = notifyVia;
+    }
+
     public String getType() {
-        if (type == null || type.equalsIgnoreCase("email") || type.equalsIgnoreCase("whatsapp")) {
+        if (type == null && ("email".equalsIgnoreCase(notifyVia) || "whatsapp".equalsIgnoreCase(notifyVia))) {
             return "notification";
         }
         return type;

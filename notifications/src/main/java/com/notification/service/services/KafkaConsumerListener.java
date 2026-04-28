@@ -40,14 +40,14 @@ public class KafkaConsumerListener {
     @Value("${evolution.api.instance:gm2}")
     private String instanceName;
 
-    @KafkaListener(topics = { "email-notifications" }, groupId = "email-service")
+    @KafkaListener(topics = { "email-notifications", "whatsapp-notifications" }, groupId = "email-service")
     public void listener(String message) {
         LOGGER.info("Received email message: " + message);
 
         try {
             NotificationMessage notification = objectMapper.readValue(message, NotificationMessage.class);
             
-            if ("whatsapp".equalsIgnoreCase(notification.getType())) {
+            if ("whatsapp".equalsIgnoreCase(notification.getNotifyVia()) || "whatsapp".equalsIgnoreCase(notification.getType())) {
                 sendWhatsAppNotification(notification);
             } else {
                 emailService.sendEmail(notification);
@@ -58,9 +58,11 @@ public class KafkaConsumerListener {
     }
 
     private void sendWhatsAppNotification(NotificationMessage notification) {
-        String recipientsStr = notification.getTo();
-        if (recipientsStr != null && recipientsStr.contains(",")) {
-            String[] recipients = recipientsStr.split(",");
+        String phonesStr = notification.getPhones();
+        String targetStr = (phonesStr != null && !phonesStr.isEmpty()) ? phonesStr : notification.getTo();
+        
+        if (targetStr != null && targetStr.contains(",")) {
+            String[] recipients = targetStr.split(",");
             for (String recipient : recipients) {
                 String trimmedRecipient = recipient.trim();
                 if (!trimmedRecipient.isEmpty()) {
@@ -68,7 +70,7 @@ public class KafkaConsumerListener {
                 }
             }
         } else {
-            sendSingleWhatsAppNotification(notification, recipientsStr != null ? recipientsStr.trim() : null);
+            sendSingleWhatsAppNotification(notification, targetStr != null ? targetStr.trim() : null);
         }
     }
 
