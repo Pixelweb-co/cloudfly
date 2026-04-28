@@ -58,10 +58,30 @@ public class KafkaConsumerListener {
     }
 
     private void sendWhatsAppNotification(NotificationMessage notification) {
+        String recipientsStr = notification.getTo();
+        if (recipientsStr != null && recipientsStr.contains(",")) {
+            String[] recipients = recipientsStr.split(",");
+            for (String recipient : recipients) {
+                String trimmedRecipient = recipient.trim();
+                if (!trimmedRecipient.isEmpty()) {
+                    sendSingleWhatsAppNotification(notification, trimmedRecipient);
+                }
+            }
+        } else {
+            sendSingleWhatsAppNotification(notification, recipientsStr != null ? recipientsStr.trim() : null);
+        }
+    }
+
+    private void sendSingleWhatsAppNotification(NotificationMessage notification, String to) {
+        if (to == null || to.isEmpty()) {
+            LOGGER.warn("Skipping WhatsApp send: recipient is null or empty");
+            return;
+        }
+
         String instance = findInstanceFor(notification.getTenantId(), notification.getCompanyId());
-        LOGGER.info("Sending WhatsApp notification using instance: " + instance);
+        LOGGER.info("Sending WhatsApp notification to {} using instance: {}", to, instance);
         
-        String formattedPhone = formatPhoneNumber(notification.getTo());
+        String formattedPhone = formatPhoneNumber(to);
         boolean sent = sendWhatsAppTextWithInstance(formattedPhone, notification.getBody(), instance, evolutionApiKey);
         
         if (sent) {

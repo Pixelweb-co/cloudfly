@@ -28,6 +28,26 @@ public class EmailService {
      * Envía un email con soporte para adjuntos PDF
      */
     public void sendEmail(NotificationMessage notification) {
+        String recipientsStr = notification.getTo();
+        if (recipientsStr != null && recipientsStr.contains(",")) {
+            String[] recipients = recipientsStr.split(",");
+            for (String recipient : recipients) {
+                String trimmedRecipient = recipient.trim();
+                if (!trimmedRecipient.isEmpty()) {
+                    sendSingleEmail(notification, trimmedRecipient);
+                }
+            }
+        } else {
+            sendSingleEmail(notification, recipientsStr != null ? recipientsStr.trim() : null);
+        }
+    }
+
+    private void sendSingleEmail(NotificationMessage notification, String to) {
+        if (to == null || to.isEmpty()) {
+            System.err.println("Skipping email send: recipient is null or empty");
+            return;
+        }
+
         try {
             // Determinar el tipo de correo y cargar la plantilla correspondiente
             String body = loadTemplate(notification);
@@ -38,7 +58,7 @@ public class EmailService {
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
             helper.setFrom("gestorweb@cloudfly.com.co");
-            helper.setTo(notification.getTo());
+            helper.setTo(to);
             helper.setSubject(notification.getSubject());
             helper.setText(body, true); // El segundo parámetro true indica que el cuerpo es HTML
 
@@ -53,10 +73,10 @@ public class EmailService {
             }
 
             mailSender.send(mimeMessage);
-            System.out.println("Email sent successfully to: " + notification.getTo());
+            System.out.println("Email sent successfully to: " + to);
 
         } catch (Exception e) {
-            System.err.println("Error while processing or sending email: " + e.getMessage());
+            System.err.println("Error while processing or sending email to " + to + ": " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -93,7 +113,16 @@ public class EmailService {
         }
 
         // Cargar la plantilla dependiendo del tipo
-        Template template = freemarkerConfig.getTemplate(notification.getType() + ".ftl");
+        Template template;
+        try {
+            template = freemarkerConfig.getTemplate(notification.getType() + ".ftl");
+        } catch (Exception e) {
+            System.err.println("Template not found for " + notification.getType() + ", falling back to notification.ftl");
+            template = freemarkerConfig.getTemplate("notification.ftl");
+            // Asegurarse de que el modelo tenga los datos necesarios para la plantilla genérica
+            if (!model.containsKey("body")) model.put("body", notification.getBody());
+            if (!model.containsKey("subject")) model.put("subject", notification.getSubject());
+        }
 
         // Procesar la plantilla y devolver el cuerpo HTML
         return FreeMarkerTemplateUtils.processTemplateIntoString(template, model);
