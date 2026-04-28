@@ -9,6 +9,7 @@ export interface ChatMessage {
   body: string;
   direction: 'INBOUND' | 'OUTBOUND';
   messageType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT';
+  mediaType?: string; // Support for explicit mediaType
   mediaUrl?: string;
   content?: string; // Support for legacy field from socket service
   sentAt: string;
@@ -30,6 +31,7 @@ export const chatService = {
     return response.data.map((msg: any) => ({
       ...msg,
       body: msg.body || msg.content,
+      mediaType: msg.mediaType || msg.messageType,
       sentAt: msg.sentAt || msg.createdAt || new Date().toISOString()
     }));
   },
@@ -42,6 +44,7 @@ export const chatService = {
     contactId: number; 
     body: string;
     messageType?: string;
+    mediaType?: string;
     mediaUrl?: string;
     platform?: string;
   }): Promise<ChatMessage> => {

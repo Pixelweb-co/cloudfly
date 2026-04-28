@@ -28,6 +28,73 @@ export default function ChatInterface({ contact, isNew }: Props) {
   )
   const scrollRef = useRef<HTMLDivElement>(null)
 
+  // Audio Recording States
+  const [isRecording, setIsRecording] = useState(false)
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([])
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      const chunks: Blob[] = []
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data)
+      }
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/mpeg' })
+        await handleSendAudio(audioBlob)
+        stream.getTracks().forEach(track => track.stop())
+      }
+
+      setMediaRecorder(recorder)
+      setAudioChunks(chunks)
+      recorder.start()
+      setIsRecording(true)
+    } catch (err) {
+      console.error('Error accessing microphone:', err)
+      alert('No se pudo acceder al micrófono')
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop()
+      setIsRecording(false)
+    }
+  }
+
+  const handleSendAudio = async (blob: Blob) => {
+    if (!contact?.phone) return
+    
+    setSending(true)
+    try {
+      // Convert blob to base64
+      const reader = new FileReader()
+      reader.readAsDataURL(blob)
+      reader.onloadend = async () => {
+        const base64Audio = reader.result as string
+        
+        const sentMsg = await chatService.sendMessage({
+          conversationId: contact.phone,
+          contactId: Number(contact.id),
+          body: '[Nota de Voz]',
+          mediaType: 'AUDIO',
+          mediaUrl: base64Audio,
+          platform: activeTab
+        })
+
+        setMessages(prev => [...prev, sentMsg])
+      }
+    } catch (error) {
+      console.error('Error sending audio:', error)
+    } finally {
+      setSending(false)
+    }
+  }
+
   // Sync chatbot state when contact changes
   useEffect(() => {
     if (contact?.chatbotEnabled !== undefined) {
@@ -58,7 +125,9 @@ export default function ChatInterface({ contact, isNew }: Props) {
       ...msg,
       body: msg.body || msg.content || (msg.message?.content),
       sentAt: msg.sentAt || msg.createdAt || new Date().toISOString(),
-      direction: msg.direction || (msg.message?.direction)
+      direction: msg.direction || (msg.message?.direction),
+      mediaType: msg.mediaType || (msg.message?.mediaType),
+      mediaUrl: msg.mediaUrl || (msg.message?.mediaUrl)
     };
     setMessages((prev) => {
       // Evitar duplicados si el mensaje ya existe (ej. mensaje enviado por nosotros)
@@ -144,13 +213,59 @@ export default function ChatInterface({ contact, isNew }: Props) {
     return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
   }
 
-  const renderMessageBody = (text: string = '') => {
-    const mediaRegex = /^\[(https?:\/\/[^\]]+)\]\s*\n/;
-    const match = text.match(mediaRegex);
+  const renderMessageBody = (msg: any) => {
+    const text = msg.body || ''
+    const mediaUrl = msg.mediaUrl
+    const mediaType = msg.mediaType || msg.messageType
+
+    // Explicit Media handling
+    if (mediaType === 'audio' || mediaType === 'AUDIO') {
+      return (
+        <Box sx={{ minWidth: 220, py: 1 }}>
+          <audio 
+            controls 
+            src={mediaUrl} 
+            style={{ width: '100%', height: '40px' }} 
+            controlsList="nodownload"
+          />
+        </Box>
+      )
+    }
+
+    if (mediaType === 'image' || mediaType === 'IMAGE') {
+      return (
+        <Box>
+          <Box
+            component="img"
+            src={mediaUrl}
+            alt="Media"
+            sx={{ 
+              maxWidth: '100%', 
+              maxHeight: 350, 
+              borderRadius: 1, 
+              mb: text && text !== '[Image Message]' ? 1 : 0, 
+              objectFit: 'contain', 
+              display: 'block',
+              cursor: 'pointer'
+            }}
+            onClick={() => window.open(mediaUrl, '_blank')}
+          />
+          {text && text !== '[Image Message]' && (
+            <Typography variant="body2" color="inherit" sx={{ whiteSpace: 'pre-wrap' }}>
+              {text}
+            </Typography>
+          )}
+        </Box>
+      )
+    }
+
+    // Legacy Markdown/Regex fallback for [URL] format
+    const mediaRegex = /^\[(https?:\/\/[^\]]+)\]\s*\n/
+    const match = text.match(mediaRegex)
 
     if (match) {
-      const url = match[1];
-      const remainingText = text.replace(mediaRegex, '').trim();
+      const url = match[1]
+      const remainingText = text.replace(mediaRegex, '').trim()
       return (
         <Box>
           <Box
@@ -163,14 +278,14 @@ export default function ChatInterface({ contact, isNew }: Props) {
             {remainingText}
           </Typography>
         </Box>
-      );
+      )
     }
 
     return (
       <Typography variant="body2" color="inherit" sx={{ whiteSpace: 'pre-wrap' }}>
         {text}
       </Typography>
-    );
+    )
   }
 
   return (
@@ -300,7 +415,7 @@ export default function ChatInterface({ contact, isNew }: Props) {
                       boxShadow: 1
                     }}
                   >
-                    {renderMessageBody(msg.body)}
+                    {renderMessageBody(msg)}
                   </Box>
                   <Box display="flex" justifyContent={isOutbound ? 'flex-end' : 'flex-start'} alignItems="center" gap={1} mt={1}>
                     <Typography variant="caption" sx={{ color: 'text.disabled' }}>
@@ -334,17 +449,29 @@ export default function ChatInterface({ contact, isNew }: Props) {
             px: 3
           }}
         >
-          <IconButton color="secondary" size="small">
-            <Icon icon="tabler:paperclip" />
+          <IconButton 
+            color={isRecording ? 'error' : 'secondary'} 
+            size="small"
+            onClick={isRecording ? stopRecording : startRecording}
+            sx={isRecording ? {
+              animation: 'pulse 1.5s infinite',
+              '@keyframes pulse': {
+                '0%': { transform: 'scale(1)', opacity: 1 },
+                '50%': { transform: 'scale(1.2)', opacity: 0.7 },
+                '100%': { transform: 'scale(1)', opacity: 1 }
+              }
+            } : {}}
+          >
+            <Icon icon={isRecording ? 'tabler:player-stop' : 'tabler:microphone'} />
           </IconButton>
 
           <InputBase
-            placeholder="Escribe un mensaje..."
+            placeholder={isRecording ? 'Grabando audio...' : 'Escribe un mensaje...'}
             fullWidth
             multiline
             maxRows={4}
             value={newMessage}
-            disabled={sending}
+            disabled={sending || isRecording}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {

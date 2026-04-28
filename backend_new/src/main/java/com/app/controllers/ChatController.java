@@ -49,6 +49,8 @@ public class ChatController {
             @RequestBody Map<String, Object> payload) {
         
         final String body = (String) payload.get("body");
+        final String mediaType = (String) payload.get("mediaType");
+        final String mediaUrl = (String) payload.get("mediaUrl");
         final Long contactId = payload.get("contactId") != null ? Long.valueOf(payload.get("contactId").toString()) : null;
 
         return userService.getCurrentUser()
@@ -61,6 +63,8 @@ public class ChatController {
                             .contactId(contactId)
                             .direction("OUTBOUND")
                             .body(body)
+                            .mediaType(mediaType)
+                            .mediaUrl(mediaUrl)
                             .status("SENT")
                             .createdAt(LocalDateTime.now())
                             .build();
@@ -69,14 +73,22 @@ public class ChatController {
                             .flatMap(savedMsg -> {
                                 log.info("📤 [CHAT-CONTROLLER] Message saved locally (ID: {}). Looking for channel...", savedMsg.getId());
 
-                                return channelRepository.findAll() // Simple check for now, filter by tenant in logic if needed
+                                return channelRepository.findAll()
                                         .filter(c -> c.getTenantId().equals(tenantId) && Boolean.TRUE.equals(c.getStatus()))
                                         .next()
                                         .flatMap(channel -> {
                                             String instanceName = channel.getInstanceName();
-                                            log.info("📤 [CHAT-CONTROLLER] Routing to provider instance: {}", instanceName);
                                             
-                                            return evolutionService.sendSimpleMessage(instanceName, phone, body)
+                                            Mono<Map<String, Object>> evolutionCall;
+                                            if ("AUDIO".equalsIgnoreCase(mediaType) || "audio".equalsIgnoreCase(mediaType)) {
+                                                evolutionCall = evolutionService.sendWhatsAppAudio(instanceName, phone, mediaUrl);
+                                            } else if ("IMAGE".equalsIgnoreCase(mediaType) || "image".equalsIgnoreCase(mediaType)) {
+                                                evolutionCall = evolutionService.sendMedia(instanceName, phone, mediaUrl, body);
+                                            } else {
+                                                evolutionCall = evolutionService.sendSimpleMessage(instanceName, phone, body);
+                                            }
+
+                                            return evolutionCall
                                                     .flatMap(evolutionRes -> {
                                                         // 3. Notificar al socket
                                                         Map<String, Object> socketPayload = new HashMap<>();
@@ -86,6 +98,8 @@ public class ChatController {
                                                         socketPayload.put("body", body);
                                                         socketPayload.put("contactId", contactId);
                                                         socketPayload.put("sentAt", savedMsg.getCreatedAt());
+                                                        socketPayload.put("mediaType", mediaType);
+                                                        socketPayload.put("mediaUrl", mediaUrl);
 
                                                         socketNotificationService.notifyNewMessage(socketPayload).subscribe();
 
