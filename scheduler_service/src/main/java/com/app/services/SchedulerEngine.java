@@ -109,7 +109,15 @@ public class SchedulerEngine {
             String notifyVia = (String) notification.getOrDefault("notifyVia", "email");
             String topic = "whatsapp".equalsIgnoreCase(notifyVia) ? "whatsapp-notifications" : "email-notifications";
             
-            return kafkaTemplate.send(topic, (String) notification.getOrDefault("to", "system"), notification)
+            String toKey = "system";
+            Object toObj = notification.get("to");
+            if (toObj instanceof String) {
+                toKey = (String) toObj;
+            } else if (toObj instanceof java.util.List && !((java.util.List<?>) toObj).isEmpty()) {
+                toKey = ((java.util.List<?>) toObj).get(0).toString();
+            }
+            
+            return kafkaTemplate.send(topic, toKey, notification)
                     .doOnSuccess(result -> log.info("Notification sent to Kafka topic {} for event {}", topic, event.getId()))
                     .then();
         } catch (Exception e) {
