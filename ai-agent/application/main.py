@@ -59,6 +59,7 @@ class AIAgentApp:
         self.vector_worker: VectorSyncWorker | None = None
         self.vector_consumer: AsyncKafkaConsumer | None = None
         self.ai: AIService | None = None
+        self.media: MediaService | None = None
         self._shutdown_event = asyncio.Event()
 
     # ── Startup / Shutdown ────────────────────────────────────────────────
@@ -79,6 +80,11 @@ class AIAgentApp:
         except Exception as exc:
             logger.warning("Qdrant unavailable — product search disabled", extra={"error": str(exc)})
 
+        from infrastructure.media_service import MediaService
+        from openai import AsyncOpenAI
+        
+        openai_client = AsyncOpenAI(api_key=config.openai_api_key)
+        self.media = MediaService(openai_client=openai_client)
         self.ai = AIService(db=self.db, qdrant=qdrant)
         self.consumer = AsyncKafkaConsumer(topic=config.topic_messages_in, callback=self._process_message)
         
@@ -130,7 +136,27 @@ class AIAgentApp:
             logger.info("♻️ [AI_STEP_1] Duplicate message detected in Redis — skipping", extra=log_ctx)
             return
 
-        logger.info(f"⚙️ [AI_START] Processing message: \"{payload.message_text[:50]}...\"", extra=log_ctx)
+        logger.info(f"⚙️ [AI_START] Processing message: type={payload.media_type}, \"{payload.message_text[:50]}...\"", extra=log_ctx)
+
+        # ②.1 Media Pre-processing (Phase 1 & 3)
+        if payload.media_type == "audio" and payload.media_url:
+            transcription = await self.media.transcribe_audio(payload.media_url, payload.tenant_id)
+            if transcription:
+                logger.info(f"🎙️ [AI_STT_OK] Transcription: \"{transcription[:50]}...\"", extra=log_ctx)
+                payload.message_text = transcription
+            else:
+                logger.warning("⚠️ [AI_STT_FAIL] Transcription failed, using placeholder text", extra=log_ctx)
+                payload.message_text = "[Mensaje de audio no procesado]"
+
+        elif payload.media_type == "image" and payload.media_url:
+            image_desc = await self.media.analyze_image(payload.media_url, payload.tenant_id)
+            if image_desc:
+                logger.info(f"🖼️ [AI_VISION_OK] Image analyzed", extra=log_ctx)
+                # We append the description to the message text (which might be empty or "[Image Message]")
+                payload.message_text = image_desc
+            else:
+                logger.warning("⚠️ [AI_VISION_FAIL] Image analysis failed", extra=log_ctx)
+                payload.message_text = "[Imagen no procesada]"
 
         # ② Rate limiting
         if not await self.redis.check_and_increment_rate_limit(payload.tenant_id):
@@ -196,24 +222,43 @@ class AIAgentApp:
                 "assistant", response_text,
             )
 
-            # ⑨ Publish reply (with Human-like fragmentation)
-            logger.info("📡 [AI_SENDING] Fragmenting and publishing response to Kafka", extra=log_ctx)
+            # ⑨ Publish reply (with Human-like fragmentation or Audio)
+            logger.info("📡 [AI_SENDING] Sending response to Kafka", extra=log_ctx)
             
+            # Phase 2: Audio response logic
+            if payload.media_type == "audio" and response_text:
+                audio_base64 = await self.media.generate_tts(response_text, payload.tenant_id)
+                if audio_base64:
+                    logger.info("🎙️ [AI_TTS_OK] Sending audio response", extra=log_ctx)
+                    self.producer.send_response(
+                        tenant_id=payload.tenant_id,
+                        contact_id=payload.contact_id,
+                        conversation_id=payload.conversation_id,
+                        response_text=response_text,
+                        is_bot_handoff=is_handoff,
+                        media_type="audio",
+                        media_url=f"data:audio/mp3;base64,{audio_base64}"
+                    )
+                    logger.info("🏁 [AI_FINISHED] Audio message complete", extra=log_ctx)
+                    return # Exit after sending audio
+
+            # Fallback to Text (Fragmented)
             fragments = self.ai.split_text_for_whatsapp(response_text)
-            
             for i, fragment in enumerate(fragments):
                 # 9.1 Send the fragment
                 self.producer.send_response(
-                    payload.tenant_id,
-                    payload.contact_id,
-                    payload.conversation_id,
-                    fragment,
-                    is_bot_handoff=(is_handoff and i == len(fragments) - 1), # Only mark handoff on last fragment
+                    tenant_id=payload.tenant_id,
+                    contact_id=payload.contact_id,
+                    conversation_id=payload.conversation_id,
+                    response_text=fragment,
+                    is_bot_handoff=(is_handoff and i == len(fragments) - 1),
+                    media_type="text",
+                    media_url=None
                 )
                 
                 # 9.2 If there are more fragments, wait (Simulate writing time)
                 if i < len(fragments) - 1:
-                    delay = 1.5 + (len(fragment) * 0.015) # n8n inspired formula
+                    delay = 1.5 + (len(fragment) * 0.015)
                     logger.info(f"⏳ [AI_DELAY] Waiting {delay:.2f}s before next fragment", extra=log_ctx)
                     await asyncio.sleep(delay)
 

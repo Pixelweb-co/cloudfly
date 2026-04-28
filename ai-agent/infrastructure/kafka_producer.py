@@ -65,6 +65,8 @@ class AsyncKafkaProducer:
         conversation_id: str,
         response_text: str,
         is_bot_handoff: bool = False,
+        media_type: str = "text",
+        media_url: Optional[str] = None,
     ) -> None:
         """Publish the AI-generated reply to messages.out."""
         payload = {
@@ -73,6 +75,8 @@ class AsyncKafkaProducer:
             "conversationId": conversation_id,
             "respuesta": response_text,
             "isBotHandoff": is_bot_handoff,
+            "mediaType": media_type,
+            "mediaUrl": media_url,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "source": "ai-agent",
         }

@@ -67,6 +67,35 @@ class EvolutionClient {
             throw error;
         }
     }
+
+    /**
+     * Enviar Nota de Voz (WhatsApp Audio)
+     */
+    async sendWhatsAppAudio(instanceName, remoteJid, audioContent) {
+        try {
+            const url = `/message/sendWhatsAppAudio/${instanceName}`;
+            const body = {
+                number: remoteJid,
+                audio: audioContent, // Puede ser URL o Base64 (sin el data:audio/mp3;base64,)
+                options: {
+                    delay: 2000,
+                    presence: 'recording'
+                }
+            };
+
+            // Si es base64 con el prefijo data:..., lo limpiamos
+            if (typeof audioContent === 'string' && audioContent.startsWith('data:')) {
+                body.audio = audioContent.split(',')[1];
+            }
+
+            logger.info(`🎙️ Sending WhatsApp Audio to ${remoteJid} via instance ${instanceName}`);
+            const response = await this.client.post(url, body);
+            return response.data;
+        } catch (error) {
+            logger.error(`❌ Error sending Evolution audio: ${error.message}`);
+            throw error;
+        }
+    }
     /**
      * Marcar mensaje como leído (Doble check azul)
      */
