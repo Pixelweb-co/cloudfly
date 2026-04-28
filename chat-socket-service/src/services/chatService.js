@@ -30,9 +30,10 @@ class ChatService {
         const data = payload.data;
         const message = data.message;
         
-        // Extract remoteJid (conversationId)
+        // Extract remoteJid (conversationId) and messageId
         let remoteJid = data.key.remoteJid;
         const pushName = data.pushName;
+        const messageId = data.key.id;
 
         // 0. FILTER: No groups
         if (remoteJid && remoteJid.endsWith('@g.us')) {
