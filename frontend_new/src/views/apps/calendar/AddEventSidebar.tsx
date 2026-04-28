@@ -264,8 +264,8 @@ const AddEventSidebar = (props: Props) => {
     const eventData = {
       title: data.title,
       calendarId: values.calendarId,
-      startTime: values.startDate.toISOString(),
-      endTime: values.endDate.toISOString(),
+      startTime: values.startDate.toISOString().split('.')[0],
+      endTime: values.endDate.toISOString().split('.')[0],
       allDay: values.allDay,
       description: values.description,
       eventType: 'NOTIFICATION',
