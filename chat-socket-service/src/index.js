@@ -22,10 +22,17 @@ const messageBufferService = require('./services/messageBufferService');
 const app = express();
 const server = http.createServer(app);
 
+// Configurar Orígenes Permitidos (CORS)
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    'http://localhost:3000',
+    'https://dashboard.cloudfly.com.co'
+].filter(Boolean);
+
 // Configurar Socket.IO
 const io = new Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+        origin: allowedOrigins,
         methods: ['GET', 'POST'],
         credentials: true
     },
@@ -35,7 +42,13 @@ const io = new Server(server, {
 
 // Middleware Express
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
