@@ -97,6 +97,7 @@ services:
     env_file:
       - .env
     environment:
+      - TZ=America/Bogota
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_DATABASE=cloud_master
