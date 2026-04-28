@@ -32,6 +32,9 @@ public class OmniChannelMessageEntity {
     
     @Column("media_url")
     private String mediaUrl;
+
+    @Column("media_type")
+    private String mediaType;
     
     @Column("external_msg_id")
     private String externalMessageId;
