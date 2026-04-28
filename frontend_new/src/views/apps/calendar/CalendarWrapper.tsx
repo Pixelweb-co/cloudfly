@@ -100,8 +100,8 @@ const AppCalendar = () => {
       const mappedEvents = data.map(event => ({
         id: event.id?.toString(),
         title: event.title,
-        start: event.startTime,
-        end: event.endTime || new Date(new Date(event.startTime).getTime() + 3600000).toISOString(),
+        start: event.startTime.includes('Z') ? event.startTime : (event.startTime.includes('T') ? event.startTime + 'Z' : event.startTime.replace(' ', 'T') + 'Z'),
+        end: event.endTime ? (event.endTime.includes('Z') ? event.endTime : (event.endTime.includes('T') ? event.endTime + 'Z' : event.endTime.replace(' ', 'T') + 'Z')) : new Date(new Date(event.startTime).getTime() + 3600000).toISOString(),
         allDay: event.allDay,
         extendedProps: {
           calendar: (event.eventType === 'REST_ACTION' && event.eventSubtype === 'MAINTENANCE') ? 'Equipos' : (event.eventType || 'Business'),
