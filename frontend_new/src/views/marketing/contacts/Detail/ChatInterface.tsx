@@ -31,6 +31,7 @@ export default function ChatInterface({ contact, isNew }: Props) {
   // Audio Recording States & Refs
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
+  const [recordedAudio, setRecordedAudio] = useState<Blob | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -42,14 +43,15 @@ export default function ChatInterface({ contact, isNew }: Props) {
       
       audioChunksRef.current = []
       mediaRecorderRef.current = recorder
+      setRecordedAudio(null)
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data)
       }
 
-      recorder.onstop = async () => {
-        // Solo enviamos si no fue cancelado (indicado por isRecording siendo falso antes de llamar a stop)
-        // Pero usamos una variable local para seguridad
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mpeg' })
+        setRecordedAudio(audioBlob)
         stream.getTracks().forEach(track => track.stop())
       }
 
@@ -57,7 +59,6 @@ export default function ChatInterface({ contact, isNew }: Props) {
       setIsRecording(true)
       setRecordingTime(0)
       
-      // Iniciar cronómetro
       timerRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1)
       }, 1000)
@@ -68,29 +69,22 @@ export default function ChatInterface({ contact, isNew }: Props) {
     }
   }
 
-  const stopRecording = (shouldSend: boolean = true) => {
+  const stopRecording = () => {
     if (timerRef.current) {
       clearInterval(timerRef.current)
       timerRef.current = null
     }
 
     if (mediaRecorderRef.current && isRecording) {
-      const recorder = mediaRecorderRef.current
-      
-      recorder.onstop = async () => {
-        if (shouldSend && audioChunksRef.current.length > 0) {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mpeg' })
-          await handleSendAudio(audioBlob)
-        }
-        // Cleanup stream
-        if (recorder.stream) {
-          recorder.stream.getTracks().forEach(track => track.stop())
-        }
-      }
-
-      recorder.stop()
+      mediaRecorderRef.current.stop()
       setIsRecording(false)
     }
+  }
+
+  const discardRecording = () => {
+    setRecordedAudio(null)
+    setIsRecording(false)
+    if (timerRef.current) clearInterval(timerRef.current)
   }
 
   const formatTime = (seconds: number) => {
@@ -99,9 +93,10 @@ export default function ChatInterface({ contact, isNew }: Props) {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const handleSendAudio = async (blob: Blob) => {
-    if (!contact?.phone) return
+  const handleSendAudio = async () => {
+    if (!contact?.phone || !recordedAudio) return
     
+    const blob = recordedAudio
     setSending(true)
     try {
       const reader = new FileReader()
@@ -122,6 +117,7 @@ export default function ChatInterface({ contact, isNew }: Props) {
           if (prev.find(m => m.id === sentMsg.id)) return prev
           return [...prev, sentMsg]
         })
+        setRecordedAudio(null)
       }
     } catch (error) {
       console.error('Error sending audio:', error)
@@ -501,7 +497,18 @@ export default function ChatInterface({ contact, isNew }: Props) {
                   '@keyframes wave': { '0%': { transform: 'translateX(-100%)' }, '100%': { transform: 'translateX(100%)' } }
                 }} />
               </Box>
-              <IconButton color="error" size="small" onClick={() => stopRecording(false)}>
+              <IconButton color="error" size="small" onClick={discardRecording}>
+                <Icon icon="tabler:trash" />
+              </IconButton>
+            </Box>
+          ) : recordedAudio ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, ml: 2 }}>
+              <audio 
+                src={URL.createObjectURL(recordedAudio)} 
+                controls 
+                style={{ height: 32, flex: 1 }} 
+              />
+              <IconButton color="error" size="small" onClick={discardRecording}>
                 <Icon icon="tabler:trash" />
               </IconButton>
             </Box>
@@ -527,7 +534,7 @@ export default function ChatInterface({ contact, isNew }: Props) {
           <IconButton 
             color="primary"
             size="small"
-            onClick={isRecording ? () => stopRecording(true) : (newMessage.trim() ? handleSend : startRecording)}
+            onClick={isRecording ? stopRecording : (recordedAudio ? handleSendAudio : (newMessage.trim() ? handleSend : startRecording))}
             disabled={sending}
             sx={{
               bgcolor: 'primary.main',
@@ -536,7 +543,7 @@ export default function ChatInterface({ contact, isNew }: Props) {
               '&.Mui-disabled': { bgcolor: 'action.disabledBackground', color: 'action.disabled' }
             }}
           >
-            {sending ? <CircularProgress size={20} color="inherit" /> : <Icon icon={isRecording ? 'tabler:send' : (newMessage.trim() ? 'tabler:send' : 'tabler:microphone')} />}
+            {sending ? <CircularProgress size={20} color="inherit" /> : <Icon icon={isRecording ? 'tabler:player-stop' : (recordedAudio || newMessage.trim() ? 'tabler:send' : 'tabler:microphone')} />}
           </IconButton>
         </Box>
       </Box>
