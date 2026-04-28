@@ -5,6 +5,7 @@ import com.app.events.CalendarEventCreated;
 import com.app.persistence.entity.CalendarEventEntity;
 import com.app.persistence.entity.EventStatus;
 import com.app.persistence.repository.CalendarEventRepository;
+import com.app.persistence.repository.ScheduledJobRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
 public class CalendarEventService {
 
     private final CalendarEventRepository calendarEventRepository;
+    private final ScheduledJobRepository scheduledJobRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     public Mono<CalendarEventDto> createEvent(CalendarEventDto dto) {
@@ -72,7 +74,8 @@ public class CalendarEventService {
     }
 
     public Mono<Void> deleteEvent(Long id) {
-        return calendarEventRepository.deleteById(id);
+        return scheduledJobRepository.deleteByEventId(id)
+                .then(calendarEventRepository.deleteById(id));
     }
 
     private CalendarEventDto mapToDto(CalendarEventEntity entity) {
