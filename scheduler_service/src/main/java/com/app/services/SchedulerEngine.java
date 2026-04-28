@@ -101,12 +101,16 @@ public class SchedulerEngine {
 
     private Mono<Void> publishToNotificationService(CalendarEventEntity event) {
         try {
-            Map<String, Object> notification = objectMapper.readValue(event.getPayload(), Map.class);
+            java.util.Map<String, Object> notification = objectMapper.readValue(event.getPayload(), java.util.Map.class);
             notification.put("tenantId", event.getTenantId());
             notification.put("companyId", event.getCompanyId());
+            notification.put("eventId", event.getId());
             
-            return kafkaTemplate.send("email-notifications", (String) notification.getOrDefault("to", "system"), notification)
-                    .doOnSuccess(result -> log.info("Notification sent to Kafka for event {}", event.getId()))
+            String notifyVia = (String) notification.getOrDefault("notifyVia", "email");
+            String topic = "whatsapp".equalsIgnoreCase(notifyVia) ? "whatsapp-notifications" : "email-notifications";
+            
+            return kafkaTemplate.send(topic, (String) notification.getOrDefault("to", "system"), notification)
+                    .doOnSuccess(result -> log.info("Notification sent to Kafka topic {} for event {}", topic, event.getId()))
                     .then();
         } catch (Exception e) {
             return Mono.error(e);
