@@ -205,6 +205,63 @@ public class EvolutionService {
                 .doOnSuccess(res -> log.info("✅ Message sent successfully to {}", cleanNumber));
     }
 
+    /**
+     * Enviar Nota de Voz (Audio)
+     */
+    public Mono<Map<String, Object>> sendWhatsAppAudio(String instanceName, String phoneNumber, String audioContent) {
+        String cleanNumber = phoneNumber.replaceAll("[^0-9]", "");
+        String url = apiUrl + "/message/sendWhatsAppAudio/" + (instanceName != null ? instanceName : "cloudfly_chatbot1");
+        
+        // Limpiar prefijo data:audio/mp3;base64, si existe
+        String finalAudio = audioContent;
+        if (audioContent != null && audioContent.startsWith("data:")) {
+            finalAudio = audioContent.split(",")[1];
+        }
+
+        Map<String, Object> messageBody = new HashMap<>();
+        messageBody.put("number", cleanNumber);
+        messageBody.put("audio", finalAudio);
+        
+        Map<String, Object> options = new HashMap<>();
+        options.put("delay", 1200);
+        options.put("presence", "recording");
+        messageBody.put("options", options);
+
+        log.info("🎙️ [EVOLUTION-SERVICE] Sending audio message to {}", cleanNumber);
+
+        return webClient.post()
+                .uri(url)
+                .header("apikey", apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(messageBody)
+                .retrieve()
+                .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {});
+    }
+
+    /**
+     * Enviar Media (Imagen)
+     */
+    public Mono<Map<String, Object>> sendMedia(String instanceName, String phoneNumber, String mediaUrl, String caption) {
+        String cleanNumber = phoneNumber.replaceAll("[^0-9]", "");
+        String url = apiUrl + "/message/sendMedia/" + (instanceName != null ? instanceName : "cloudfly_chatbot1");
+        
+        Map<String, Object> messageBody = new HashMap<>();
+        messageBody.put("number", cleanNumber);
+        messageBody.put("media", mediaUrl);
+        messageBody.put("mediatype", "image");
+        messageBody.put("caption", caption);
+
+        log.info("🖼️ [EVOLUTION-SERVICE] Sending media to {}", cleanNumber);
+
+        return webClient.post()
+                .uri(url)
+                .header("apikey", apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(messageBody)
+                .retrieve()
+                .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {});
+    }
+
     public Mono<Map<String, Object>> setWebhook(String instanceName) {
         String url = apiUrl + "/webhook/set/" + instanceName;
         log.info("📡 [EVOLUTION-SERVICE] Configuring Webhook for: {} (URL: {})", instanceName, webhookUrl);
