@@ -18,6 +18,8 @@ class MessagePayload:
     message_text: str
     message_id: str          # UUID for idempotency
     timestamp: str
+    media_type: str = "text"
+    media_url: Optional[str] = None
 
     @classmethod
     def from_dict(cls, data: dict) -> "MessagePayload":
@@ -34,6 +36,8 @@ class MessagePayload:
             # Prefer explicit messageId; fall back to timestamp for legacy compat
             message_id=str(data.get("messageId") or data.get("timestamp", "")),
             timestamp=str(data.get("timestamp", "")),
+            media_type=str(data.get("mediaType", "text")),
+            media_url=str(data.get("mediaUrl")) if data.get("mediaUrl") else None,
         )
 
 

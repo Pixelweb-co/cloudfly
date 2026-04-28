@@ -45,18 +45,33 @@ class ChatService {
             return;
         }
 
-        // Extract body
+        // Extract body and media
         let body = '';
+        let mediaUrl = null;
+        let mediaType = 'text';
+
         if (message) {
             if (message.conversation) {
                 body = message.conversation;
+                mediaType = 'text';
             } else if (message.extendedTextMessage) {
                 body = message.extendedTextMessage.text;
+                mediaType = 'text';
+            } else if (message.audioMessage) {
+                mediaUrl = message.audioMessage.url;
+                mediaType = 'audio';
+                body = '[Audio Message]';
+                logger.info(`🎵 [WEBHOOK_AUDIO] Detected audio message from ${remoteJid}. URL: ${mediaUrl}`);
+            } else if (message.imageMessage) {
+                mediaUrl = message.imageMessage.url;
+                mediaType = 'image';
+                body = '[Image Message]';
+                logger.info(`🖼️ [WEBHOOK_IMAGE] Detected image message from ${remoteJid}. URL: ${mediaUrl}`);
             }
         }
 
         let messagePreview = body ? (body.length > 50 ? body.substring(0, 50) + '...' : body) : '[No Content]';
-        logger.info(`📥 [WEBHOOK_DATA] From: ${pushName} (${remoteJid}) | Body: "${messagePreview}"`);
+        logger.info(`📥 [WEBHOOK_DATA] From: ${pushName} (${remoteJid}) | Type: ${mediaType} | Body: "${messagePreview}"`);
 
         try {
             // 1. Encontrar el canal (Channel) para obtener tenantId y companyId
@@ -146,7 +161,7 @@ class ChatService {
                     // Buffer the message (3s debounce → Kafka)
                     const buffered = await messageBufferService.bufferMessage(
                         tenantId, companyId, contact.id, conversationId,
-                        { body, messageId, timestamp: new Date().toISOString() },
+                        { body, messageId, mediaType, mediaUrl, timestamp: new Date().toISOString() },
                         { instance, remoteJid }
                     );
 
@@ -520,37 +535,40 @@ class ChatService {
 
             // 4. Enviar vía WhatsApp (Evolution API)
             try {
+                const { mediaType, mediaUrl } = payload;
                 // Detectar si es un grupo (ID largo o contiene guión)
                 const isGroup = contact.phone.includes('-') || contact.phone.length > 15;
                 const remoteJid = isGroup ? `${contact.phone}@g.us` : `${contact.phone}@s.whatsapp.net`;
                 
-                // Interceptar MediaMessage format
-                let mediaUrl = null;
-                let textContent = respuesta;
-                
-                // Buscar [URL] o [texto](URL) o ![texto](URL)
-                const mediaRegex = /!?\[.*?\]\((https?:\/\/[^\)]+)\)|\[(https?:\/\/[^\]]+)\]/;
-                const match = respuesta.match(mediaRegex);
-                
-                if (match) {
-                    // El grupo 1 es para formato markdown ![](), el grupo 2 para [URL]
-                    mediaUrl = match[1] || match[2];
-                    // Remover el bloque [URL] del texto final
-                    textContent = respuesta.replace(mediaRegex, '').trim();
-                    // Limpiar posibles líneas vacías dobles resultantes
-                    textContent = textContent.replace(/\n\s*\n/g, '\n\n');
-                }
-
-                if (mediaUrl) {
-                    await evolutionClient.sendMedia(channel.instance_name, remoteJid, mediaUrl, textContent);
-                    logger.info(`✅ [AI-RESPONSE] MediaMessage sent to WhatsApp for contact ${contactId}`);
+                if (mediaType === 'audio' && mediaUrl) {
+                    await evolutionClient.sendWhatsAppAudio(channel.instance_name, remoteJid, mediaUrl);
+                    logger.info(`✅ [AI-RESPONSE] AudioMessage sent to WhatsApp for contact ${contactId}`);
                 } else {
-                    await evolutionClient.sendMessage(channel.instance_name, remoteJid, respuesta);
-                    logger.info(`✅ [AI-RESPONSE] TextMessage sent to WhatsApp for contact ${contactId}`);
+                    // Interceptar MediaMessage format (legacy / fallback)
+                    let finalMediaUrl = mediaUrl;
+                    let textContent = respuesta;
+                    
+                    // Buscar [URL] o [texto](URL) o ![texto](URL) en el texto si no viene mediaUrl explícito
+                    if (!finalMediaUrl) {
+                        const mediaRegex = /!?\[.*?\]\((https?:\/\/[^\)]+)\)|\[(https?:\/\/[^\]]+)\]/;
+                        const match = respuesta.match(mediaRegex);
+                        if (match) {
+                            finalMediaUrl = match[1] || match[2];
+                            textContent = respuesta.replace(mediaRegex, '').trim();
+                            textContent = textContent.replace(/\n\s*\n/g, '\n\n');
+                        }
+                    }
+
+                    if (finalMediaUrl) {
+                        await evolutionClient.sendMedia(channel.instance_name, remoteJid, finalMediaUrl, textContent);
+                        logger.info(`✅ [AI-RESPONSE] MediaMessage sent to WhatsApp for contact ${contactId}`);
+                    } else {
+                        await evolutionClient.sendMessage(channel.instance_name, remoteJid, respuesta);
+                        logger.info(`✅ [AI-RESPONSE] TextMessage sent to WhatsApp for contact ${contactId}`);
+                    }
                 }
             } catch (evError) {
                 logger.error(`❌ [AI-RESPONSE] Error sending to Evolution API: ${evError.message}`);
-                // No retornamos, igual notificamos al socket que "quedó" en DB o falló el envío
             }
 
             // 5. Notificar al Frontend vía Socket.IO

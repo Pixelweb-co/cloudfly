@@ -44,7 +44,7 @@ async function initKafkaProducer() {
 /**
  * Publish a buffered (concatenated) message to Kafka.
  */
-async function publishToKafka(tenantId, companyId, contactId, conversationId, concatenatedMessage, messageCount) {
+async function publishToKafka(tenantId, companyId, contactId, conversationId, concatenatedMessage, messageCount, mediaType = 'text', mediaUrl = null) {
     if (!isConnected || !producer) {
         logger.error('❌ [KAFKA] Producer not connected. Message dropped.');
         return false;
@@ -58,6 +58,8 @@ async function publishToKafka(tenantId, companyId, contactId, conversationId, co
         conversationId,
         mensaje: concatenatedMessage,
         messageCount,
+        mediaType,
+        mediaUrl,
         timestamp: new Date().toISOString(),
         source: 'buffered'
     };

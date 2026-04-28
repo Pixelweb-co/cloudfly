@@ -28,6 +28,8 @@ class MessageBufferService {
             const entry = JSON.stringify({
                 body: messageData.body,
                 messageId: messageData.messageId,
+                mediaType: messageData.mediaType || 'text',
+                mediaUrl: messageData.mediaUrl || null,
                 timestamp: messageData.timestamp || new Date().toISOString()
             });
 
@@ -126,6 +128,11 @@ class MessageBufferService {
             const concatenated = messages.map(m => m.body).filter(Boolean).join('\n');
             const messageCount = messages.length;
 
+            // Find the last media message (if any) to represent this turn
+            const mediaMessage = [...messages].reverse().find(m => m.mediaType !== 'text');
+            const mediaType = mediaMessage ? mediaMessage.mediaType : 'text';
+            const mediaUrl = mediaMessage ? mediaMessage.mediaUrl : null;
+
             // 4. Clean up Redis BEFORE publishing (prevent re-processing)
             await redis.del(bufferKey, `meta:${bufferKey}`);
 
@@ -137,7 +144,9 @@ class MessageBufferService {
                     meta.contactId,
                     meta.conversationId,
                     concatenated,
-                    messageCount
+                    messageCount,
+                    mediaType,
+                    mediaUrl
                 );
 
                 if (success) {
