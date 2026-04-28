@@ -44,6 +44,7 @@ import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
 interface PickerProps {
   label?: string
   error?: boolean
+  disabled?: boolean
 }
 
 interface DefaultStateType {
@@ -105,6 +106,7 @@ const AddEventSidebar = (props: Props) => {
   const [missingInfoDialogOpen, setMissingInfoDialogOpen] = useState(false)
   const [currentEditingContact, setCurrentEditingContact] = useState<Contact | null>(null)
   const [tempContactInfo, setTempContactInfo] = useState({ email: '', phone: '' })
+  const [isPastEvent, setIsPastEvent] = useState(false)
 
   // Refs
   const PickersComponent = forwardRef(({ ...props }: PickerProps, ref) => {
@@ -116,6 +118,7 @@ const AddEventSidebar = (props: Props) => {
         label={props.label || ''}
         className='is-full'
         error={props.error}
+        disabled={props.disabled}
       />
     )
   })
@@ -199,6 +202,7 @@ const AddEventSidebar = (props: Props) => {
     setValue('title', '')
     setValues(defaultState)
     setSelectedContacts([])
+    setIsPastEvent(false)
   }, [setValue])
 
   const handleSidebarClose = () => {
@@ -292,8 +296,15 @@ const AddEventSidebar = (props: Props) => {
     if (addEventSidebarOpen) {
       if (calendarStore.selectedEvent !== null) {
         resetToStoredValues()
+        const eventStart = calendarStore.selectedEvent.start
+        if (eventStart) {
+          setIsPastEvent(new Date(eventStart) < new Date())
+        } else {
+          setIsPastEvent(false)
+        }
       } else {
         resetToEmptyValues()
+        setIsPastEvent(false)
       }
     }
   }, [addEventSidebarOpen, resetToStoredValues, resetToEmptyValues, calendarStore.selectedEvent])
@@ -342,6 +353,7 @@ const AddEventSidebar = (props: Props) => {
                     placeholder='Ej: Cita Médica, Reunión Spa...'
                     value={value}
                     onChange={onChange}
+                    disabled={isPastEvent}
                     {...(errors.title && { error: true, helperText: 'Este campo es requerido' })}
                   />
                 )}
@@ -353,6 +365,7 @@ const AddEventSidebar = (props: Props) => {
                 label='Calendario'
                 value={values.calendar}
                 onChange={e => setValues({ ...values, calendar: e.target.value })}
+                disabled={isPastEvent}
               >
                 <MenuItem value='Business'>Business</MenuItem>
                 <MenuItem value='Personal'>Personal</MenuItem>
@@ -369,8 +382,9 @@ const AddEventSidebar = (props: Props) => {
                   timeIntervals={5}
                   todayButton='Hoy'
                   dateFormat={!values.allDay ? 'yyyy-MM-dd hh:mm aa' : 'yyyy-MM-dd'}
-                  customInput={<PickersComponent label='Fecha Inicio' />}
+                  customInput={<PickersComponent label='Fecha Inicio' disabled={isPastEvent} />}
                   onChange={(date: Date | null) => date && setValues({ ...values, startDate: date })}
+                  disabled={isPastEvent}
                 />
                 
                 <AppReactDatepicker
@@ -381,14 +395,15 @@ const AddEventSidebar = (props: Props) => {
                   timeIntervals={5}
                   todayButton='Hoy'
                   dateFormat={!values.allDay ? 'yyyy-MM-dd hh:mm aa' : 'yyyy-MM-dd'}
-                  customInput={<PickersComponent label='Fecha Fin' />}
+                  customInput={<PickersComponent label='Fecha Fin' disabled={isPastEvent} />}
                   onChange={(date: Date | null) => date && setValues({ ...values, endDate: date })}
+                  disabled={isPastEvent}
                 />
               </Box>
               
               <FormControlLabel
                 label='Todo el día'
-                control={<Switch checked={values.allDay} onChange={e => setValues({ ...values, allDay: e.target.checked })} />}
+                control={<Switch checked={values.allDay} onChange={e => setValues({ ...values, allDay: e.target.checked })} disabled={isPastEvent} />}
               />
 
               <CustomTextField
@@ -399,6 +414,7 @@ const AddEventSidebar = (props: Props) => {
                 placeholder='Detalles del recordatorio...'
                 value={values.description}
                 onChange={e => setValues({ ...values, description: e.target.value })}
+                disabled={isPastEvent}
               />
 
               <Divider />
@@ -421,8 +437,9 @@ const AddEventSidebar = (props: Props) => {
                   }
                 }}
                 renderInput={(params) => (
-                  <CustomTextField {...params} label='Notificar a (Contactos)' placeholder='Buscar por nombre, cédula...' />
+                  <CustomTextField {...params} label='Notificar a (Contactos)' placeholder='Buscar por nombre, cédula...' disabled={isPastEvent} />
                 )}
+                disabled={isPastEvent}
                 renderTags={(value, getTagProps) =>
                   value.map((option, index) => (
                     <Chip label={option.name} {...getTagProps({ index })} size='small' color='primary' variant='outlined' key={option.id} />
@@ -437,6 +454,7 @@ const AddEventSidebar = (props: Props) => {
                   label='Avisar antes'
                   value={values.remindBefore}
                   onChange={e => setValues({ ...values, remindBefore: parseInt(e.target.value) })}
+                  disabled={isPastEvent}
                 />
                 <CustomTextField
                   select
@@ -444,6 +462,7 @@ const AddEventSidebar = (props: Props) => {
                   label='Unidad'
                   value={values.remindUnit}
                   onChange={e => setValues({ ...values, remindUnit: e.target.value })}
+                  disabled={isPastEvent}
                 >
                   <MenuItem value='MINUTES'>Minutos</MenuItem>
                   <MenuItem value='HOURS'>Horas</MenuItem>
@@ -458,17 +477,25 @@ const AddEventSidebar = (props: Props) => {
                 label='Enviar por'
                 value={values.notifyVia}
                 onChange={e => setValues({ ...values, notifyVia: e.target.value as any })}
+                disabled={isPastEvent}
               >
                 <MenuItem value='email'>Email</MenuItem>
                 <MenuItem value='whatsapp'>WhatsApp</MenuItem>
               </CustomTextField>
 
+              {isPastEvent && (
+                <Typography color='error' variant='body2' className='mbe-2'>
+                  Este evento ya ha pasado y no puede ser editado.
+                </Typography>
+              )}
               <div className='flex gap-4 mbs-4'>
-                <Button type='submit' variant='contained'>
-                  {calendarStore.selectedEvent ? 'Actualizar' : 'Guardar Recordatorio'}
-                </Button>
+                {!isPastEvent && (
+                  <Button type='submit' variant='contained'>
+                    {calendarStore.selectedEvent ? 'Actualizar' : 'Guardar Recordatorio'}
+                  </Button>
+                )}
                 <Button variant='outlined' color='secondary' onClick={handleSidebarClose}>
-                  Cancelar
+                  {isPastEvent ? 'Cerrar' : 'Cancelar'}
                 </Button>
               </div>
             </form>

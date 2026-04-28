@@ -37,7 +37,11 @@ public class NotificationMessage {
         }
     }
 
+    @com.fasterxml.jackson.annotation.JsonAlias({"notifyVia", "notify_via"})
     public String getType() {
+        if (type == null || type.equalsIgnoreCase("email") || type.equalsIgnoreCase("whatsapp")) {
+            return "notification";
+        }
         return type;
     }
 
