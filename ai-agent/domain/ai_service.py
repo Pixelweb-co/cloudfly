@@ -973,15 +973,23 @@ class AIService:
                     "tenantId": tenant_id,
                     "companyId": company_id,
                     "calendarId": calendar_id,
-                    "title": event_data["title"],
-                    "description": event_data["description"],
-                    "eventType": event_data["event_type"],
-                    "eventSubtype": event_data["event_subtype"],
-                    "startTime": event_data["start_time"],
-                    "endTime": event_data["end_time"],
-                    "relatedEntityType": event_data["related_entity_type"],
-                    "relatedEntityId": event_data["related_entity_id"],
-                    "payload": event_data["payload"]
+                    "title": args["title"],
+                    "description": args.get("description", ""),
+                    "eventType": "NOTIFICATION",
+                    "eventSubtype": "whatsapp",
+                    "startTime": args["start_time"],
+                    "endTime": end_time_str,
+                    "relatedEntityType": "CONTACT",
+                    "relatedEntityId": contact_id,
+                    "payload": json.dumps({
+                        "remindBefore": 5,
+                        "remindUnit": "MINUTES",
+                        "notifyVia": "email",
+                        "to": email,
+                        "subject": f"Confirmación de Cita: {args['title']}",
+                        "body": f"Hola {contact.get('name', 'cliente')}, tu cita para '{args['title']}' ha sido agendada para el {start_dt.strftime('%d/%m/%Y a las %H:%M')}.",
+                        "sendConfirmation": True
+                    })
                 }
                 logger.info(f"🚀 Calling scheduler-service API: {url}")
                 res = requests.post(url, json=payload, timeout=10)
@@ -998,9 +1006,24 @@ class AIService:
                 return json.dumps({"error": "event_id is required for update"})
             try:
                 url = f"{config.scheduler_api_url}/api/events/{eid}"
-                res = requests.put(url, json=event_data, timeout=10)
+                update_payload = {
+                    "title": args["title"],
+                    "description": args.get("description", ""),
+                    "startTime": args["start_time"],
+                    "endTime": end_time_str,
+                    "payload": json.dumps({
+                        "remindBefore": 5,
+                        "remindUnit": "MINUTES",
+                        "notifyVia": "email",
+                        "to": email,
+                        "subject": f"Reprogramación de Cita: {args['title']}",
+                        "body": f"Hola {contact.get('name', 'cliente')}, tu cita para '{args['title']}' ha sido REPROGRAMADA para el {start_dt.strftime('%d/%m/%Y a las %H:%M')}.",
+                        "sendConfirmation": True
+                    })
+                }
+                res = requests.put(url, json=update_payload, timeout=10)
                 if res.status_code == 200:
-                    return json.dumps({"success": True, "message": "Cita reprogramada correctamente."})
+                    return json.dumps({"success": True, "message": "Cita reprogramada correctamente y notificación enviada."})
                 return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
             except Exception as e:
                 return json.dumps({"error": str(e)})

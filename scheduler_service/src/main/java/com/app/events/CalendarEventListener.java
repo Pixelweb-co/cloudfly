@@ -12,16 +12,17 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class CalendarEventListener {
 
-    private final JobGeneratorService jobGeneratorService;
+        private final JobGeneratorService jobGeneratorService;
 
-    @Async
-    @EventListener
-    public void handleCalendarEventCreated(CalendarEventCreated eventCreated) {
-        log.info("Event listener caught new event: {}", eventCreated.getEvent().getId());
-        jobGeneratorService.generateJobsForEvent(eventCreated.getEvent())
-                .subscribe(
-                        success -> log.info("Jobs generated for event {}", eventCreated.getEvent().getId()),
-                        error -> log.error("Failed to generate jobs for event {}", eventCreated.getEvent().getId(), error)
-                );
-    }
+        @Async
+        @EventListener
+        public void handleCalendarEventCreated(CalendarEventCreated eventCreated) {
+                log.info("Event listener caught new event: {}", eventCreated.getEvent().getId());
+                jobGeneratorService.generateJobsForEvent(eventCreated.getEvent())
+                                .subscribe(
+                                                success -> log.info("Jobs generated for event {}",
+                                                                eventCreated.getEvent().getId()),
+                                                error -> log.error("Failed to generate jobs for event {}",
+                                                                eventCreated.getEvent().getId(), error));
+        }
 }
