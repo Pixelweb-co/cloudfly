@@ -337,3 +337,81 @@ class AsyncMySQLClient:
         async with self.transaction() as cur:
             await cur.execute(sql, params)
             return cur.rowcount > 0
+
+    async def get_or_create_ai_calendar(self, tenant_id: int, company_id: int) -> int:
+        """Busca el calendario 'Calendario IA' o lo crea si no existe."""
+        async with self.transaction() as cur:
+            await cur.execute(
+                "SELECT id FROM calendars WHERE name = 'Calendario IA' AND tenant_id = %s AND company_id = %s LIMIT 1",
+                (tenant_id, company_id)
+            )
+            row = await cur.fetchone()
+            if row:
+                return row["id"]
+            
+            await cur.execute(
+                "INSERT INTO calendars (tenant_id, company_id, name, color, is_active, created_at) VALUES (%s, %s, %s, %s, %s, NOW())",
+                (tenant_id, company_id, "Calendario IA", "#4A90E2", 1)
+            )
+            return cur.lastrowid
+
+    async def create_calendar_event(self, tenant_id: int, company_id: int, data: Dict[str, Any]) -> int:
+        """Crea un evento en el calendario."""
+        fields = ["tenant_id", "company_id", "created_at", "updated_at"]
+        values = [tenant_id, company_id, "NOW()", "NOW()"]
+        
+        allowed = ["calendar_id", "title", "description", "event_type", "event_subtype", "status", "start_time", "end_time", "all_day", "related_entity_type", "related_entity_id", "payload", "recurrence"]
+        for k, v in data.items():
+            if k in allowed and v is not None:
+                fields.append(k)
+                values.append(v)
+        
+        placeholders = ", ".join(["%s" if v != "NOW()" else "NOW()" for v in values])
+        params = [v for v in values if v != "NOW()"]
+        
+        sql = f"INSERT INTO calendar_events ({', '.join(fields)}) VALUES ({placeholders})"
+        async with self.transaction() as cur:
+            await cur.execute(sql, params)
+            return cur.lastrowid
+
+    async def get_calendar_events(self, tenant_id: int, company_id: int, start_time: str, end_time: str) -> List[Dict[str, Any]]:
+        """Busca eventos en un rango de tiempo."""
+        sql = """
+            SELECT * FROM calendar_events 
+            WHERE tenant_id = %s AND company_id = %s 
+            AND start_time >= %s AND start_time <= %s
+            ORDER BY start_time ASC
+        """
+        async with self.readonly() as cur:
+            await cur.execute(sql, (tenant_id, company_id, start_time, end_time))
+            return await cur.fetchall()
+
+    async def update_calendar_event(self, event_id: int, tenant_id: int, data: Dict[str, Any]) -> bool:
+        """Actualiza un evento existente."""
+        allowed = ["title", "description", "start_time", "end_time", "status", "payload"]
+        updates = []
+        params = []
+        
+        for k, v in data.items():
+            if k in allowed and v is not None:
+                updates.append(f"{k} = %s")
+                params.append(v)
+        
+        if not updates:
+            return False
+            
+        sql = f"UPDATE calendar_events SET {', '.join(updates)}, updated_at = NOW() WHERE id = %s AND tenant_id = %s"
+        params.extend([event_id, tenant_id])
+        
+        async with self.transaction() as cur:
+            await cur.execute(sql, params)
+            return cur.rowcount > 0
+
+    async def delete_calendar_event(self, event_id: int, tenant_id: int) -> bool:
+        """Elimina un evento."""
+        async with self.transaction() as cur:
+            # Primero eliminamos los jobs asociados
+            await cur.execute("DELETE FROM scheduled_jobs WHERE event_id = %s", (event_id,))
+            # Luego el evento
+            await cur.execute("DELETE FROM calendar_events WHERE id = %s AND tenant_id = %s", (event_id, tenant_id))
+            return cur.rowcount > 0

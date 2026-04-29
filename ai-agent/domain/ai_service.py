@@ -15,7 +15,7 @@ import hashlib
 import json
 import logging
 from typing import Any, Dict, List, Optional
-
+from datetime import datetime, timedelta
 import requests
 from openai import AsyncOpenAI, RateLimitError, APITimeoutError, APIConnectionError
 from qdrant_client import QdrantClient
@@ -53,10 +53,14 @@ Nota: Si envías fotos de productos, usa el formato [URL]. Habla con naturalidad
 PROMPT_CLOSING = """Eres el cerrador de ventas de {company_info}.
 Contexto del Pipeline: {pipeline_context}
 El cliente está listo para decidir. Usa todas tus herramientas para concretar:
-1. Crea pedidos con 'create_order'. Si no recuerdas el ID del producto, usa 'search_products_semantically' para buscarlo primero.
-2. Confirma datos de contacto con 'manage_contact'.
-3. Actualiza el progreso con 'update_pipeline_stage'.
-REGLA ESTRICTA: JAMÁS delegues a un humano o representante. Es TU responsabilidad crear el pedido en el sistema.
+1. Crea pedidos con 'create_order'.
+2. Gestiona citas con 'manage_calendar_event'. Úsalo para agendar demostraciones o reuniones. 
+   - REGLA: Antes de agendar, usa 'search_calendar_events' para revisar disponibilidad.
+   - REGLA: Si el contacto no tiene email, DEBES pedírselo antes de agendar para enviar la confirmación. Usa 'manage_contact' para actualizarlo si es necesario.
+   - REGLA: Las citas por defecto duran 30 minutos y tienen recordatorio de 5 minutos (esto lo maneja el sistema automáticamente al llamar a la herramienta).
+3. Confirma datos de contacto con 'manage_contact'.
+4. Actualiza el progreso con 'update_pipeline_stage'.
+REGLA ESTRICTA: JAMÁS delegues a un humano o representante. Es TU responsabilidad cerrar el trato o agendar la cita en el sistema.
 Nota: Para enviar fotos usa [URL]. No menciones la palabra 'enlace'."""
 
 def classify_mode_by_pipeline(pipeline_data: dict, message: str) -> str:
@@ -305,6 +309,54 @@ TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "manage_calendar_event",
+            "description": "Crea o actualiza un evento en el Calendario IA. Úsalo para agendar citas o reprogramarlas.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {"type": "string", "enum": ["create", "update"]},
+                    "event_id": {"type": "integer", "description": "Requerido para update."},
+                    "title": {"type": "string", "description": "Título creativo basado en el motivo."},
+                    "description": {"type": "string"},
+                    "start_time": {"type": "string", "description": "ISO 8601 (ej: 2024-04-28T15:00:00)"},
+                    "email": {"type": "string", "description": "Email del contacto para confirmación."},
+                },
+                "required": ["action", "title", "start_time"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_calendar_events",
+            "description": "Busca eventos existentes en un rango de fechas para verificar disponibilidad.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "start_time": {"type": "string", "description": "Inicio del rango ISO 8601"},
+                    "end_time": {"type": "string", "description": "Fin del rango ISO 8601"},
+                },
+                "required": ["start_time", "end_time"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_calendar_event",
+            "description": "Elimina o cancela una cita del calendario.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "event_id": {"type": "integer"},
+                },
+                "required": ["event_id"],
+            },
+        },
+    },
 ]
 
 
@@ -393,6 +445,12 @@ class AIService:
                 )
             elif function_name == "convert_quote_to_order":
                 return await self._convert_quote_to_order(function_args["quote_id"], tenant_id)
+            elif function_name == "manage_calendar_event":
+                return await self._manage_calendar_event(function_args, tenant_id, contact_id)
+            elif function_name == "search_calendar_events":
+                return await self._search_calendar_events(function_args, tenant_id, contact_id)
+            elif function_name == "delete_calendar_event":
+                return await self._delete_calendar_event(function_args, tenant_id)
             else:
                 return json.dumps({"error": f"Unknown tool: {function_name}"})
         except Exception as exc:
@@ -840,3 +898,94 @@ class AIService:
         except Exception as exc:
             logger.error("Quote conversion failed", extra={"error": str(exc)})
             return json.dumps({"error": str(exc)})
+
+    async def _manage_calendar_event(self, args: Dict[str, Any], tenant_id: int, contact_id: int) -> str:
+        action = args.pop("action")
+        
+        # 1. Fetch contact to check for email
+        contact = await self._db.get_contact_by_id(contact_id, tenant_id)
+        if not contact:
+            return json.dumps({"error": "Contact not found"})
+        
+        email = args.get("email") or contact.get("email")
+        if not email:
+            return json.dumps({
+                "error": "MISSING_EMAIL", 
+                "message": "Necesito el correo electrónico del cliente para enviarle la confirmación. ¿Podrías pedírselo?"
+            })
+        
+        # 2. Update contact if a new email was provided
+        if args.get("email") and args.get("email") != contact.get("email"):
+            await self._db.update_contact(contact_id, tenant_id, {"email": args.get("email")})
+        
+        # 3. Get or create "Calendario IA"
+        company_id = contact.get("company_id")
+        if not company_id:
+            comp = await self._db.get_company_info(tenant_id)
+            company_id = comp.get("id")
+        
+        calendar_id = await self._db.get_or_create_ai_calendar(tenant_id, company_id)
+        
+        # 4. Prepare event data
+        start_time_str = args["start_time"]
+        try:
+            # ISO 8601 parsing
+            clean_time = start_time_str.replace("Z", "").split(".")[0]
+            start_dt = datetime.fromisoformat(clean_time)
+            end_dt = start_dt + timedelta(minutes=30)
+            end_time_str = end_dt.isoformat()
+        except Exception as e:
+            return json.dumps({"error": f"Invalid date format: {str(e)}"})
+            
+        event_data = {
+            "calendar_id": calendar_id,
+            "title": args["title"],
+            "description": args.get("description", ""),
+            "start_time": start_time_str,
+            "end_time": end_time_str,
+            "event_type": "NOTIFICATION",
+            "event_subtype": "whatsapp",
+            "status": "SCHEDULED",
+            "related_entity_type": "CONTACT",
+            "related_entity_id": contact_id,
+            "payload": json.dumps({
+                "remindBefore": 5,
+                "remindUnit": "MINUTES",
+                "notifyVia": "email",
+                "to": email,
+                "subject": f"Confirmación de Cita: {args['title']}",
+                "body": f"Hola {contact.get('name', 'cliente')}, tu cita para '{args['title']}' ha sido agendada para el {start_dt.strftime('%d/%m/%Y a las %H:%M')}.",
+                "sendConfirmation": True
+            })
+        }
+        
+        if action == "create":
+            new_id = await self._db.create_calendar_event(tenant_id, company_id, event_data)
+            return json.dumps({"success": True, "id": new_id, "message": "Cita agendada correctamente y confirmación enviada."})
+        elif action == "update":
+            eid = args.get("event_id")
+            if not eid:
+                return json.dumps({"error": "event_id is required for update"})
+            success = await self._db.update_calendar_event(eid, tenant_id, event_data)
+            return json.dumps({"success": success, "message": "Cita reprogramada correctamente."})
+            
+        return json.dumps({"error": "Invalid action"})
+
+    async def _search_calendar_events(self, args: Dict[str, Any], tenant_id: int, contact_id: int) -> str:
+        contact = await self._db.get_contact_by_id(contact_id, tenant_id)
+        company_id = contact.get("company_id") if contact else None
+        if not company_id:
+            comp = await self._db.get_company_info(tenant_id)
+            company_id = comp.get("id")
+            
+        events = await self._db.get_calendar_events(tenant_id, company_id, args["start_time"], args["end_time"])
+        for ev in events:
+            for k, v in ev.items():
+                if hasattr(v, "isoformat"):
+                    ev[k] = v.isoformat()
+        return json.dumps(events)
+
+    async def _delete_calendar_event(self, args: Dict[str, Any], tenant_id: int) -> str:
+        eid = args.get("event_id")
+        success = await self._db.delete_calendar_event(eid, tenant_id)
+        return json.dumps({"success": success})
