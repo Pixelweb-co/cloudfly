@@ -52,6 +52,7 @@ class AppConfig:
 
     # ── External APIs ─────────────────────────────────────────────────────
     java_api_url: str
+    scheduler_api_url: str
 
     # ── Observability ─────────────────────────────────────────────────────
     log_level: str
@@ -93,6 +94,7 @@ def load_config() -> AppConfig:
         ai_rate_limit_per_tenant_per_day=int(os.getenv("AI_RATE_LIMIT_PER_DAY", "500")),
 
         java_api_url=os.getenv("JAVA_API_URL", "http://backend:8080/api"),
+        scheduler_api_url=os.getenv("SCHEDULER_API_URL", "http://scheduler-service:8080"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
         ai_api_secret=os.getenv("AI_API_SECRET", "cloudfly_ai_secret_2026")
     )
