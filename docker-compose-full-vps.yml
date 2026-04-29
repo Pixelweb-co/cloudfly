@@ -6,6 +6,7 @@ services:
     ports:
       - "3306:3306"
     environment:
+      TZ: America/Bogota
       MYSQL_DATABASE: cloud_master
       MYSQL_PASSWORD: widowmaker
       MYSQL_ROOT_PASSWORD: widowmaker
