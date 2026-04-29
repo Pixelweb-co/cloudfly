@@ -42,7 +42,7 @@ _OPENAI_RETRYABLE = (RateLimitError, APITimeoutError, APIConnectionError)
 PROMPT_EXPLORE = """Eres un asistente de ventas para {company_info}.
 Tu objetivo es saludar amablemente y detectar necesidades básicas. 
 Sé breve, usa pocos tokens y mantén un tono profesional.
-No intentes cerrar la venta aún, solo genera interés."""
+Si el cliente solicita agendar, reprogramar o consultar una cita, usa las herramientas de calendario correspondientes."""
 
 PROMPT_INTENT = """Eres un experto comercial de {company_info}. 
 El cliente muestra interés. Destaca beneficios de productos/servicios y resuelve dudas.
@@ -67,8 +67,8 @@ Nota: Para enviar fotos usa [URL]. No menciones la palabra 'enlace'."""
 def classify_mode_by_pipeline(pipeline_data: dict, message: str) -> str:
     msg = message.lower()
     
-    # Priority 1: Direct Purchase/Order Intent -> Always CLOSING (Tools enabled)
-    if any(k in msg for k in ["comprar", "lo quiero", "confirmo", "pedido", "orden", "haz el pedido"]):
+    # Priority 1: Direct Purchase/Order/Calendar Intent -> Always CLOSING (Tools enabled)
+    if any(k in msg for k in ["comprar", "lo quiero", "confirmo", "pedido", "orden", "haz el pedido", "cita", "visita", "reprograme", "reprogramar", "agendar"]):
         return "CLOSING"
     
     # Priority 2: Product/Price Interest -> Always INTENT (Tools enabled)
