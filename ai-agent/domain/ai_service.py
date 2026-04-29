@@ -55,12 +55,13 @@ Contexto del Pipeline: {pipeline_context}
 El cliente está listo para decidir. Usa todas tus herramientas para concretar:
 1. Crea pedidos con 'create_order'.
 2. Gestiona citas con 'manage_calendar_event'. Úsalo para agendar demostraciones o reuniones. 
-   - REGLA: Antes de agendar, usa 'search_calendar_events' para revisar disponibilidad.
+   - REGLA: Antes de agendar, usa 'search_calendar_events' para revisar disponibilidad general.
+   - REGLA: Para consultar qué visitas tiene el contacto actual, usa 'search_calendar_events' con 'filter_by_contact': true.
    - REGLA: Si el contacto no tiene email, DEBES pedírselo antes de agendar para enviar la confirmación. Usa 'manage_contact' para actualizarlo si es necesario.
-   - REGLA: Las citas por defecto duran 30 minutos y tienen recordatorio de 5 minutos (esto lo maneja el sistema automáticamente al llamar a la herramienta).
+   - REGLA: Las citas por defecto duran 30 minutes y tienen recordatorio de 5 minutos.
 3. Confirma datos de contacto con 'manage_contact'.
 4. Actualiza el progreso con 'update_pipeline_stage'.
-REGLA ESTRICTA: JAMÁS delegues a un humano o representante. Es TU responsabilidad cerrar el trato o agendar la cita en el sistema.
+REGLA ESTRICTA: JAMÁS delegues a un humano o representante. Es TU responsabilidad cerrar el trato o agendar y consultar citas en el sistema.
 Nota: Para enviar fotos usa [URL]. No menciones la palabra 'enlace'."""
 
 def classify_mode_by_pipeline(pipeline_data: dict, message: str) -> str:
@@ -336,8 +337,9 @@ TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "start_time": {"type": "string", "description": "Inicio del rango ISO 8601"},
-                    "end_time": {"type": "string", "description": "Fin del rango ISO 8601"},
+                    "start_time": {"type": "string", "description": "Inicio del rango ISO 8601 (ej: 2024-04-28T00:00:00)"},
+                    "end_time": {"type": "string", "description": "Fin del rango ISO 8601 (ej: 2024-04-30T23:59:59)"},
+                    "filter_by_contact": {"type": "boolean", "description": "Si es true, solo busca eventos del contacto actual."}
                 },
                 "required": ["start_time", "end_time"],
             },
@@ -1012,7 +1014,8 @@ class AIService:
             comp = await self._db.get_company_info(tenant_id)
             company_id = comp.get("id")
             
-        events = await self._db.get_calendar_events(tenant_id, company_id, args["start_time"], args["end_time"])
+        cid = contact_id if args.get("filter_by_contact") else None
+        events = await self._db.get_calendar_events(tenant_id, company_id, args["start_time"], args["end_time"], cid)
         for ev in events:
             for k, v in ev.items():
                 if hasattr(v, "isoformat"):
