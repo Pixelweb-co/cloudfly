@@ -374,16 +374,23 @@ class AsyncMySQLClient:
             await cur.execute(sql, params)
             return cur.lastrowid
 
-    async def get_calendar_events(self, tenant_id: int, company_id: int, start_time: str, end_time: str) -> List[Dict[str, Any]]:
-        """Busca eventos en un rango de tiempo."""
+    async def get_calendar_events(self, tenant_id: int, company_id: int, start_time: str, end_time: str, contact_id: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Lista eventos en un rango de tiempo, opcionalmente para un contacto específico."""
         sql = """
             SELECT * FROM calendar_events 
             WHERE tenant_id = %s AND company_id = %s 
             AND start_time >= %s AND start_time <= %s
-            ORDER BY start_time ASC
         """
+        params = [tenant_id, company_id, start_time, end_time]
+        
+        if contact_id:
+            sql += " AND related_entity_type = 'CONTACT' AND related_entity_id = %s"
+            params.append(contact_id)
+            
+        sql += " ORDER BY start_time ASC"
+        
         async with self.readonly() as cur:
-            await cur.execute(sql, (tenant_id, company_id, start_time, end_time))
+            await cur.execute(sql, params)
             return await cur.fetchall()
 
     async def update_calendar_event(self, event_id: int, tenant_id: int, data: Dict[str, Any]) -> bool:
