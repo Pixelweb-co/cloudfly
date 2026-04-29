@@ -36,6 +36,7 @@ public class JobGeneratorService {
                             Number amount = (Number) config.get("remindBefore");
                             String unit = (String) config.getOrDefault("remindUnit", "MINUTES");
                             LocalDateTime remindTime = calculateRemindTime(event.getStartTime(), amount.intValue(), unit);
+                            log.info("Event {} startTime: {}, amount: {}, unit: {}, remindTime: {}", event.getId(), event.getStartTime(), amount, unit, remindTime);
                             jobs.add(buildJob(event, remindTime));
                             reminderAdded = true;
                         }
@@ -89,11 +90,17 @@ public class JobGeneratorService {
 
         // Filter out jobs that are already in the past
         LocalDateTime now = LocalDateTime.now();
+        log.info("Current now(): {}", now);
         List<ScheduledJobEntity> validJobs = jobs.stream()
-                .filter(j -> j.getExecuteAt().isAfter(now) || j.getExecuteAt().equals(now))
+                .filter(j -> {
+                    boolean isValid = j.getExecuteAt().isAfter(now) || j.getExecuteAt().equals(now);
+                    log.info("Evaluating job for event {}, executeAt: {}, isAfterNow: {}", event.getId(), j.getExecuteAt(), isValid);
+                    return isValid;
+                })
                 .toList();
 
         if (validJobs.isEmpty() && !jobs.isEmpty()) {
+            log.warn("All calculated jobs for event {} were in the past! Forcing execution at now()", event.getId());
             // If all were in the past, at least schedule one for now if it's the execution
             validJobs = List.of(buildJob(event, now));
         }
