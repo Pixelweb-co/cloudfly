@@ -67,6 +67,7 @@ services:
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_DATABASE=cloud_master
+      - SPRING_R2DBC_URL=r2dbc:mysql://mysql:3306/cloud_master?serverZoneId=America/Bogota
       - DB_USERNAME=root
       - DB_PASSWORD=widowmaker
       - KAFKA_HOST=kafka
@@ -103,6 +104,7 @@ services:
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_DATABASE=cloud_master
+      - SPRING_R2DBC_URL=r2dbc:mysql://mysql:3306/cloud_master?serverZoneId=America/Bogota
       - DB_USERNAME=root
       - DB_PASSWORD=widowmaker
       - KAFKA_HOST=kafka
