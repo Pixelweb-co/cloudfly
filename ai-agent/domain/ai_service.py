@@ -509,6 +509,10 @@ class AIService:
             system_prompt = PROMPT_CLOSING.format(company_info=company_info_str, pipeline_context=pipeline_context)
             temp = 0.3
             active_tools = TOOLS
+            
+        # Append current datetime to system prompt
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+        system_prompt += f"\n\n[CONTEXTO DEL SISTEMA]\nFecha y hora actual: {now_str}\nUsa esta fecha como referencia para 'hoy', 'mañana', etc."
 
         messages: List[Dict] = [{"role": "system", "content": system_prompt}]
         for h in history:
