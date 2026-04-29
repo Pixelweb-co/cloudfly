@@ -2,6 +2,7 @@ package com.app.services;
 
 import com.app.dto.CalendarEventDto;
 import com.app.events.CalendarEventCreated;
+import com.app.events.CalendarEventUpdated;
 import com.app.persistence.entity.CalendarEventEntity;
 import com.app.persistence.entity.EventStatus;
 import com.app.persistence.repository.CalendarEventRepository;
@@ -70,6 +71,7 @@ public class CalendarEventService {
                     entity.setUpdatedAt(LocalDateTime.now());
                     return calendarEventRepository.save(entity);
                 })
+                .doOnSuccess(saved -> eventPublisher.publishEvent(new CalendarEventUpdated(saved)))
                 .map(this::mapToDto);
     }
 
