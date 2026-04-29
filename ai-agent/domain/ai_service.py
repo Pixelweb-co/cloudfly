@@ -964,14 +964,44 @@ class AIService:
         }
         
         if action == "create":
-            new_id = await self._db.create_calendar_event(tenant_id, company_id, event_data)
-            return json.dumps({"success": True, "id": new_id, "message": "Cita agendada correctamente y confirmación enviada."})
+            try:
+                url = f"{config.scheduler_api_url}/api/events"
+                # EventDto expected by Java
+                payload = {
+                    "tenantId": tenant_id,
+                    "companyId": company_id,
+                    "calendarId": calendar_id,
+                    "title": event_data["title"],
+                    "description": event_data["description"],
+                    "eventType": event_data["event_type"],
+                    "eventSubtype": event_data["event_subtype"],
+                    "startTime": event_data["start_time"],
+                    "endTime": event_data["end_time"],
+                    "relatedEntityType": event_data["related_entity_type"],
+                    "relatedEntityId": event_data["related_entity_id"],
+                    "payload": event_data["payload"]
+                }
+                logger.info(f"🚀 Calling scheduler-service API: {url}")
+                res = requests.post(url, json=payload, timeout=10)
+                if res.status_code in [200, 201]:
+                    return json.dumps({"success": True, "data": res.json(), "message": "Cita agendada correctamente y confirmación enviada."})
+                return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
+            except Exception as e:
+                logger.error(f"Failed to call scheduler API: {e}")
+                return json.dumps({"error": str(e)})
+
         elif action == "update":
             eid = args.get("event_id")
             if not eid:
                 return json.dumps({"error": "event_id is required for update"})
-            success = await self._db.update_calendar_event(eid, tenant_id, event_data)
-            return json.dumps({"success": success, "message": "Cita reprogramada correctamente."})
+            try:
+                url = f"{config.scheduler_api_url}/api/events/{eid}"
+                res = requests.put(url, json=event_data, timeout=10)
+                if res.status_code == 200:
+                    return json.dumps({"success": True, "message": "Cita reprogramada correctamente."})
+                return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
+            except Exception as e:
+                return json.dumps({"error": str(e)})
             
         return json.dumps({"error": "Invalid action"})
 
@@ -991,5 +1021,11 @@ class AIService:
 
     async def _delete_calendar_event(self, args: Dict[str, Any], tenant_id: int) -> str:
         eid = args.get("event_id")
-        success = await self._db.delete_calendar_event(eid, tenant_id)
-        return json.dumps({"success": success})
+        try:
+            url = f"{config.scheduler_api_url}/api/events/{eid}"
+            res = requests.delete(url, timeout=10)
+            if res.status_code in [200, 204]:
+                return json.dumps({"success": True})
+            return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
+        except Exception as e:
+            return json.dumps({"error": str(e)})
