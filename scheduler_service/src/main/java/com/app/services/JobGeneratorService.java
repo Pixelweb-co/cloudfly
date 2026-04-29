@@ -40,6 +40,11 @@ public class JobGeneratorService {
                             jobs.add(buildJob(event, remindTime));
                             reminderAdded = true;
                         }
+                        
+                        if (config.containsKey("sendConfirmation") && Boolean.TRUE.equals(config.get("sendConfirmation"))) {
+                            log.info("Event {} requested immediate confirmation job", event.getId());
+                            jobs.add(buildJob(event, LocalDateTime.now()));
+                        }
                     }
                 } catch (Exception e) {
                     log.warn("Could not parse payload for custom reminder: {}", e.getMessage());
