@@ -62,6 +62,7 @@ services:
     env_file:
       - .env
     environment:
+      - TZ=America/Bogota
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_DATABASE=cloud_master
@@ -126,6 +127,7 @@ services:
     container_name: notification-service
     restart: always
     environment:
+      - TZ=America/Bogota
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - SPRING_PROFILES_ACTIVE=production
       - DB_HOST=mysql
