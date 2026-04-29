@@ -23,6 +23,7 @@ public class JobGeneratorService {
 
     public Mono<Void> generateJobsForEvent(CalendarEventEntity event) {
         log.info("Generating jobs for event: {} (Type: {})", event.getId(), event.getEventType());
+        final LocalDateTime generationTime = LocalDateTime.now();
         
         return scheduledJobRepository.deleteByEventId(event.getId())
                 .then(Mono.defer(() -> {
@@ -39,13 +40,13 @@ public class JobGeneratorService {
                                         String unit = (String) config.getOrDefault("remindUnit", "MINUTES");
                                         LocalDateTime remindTime = calculateRemindTime(event.getStartTime(), amount.intValue(), unit);
                                         log.info("Event {} startTime: {}, amount: {}, unit: {}, remindTime: {}", event.getId(), event.getStartTime(), amount, unit, remindTime);
-                                        jobs.add(buildJob(event, remindTime));
+                                        jobs.add(buildJob(event, remindTime, generationTime));
                                         reminderAdded = true;
                                     }
                                     
                                     if (config.containsKey("sendConfirmation") && Boolean.TRUE.equals(config.get("sendConfirmation"))) {
                                         log.info("Event {} requested immediate confirmation job", event.getId());
-                                        jobs.add(buildJob(event, LocalDateTime.now()));
+                                        jobs.add(buildJob(event, generationTime, generationTime));
                                     }
                                 }
                             } catch (Exception e) {
@@ -53,45 +54,49 @@ public class JobGeneratorService {
                             }
                             
                             if (!reminderAdded) {
-                                jobs.add(buildJob(event, event.getStartTime()));
+                                jobs.add(buildJob(event, event.getStartTime(), generationTime));
                             }
                             break;
 
                         case APPOINTMENT:
-                            jobs.add(buildJob(event, LocalDateTime.now()));
-                            jobs.add(buildJob(event, event.getStartTime().minusHours(24)));
-                            jobs.add(buildJob(event, event.getStartTime().minusHours(1)));
-                            jobs.add(buildJob(event, event.getStartTime()));
+                            jobs.add(buildJob(event, generationTime, generationTime));
+                            jobs.add(buildJob(event, event.getStartTime().minusHours(24), generationTime));
+                            jobs.add(buildJob(event, event.getStartTime().minusHours(1), generationTime));
+                            jobs.add(buildJob(event, event.getStartTime(), generationTime));
                             break;
 
                         case FINANCIAL:
-                            jobs.add(buildJob(event, event.getStartTime().minusDays(3)));
-                            jobs.add(buildJob(event, event.getStartTime()));
-                            jobs.add(buildJob(event, event.getStartTime().plusDays(1)));
+                            jobs.add(buildJob(event, event.getStartTime().minusDays(3), generationTime));
+                            jobs.add(buildJob(event, event.getStartTime(), generationTime));
+                            jobs.add(buildJob(event, event.getStartTime().plusDays(1), generationTime));
                             break;
 
                         case SUBSCRIPTION:
-                            jobs.add(buildJob(event, event.getStartTime()));
-                            jobs.add(buildJob(event, event.getStartTime().plusDays(3)));
+                            jobs.add(buildJob(event, event.getStartTime(), generationTime));
+                            jobs.add(buildJob(event, event.getStartTime().plusDays(3), generationTime));
                             break;
 
                         case REST_ACTION:
-                            jobs.add(buildJob(event, event.getStartTime()));
+                            jobs.add(buildJob(event, event.getStartTime(), generationTime));
                             break;
 
                         default:
-                            jobs.add(buildJob(event, event.getStartTime()));
+                            jobs.add(buildJob(event, event.getStartTime(), generationTime));
                             break;
                     }
 
-                    LocalDateTime now = LocalDateTime.now();
+                    log.info("Current generationTime: {}", generationTime);
                     List<ScheduledJobEntity> validJobs = jobs.stream()
-                            .filter(j -> j.getExecuteAt().isAfter(now) || j.getExecuteAt().equals(now))
+                            .filter(j -> {
+                                boolean isValid = j.getExecuteAt().isAfter(generationTime) || j.getExecuteAt().isEqual(generationTime);
+                                log.info("Job for event {} executeAt: {}, isValid: {}", event.getId(), j.getExecuteAt(), isValid);
+                                return isValid;
+                            })
                             .toList();
 
                     if (validJobs.isEmpty() && !jobs.isEmpty()) {
                         log.warn("All calculated jobs for event {} were in the past! Forcing execution at now()", event.getId());
-                        validJobs = List.of(buildJob(event, now));
+                        validJobs = List.of(buildJob(event, generationTime, generationTime));
                     }
 
                     return scheduledJobRepository.saveAll(validJobs).then();
@@ -108,14 +113,14 @@ public class JobGeneratorService {
         }
     }
 
-    private ScheduledJobEntity buildJob(CalendarEventEntity event, LocalDateTime executeAt) {
+    private ScheduledJobEntity buildJob(CalendarEventEntity event, LocalDateTime executeAt, LocalDateTime generationTime) {
         return ScheduledJobEntity.builder()
                 .eventId(event.getId())
                 .executeAt(executeAt)
                 .status(JobStatus.PENDING)
                 .retryCount(0)
                 .maxRetries(3)
-                .createdAt(LocalDateTime.now())
+                .createdAt(generationTime)
                 .build();
     }
 }
