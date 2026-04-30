@@ -44,5 +44,60 @@ docker compose -f docker-compose-full-vps.yml up -d --build backend-api ai-agent
 *   **Caché:** Redis
 *   **Vectores:** Qdrant & PostgreSQL (pgvector)
 
+## 📊 Diagrama de Arquitectura
+
+```mermaid
+graph TB
+    subgraph Clientes ["Capa de Cliente"]
+        Browser["🌐 Navegador Web (Next.js)"]
+        Mobile["📱 App Móvil (Expo/React Native)"]
+        WhatsApp["💬 WhatsApp (Usuario)"]
+    end
+
+    subgraph Gateway ["Puerta de Enlace (Traefik)"]
+        SSL["🔒 Traefik (Proxy & SSL)"]
+    end
+
+    subgraph Services ["Capa de Microservicios"]
+        Backend["☕ Backend API (Java/Spring Boot)"]
+        Scheduler["📅 Scheduler Service (Calendar)"]
+        Socket["🔌 Chat Socket (Node.js)"]
+        AI["🤖 AI Agent (Python/OpenAI)"]
+        Vector["⚙️ AI Vector Worker"]
+        Notif["🔔 Notification Service"]
+        Evolution["📞 Evolution API (WhatsApp)"]
+    end
+
+    subgraph Messaging ["Mensajería y Eventos"]
+        Kafka[("📨 Apache Kafka")]
+    end
+
+    subgraph Persistence ["Capa de Datos"]
+        MySQL[("🗄️ MySQL 8.0 (CRM/Orders)")]
+        Redis[("⚡ Redis (Cache/Sessions)")]
+        Qdrant[("🧠 Qdrant (Vector DB)")]
+        Postgres[("🐘 PostgreSQL (Vector Storage)")]
+    end
+
+    %% Flujos de conexión
+    Browser & Mobile <--> SSL
+    SSL <--> Backend & Scheduler & Socket & Evolution
+    
+    %% Comunicación Interna
+    Backend & Scheduler & AI & Notif & Vector <--> Kafka
+    Socket <--> Redis & Kafka
+    
+    %% Persistencia
+    Backend & Scheduler & Notif <--> MySQL
+    Evolution <--> Redis
+    AI & Vector <--> Qdrant & Postgres & Backend
+    WhatsApp <--> Evolution
+
+    style Kafka fill:#f96,stroke:#333,stroke-width:2px
+    style AI fill:#00ff00,stroke:#333,stroke-width:2px
+    style Backend fill:#6366F1,stroke:#333,stroke-width:2px
+    style SSL fill:#fff,stroke:#333,stroke-dasharray: 5 5
+```
+
 ---
 © 2026 CloudFly AI - Soluciones de Automatización Inteligente.
