@@ -40,6 +40,7 @@ export default function CreateProductPage() {
     inventoryQty: 0,
     manageStock: true,
     status: 'PUBLISHED',
+    productType: 'PRODUCT',
     categoryIds: [] as number[],
     imageUrls: [] as string[]
   })
@@ -277,6 +278,20 @@ export default function CreateProductPage() {
                       >
                         <MenuItem value="PUBLISHED">Publicado</MenuItem>
                         <MenuItem value="DRAFT">Borrador</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <FormControl fullWidth>
+                      <InputLabel>Tipo de Item</InputLabel>
+                      <Select
+                        name="productType"
+                        value={formData.productType}
+                        onChange={handleChange}
+                        label="Tipo de Item"
+                      >
+                        <MenuItem value="PRODUCT">Producto Físico</MenuItem>
+                        <MenuItem value="SERVICE">Servicio / Cita</MenuItem>
                       </Select>
                     </FormControl>
                   </Grid>
