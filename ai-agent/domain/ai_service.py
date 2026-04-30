@@ -39,36 +39,43 @@ _OPENAI_RETRYABLE = (RateLimitError, APITimeoutError, APIConnectionError)
 
 # --- Dynamic Prompt Constants ---
 
-PROMPT_EXPLORE = """Eres un asistente de ventas para {company_info}.
-Tu objetivo es saludar amablemente y detectar necesidades básicas. 
-Sé breve, usa pocos tokens y mantén un tono profesional.
-Si el cliente solicita agendar, reprogramar o consultar una cita, usa las herramientas de calendario correspondientes."""
+PROMPT_EXPLORE = """Eres un asistente de ventas profesional para {company_info}. Tu objetivo es saludar amablemente y detectar necesidades básicas del cliente. Mantén un tono profesional, entusiasta y sé breve en tus respuestas.
 
-PROMPT_INTENT = """Eres un experto comercial de {company_info}. 
-El cliente muestra interés. Destaca beneficios de productos/servicios y resuelve dudas.
-Tu objetivo es perfilar la venta y guiar al cliente hacia una cotización o pedido.
-Usa herramientas de búsqueda si es necesario.
-Nota: Si envías fotos de productos, usa el formato [URL]. Habla con naturalidad (ej: "Aquí te muestro...")."""
+Para la gestión de citas (agendar, reprogramar o consultar), utiliza las herramientas 'manage_calendar_event' y 'search_calendar_events' según corresponda."""
 
-PROMPT_CLOSING = """Eres el cerrador de ventas de {company_info}.
-Contexto del Pipeline: {pipeline_context}
-El cliente está listo para decidir. Usa todas tus herramientas para concretar:
-1. Crea pedidos con 'create_order'.
-2. Gestiona citas con 'manage_calendar_event'. Úsalo para agendar demostraciones o reuniones. 
-   - REGLA: Antes de agendar, usa 'search_calendar_events' para revisar disponibilidad general.
-   - REGLA: Para consultar qué visitas tiene el contacto actual, usa 'search_calendar_events' con 'filter_by_contact': true.
-   - REGLA: Si el contacto no tiene email, DEBES pedírselo antes de agendar para enviar la confirmación. Usa 'manage_contact' para actualizarlo si es necesario.
-   - REGLA: Las citas por defecto duran 30 minutes y tienen recordatorio de 5 minutos.
-3. Confirma datos de contacto con 'manage_contact'.
-4. Actualiza el progreso con 'update_pipeline_stage'.
-REGLA ESTRICTA: JAMÁS delegues a un humano o representante. Es TU responsabilidad cerrar el trato o agendar y consultar citas en el sistema.
-Nota: Para enviar fotos usa [URL]. No menciones la palabra 'enlace'."""
+PROMPT_INTENT = """Eres un experto comercial de {company_info}. El cliente muestra un interés claro en nuestros productos o servicios. Tu labor es destacar los beneficios, resolver dudas y perfilar la venta.
+
+REGLA DE PERFILAMIENTO: Si el cliente muestra intención de avanzar hacia una compra o cotización, DEBES validar si ya tienes su Nombre y Email. Usa 'get_contact' para verificarlo. Si ya existen, confírmalos (ej: "Veo que tu correo es [email], ¿es correcto?"). Si faltan, solicítalos para completar su perfil.
+
+Utiliza 'search_products_semantically' para encontrar productos que se ajusten a las necesidades del cliente. Si envías fotos de productos, asegúrate de usar el formato [URL] y hablar con naturalidad.
+"""
+
+PROMPT_CLOSING = """Eres el cerrador de ventas experto de {company_info}. El cliente está listo para decidir y tu misión es concretar la operación de forma eficiente y profesional.
+
+[ESTADO INTERNO DEL PIPELINE]
+{pipeline_context}
+
+REGLA DE ORO OBLIGATORIA: Antes de ejecutar cualquier herramienta de cierre ('create_order', 'create_quote' o 'manage_calendar_event'), DEBES validar la información de contacto:
+1. Usa 'get_contact' para verificar si el cliente ya tiene Nombre y Email registrados.
+2. Si falta el Email o el Nombre, solicítalos amablemente.
+3. Si ya tienes los datos, DEBES pedir al cliente que los RECTIFIQUE o CONFIRME. Di algo como: "Para procesar tu [pedido/cita], por favor confírmame si tu nombre completo sigue siendo [Nombre] y tu correo electrónico es [Email], o si deseas actualizarlos."
+4. No invoques la herramienta de cierre hasta que el usuario haya confirmado o proporcionado estos datos.
+
+Para la gestión de pedidos, utiliza 'create_order'. Asegúrate de haber confirmado los productos, cantidades y precios antes de llamar a esta herramienta.
+
+Para la gestión de citas o agendamientos, utiliza 'manage_calendar_event'. Antes de agendar, usa 'search_calendar_events' para revisar la disponibilidad general. Para consultar visitas previas del contacto, usa 'filter_by_contact': true. Las citas duran 30 min por defecto con recordatorio de 5 min.
+
+Para mantener el CRM actualizado, utiliza 'manage_contact' cada vez que el cliente proporcione nuevos datos (email, dirección, etc.).
+
+Utiliza 'update_pipeline_stage' de forma silenciosa para mover al contacto a través de las etapas del pipeline según el progreso de la venta.
+
+REGLA ESTRICTA: Es TU responsabilidad cerrar el trato o agendar las citas necesarias. JAMÁS delegues esta tarea a un humano a menos que sea estrictamente necesario mediante 'transfer_to_human'."""
 
 def classify_mode_by_pipeline(pipeline_data: dict, message: str) -> str:
     msg = message.lower()
     
     # Priority 1: Direct Purchase/Order/Calendar Intent -> Always CLOSING (Tools enabled)
-    if any(k in msg for k in ["comprar", "lo quiero", "confirmo", "pedido", "orden", "haz el pedido", "cita", "visita", "reprograme", "reprogramar", "agendar"]):
+    if any(k in msg for k in ["comprar", "lo quiero", "confirmo", "pedido", "pedir", "orden", "haz el pedido", "cita", "visita", "reprograme", "reprogramar", "agendar"]):
         return "CLOSING"
     
     # Priority 2: Product/Price Interest -> Always INTENT (Tools enabled)
@@ -146,7 +153,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "manage_contact",
-            "description": "Crea o actualiza la información de un contacto (nombre, email, dirección, documento, etc).",
+            "description": "Crea o actualiza la información de un contacto (nombre, email, dirección, documento, etc). Úsalo siempre que el cliente proporcione o confirme sus datos.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -168,7 +175,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "create_order",
-            "description": "Crea un pedido oficial. Llama a esto cuando el cliente confirme la compra.",
+            "description": "Crea un pedido oficial. Llama a esto SOLO después de haber solicitado y confirmado el Nombre y Email del cliente para actualizar su ficha.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -254,7 +261,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "create_quote",
-            "description": "Crea una cotización (proforma). Úsalo cuando el cliente pida precios o un presupuesto sin confirmar la compra.",
+            "description": "Crea una cotización (proforma). Úsalo SOLO después de haber solicitado y confirmado el Nombre y Email del cliente para actualizar su ficha.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -314,7 +321,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "manage_calendar_event",
-            "description": "Crea o actualiza un evento en el Calendario IA. Úsalo para agendar citas o reprogramarlas.",
+            "description": "Crea o actualiza un evento en el Calendario IA. Llama a esto SOLO después de haber solicitado y confirmado el Nombre y Email del cliente para actualizar su ficha.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -774,9 +781,15 @@ class AIService:
         })
 
     async def _create_order(self, customer_id: int, items: List[Dict], tenant_id: int, notes: str = None, message_id: str = "unknown") -> str:
+        # 0. Pre-validation: Check for missing name or email in contact
+        contact = await self._db.get_contact_by_id(customer_id, tenant_id)
+        if not contact or not contact.get("name") or not contact.get("email"):
+            return json.dumps({
+                "error": "INCOMPLETE_CONTACT_INFO",
+                "message": "Falta el nombre o el correo electrónico del contacto. Por favor, solicítalos antes de crear el pedido."
+            })
+
         # Idempotency: generate a hash of the critical order data + message_id
-        order_hash_data = f"{customer_id}-{json.dumps(items, sort_keys=True)}-{message_id}"
-        idempotency_key = hashlib.sha256(order_hash_data.encode()).hexdigest()
 
         log_ctx = {
             "customer_id": customer_id,
@@ -926,16 +939,18 @@ class AIService:
     async def _manage_calendar_event(self, args: Dict[str, Any], tenant_id: int, contact_id: int) -> str:
         action = args.pop("action")
         
-        # 1. Fetch contact to check for email
+        # 1. Fetch contact to check for name and email
         contact = await self._db.get_contact_by_id(contact_id, tenant_id)
         if not contact:
             return json.dumps({"error": "Contact not found"})
         
+        name = contact.get("name")
         email = args.get("email") or contact.get("email")
-        if not email:
+        
+        if not name or not email:
             return json.dumps({
-                "error": "MISSING_EMAIL", 
-                "message": "Necesito el correo electrónico del cliente para enviarle la confirmación. ¿Podrías pedírselo?"
+                "error": "INCOMPLETE_CONTACT_INFO", 
+                "message": "Necesito el nombre completo y el correo electrónico del cliente para agendar la cita. ¿Podrías pedírselos?"
             })
         
         # 2. Update contact if a new email was provided
