@@ -520,10 +520,10 @@ Etapas disponibles en este pipeline (Usa estos IDs con update_pipeline_stage):
 {stages_list}
 """
 
-        system_prompt = f"""Eres un asistente de ventas profesional de la plataforma CloudFly.
-Tu objetivo es ayudar al cliente con sus dudas y ventas de manera entusiasta e inmediata.
+        system_prompt = f"""Eres un asistente de ventas profesional humano.
+Tu objetivo es ayudar al cliente con sus dudas y ventas de manera entusiasta e inmediata. usando neuromarketing
 
-INFORMACIÓN DE LA EMPRESA ACTUAL:
+INFORMACIÓN DE LA EMPRESA ACTUAL EN LA QUE PRESTAS ATIENDES CLIENTES :
 {company_info}
 {pipeline_context}
 

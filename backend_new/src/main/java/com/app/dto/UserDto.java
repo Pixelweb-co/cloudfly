@@ -28,10 +28,11 @@ public class UserDto {
     private TenantEntity tenant;
     private TenantEntity customer; // Alias for tenant for frontend compatibility
     private boolean hasActiveSubscription;
+    private boolean onboardingCompleted;
     private ChannelConfigDTO channelConfig;
 
     public UserDto() {}
-    public UserDto(Long id, String nombres, String apellidos, String username, String email, boolean isEnabled, boolean accountNoExpired, boolean accountNoLocked, boolean credentialNoExpired, String verificationToken, String recoveryToken, Long customerId, Long activeCompanyId, Long tenant_id, Long company_id, List<RoleEntity> roles, TenantEntity tenant, TenantEntity customer, boolean hasActiveSubscription, ChannelConfigDTO channelConfig) {
+    public UserDto(Long id, String nombres, String apellidos, String username, String email, boolean isEnabled, boolean accountNoExpired, boolean accountNoLocked, boolean credentialNoExpired, String verificationToken, String recoveryToken, Long customerId, Long activeCompanyId, Long tenant_id, Long company_id, List<RoleEntity> roles, TenantEntity tenant, TenantEntity customer, boolean hasActiveSubscription, boolean onboardingCompleted, ChannelConfigDTO channelConfig) {
         this.id = id;
         this.nombres = nombres;
         this.apellidos = apellidos;
@@ -51,6 +52,7 @@ public class UserDto {
         this.tenant = tenant;
         this.customer = customer;
         this.hasActiveSubscription = hasActiveSubscription;
+        this.onboardingCompleted = onboardingCompleted;
         this.channelConfig = channelConfig;
     }
 
@@ -89,6 +91,8 @@ public class UserDto {
     public void setActiveCompanyName(String activeCompanyName) { this.activeCompanyName = activeCompanyName; }
     public boolean isHasActiveSubscription() { return hasActiveSubscription; }
     public void setHasActiveSubscription(boolean hasActiveSubscription) { this.hasActiveSubscription = hasActiveSubscription; }
+    public boolean isOnboardingCompleted() { return onboardingCompleted; }
+    public void setOnboardingCompleted(boolean onboardingCompleted) { this.onboardingCompleted = onboardingCompleted; }
     public ChannelConfigDTO getChannelConfig() { return channelConfig; }
     public void setChannelConfig(ChannelConfigDTO channelConfig) { this.channelConfig = channelConfig; }
 
@@ -122,6 +126,7 @@ public class UserDto {
         private TenantEntity tenant;
         private TenantEntity customer; // Alias
         private boolean hasActiveSubscription;
+        private boolean onboardingCompleted;
         private ChannelConfigDTO channelConfig;
 
         public UserDtoBuilder id(Long id) { this.id = id; return this; }
@@ -145,6 +150,7 @@ public class UserDto {
         public UserDtoBuilder tenant(TenantEntity tenant) { this.tenant = tenant; this.customer = tenant; return this; }
         public UserDtoBuilder customer(TenantEntity customer) { this.customer = customer; this.tenant = customer; return this; }
         public UserDtoBuilder hasActiveSubscription(boolean hasActiveSubscription) { this.hasActiveSubscription = hasActiveSubscription; return this; }
+        public UserDtoBuilder onboardingCompleted(boolean onboardingCompleted) { this.onboardingCompleted = onboardingCompleted; return this; }
         public UserDtoBuilder channelConfig(ChannelConfigDTO channelConfig) { this.channelConfig = channelConfig; return this; }
 
         public UserDto build() {
@@ -170,6 +176,7 @@ public class UserDto {
             dto.setTenant(tenant);
             dto.setCustomer(customer);
             dto.setHasActiveSubscription(hasActiveSubscription);
+            dto.setOnboardingCompleted(onboardingCompleted);
             dto.setChannelConfig(channelConfig);
             return dto;
         }

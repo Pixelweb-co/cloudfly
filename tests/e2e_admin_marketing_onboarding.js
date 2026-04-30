@@ -156,11 +156,55 @@ async function runTest() {
 
         console.log('⏳ Esperando redirección final a Dashboard...');
         await driver.wait(until.urlMatches(/\/(home|dashboard)/), 20000);
-        console.log('✅ TEST E2E EXITOSO. SISTEMA COMPROBADO.');
+        console.log('✅ Redirección a Dashboard detectada.');
+
+        // [8] VALIDACIÓN POST-ONBOARDING: LOGOUT Y LOGIN
+        console.log('\n🔄 [8/8] VALIDACIÓN FINAL: LOGOUT Y RE-LOGIN...');
+        
+        // Abrir menú de usuario y cerrar sesión
+        const avatar = await driver.wait(until.elementLocated(By.css('.MuiAvatar-root.cursor-pointer')), 15000);
+        await avatar.click();
+        const logoutBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Logout')]")), 15000);
+        await logoutBtn.click();
+        
+        await driver.wait(until.urlContains('/login'), 15000);
+        console.log('✅ Logout exitoso.');
+
+        // Re-login
+        await driver.findElement(By.name('username')).sendKeys(NEW_USER_NAME);
+        await driver.findElement(By.name('password')).sendKeys(NEW_USER_PASSWORD);
+        await driver.findElement(By.xpath("//button[@type='submit']")).click();
+
+        // Debería ir directo a /home sin pasar por el wizard
+        await driver.wait(until.urlMatches(/\/(home|dashboard)/), 20000);
+        const currentUrl = await driver.getCurrentUrl();
+        
+        if (currentUrl.includes('account-setup')) {
+            throw new Error('❌ ERROR: El usuario fue redirigido al wizard de nuevo. Debería ir a /home.');
+        }
+        
+        console.log('✅ Re-login exitoso: El usuario entró directamente al Dashboard.');
+
+        // Obtener logs del frontend
+        console.log('\n📋 LOGS DEL FRONTEND (VALIDACIÓN):');
+        const logs = await driver.manage().logs().get(logging.Type.BROWSER);
+        logs.forEach(log => {
+            console.log(`[${log.level.name}] ${log.message}`);
+        });
+
+        console.log('\n✅ TEST E2E EXITOSO. FLUJO COMPLETO VALIDADO.');
 
     } catch (error) {
         console.error('\n❌ FALLO EN EL TEST:');
         console.error(error.message);
+        
+        // Intentar obtener logs incluso en error
+        try {
+            const logs = await driver.manage().logs().get(logging.Type.BROWSER);
+            console.log('\n📋 LOGS DEL FRONTEND (ERROR):');
+            logs.slice(-10).forEach(log => console.log(`[${log.level.name}] ${log.message}`));
+        } catch (e) {}
+
         await takeScreenshot(driver, 'error_final');
     } finally {
         // [MODIFICADO] No eliminamos el buzón para que el usuario pueda revisarlo

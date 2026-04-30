@@ -19,6 +19,7 @@ import HorizontalFooter from '@components/layout/horizontal/Footer'
 import Customizer from '@core/components/customizer'
 import ScrollToTop from '@core/components/scroll-to-top'
 import AuthSync from '@/components/AuthSync'
+import OnboardingGuard from '@/components/OnboardingGuard'
 
 // Util Imports
 import { getMode, getSystemMode, getSettingsFromCookie } from '@core/utils/serverHelpers'
@@ -33,6 +34,7 @@ const Layout = async ({ children }: ChildrenType) => {
   return (
     <Providers direction={direction} mode={mode} systemMode={systemMode} settingsCookie={settingsCookie}>
       <AuthSync />
+      <OnboardingGuard />
       <LayoutWrapper
         systemMode={systemMode}
         verticalLayout={

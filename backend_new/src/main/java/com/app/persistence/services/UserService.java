@@ -201,6 +201,7 @@ public class UserService {
                                 .tenant(tenant)
                                 .customer(tenant) // Alias for frontend compatibility
                                 .hasActiveSubscription(hasActiveSub)
+                                .onboardingCompleted(user.isOnboardingCompleted())
                                 .build();
         }
 
@@ -256,5 +257,17 @@ public class UserService {
                     user.setRecoveryToken(null);
                     return userRepository.save(user).then();
                 });
+    }
+
+    @Transactional
+    public Mono<Void> completeOnboarding(Long userId) {
+        log.info("🎯 [USER-SERVICE] Marking onboarding as completed for user: {}", userId);
+        return userRepository.findById(userId)
+                .flatMap(user -> {
+                    user.setOnboardingCompleted(true);
+                    return userRepository.save(user);
+                })
+                .doOnSuccess(u -> log.info("✅ [USER-SERVICE] Onboarding flag set to TRUE for user: {}", userId))
+                .then();
     }
 }
