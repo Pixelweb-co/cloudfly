@@ -39,38 +39,39 @@ _OPENAI_RETRYABLE = (RateLimitError, APITimeoutError, APIConnectionError)
 
 # --- Dynamic Prompt Constants ---
 
-PROMPT_EXPLORE = """Eres un asistente de ventas profesional para {company_info}. Tu objetivo es saludar amablemente y detectar necesidades básicas del cliente. Mantén un tono profesional, entusiasta y sé breve en tus respuestas.
+PROMPT_EXPLORE = """Eres un asistente de ventas de {company_info}. Tu objetivo es saludar cordialmente, entender las necesidades del cliente y despertar su interés.
 
-Para la gestión de citas (agendar, reprogramar o consultar), utiliza las herramientas 'manage_calendar_event' y 'search_calendar_events' según corresponda."""
+REGLA DE PERFILAMIENTO: 
+1. Si el cliente proporciona su Nombre o Email, DEBES usar 'manage_contact' (action: update) para actualizar su ficha técnica inmediatamente con el ID de contacto actual (revisa el estado interno).
+2. Si el cliente pregunta por productos, usa 'search_products_semantically'.
+3. Si detectas un interés claro en comprar o agendar, responde con entusiasmo y prepárate para el siguiente paso."""
 
 PROMPT_INTENT = """Eres un experto comercial de {company_info}. El cliente muestra un interés claro en nuestros productos o servicios. Tu labor es destacar los beneficios, resolver dudas y perfilar la venta.
 
 [ESTADO INTERNO DEL PIPELINE]
 {pipeline_context}
 
-REGLA DE PERFILAMIENTO: Si el cliente muestra intención de avanzar hacia una compra o cotización, DEBES validar si ya tienes su Nombre y Email (revisa el estado interno arriba). Si ya existen, confírmalos (ej: "Veo que tu correo es [email], ¿es correcto?"). Si faltan, solicítalos para completar su perfil.
-
-Utiliza 'search_products_semantically' para encontrar productos que se ajusten a las necesidades del cliente. Si envías fotos de productos, asegúrate de usar el formato [URL] y hablar con naturalidad.
+REGLA DE PERFILAMIENTO: 
+1. Si el usuario te da un dato (Nombre o Email) que NO está en el estado interno arriba, usa 'manage_contact' (action: update) para guardarlo de inmediato.
+2. Si el cliente muestra intención de avanzar, valida los datos faltantes. Si ya existen, confírmalos (ej: "Confírmame si tu correo es [email]").
+3. Utiliza 'search_products_semantically' para encontrar productos. Si envías fotos, usa el formato [URL].
 """
 
-PROMPT_CLOSING = """Eres el cerrador de ventas experto de {company_info}. El cliente está listo para decidir y tu misión es concretar la operación de forma eficiente y profesional.
+PROMPT_CLOSING = """Eres un cerrador de ventas experto de {company_info}. El cliente está listo para comprar o agendar. 
 
 [ESTADO INTERNO DEL PIPELINE]
 {pipeline_context}
 
-REGLA DE ORO OBLIGATORIA (FLUJO DE CIERRE): 
-1. SIEMPRE inicia llamando a 'get_contact' para obtener la ficha técnica del cliente (Nombre y Email). NO SUPONGAS que los tienes.
-2. Si tras el resultado de 'get_contact' ves que falta el Email o el Nombre, DEBES pedirlos antes de cualquier otra cosa.
-3. Si los datos ya existen, DEBES pedir al cliente que los RECTIFIQUE (ej: "Confírmame si tu nombre es [Nombre] y tu correo es [Email]").
-4. SOLO DESPUÉS de la confirmación/rectificación del cliente, puedes usar 'create_order', 'create_quote' o 'manage_calendar_event'.
+REGLA DE ORO: Antes de usar 'create_order' o 'manage_calendar_event', DEBES:
+1. Validar que el Nombre y Email estén en el sistema (revisa el estado interno).
+2. Si falta algo o el usuario proporciona datos nuevos, usa 'manage_contact' (action: update) inmediatamente.
+3. Solicita confirmación explícita de los datos (ej: "¿Mantenemos el correo [email]?").
+
+NO intentes cerrar el trato sin tener estos datos validados y guardados en el CRM.
 
 Para la gestión de pedidos, utiliza 'create_order'. Asegúrate de haber confirmado los productos, cantidades y precios antes de llamar a esta herramienta.
 
 Para la gestión de citas o agendamientos, utiliza 'manage_calendar_event'. Antes de agendar, usa 'search_calendar_events' para revisar la disponibilidad general. Para consultar visitas previas del contacto, usa 'filter_by_contact': true. Las citas duran 30 min por defecto con recordatorio de 5 min.
-
-Para mantener el CRM actualizado, utiliza 'manage_contact' cada vez que el cliente proporcione nuevos datos (email, dirección, etc.).
-
-Utiliza 'update_pipeline_stage' de forma silenciosa para mover al contacto a través de las etapas del pipeline según el progreso de la venta.
 
 REGLA ESTRICTA: Es TU responsabilidad cerrar el trato o agendar las citas necesarias. JAMÁS delegues esta tarea a un humano a menos que sea estrictamente necesario mediante 'transfer_to_human'."""
 
@@ -80,6 +81,12 @@ def classify_mode_by_pipeline(pipeline_data: dict, message: str) -> str:
     # Priority 1: Direct Purchase/Order/Calendar Intent -> Always CLOSING (Tools enabled)
     if any(k in msg for k in ["comprar", "lo quiero", "confirmo", "pedido", "pedir", "orden", "haz el pedido", "cita", "visita", "reprograme", "reprogramar", "agendar"]):
         return "CLOSING"
+    
+    # Priority 2: Providing contact data -> At least INTENT
+    if "@" in msg or any(char.isdigit() for char in msg if char not in " +-.()"):
+        # If it's just a number/email, it's likely a response to a previous data request.
+        # We classify as INTENT to ensure tools are active and profiling rule is present.
+        return "INTENT"
     
     # Priority 2: Product/Price Interest -> Always INTENT (Tools enabled)
     if any(k in msg for k in ["precio", "producto", "catalogo", "catálogo", "cuánto", "cuanto", "valen", "vale"]):
@@ -514,11 +521,13 @@ class AIService:
             active_tools = TOOLS
         elif mode == "INTENT":
             pipeline_context = json.dumps(pipeline_data, indent=2)
+            logger.info(f"Pipeline Context for LLM (INTENT): {pipeline_context}", extra=log_ctx)
             system_prompt = PROMPT_INTENT.format(company_info=company_info_str, pipeline_context=pipeline_context)
             temp = 0.5
             active_tools = TOOLS
         else: # CLOSING
             pipeline_context = json.dumps(pipeline_data, indent=2)
+            logger.info(f"Pipeline Context for LLM: {pipeline_context}", extra=log_ctx)
             system_prompt = PROMPT_CLOSING.format(company_info=company_info_str, pipeline_context=pipeline_context)
             temp = 0.3
             active_tools = TOOLS
@@ -746,9 +755,14 @@ class AIService:
             if args.get("email"):
                 existing = await self._db.get_contact(args.get("email"), tenant_id)
                 if existing:
+                    logger.info(f"Email {args.get('email')} already exists for contact {existing.get('id')}. Returning info instead of creating new.", extra={"tenant_id": tenant_id})
                     return json.dumps({
-                        "error": "DUPLICATE_EMAIL",
-                        "message": f"El correo {args.get('email')} ya existe para el cliente '{existing.get('name')}'. No se puede crear duplicado."
+                        "success": True,
+                        "info": "CONTACT_ALREADY_EXISTS",
+                        "id": existing.get("id"),
+                        "name": existing.get("name"),
+                        "email": existing.get("email"),
+                        "message": "Este correo ya está registrado. He vinculado la información."
                     })
             new_id = await self._db.create_contact(tenant_id, args)
             return json.dumps({"success": True, "id": new_id, "message": "Contact created"})
@@ -761,9 +775,13 @@ class AIService:
             if args.get("email"):
                 existing = await self._db.get_contact(args.get("email"), tenant_id)
                 if existing and existing.get("id") != cid:
+                    logger.info(f"Email {args.get('email')} already exists for contact {existing.get('id')}. Returning info.", extra={"tenant_id": tenant_id})
                     return json.dumps({
-                        "error": "DUPLICATE_EMAIL",
-                        "message": f"El correo {args.get('email')} ya está en uso por otro cliente."
+                        "success": True,
+                        "info": "CONTACT_ALREADY_EXISTS",
+                        "contact_id": existing.get("id"),
+                        "name": existing.get("name"),
+                        "email": existing.get("email")
                     })
                     
             success = await self._db.update_contact(cid, tenant_id, args)
@@ -964,12 +982,13 @@ class AIService:
             # Idempotency check: does this email already belong to someone else?
             existing_contact = await self._db.get_contact(args.get("email"), tenant_id)
             if existing_contact and existing_contact.get("id") != contact_id:
-                logger.warning(f"Email {args.get('email')} already belongs to contact {existing_contact.get('id')}", extra={"tenant_id": tenant_id})
-                return json.dumps({
-                    "error": "DUPLICATE_EMAIL",
-                    "message": f"El correo {args.get('email')} ya está asociado al cliente '{existing_contact.get('name')}'. No puedo duplicarlo. ¿Deseas usar un correo diferente?"
-                })
-            await self._db.update_contact(contact_id, tenant_id, {"email": args.get("email")})
+                logger.info(f"Using existing contact email {args.get('email')} for event without updating current contact.", extra={"tenant_id": tenant_id})
+                email = args.get("email")
+            else:
+                await self._db.update_contact(contact_id, tenant_id, {"email": args.get("email")})
+                email = args.get("email")
+        else:
+            email = email or contact.get("email")
         
         # 3. Get or create "Calendario IA"
         company_id = contact.get("company_id")
