@@ -31,9 +31,9 @@ public class DashboardService {
     public Mono<DashboardStatsDTO> getStats(Long tenantId, Long companyId) {
         log.info("Fetching dashboard stats for tenant: {} and company: {}", tenantId, companyId);
         
-        Mono<Long> totalCustomers = contactRepository.countTotalContacts(tenantId, companyId);
-        Mono<Long> totalProducts = productRepository.countByTenantId(tenantId);
-        Mono<Long> totalOrders = orderRepository.countByTenantIdAndCompanyId(tenantId, companyId);
+        Mono<Integer> totalCustomers = contactRepository.countTotalContacts(tenantId, companyId);
+        Mono<Integer> totalProducts = productRepository.countByTenantId(tenantId);
+        Mono<Integer> totalOrders = orderRepository.countByTenantIdAndCompanyId(tenantId, companyId);
         Mono<Double> totalRevenue = orderRepository.sumTotalByTenantIdAndCompanyId(tenantId, companyId);
         
         return Mono.zip(totalCustomers, totalProducts, totalOrders, totalRevenue)
