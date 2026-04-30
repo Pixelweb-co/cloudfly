@@ -223,4 +223,19 @@ public class AuthController {
                                 .map(org.springframework.http.ResponseEntity::ok)
                                 .defaultIfEmpty(org.springframework.http.ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
         }
+
+        @PostMapping({"/complete-onboarding", "/auth/complete-onboarding"})
+        public Mono<org.springframework.http.ResponseEntity<Map<String, Object>>> completeOnboarding(@RequestBody Map<String, Long> request) {
+                Long userId = request.get("userId");
+                log.info("🎯 [AUTH-CONTROLLER] Received request to complete onboarding for user: {}", userId);
+                
+                if (userId == null) {
+                        return Mono.just(org.springframework.http.ResponseEntity.badRequest().body(Map.of("status", false, "message", "userId no proporcionado.")));
+                }
+                
+                return userService.completeOnboarding(userId)
+                                .then(Mono.just(org.springframework.http.ResponseEntity.ok(Map.of("status", true, "message", "Onboarding completado exitosamente."))))
+                                .onErrorResume(e -> Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                                .body(Map.of("status", false, "message", "Error: " + e.getMessage()))));
+        }
 }

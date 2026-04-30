@@ -23,6 +23,7 @@ import FormCustomer from '@/views/apps/customers/form/page'
 import WhatsAppConfigForm from '@/views/apps/comunicaciones/canales/whatsapp/WhatsAppConfigForm'
 import ProductCreationStep from './ProductCreationStep'
 import { userMethods } from '@/utils/userMethods'
+import { axiosInstance } from '@/utils/axiosInstance'
 
 // Custom Step Icon Component extracted to avoid re-creation on each render
 const CustomStepIcon = (props: { active: boolean; completed: boolean; icon: string; index: number }) => {
@@ -109,9 +110,23 @@ const AccountSetup = () => {
     }
   }, [activeStep, isMounted])
 
-  const handleStepComplete = () => {
+  const handleStepComplete = async () => {
     // Check if it was the last step
     if (activeStep === steps.length - 1) {
+      try {
+        const user = userMethods.getUserLogin()
+        if (user?.id) {
+          console.log('🎯 [ACCOUNT-SETUP] Marking onboarding as completed in backend via handleStepComplete...')
+          await axiosInstance.post('/auth/complete-onboarding', { userId: user.id })
+          
+          // Update local storage so OnboardingGuard knows it's done
+          user.onboardingCompleted = true
+          localStorage.setItem('userData', JSON.stringify(user))
+        }
+      } catch (error) {
+        console.error('❌ [ACCOUNT-SETUP] Error marking onboarding as completed:', error)
+      }
+
       localStorage.removeItem('account_setup_step')
       router.push('/home')
     } else {
@@ -119,13 +134,28 @@ const AccountSetup = () => {
     }
   }
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (isTransitioning) return;
 
     setIsTransitioning(true);
     setTimeout(() => setIsTransitioning(false), 1000); // 1s cooldown
 
     if (activeStep === steps.length - 1) {
+      try {
+        const user = userMethods.getUserLogin()
+        if (user?.id) {
+          console.log('🎯 [ACCOUNT-SETUP] Marking onboarding as completed in backend...')
+          await axiosInstance.post('/auth/complete-onboarding', { userId: user.id })
+          
+          // Update local storage so OnboardingGuard knows it's done
+          user.onboardingCompleted = true
+          localStorage.setItem('userData', JSON.stringify(user))
+        }
+      } catch (error) {
+        console.error('❌ [ACCOUNT-SETUP] Error marking onboarding as completed:', error)
+      }
+
+      localStorage.removeItem('account_setup_step')
       router.push('/home')
     } else {
       setActiveStep(activeStep + 1)

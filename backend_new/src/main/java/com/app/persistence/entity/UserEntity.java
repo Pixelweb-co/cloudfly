@@ -45,6 +45,9 @@ public class UserEntity {
     @Column("customer_id")
     private Long customerId;
 
+    @Column("onboarding_completed")
+    private boolean onboardingCompleted;
+
     // Explicit getters/setters to bypass Lombok issues on VPS
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -72,4 +75,6 @@ public class UserEntity {
     public void setRecoveryToken(String recoveryToken) { this.recoveryToken = recoveryToken; }
     public Long getCustomerId() { return customerId; }
     public void setCustomerId(Long customerId) { this.customerId = customerId; }
+    public boolean isOnboardingCompleted() { return onboardingCompleted; }
+    public void setOnboardingCompleted(boolean onboardingCompleted) { this.onboardingCompleted = onboardingCompleted; }
 }

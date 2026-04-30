@@ -129,7 +129,12 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
           }
 
           if (hasRole('ADMIN')) {
-            router.push('/home')
+            if (!user.onboardingCompleted) {
+              console.log('🚧 [LOGIN] ADMIN onboarding incomplete. Redirecting to /account-setup')
+              router.push('/account-setup')
+            } else {
+              router.push('/home')
+            }
           } else if (hasRole('USER') || hasRole('BIOMEDICAL') || hasRole('BIOEDICAL')) {
             router.push('/accounts/user/view')
           } else {
