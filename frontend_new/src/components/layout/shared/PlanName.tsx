@@ -50,8 +50,13 @@ const PlanName = () => {
                     return
                 }
 
-                // Intentar obtener tenantId de diferentes lugares
-                const tenantId = userData.user?.customer?.id ||
+                // Intentar obtener tenantId de diferentes lugares (estandarizado)
+                const tenantId = userData.customerId || 
+                    userData.tenantId || 
+                    userData.tenant_id || 
+                    userData.activeCompanyId || 
+                    userData.company_id || 
+                    userData.user?.customer?.id ||
                     userData.customer?.id
 
                 if (!tenantId) {
