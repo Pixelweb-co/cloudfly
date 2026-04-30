@@ -20,5 +20,5 @@ public interface ProductRepository extends ReactiveCrudRepository<Product, Long>
     Flux<Product> findByIdInAndTenantId(java.util.Collection<Long> ids, Long tenantId);
 
     @Query("SELECT COUNT(*) FROM productos WHERE tenant_id = :tenantId")
-    Mono<Long> countByTenantId(Long tenantId);
+    Mono<Integer> countByTenantId(Long tenantId);
 }

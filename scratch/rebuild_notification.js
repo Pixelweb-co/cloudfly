@@ -3,12 +3,13 @@ const { Client } = require('ssh2');
 const conn = new Client();
 conn.on('ready', () => {
   console.log('Client :: ready');
-  const rebuildCommand = 'cd /apps/cloudfly && docker compose -f docker-compose-full-vps.yml up -d --build notification-service';
+  // Process: git fetch -> git reset --hard -> rebuild notification-service
+  const deployCommand = 'cd /apps/cloudfly && git fetch origin main && git reset --hard origin/main && docker compose -f docker-compose-full-vps.yml up -d --build notification-service';
   
-  conn.exec(rebuildCommand, (err, stream) => {
+  conn.exec(deployCommand, (err, stream) => {
     if (err) throw err;
     stream.on('close', (code, signal) => {
-      console.log('Rebuild completed. Code: ' + code);
+      console.log('Deployment completed. Code: ' + code);
       conn.end();
     }).on('data', (data) => {
       process.stdout.write(data);

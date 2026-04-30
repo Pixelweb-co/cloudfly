@@ -97,8 +97,7 @@ public class UserService {
                                                 return rolesToAssign
                                                                 .flatMap(roleName -> roleRepository
                                                                                 .findByName(roleName))
-                                                                .flatMap(role -> userRoleRepository.save(new UserRole(
-                                                                                savedUser.getId(), role.getId())))
+                                                                .flatMap(role -> userRoleRepository.insertRole(savedUser.getId(), role.getId()))
                                                                 .then(handleAutomaticSubscription(finalCustId))
                                                                 .then(Mono.defer(() -> {
                                                                         sendRegistrationEmail(savedUser);

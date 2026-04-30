@@ -35,23 +35,23 @@ public interface ContactRepository extends ReactiveCrudRepository<ContactEntity,
             String documentNumber);
 
     @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND phone = :phone")
-    Mono<Long> countByTenantIdAndCompanyIdAndPhone(Long tenantId, Long companyId, String phone);
+    Mono<Integer> countByTenantIdAndCompanyIdAndPhone(Long tenantId, Long companyId, String phone);
 
     @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND email = :email")
-    Mono<Long> countByTenantIdAndCompanyIdAndEmail(Long tenantId, Long companyId, String email);
+    Mono<Integer> countByTenantIdAndCompanyIdAndEmail(Long tenantId, Long companyId, String email);
 
     @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND pipeline_id = :pipelineId AND stage_id = :stageId")
-    Mono<Long> countByPipelineAndStage(Long tenantId, Long companyId, Long pipelineId, Long stageId);
+    Mono<Integer> countByPipelineAndStage(Long tenantId, Long companyId, Long pipelineId, Long stageId);
 
     @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId)")
-    Mono<Long> countTotalContacts(Long tenantId, Long companyId);
+    Mono<Integer> countTotalContacts(Long tenantId, Long companyId);
 
     @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND pipeline_id = :pipelineId")
     Flux<ContactEntity> findByPipelineId(Long tenantId, Long companyId, Long pipelineId);
 
     @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND email = :email AND id != :id")
-    Mono<Long> existsByEmailAndCompanyIdAndIdNot(String email, Long companyId, Long id, Long tenantId);
+    Mono<Integer> existsByEmailAndCompanyIdAndIdNot(String email, Long companyId, Long id, Long tenantId);
 
     @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND phone = :phone AND id != :id")
-    Mono<Long> existsByPhoneAndCompanyIdAndIdNot(String phone, Long companyId, Long id, Long tenantId);
+    Mono<Integer> existsByPhoneAndCompanyIdAndIdNot(String phone, Long companyId, Long id, Long tenantId);
 }

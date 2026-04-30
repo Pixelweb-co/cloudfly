@@ -2,17 +2,16 @@ const { Client } = require('ssh2');
 
 const conn = new Client();
 conn.on('ready', () => {
-  console.log('Client :: ready');
-  const sqlCommand = 'docker exec mysql mysql -u root -pwidowmaker -e "SELECT j.id, e.title, j.status, j.execute_at FROM cloud_master.scheduled_jobs j JOIN cloud_master.calendar_events e ON j.event_id = e.id WHERE j.status = \'DONE\' AND j.execute_at >= \'2026-04-28 00:00:00\' ORDER BY j.execute_at DESC LIMIT 10;"';
+  const sqlCommand = "docker exec mysql mysql -uroot -pwidowmaker cloud_master -e 'DESCRIBE plans;'";
   
   conn.exec(sqlCommand, (err, stream) => {
     if (err) throw err;
     stream.on('close', (code, signal) => {
       conn.end();
     }).on('data', (data) => {
-      console.log('STDOUT: ' + data);
+      process.stdout.write(data);
     }).stderr.on('data', (data) => {
-      console.log('STDERR: ' + data);
+      process.stderr.write(data);
     });
   });
 }).on('error', (err) => {

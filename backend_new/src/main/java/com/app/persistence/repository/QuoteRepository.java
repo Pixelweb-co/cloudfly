@@ -18,5 +18,5 @@ public interface QuoteRepository extends ReactiveCrudRepository<QuoteEntity, Lon
     Flux<QuoteEntity> findByCustomerIdAndTenantId(Long customerId, Long tenantId);
 
     @Query("SELECT COUNT(*) FROM quotes WHERE tenant_id = :tenantId")
-    Mono<Long> countByTenantId(Long tenantId);
+    Mono<Integer> countByTenantId(Long tenantId);
 }
