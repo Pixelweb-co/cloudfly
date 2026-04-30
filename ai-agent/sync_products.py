@@ -54,6 +54,7 @@ def main():
             "product_id": prod.get("id"),
             "tenant_id": prod.get("tenant_id"),
             "name": prod.get("product_name", ""),
+            "product_type": prod.get("product_type", "PRODUCT"),
             "categories": category_names.split(',') if category_names else [],
             "description": prod.get("description", ""),
             "price": float(prod.get("price") or 0),

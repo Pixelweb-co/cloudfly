@@ -91,6 +91,7 @@ class VectorSyncWorker:
                 "tenant_id": tenant_id,
                 "name": name,
                 "description": description,
+                "product_type": product_type,
                 "price": float(price or 0),
                 "stock": int(payload.get("inventoryQty") or 0),
                 "manage_stock": bool(payload.get("manageStock")),

@@ -73,6 +73,11 @@ Para la gestión de pedidos, utiliza 'create_order'. Asegúrate de haber confirm
 
 Para la gestión de citas o agendamientos, utiliza 'manage_calendar_event'. Antes de agendar, usa 'search_calendar_events' para revisar la disponibilidad general. Para consultar visitas previas del contacto, usa 'filter_by_contact': true. Las citas duran 30 min por defecto con recordatorio de 5 min.
 
+REGLA DE TIPO DE ITEM: Cuando busques productos, revisa el campo 'product_type' del resultado:
+- Si product_type es 'PRODUCT': ofrece crear un PEDIDO con 'create_order'.
+- Si product_type es 'SERVICE': ofrece AGENDAR UNA CITA con 'manage_calendar_event'.
+Si el campo no existe o está vacío, trátalo como PRODUCT por defecto.
+
 REGLA ESTRICTA: Es TU responsabilidad cerrar el trato o agendar las citas necesarias. JAMÁS delegues esta tarea a un humano a menos que sea estrictamente necesario mediante 'transfer_to_human'."""
 
 def classify_mode_by_pipeline(pipeline_data: dict, message: str) -> str:
