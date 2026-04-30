@@ -814,6 +814,9 @@ class AIService:
             })
 
         # Idempotency: generate a hash of the critical order data + message_id
+        import hashlib
+        raw = f"{customer_id}:{json.dumps(items, sort_keys=True)}:{message_id}"
+        idempotency_key = hashlib.sha256(raw.encode()).hexdigest()[:16]
 
         log_ctx = {
             "customer_id": customer_id,
