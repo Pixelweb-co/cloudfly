@@ -2,7 +2,7 @@ const { Client } = require('ssh2');
 
 const conn = new Client();
 conn.on('ready', () => {
-  const sqlCommand = 'docker logs --tail 100 notification-service';
+  const sqlCommand = 'docker logs --tail 50 notification-service';
   
   conn.exec(sqlCommand, (err, stream) => {
     if (err) throw err;

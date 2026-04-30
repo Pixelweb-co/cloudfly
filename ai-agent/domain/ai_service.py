@@ -731,12 +731,30 @@ class AIService:
                 args["company_id"] = comp["id"]
                 
         if action == "create":
+            # Check for duplicate email before creation
+            if args.get("email"):
+                existing = await self._db.get_contact(args.get("email"), tenant_id)
+                if existing:
+                    return json.dumps({
+                        "error": "DUPLICATE_EMAIL",
+                        "message": f"El correo {args.get('email')} ya existe para el cliente '{existing.get('name')}'. No se puede crear duplicado."
+                    })
             new_id = await self._db.create_contact(tenant_id, args)
             return json.dumps({"success": True, "id": new_id, "message": "Contact created"})
         elif action == "update":
             cid = args.pop("contact_id", None)
             if not cid:
                 return json.dumps({"error": "contact_id required for update"})
+            
+            # Check for duplicate email before update
+            if args.get("email"):
+                existing = await self._db.get_contact(args.get("email"), tenant_id)
+                if existing and existing.get("id") != cid:
+                    return json.dumps({
+                        "error": "DUPLICATE_EMAIL",
+                        "message": f"El correo {args.get('email')} ya está en uso por otro cliente."
+                    })
+                    
             success = await self._db.update_contact(cid, tenant_id, args)
             return json.dumps({"success": success})
         return json.dumps({"error": "Invalid action"})
@@ -922,6 +940,14 @@ class AIService:
         
         # 2. Update contact if a new email was provided
         if args.get("email") and args.get("email") != contact.get("email"):
+            # Idempotency check: does this email already belong to someone else?
+            existing_contact = await self._db.get_contact(args.get("email"), tenant_id)
+            if existing_contact and existing_contact.get("id") != contact_id:
+                logger.warning(f"Email {args.get('email')} already belongs to contact {existing_contact.get('id')}", extra={"tenant_id": tenant_id})
+                return json.dumps({
+                    "error": "DUPLICATE_EMAIL",
+                    "message": f"El correo {args.get('email')} ya está asociado al cliente '{existing_contact.get('name')}'. No puedo duplicarlo. ¿Deseas usar un correo diferente?"
+                })
             await self._db.update_contact(contact_id, tenant_id, {"email": args.get("email")})
         
         # 3. Get or create "Calendario IA"

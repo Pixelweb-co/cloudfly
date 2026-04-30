@@ -19,10 +19,10 @@ public interface OrderRepository extends ReactiveCrudRepository<OrderEntity, Lon
     Flux<OrderEntity> findByCustomerIdAndTenantId(Long customerId, Long tenantId);
 
     @Query("SELECT COUNT(*) FROM orders WHERE tenant_id = :tenantId")
-    Mono<Long> countByTenantId(Long tenantId);
+    Mono<Integer> countByTenantId(Long tenantId);
 
     @Query("SELECT COUNT(*) FROM orders WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId)")
-    Mono<Long> countByTenantIdAndCompanyId(Long tenantId, Long companyId);
+    Mono<Integer> countByTenantIdAndCompanyId(Long tenantId, Long companyId);
 
     @Query("SELECT COALESCE(SUM(total), 0) FROM orders WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId)")
     Mono<Double> sumTotalByTenantIdAndCompanyId(Long tenantId, Long companyId);
