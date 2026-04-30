@@ -259,7 +259,11 @@ const AccountSetup = () => {
           {/* Stepper */}
           <Stepper activeStep={activeStep} alternativeLabel className='mb-8'>
             {steps.map((step, index) => (
-              <Step key={step.title}>
+              <Step 
+                key={step.title} 
+                onClick={() => setActiveStep(index)}
+                sx={{ cursor: 'pointer' }}
+              >
                 <StepLabel
                   StepIconComponent={() => (
                     <CustomStepIcon
