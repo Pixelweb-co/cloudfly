@@ -119,12 +119,18 @@ async function runTest() {
         console.log('\n📱 [6/7] WIZARD: WHATSAPP (OMITIENDO)');
         await sleep(5000);
         try {
-            // Buscamos el botón para avanzar sin QR (Ya escaneé o similar)
-            const skipBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Continuar') or contains(., 'Ya escaneé')]")), 15000);
-            await skipBtn.click();
-            console.log('⏩ Paso 2 omitido.');
+            // Buscamos el label del paso "Chatbot IA" para hacer click (nueva funcionalidad)
+            const chatbotStep = await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'Chatbot IA')]")), 15000);
+            await chatbotStep.click();
+            console.log('👆 Click en tab "Chatbot IA" exitoso.');
+            await sleep(2000);
+
+            // Ahora intentamos avanzar al siguiente paso "Productos"
+            const productsStep = await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'Productos')]")), 15000);
+            await productsStep.click();
+            console.log('⏩ Paso 2 omitido vía click en tab "Productos".');
         } catch (e) {
-             console.warn('⚠️ No se pudo omitir el paso 2 con el botón. Intentando navegación forzada.');
+             console.warn('⚠️ No se pudo navegar vía tabs. Intentando navegación forzada.');
              await driver.get(`${BASE_URL}/account-setup`); // Recargar para ver si avanza
         }
 
