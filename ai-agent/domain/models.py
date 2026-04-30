@@ -64,6 +64,8 @@ class ContactPipelineState:
     pipeline_name: str
     current_stage_id: Optional[int]
     current_stage_name: str
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
     stages: List[PipelineStage] = field(default_factory=list)
 
     def stages_prompt(self) -> str:
