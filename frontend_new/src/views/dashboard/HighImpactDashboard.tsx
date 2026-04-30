@@ -76,11 +76,11 @@ const HighImpactDashboard = () => {
     const mockSeriesUsers = [{ name: 'Usuarios', data: [10, 25, 15, 40, 20, 60, 50] }]
     
     // Real or mock series for key metrics
-    const ordersSeries = salesChart?.series.find(s => s.name === 'Pedidos') 
+    const ordersSeries = salesChart?.series?.find(s => s.name === 'Pedidos') 
         ? [{ name: 'Pedidos', data: salesChart.series.find(s => s.name === 'Pedidos')!.data }]
         : [{ name: 'Pedidos', data: [100, 120, 180, 150, 250, 190, 300] }]
         
-    const revenueSeries = salesChart?.series.find(s => s.name === 'Ingresos')
+    const revenueSeries = salesChart?.series?.find(s => s.name === 'Ingresos')
         ? [{ name: 'Ingresos', data: salesChart.series.find(s => s.name === 'Ingresos')!.data }]
         : [{ name: 'Ingresos', data: [1000, 2500, 1500, 4000, 3000, 6000, 5500] }]
 
