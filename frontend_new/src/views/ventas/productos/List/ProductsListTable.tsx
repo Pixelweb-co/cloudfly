@@ -92,7 +92,7 @@ export default function ProductsListTable() {
           <TableHead>
             <TableRow sx={{ '& th': { borderBottom: '2px solid rgba(0, 0, 0, 0.12)' } }}>
               <TableCell>Producto</TableCell>
-              <TableCell>Categoría</TableCell>
+              <TableCell>Tipo</TableCell>
               <TableCell>Precio</TableCell>
               <TableCell>Stock</TableCell>
               <TableCell>Estado</TableCell>
@@ -131,9 +131,13 @@ export default function ProductsListTable() {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {product.productType || 'General'}
-                    </Typography>
+                    <Chip 
+                      label={product.productType === 'SERVICE' ? 'Servicio' : 'Producto'} 
+                      color={product.productType === 'SERVICE' ? 'info' : 'primary'} 
+                      size="small"
+                      variant="outlined"
+                      icon={<Icon icon={product.productType === 'SERVICE' ? 'tabler:calendar' : 'tabler:package'} />}
+                    />
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
