@@ -89,6 +89,8 @@ class AsyncMySQLClient:
                 p.name          AS pipeline_name,
                 c.stage_id      AS current_stage_id,
                 cs.name         AS current_stage_name,
+                c.name          AS contact_name,
+                c.email         AS contact_email,
                 ps.id           AS stage_id,
                 ps.name         AS stage_name,
                 ps.position     AS stage_position,
@@ -124,6 +126,8 @@ class AsyncMySQLClient:
             pipeline_name=first["pipeline_name"] or "",
             current_stage_id=first["current_stage_id"],
             current_stage_name=first["current_stage_name"] or "Desconocido",
+            contact_name=first["contact_name"],
+            contact_email=first["contact_email"],
             stages=stages,
         )
 

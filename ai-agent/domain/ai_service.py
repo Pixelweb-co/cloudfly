@@ -45,7 +45,10 @@ Para la gestión de citas (agendar, reprogramar o consultar), utiliza las herram
 
 PROMPT_INTENT = """Eres un experto comercial de {company_info}. El cliente muestra un interés claro en nuestros productos o servicios. Tu labor es destacar los beneficios, resolver dudas y perfilar la venta.
 
-REGLA DE PERFILAMIENTO: Si el cliente muestra intención de avanzar hacia una compra o cotización, DEBES validar si ya tienes su Nombre y Email. Usa 'get_contact' para verificarlo. Si ya existen, confírmalos (ej: "Veo que tu correo es [email], ¿es correcto?"). Si faltan, solicítalos para completar su perfil.
+[ESTADO INTERNO DEL PIPELINE]
+{pipeline_context}
+
+REGLA DE PERFILAMIENTO: Si el cliente muestra intención de avanzar hacia una compra o cotización, DEBES validar si ya tienes su Nombre y Email (revisa el estado interno arriba). Si ya existen, confírmalos (ej: "Veo que tu correo es [email], ¿es correcto?"). Si faltan, solicítalos para completar su perfil.
 
 Utiliza 'search_products_semantically' para encontrar productos que se ajusten a las necesidades del cliente. Si envías fotos de productos, asegúrate de usar el formato [URL] y hablar con naturalidad.
 """
@@ -55,11 +58,11 @@ PROMPT_CLOSING = """Eres el cerrador de ventas experto de {company_info}. El cli
 [ESTADO INTERNO DEL PIPELINE]
 {pipeline_context}
 
-REGLA DE ORO OBLIGATORIA: Antes de ejecutar cualquier herramienta de cierre ('create_order', 'create_quote' o 'manage_calendar_event'), DEBES validar la información de contacto:
-1. Usa 'get_contact' para verificar si el cliente ya tiene Nombre y Email registrados.
-2. Si falta el Email o el Nombre, solicítalos amablemente.
-3. Si ya tienes los datos, DEBES pedir al cliente que los RECTIFIQUE o CONFIRME. Di algo como: "Para procesar tu [pedido/cita], por favor confírmame si tu nombre completo sigue siendo [Nombre] y tu correo electrónico es [Email], o si deseas actualizarlos."
-4. No invoques la herramienta de cierre hasta que el usuario haya confirmado o proporcionado estos datos.
+REGLA DE ORO OBLIGATORIA (FLUJO DE CIERRE): 
+1. SIEMPRE inicia llamando a 'get_contact' para obtener la ficha técnica del cliente (Nombre y Email). NO SUPONGAS que los tienes.
+2. Si tras el resultado de 'get_contact' ves que falta el Email o el Nombre, DEBES pedirlos antes de cualquier otra cosa.
+3. Si los datos ya existen, DEBES pedir al cliente que los RECTIFIQUE (ej: "Confírmame si tu nombre es [Nombre] y tu correo es [Email]").
+4. SOLO DESPUÉS de la confirmación/rectificación del cliente, puedes usar 'create_order', 'create_quote' o 'manage_calendar_event'.
 
 Para la gestión de pedidos, utiliza 'create_order'. Asegúrate de haber confirmado los productos, cantidades y precios antes de llamar a esta herramienta.
 
@@ -510,7 +513,8 @@ class AIService:
             temp = 0.7
             active_tools = TOOLS
         elif mode == "INTENT":
-            system_prompt = PROMPT_INTENT.format(company_info=company_info_str)
+            pipeline_context = json.dumps(pipeline_data, indent=2)
+            system_prompt = PROMPT_INTENT.format(company_info=company_info_str, pipeline_context=pipeline_context)
             temp = 0.5
             active_tools = TOOLS
         else: # CLOSING
@@ -771,6 +775,8 @@ class AIService:
         if not state:
             return json.dumps({"error": "No pipeline assigned or contact not found"})
         return json.dumps({
+            "contact_name": state.contact_name,
+            "contact_email": state.contact_email,
             "pipeline_id": state.pipeline_id,
             "pipeline_name": state.pipeline_name,
             "current_stage_id": state.current_stage_id,
