@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Container, Typography, Box, CircularProgress, Alert } from '@mui/material';
 import ChatbotForm from '../components/ChatbotForm';
-import { chatbotApi } from '@/lib/api/chatbots';
+import { getChatbot, createChatbot, updateChatbot } from '@/lib/api/chatbots';
 
 export default function ChatbotFormPage() {
   const searchParams = useSearchParams();
@@ -14,12 +14,15 @@ export default function ChatbotFormPage() {
   const [chatbot, setChatbot] = useState(null);
   const [error, setError] = useState(null);
 
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+  const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenantId') : 1;
+
   useEffect(() => {
     if (id) {
-      const fetchChatbot = async () => {
+      const fetchChatbotData = async () => {
         try {
-          const tenantId = 1; // En una app real, esto vendría del auth context
-          const data = await chatbotApi.getChatbot(tenantId);
+          const { data, error: apiError } = await getChatbot(token, tenantId);
+          if (apiError) throw new Error(apiError);
           setChatbot(data);
         } catch (err) {
           console.error('Error fetching chatbot:', err);
@@ -28,9 +31,26 @@ export default function ChatbotFormPage() {
           setLoading(false);
         }
       };
-      fetchChatbot();
+      fetchChatbotData();
     }
-  }, [id]);
+  }, [id, token, tenantId]);
+
+  const handleSave = async (formData) => {
+    try {
+      if (id) {
+        const { error: apiError } = await updateChatbot(token, tenantId, id, formData);
+        if (apiError) throw new Error(apiError);
+      } else {
+        const { error: apiError } = await createChatbot(token, tenantId, formData);
+        if (apiError) throw new Error(apiError);
+      }
+      router.push('/marketing/chatbots/list');
+    } catch (err) {
+      console.error('Error saving chatbot:', err);
+      setError('Error al guardar la configuración.');
+      throw err;
+    }
+  };
 
   if (loading) {
     return (
@@ -55,8 +75,7 @@ export default function ChatbotFormPage() {
 
       <ChatbotForm 
         initialData={chatbot} 
-        isEdit={!!id} 
-        onSuccess={() => router.push('/marketing/chatbots/list')}
+        onSave={handleSave}
       />
     </Container>
   );
