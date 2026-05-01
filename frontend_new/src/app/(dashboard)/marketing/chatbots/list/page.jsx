@@ -11,7 +11,7 @@ import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import { useRouter } from 'next/navigation';
 import { getChatbot, updateChatbot, invalidateCache } from '@/lib/api/chatbots';
-import { AGENT_TYPES } from './constants';
+import { AGENT_TYPES } from '../constants';
 
 // Hook simulado para obtener sesión (ajustar según el proyecto real)
 const useSession = () => ({
