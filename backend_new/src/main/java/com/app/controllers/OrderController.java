@@ -47,7 +47,8 @@ public class OrderController {
                         if (auth == null || auth.getDetails() == null) return new UserContext(1L, null, java.util.Set.of("ROLE_ADMIN"));
                         java.util.Map<String, Object> details = (java.util.Map<String, Object>) auth.getDetails();
                         Long tid = details.get("customer_id") != null ? ((Number) details.get("customer_id")).longValue() : 1L;
-                        return new UserContext(tid, null, java.util.Set.of("ROLE_ADMIN"));
+                        Long cid = details.get("company_id") != null ? ((Number) details.get("company_id")).longValue() : null;
+                        return new UserContext(tid, cid, java.util.Set.of("ROLE_ADMIN"));
                     })
                     .defaultIfEmpty(new UserContext(1L, null, java.util.Set.of("ROLE_ADMIN")));
         }

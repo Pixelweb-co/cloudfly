@@ -26,26 +26,28 @@ public class AIAgentController {
     private final GlobalAgentRepository globalAgentRepository;
     private final TenantAgentConfigRepository tenantAgentConfigRepository;
 
-    private Mono<Long> getCurrentTenantId() {
+    private Mono<java.util.Map<String, Long>> getCurrentUserContext() {
         return ReactiveSecurityContextHolder.getContext()
                 .map(SecurityContext::getAuthentication)
                 .map(auth -> {
-                    if (auth == null) return 1L;
+                    if (auth == null) return java.util.Map.of("tenantId", 1L, "companyId", 1L);
                     java.util.Map<String, Object> details = (java.util.Map<String, Object>) auth.getDetails();
-                    if (details != null && details.containsKey("customer_id")) {
-                        Object cid = details.get("customer_id");
-                        if (cid instanceof Number) return ((Number) cid).longValue();
-                        return Long.parseLong(cid.toString());
+                    Long tid = 1L;
+                    Long cid = 1L;
+                    if (details != null) {
+                        if (details.get("customer_id") != null) tid = ((Number) details.get("customer_id")).longValue();
+                        if (details.get("company_id") != null) cid = ((Number) details.get("company_id")).longValue();
                     }
-                    return 1L;
+                    return java.util.Map.of("tenantId", tid, "companyId", cid);
                 })
-                .doOnError(e -> log.error("❌ [AGENT-CONTROLLER] Error getting tenantId: {}", e.getMessage()));
+                .defaultIfEmpty(java.util.Map.of("tenantId", 1L, "companyId", 1L));
     }
 
     @GetMapping("/my-agents")
     public Flux<TenantAgentConfig> getMyAgents() {
-        return getCurrentTenantId()
-                .flatMapMany(tenantId -> {
+        return getCurrentUserContext()
+                .flatMapMany(ctx -> {
+                    Long tenantId = ctx.get("tenantId");
                     log.info("📋 [AGENT-CONTROLLER] Fetching personalized agents for tenant: {}", tenantId);
                     return tenantAgentConfigRepository.findByTenantId(tenantId);
                 });
@@ -65,8 +67,9 @@ public class AIAgentController {
      */
     @PostMapping("/personalize")
     public Mono<ResponseEntity<TenantAgentConfig>> personalizeAgent(@RequestBody TenantAgentConfig config) {
-        return getCurrentTenantId()
-                .flatMap(tenantId -> {
+        return getCurrentUserContext()
+                .flatMap(ctx -> {
+                    Long tenantId = ctx.get("tenantId");
                     log.info("💾 [AGENT-CONTROLLER] Personalizing agent for tenant: {}", tenantId);
                     config.setTenantId(tenantId);
                     config.setCreatedAt(LocalDateTime.now());

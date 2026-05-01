@@ -61,7 +61,9 @@ public class JwtAuthenticationFilter implements WebFilter {
             List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
             
             String tenantIdStr = exchange.getRequest().getQueryParams().getFirst("tenantId");
+            String companyIdStr = exchange.getRequest().getQueryParams().getFirst("companyId");
             Long tenantId = 1L;
+            Long companyId = null;
             if (tenantIdStr != null) {
                 try {
                     tenantId = Long.parseLong(tenantIdStr);
@@ -69,11 +71,18 @@ public class JwtAuthenticationFilter implements WebFilter {
                     log.warn("⚠️ [JWT-FILTER] Invalid tenantId in query: {}", tenantIdStr);
                 }
             }
+            if (companyIdStr != null) {
+                try {
+                    companyId = Long.parseLong(companyIdStr);
+                } catch (Exception e) {
+                    log.warn("⚠️ [JWT-FILTER] Invalid companyId in query: {}", companyIdStr);
+                }
+            }
 
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken("ai-agent", null, authorities);
             java.util.Map<String, Object> details = new java.util.HashMap<>();
             details.put("customer_id", tenantId);
-            details.put("company_id", null);
+            details.put("company_id", companyId);
             auth.setDetails(details);
 
             return chain.filter(exchange)
