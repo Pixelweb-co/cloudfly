@@ -76,7 +76,7 @@ export default function ChatbotsPage() {
           <Button 
             variant="contained" 
             startIcon={<AddIcon />}
-            onClick={() => router.push('/marketing/chatbots/nuevo')}
+            onClick={() => router.push('/marketing/chatbots/form')}
             sx={{ borderRadius: 2 }}
           >
             Nuevo chatbot
@@ -95,7 +95,7 @@ export default function ChatbotsPage() {
           <Button 
             variant="outlined" 
             sx={{ mt: 2, borderRadius: 2 }}
-            onClick={() => router.push('/marketing/chatbots/nuevo')}
+            onClick={() => router.push('/marketing/chatbots/form')}
           >
             Configurar ahora
           </Button>
@@ -148,7 +148,7 @@ export default function ChatbotsPage() {
 
             <Stack direction="row" spacing={1} justifyContent="flex-end" mt={3}>
               <IconButton 
-                onClick={() => router.push(`/marketing/chatbots/${chatbot.id}/editar`)}
+                onClick={() => router.push(`/marketing/chatbots/form?id=${chatbot.id}`)}
                 color="primary"
               >
                 <EditIcon />
