@@ -26,20 +26,20 @@ public class ChannelConfigController {
         return userService.getCurrentUserContext()
                 .map(map -> new UserContext(map.get("tenantId"), map.get("companyId")))
                 .switchIfEmpty(ReactiveSecurityContextHolder.getContext()
-                    .map(SecurityContext::getAuthentication)
-                    .map(auth -> {
-                        if (auth == null) return new UserContext(1L, 1L);
-                        
-                        Object detailsObj = auth.getDetails();
-                        if (detailsObj instanceof java.util.Map) {
-                            java.util.Map<String, Object> details = (java.util.Map<String, Object>) detailsObj;
-                            Long tenantId = (Long) details.get("customer_id");
-                            Long companyId = (Long) details.get("company_id");
-                            log.info("👤 [CHANNEL-CONFIG-AUTH] Context IDs from details - Tenant: {}, Company: {}", tenantId, companyId);
-                            return new UserContext(tenantId != null ? tenantId : 1L, companyId != null ? companyId : 1L);
-                        }
-                        return new UserContext(1L, 1L);
-                    }))
+                        .map(SecurityContext::getAuthentication)
+                        .map(auth -> {
+                            if (auth == null) return new UserContext(1L, 1L);
+
+                            Object detailsObj = auth.getDetails();
+                            if (detailsObj instanceof java.util.Map) {
+                                java.util.Map<String, Object> details = (java.util.Map<String, Object>) detailsObj;
+                                Long tenantId = details.get("customer_id") != null ? ((Number) details.get("customer_id")).longValue() : 1L;
+                                Long companyId = details.get("company_id") != null ? ((Number) details.get("company_id")).longValue() : 1L;
+                                log.info("👤 [CHANNEL-CONFIG-AUTH] Context IDs from details - Tenant: {}, Company: {}", tenantId, companyId);
+                                return new UserContext(tenantId, companyId);
+                            }
+                            return new UserContext(1L, 1L);
+                        }))
                 .defaultIfEmpty(new UserContext(1L, 1L));
     }
 
