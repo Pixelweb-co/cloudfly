@@ -1,4 +1,4 @@
-CREATE TABLE chatbots (
+CREATE TABLE IF NOT EXISTS chatbots (
     id                      INT AUTO_INCREMENT PRIMARY KEY,
     tenant_id               INT NOT NULL UNIQUE,
     agent_type              VARCHAR(50) NOT NULL DEFAULT 'sales',

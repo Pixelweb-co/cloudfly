@@ -1,4 +1,4 @@
-CREATE TABLE token_usage_log (
+CREATE TABLE IF NOT EXISTS token_usage_log (
     id                BIGINT AUTO_INCREMENT PRIMARY KEY,
     tenant_id         INT NOT NULL,
     conversation_id   VARCHAR(100),
