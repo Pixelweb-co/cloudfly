@@ -23,23 +23,24 @@ public class ChannelConfigController {
     private record UserContext(Long tenantId, Long companyId) {}
 
     private Mono<UserContext> getCurrentUserContext() {
-        return ReactiveSecurityContextHolder.getContext()
-                .map(SecurityContext::getAuthentication)
-                .map(auth -> {
-                    if (auth == null || auth.getDetails() == null) {
-                        log.warn("⚠️ [CHANNEL-CONFIG-AUTH] No auth or details found in context");
-                        return new UserContext(1L, 1L); // Fallback
-                    }
-                    Object detailsObj = auth.getDetails();
-                    if (detailsObj instanceof java.util.Map) {
-                        java.util.Map<String, Object> details = (java.util.Map<String, Object>) detailsObj;
-                        Long tenantId = (Long) details.get("customer_id");
-                        Long companyId = (Long) details.get("company_id");
-                        log.info("👤 [CHANNEL-CONFIG-AUTH] Context IDs - Tenant: {}, Company: {}", tenantId, companyId);
-                        return new UserContext(tenantId != null ? tenantId : 1L, companyId != null ? companyId : 1L);
-                    }
-                    return new UserContext(1L, 1L);
-                });
+        return userService.getCurrentUserContext()
+                .map(map -> new UserContext(map.get("tenantId"), map.get("companyId")))
+                .switchIfEmpty(ReactiveSecurityContextHolder.getContext()
+                    .map(SecurityContext::getAuthentication)
+                    .map(auth -> {
+                        if (auth == null) return new UserContext(1L, 1L);
+                        
+                        Object detailsObj = auth.getDetails();
+                        if (detailsObj instanceof java.util.Map) {
+                            java.util.Map<String, Object> details = (java.util.Map<String, Object>) detailsObj;
+                            Long tenantId = (Long) details.get("customer_id");
+                            Long companyId = (Long) details.get("company_id");
+                            log.info("👤 [CHANNEL-CONFIG-AUTH] Context IDs from details - Tenant: {}, Company: {}", tenantId, companyId);
+                            return new UserContext(tenantId != null ? tenantId : 1L, companyId != null ? companyId : 1L);
+                        }
+                        return new UserContext(1L, 1L);
+                    }))
+                .defaultIfEmpty(new UserContext(1L, 1L));
     }
 
     @GetMapping("/config")

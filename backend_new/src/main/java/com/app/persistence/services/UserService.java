@@ -211,6 +211,18 @@ public class UserService {
                                 .flatMap(auth -> findByUsername(auth.getName()));
         }
 
+        public Mono<java.util.Map<String, Long>> getCurrentUserContext() {
+                return getCurrentUser()
+                                .flatMap(user -> {
+                                        Long tenantId = user.getCustomerId();
+                                        if (tenantId == null) return Mono.empty();
+                                        
+                                        return companyRepository.findFirstByTenantIdAndIsPrincipalTrue(tenantId)
+                                                        .map(company -> java.util.Map.of("tenantId", tenantId, "companyId", company.getId()))
+                                                        .defaultIfEmpty(java.util.Map.of("tenantId", tenantId, "companyId", 1L));
+                                });
+        }
+
         public Mono<Boolean> verifyEmail(String token) {
                 return userRepository.enableUserByToken(token)
                                 .map(count -> count > 0)
