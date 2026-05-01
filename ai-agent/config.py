@@ -32,3 +32,9 @@ JAVA_API_URL = os.getenv("JAVA_API_URL", "http://backend-api:8080")
 AI_API_SECRET = os.getenv("AI_API_SECRET", "cloudfly_ai_secret_2026")
 QDRANT_HOST = os.getenv("QDRANT_HOST", "qdrant")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
+
+# General Settings
+API_TIMEOUT = int(os.getenv("API_TIMEOUT", 10))
+CHARTS_LOCAL_PATH = os.getenv("CHARTS_LOCAL_PATH", "/app/uploads/charts")
+CHARTS_PUBLIC_URL = os.getenv("CHARTS_PUBLIC_URL", "https://api.cloudfly.com.co/uploads/charts/")
+
