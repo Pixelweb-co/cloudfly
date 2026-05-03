@@ -391,6 +391,29 @@ services:
     networks:
       - app-net
 
+  marketing-worker:
+    image: cloudfly-marketing-worker:latest
+    container_name: marketing-worker
+    restart: always
+    build:
+      context: ./marketing-worker
+      dockerfile: Dockerfile
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=cloud_master
+      - DB_USERNAME=root
+      - DB_PASSWORD=widowmaker
+      - KAFKA_HOST=kafka
+      - EVOLUTION_API_URL=http://evolution-api:8080
+      - EVOLUTION_API_KEY=CAMBIA_ESTA_LLAVE_LARGA_Y_UNICA
+    networks:
+      - app-net
+      - kafka-net
+    depends_on:
+      - kafka
+      - mysql
+
   traefik:
     image: traefik:v2.11
     container_name: traefik
