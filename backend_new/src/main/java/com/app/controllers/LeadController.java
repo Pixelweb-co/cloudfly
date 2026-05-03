@@ -25,4 +25,12 @@ public class LeadController {
                  request.getFilters() != null ? request.getFilters().getKeyword() : "unknown");
         return leadOrchestratorService.generateLeads(request);
     }
+
+    @PostMapping("/save-to-crm")
+    public Mono<LeadResponse> saveToCrm(@RequestBody LeadResponse request, 
+                                        @org.springframework.web.bind.annotation.RequestHeader java.util.Map<String, String> headers) {
+        log.info("💾 [LEAD-CONTROLLER] Saving {} leads to CRM", 
+                 request.getLeads() != null ? request.getLeads().size() : 0);
+        return leadOrchestratorService.saveLeadsToCrm(request.getLeads(), headers);
+    }
 }
