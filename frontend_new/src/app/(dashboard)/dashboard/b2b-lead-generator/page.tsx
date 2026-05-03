@@ -151,7 +151,7 @@ export default function B2BLeadGeneratorPage() {
 
     try {
       setSaving(true)
-      await axiosInstance.post('/api/contacts/bulk', {
+      await axiosInstance.post('/api/leads/save-to-crm', {
         leads: selectedLeads
       })
 
