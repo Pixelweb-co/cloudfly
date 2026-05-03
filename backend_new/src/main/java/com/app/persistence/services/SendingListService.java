@@ -26,6 +26,11 @@ public class SendingListService {
         return sendingListRepository.findByTenantIdAndCompanyId(tenantId, companyId);
     }
 
+    public Flux<com.app.persistence.entity.ContactEntity> findContactsByList(Long listId, Long tenantId, Long companyId) {
+        return sendingListRepository.findByIdAndTenantIdAndCompanyId(listId, tenantId, companyId)
+                .flatMapMany(list -> sendingListContactRepository.findContactsByListId(listId));
+    }
+
     public Mono<SendingListEntity> findById(Long id, Long tenantId, Long companyId) {
         return sendingListRepository.findByIdAndTenantIdAndCompanyId(id, tenantId, companyId);
     }

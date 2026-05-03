@@ -16,9 +16,10 @@ import toast from 'react-hot-toast'
 
 interface Props {
   listId: number
+  onMemberChange?: () => void
 }
 
-export default function SendingListContactsPanel({ listId }: Props) {
+export default function SendingListContactsPanel({ listId, onMemberChange }: Props) {
   const [associatedContacts, setAssociatedContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
   const [allContacts, setAllContacts] = useState<Contact[]>([])
@@ -34,9 +35,8 @@ export default function SendingListContactsPanel({ listId }: Props) {
   const loadAssociatedContacts = async () => {
     try {
       setLoading(true)
-      // En una implementación real, esto consultaría un endpoint de relación
-      const contacts = await contactService.getAllContacts() 
-      setAssociatedContacts(contacts.slice(0, 5)) // Mocking current members
+      const contacts = await sendingListService.getContacts(listId) 
+      setAssociatedContacts(contacts)
     } catch (e) {
       console.error(e)
     } finally {
@@ -58,6 +58,7 @@ export default function SendingListContactsPanel({ listId }: Props) {
       await sendingListService.removeContact(listId, contactId)
       toast.success('Contacto removido de la lista')
       loadAssociatedContacts()
+      if (onMemberChange) onMemberChange()
     } catch (e) {
       toast.error('Error al remover contacto')
     }
@@ -72,6 +73,7 @@ export default function SendingListContactsPanel({ listId }: Props) {
       setSelectedContact(null)
       setShowAddModal(false)
       loadAssociatedContacts()
+      if (onMemberChange) onMemberChange()
     } catch (e: any) {
       toast.error(e.response?.data?.message || 'Error al agregar contacto')
     } finally {

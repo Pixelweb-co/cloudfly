@@ -32,5 +32,10 @@ export const sendingListService = {
 
   removeContact: async (listId: number, contactId: number): Promise<void> => {
     await axiosInstance.delete(`/api/v1/marketing/lists/${listId}/contacts/${contactId}`);
+  },
+
+  getContacts: async (listId: number): Promise<Contact[]> => {
+    const response = await axiosInstance.get(`/api/v1/marketing/lists/${listId}/contacts`);
+    return response.data;
   }
 };

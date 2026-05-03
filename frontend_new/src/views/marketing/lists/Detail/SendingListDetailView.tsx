@@ -58,6 +58,16 @@ export default function SendingListDetailView() {
     }
   }
 
+  const refreshList = async () => {
+    if (isNew) return
+    try {
+      const data = await sendingListService.getById(Number(idStr))
+      setList(data)
+    } catch (err) {
+      console.error('Error refreshing list:', err)
+    }
+  }
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -93,10 +103,14 @@ export default function SendingListDetailView() {
         
         <Grid item xs={12} lg={8}>
           {!isNew && (
-            <SendingListContactsPanel listId={Number(idStr)} />
+            <SendingListContactsPanel 
+              listId={Number(idStr)} 
+              onMemberChange={refreshList} 
+            />
           )}
         </Grid>
       </Grid>
     </Box>
   )
 }
+
