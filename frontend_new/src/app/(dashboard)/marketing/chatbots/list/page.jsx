@@ -10,19 +10,18 @@ import EditIcon from '@mui/icons-material/Edit';
 import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { getChatbot, updateChatbot, invalidateCache } from '@/lib/api/chatbots';
 import { AGENT_TYPES } from '../constants';
-
-// Hook simulado para obtener sesión (ajustar según el proyecto real)
-const useSession = () => ({
-  token: localStorage.getItem('token'),
-  tenantId: localStorage.getItem('tenantId')
-});
 
 export default function ChatbotsPage() {
   const router = useRouter();
   const theme = useTheme();
-  const { token, tenantId } = useSession();
+  const { data: session } = useSession();
+  
+  const token = (session?.user as any)?.accessToken;
+  const tenantId = (session?.user as any)?.customerId || 1;
+  
   const [chatbot, setChatbot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -36,8 +35,10 @@ export default function ChatbotsPage() {
   };
 
   useEffect(() => {
-    fetchChatbot();
-  }, []);
+    if (token && tenantId) {
+      fetchChatbot();
+    }
+  }, [token, tenantId]);
 
   const handleToggleActive = async () => {
     if (!chatbot) return;
