@@ -90,7 +90,11 @@ class ApifyLeadRepository(LeadRepository):
                 # Google Places structure
                 name = item.get("title") or item.get("name", "Unknown")
                 phone = item.get("phone") or item.get("phoneNumber")
-                city = item.get("city") or item.get("address", "").split(",")[-1].strip()
+                
+                # Safe extraction of city
+                address = item.get("address") or ""
+                city = item.get("city") or (address.split(",")[-1].strip() if "," in address else "Unknown")
+                
                 category = item.get("categoryName") or "Business"
                 
                 score = "COLD"
