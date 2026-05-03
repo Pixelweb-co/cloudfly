@@ -62,7 +62,7 @@ class ApifyLeadRepository(LeadRepository):
             }
         else: # Default for google-places
             return {
-                "queries": [query],
+                "searchStringsArray": [query],
                 "maxItems": limit,
             }
 
