@@ -25,7 +25,7 @@ export const categoryService = {
   },
 
   updateCategory: async (id: number, category: any): Promise<Category> => {
-    const response = await axiosInstance.post('/categorias', category);
+    const response = await axiosInstance.put(`/categorias/${id}`, category);
     return response.data;
   },
 
