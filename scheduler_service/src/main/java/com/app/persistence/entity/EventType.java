@@ -7,5 +7,6 @@ public enum EventType {
     MARKETING,
     SYSTEM,
     REST_ACTION,
-    NOTIFICATION
+    NOTIFICATION,
+    KAFKA_QUEUE
 }

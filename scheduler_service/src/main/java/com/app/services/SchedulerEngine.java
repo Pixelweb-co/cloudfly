@@ -57,6 +57,8 @@ public class SchedulerEngine {
                         executionMono = executeRestAction(event);
                     } else if (event.getEventType() == com.app.persistence.entity.EventType.NOTIFICATION) {
                         executionMono = publishToNotificationService(event);
+                    } else if (event.getEventType() == com.app.persistence.entity.EventType.KAFKA_QUEUE) {
+                        executionMono = publishToSpecificQueue(event);
                     } else {
                         executionMono = publishToKafka(event);
                     }
@@ -153,6 +155,22 @@ public class SchedulerEngine {
         }
         long backoffMinutes = (long) Math.pow(2, newRetryCount);
         return scheduledJobRepository.markFailedWithRetry(job.getId(), JobStatus.PENDING.name(), LocalDateTime.now().plusMinutes(backoffMinutes), e.getMessage());
+    }
+
+    private Mono<Void> publishToSpecificQueue(CalendarEventEntity event) {
+        try {
+            Map<String, Object> config = objectMapper.readValue(event.getPayload(), Map.class);
+            String topic = (String) config.get("topic");
+            Object data = config.get("data");
+            
+            log.info("🚀 [SCHEDULER] Publishing to topic: {} for event: {}", topic, event.getId());
+            return kafkaTemplate.send(topic, event.getTenantId().toString(), data)
+                    .doOnSuccess(result -> log.info("✅ [SCHEDULER] Published successfully to {}", topic))
+                    .then();
+        } catch (Exception e) {
+            log.error("❌ [SCHEDULER] Error publishing to specific queue: {}", e.getMessage());
+            return Mono.error(e);
+        }
     }
 
     private Map<String, Object> buildKafkaMessage(CalendarEventEntity event) {
