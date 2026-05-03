@@ -29,14 +29,17 @@ public class CampaignExecutionService {
                     campaign.setStatus("RUNNING");
                     return campaignRepository.save(campaign)
                             .thenMany(fetchContacts(campaign))
-                            .flatMap(contact -> {
-                                return messageFormatterService.formatMessage(campaign, contact)
+                            .concatMap(contact -> {
+                                long delay = 2000 + (long)(Math.random() * 8000);
+                                log.debug("⏳ Waiting {}ms before sending to {}", delay, contact.getPhone());
+                                return Mono.delay(java.time.Duration.ofMillis(delay))
+                                        .then(messageFormatterService.formatMessage(campaign, contact))
                                         .flatMap(message -> evolutionService.sendMessage(campaign, contact, message))
                                         .onErrorResume(e -> {
                                             log.error("⚠️ Failed to send message to contact {}: {}", contact.getId(), e.getMessage());
                                             return Mono.empty();
                                         });
-                            }, 5) // Concurrency of 5
+                            })
                             .then(Mono.defer(() -> {
                                 campaign.setStatus("COMPLETED");
                                 return campaignRepository.save(campaign).then();
