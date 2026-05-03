@@ -14,7 +14,8 @@ import { Channel } from '@/types/marketing'
 import { Pipeline, Stage } from '@/types/marketing/pipelineTypes'
 import { productService } from '@/services/ventas/productService'
 import { categoryService } from '@/services/ventas/categoryService'
-import { Product, Category } from '@/types/ventas/productTypes'
+import { Product } from '@/types/ventas/productTypes'
+import { Category } from '@/types/apps/Types'
 
 interface Props {
   campaign: Campaign | null
@@ -73,9 +74,10 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
           // Map backend fields to frontend-friendly ones or ensure they are present
           name: p.productName,
           code: p.sku || p.barcode,
-          categories: (p.categoryIds || []).map((id: number) => 
-            catData.find((c: any) => c.id === id)?.name || c.categoryName
-          ).filter(Boolean).join(', ')
+          categories: (p.categoryIds || []).map((id: number) => {
+            const cat = catData.find((c: any) => c.id === id)
+            return cat?.nombreCategoria || cat?.name || ''
+          }).filter(Boolean).join(', ')
         }))
         setProducts(enrichedProducts)
         setCategories(catData || [])
