@@ -23,11 +23,15 @@ import { Icon } from '@iconify/react'
 import { productService } from '@/services/ventas/productService'
 import { Product } from '@/types/ventas/productTypes'
 import { userMethods } from '@/utils/userMethods'
+import ConfirmationDialog from '@/components/dialogs/ConfirmationDialog'
+import toast from 'react-hot-toast'
 
 export default function ProductsListTable() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [productToDelete, setProductToDelete] = useState<number | null>(null)
 
   useEffect(() => {
     loadData()
@@ -60,13 +64,22 @@ export default function ProductsListTable() {
     router.push(`/ventas/productos/new`)
   }
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('¿Seguro de eliminar este producto?')) return
+  const handleDeleteClick = (id: number) => {
+    setProductToDelete(id)
+    setConfirmOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!productToDelete) return
     try {
-      await productService.deleteProduct(id)
+      await productService.deleteProduct(productToDelete)
+      toast.success('Producto eliminado')
+      setConfirmOpen(false)
+      setProductToDelete(null)
       await loadData()
     } catch (e) {
       console.error('Error al eliminar producto:', e)
+      toast.error('Error al eliminar producto')
     }
   }
 
@@ -170,7 +183,7 @@ export default function ProductsListTable() {
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Eliminar">
-                      <IconButton onClick={() => handleDelete(product.id)} color="error" sx={{ backgroundColor: 'action.hover' }}>
+                      <IconButton onClick={(e) => { e.stopPropagation(); handleDeleteClick(product.id); }} color="error" sx={{ backgroundColor: 'action.hover' }}>
                         <Icon icon="tabler:trash" />
                       </IconButton>
                     </Tooltip>
@@ -181,6 +194,13 @@ export default function ProductsListTable() {
           </TableBody>
         </Table>
       </TableContainer>
+      <ConfirmationDialog 
+        open={confirmOpen}
+        setOpen={setConfirmOpen}
+        entitYName="Eliminar Producto"
+        name="confirm"
+        onConfirmation={handleConfirmDelete}
+      />
     </Card>
   )
 }

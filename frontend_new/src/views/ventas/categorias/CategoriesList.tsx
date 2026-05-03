@@ -24,12 +24,17 @@ import { CategoryType as Category } from '@/types/apps/categoryType'
 import { userMethods } from '@/utils/userMethods'
 import CategoryFormDialog from './CategoryFormDialog'
 import toast from 'react-hot-toast'
+import ConfirmationDialog from '@/components/dialogs/ConfirmationDialog'
 
 export default function CategoriesList() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
+  
+  // Confirmation Dialog State
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [categoryToDelete, setCategoryToDelete] = useState<number | null>(null)
   
   // Pagination
   const [page, setPage] = useState(0)
@@ -62,11 +67,18 @@ export default function CategoriesList() {
     setDialogOpen(true)
   }
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('¿Seguro de eliminar esta categoría?')) return
+  const handleDeleteClick = (id: number) => {
+    setCategoryToDelete(id)
+    setConfirmOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!categoryToDelete) return
     try {
-      await categoryService.deleteCategory(id)
+      await categoryService.deleteCategory(categoryToDelete)
       toast.success('Categoría eliminada')
+      setConfirmOpen(false)
+      setCategoryToDelete(null)
       await loadData()
     } catch (e) {
       console.error('Error al eliminar categoría:', e)
@@ -165,7 +177,7 @@ export default function CategoriesList() {
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Eliminar">
-                    <IconButton onClick={() => category.id && handleDelete(category.id)} size="small" color="error">
+                    <IconButton onClick={() => category.id && handleDeleteClick(category.id)} size="small" color="error">
                       <Icon icon="tabler:trash" />
                     </IconButton>
                   </Tooltip>
@@ -199,6 +211,14 @@ export default function CategoriesList() {
         onClose={() => setDialogOpen(false)}
         category={selectedCategory}
         onSaved={loadData}
+      />
+
+      <ConfirmationDialog 
+        open={confirmOpen}
+        setOpen={setConfirmOpen}
+        entitYName="Eliminar Categoría"
+        name="confirm"
+        onConfirmation={handleConfirmDelete}
       />
     </Card>
   )
