@@ -13,11 +13,12 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
+@RequestMapping("/api/leads")
 public class LeadController {
 
     private final LeadOrchestratorService leadOrchestratorService;
 
-    @PostMapping("/leads/generate")
+    @PostMapping("/generate")
     public Mono<LeadResponse> generateLeads(@RequestBody LeadRequest request) {
         log.info("📥 [LEAD-CONTROLLER] Received lead generation request for: {}", 
                  request.getFilters() != null ? request.getFilters().getKeyword() : "unknown");
