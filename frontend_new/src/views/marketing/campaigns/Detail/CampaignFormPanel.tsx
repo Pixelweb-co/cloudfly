@@ -68,7 +68,16 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
           productService.getAllProducts(),
           categoryService.getAllCategories()
         ])
-        setProducts(prodData || [])
+        const enrichedProducts = (prodData || []).map((p: any) => ({
+          ...p,
+          // Map backend fields to frontend-friendly ones or ensure they are present
+          name: p.productName,
+          code: p.sku || p.barcode,
+          categories: (p.categoryIds || []).map((id: number) => 
+            catData.find((c: any) => c.id === id)?.name || c.categoryName
+          ).filter(Boolean).join(', ')
+        }))
+        setProducts(enrichedProducts)
         setCategories(catData || [])
       } catch (err) {
         console.error('Error loading catalog:', err)
@@ -257,21 +266,49 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
                 <Autocomplete
                   fullWidth
                   options={products}
-                  getOptionLabel={(option) => `${option.name} (${option.code || ''})`}
+                  getOptionLabel={(option) => `${option.productName || option.name} (${option.sku || option.code || ''})`}
+                  filterOptions={(options, { inputValue }) => {
+                    const search = inputValue.toLowerCase()
+                    return options.filter(option => 
+                      (option.productName || option.name || '').toLowerCase().includes(search) ||
+                      (option.sku || option.code || '').toLowerCase().includes(search) ||
+                      (option.barcode || '').toLowerCase().includes(search) ||
+                      (option.categories || '').toLowerCase().includes(search)
+                    )
+                  }}
                   value={products.find(p => p.id === formData.productId) || null}
                   onChange={(_, newValue) => setFormData({ ...formData, productId: newValue?.id || '' })}
                   renderInput={(params) => (
                     <CustomTextField 
                       {...params} 
                       label='Buscar Producto' 
-                      placeholder='Nombre o código...'
+                      placeholder='Nombre, código o categoría...'
                     />
                   )}
-                  renderOption={(props, option) => (
-                    <li {...props} key={option.id}>
-                      <Box>
-                        <Typography variant='body2' sx={{ fontWeight: 500 }}>{option.name}</Typography>
-                        <Typography variant='caption' color='text.secondary'>Código: {option.code || 'N/A'}</Typography>
+                  renderOption={(props, option) => {
+                    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cloudfly.com.co'
+                    const getImgUrl = (url?: string) => {
+                      if (!url) return '/images/avatars/1.png'
+                      if (url.startsWith('http')) return url
+                      return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
+                    }
+
+                    return (
+                      <li {...props} key={option.id}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, width: '100%' }}>
+                          <Box 
+                            component='img' 
+                            src={getImgUrl(option.imageUrls?.[0])} 
+                            sx={{ width: 40, height: 40, borderRadius: 1, objectFit: 'cover', bgcolor: 'background.default' }}
+                            onError={(e: any) => { e.target.src = '/images/avatars/1.png' }}
+                          />
+                        <Box sx={{ flexGrow: 1 }}>
+                          <Typography variant='body2' sx={{ fontWeight: 600 }}>{option.productName || option.name}</Typography>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography variant='caption' color='text.secondary'>SKU: {option.sku || option.code || 'N/A'}</Typography>
+                            <Typography variant='caption' sx={{ color: 'primary.main', fontWeight: 500 }}>{option.categories || 'Sin categoría'}</Typography>
+                          </Box>
+                        </Box>
                       </Box>
                     </li>
                   )}
@@ -282,7 +319,7 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
                 <Autocomplete
                   fullWidth
                   options={categories}
-                  getOptionLabel={(option) => option.name || ''}
+                  getOptionLabel={(option) => option.nombreCategoria || option.name || ''}
                   value={categories.find(c => c.id === formData.categoryId) || null}
                   onChange={(_, newValue) => setFormData({ ...formData, categoryId: newValue?.id || '' })}
                   renderInput={(params) => (
@@ -291,6 +328,13 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
                       label='Buscar Categoría' 
                       placeholder='Nombre de categoría...'
                     />
+                  )}
+                  renderOption={(props, option) => (
+                    <li {...props} key={option.id}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Typography variant='body2' sx={{ fontWeight: 500 }}>{option.nombreCategoria || option.name}</Typography>
+                      </Box>
+                    </li>
                   )}
                 />
               )}

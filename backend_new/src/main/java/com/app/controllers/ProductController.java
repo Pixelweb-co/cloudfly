@@ -54,14 +54,29 @@ public class ProductController {
                         }
                     }
 
-                    return new UserContext(finalTenantId, tokenCompanyId, roles);
+                    Long finalCompanyId = tokenCompanyId;
+                    if (headers.containsKey("x-company-id") || headers.containsKey("X-Company-Id")) {
+                        try {
+                            String headerVal = headers.getOrDefault("x-company-id", headers.get("X-Company-Id"));
+                            finalCompanyId = Long.parseLong(headerVal);
+                        } catch (Exception e) {
+                            log.warn("⚠️ [PRODUCT-AUTH] Invalid x-company-id header");
+                        }
+                    }
+
+                    return new UserContext(finalTenantId, finalCompanyId, roles);
                 });
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Mono<ProductCreateRequest> save(@RequestBody ProductCreateRequest product) {
-        return productService.saveProduct(product);
+    public Mono<ProductCreateRequest> save(@RequestBody ProductCreateRequest product, @RequestHeader Map<String, String> headers) {
+        return getCurrentUserContext(headers)
+                .flatMap(ctx -> {
+                    if (product.getTenantId() == null) product.setTenantId(ctx.tenantId());
+                    if (product.getCompanyId() == null) product.setCompanyId(ctx.companyId());
+                    return productService.saveProduct(product);
+                });
     }
 
     @GetMapping

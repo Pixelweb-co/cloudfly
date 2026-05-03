@@ -15,5 +15,7 @@ public class CategoryCreateRequest {
     private String nombreCategoria;
     private String description;
     private Long parentCategory;
+    private Long tenantId;
+    private Long companyId;
     private Boolean status;
 }

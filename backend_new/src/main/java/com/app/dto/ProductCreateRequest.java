@@ -15,6 +15,7 @@ import java.util.List;
 public class ProductCreateRequest {
     private Long id;
     private Long tenantId;
+    private Long companyId;
     private String productName;
     private String description;
     private String productType;
@@ -36,6 +37,7 @@ public class ProductCreateRequest {
     private String model;
     
     private List<Long> categoryIds;
+    private List<String> categoryNames;
     private List<Long> imageIds;
     private List<String> imageUrls;
 }

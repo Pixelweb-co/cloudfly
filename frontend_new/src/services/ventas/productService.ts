@@ -18,14 +18,18 @@ export const productService = {
 
   createProduct: async (product: ProductCreateRequest): Promise<Product> => {
     const url = `/productos`;
-    const response = await axiosInstance.post(url, product);
+    const companyId = typeof window !== 'undefined' ? localStorage.getItem('activeCompanyId') : null;
+    const enrichedProduct = { ...product, companyId: companyId ? parseInt(companyId) : product.companyId };
+    const response = await axiosInstance.post(url, enrichedProduct);
     return response.data;
   },
 
   updateProduct: async (product: ProductCreateRequest): Promise<Product> => {
     const url = `/productos`;
+    const companyId = typeof window !== 'undefined' ? localStorage.getItem('activeCompanyId') : null;
+    const enrichedProduct = { ...product, companyId: companyId ? parseInt(companyId) : product.companyId };
     // Mismo endpoint POST usado como upsert en Node.js base
-    const response = await axiosInstance.post(url, product);
+    const response = await axiosInstance.post(url, enrichedProduct);
     return response.data;
   },
 
