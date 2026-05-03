@@ -1,6 +1,6 @@
 'use client'
 
-import { 
+import React, { useState, useEffect } from 'react'
   Card, CardHeader, CardContent, Grid, Button, MenuItem, 
   Typography, Divider, Box, CircularProgress, Alert, Tab, Tabs,
   Autocomplete
