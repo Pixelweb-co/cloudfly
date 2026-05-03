@@ -313,7 +313,8 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
                         </Box>
                       </Box>
                     </li>
-                  )}
+                  )
+                }}
                 />
               )}
 
