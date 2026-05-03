@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Container, Typography, Box, CircularProgress, Alert } from '@mui/material';
 import ChatbotForm from '../components/ChatbotForm';
 import { getChatbot, createChatbot, updateChatbot } from '@/lib/api/chatbots';
@@ -14,8 +15,9 @@ export default function ChatbotFormPage() {
   const [chatbot, setChatbot] = useState(null);
   const [error, setError] = useState(null);
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
-  const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenantId') : 1;
+  const { data: session } = useSession();
+  const token = (session?.user as any)?.accessToken;
+  const tenantId = (session?.user as any)?.customerId || 1;
 
   useEffect(() => {
     if (id) {
