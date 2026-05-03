@@ -18,4 +18,7 @@ public interface SendingListContactRepository extends ReactiveCrudRepository<Sen
 
     @Query("SELECT * FROM sending_list_contacts WHERE sending_list_id = :listId AND contact_id = :contactId")
     Mono<SendingListContactEntity> findBySendingListIdAndContactId(Long listId, Long contactId);
+
+    @Query("SELECT c.* FROM contacts c INNER JOIN sending_list_contacts slc ON c.id = slc.contact_id WHERE slc.sending_list_id = :listId AND slc.status = 'ACTIVE'")
+    Flux<com.app.persistence.entity.ContactEntity> findContactsByListId(Long listId);
 }

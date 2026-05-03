@@ -69,6 +69,13 @@ public class SendingListController {
                 .flatMap(ctx -> sendingListService.findById(id, ctx.tenantId(), ctx.companyId()));
     }
 
+    @GetMapping("/{id}/contacts")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
+    public Flux<com.app.persistence.entity.ContactEntity> getContactsByList(@PathVariable Long id, @RequestHeader Map<String, String> headers) {
+        return getCurrentUserContext(headers)
+                .flatMapMany(ctx -> sendingListService.findContactsByList(id, ctx.tenantId(), ctx.companyId()));
+    }
+
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
     public Mono<SendingListEntity> create(@RequestBody SendingListEntity list, @RequestHeader Map<String, String> headers) {
