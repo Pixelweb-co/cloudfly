@@ -41,12 +41,20 @@ export default function SendingListDetailView() {
   const handleSave = async (formData: any) => {
     try {
       setSaving(true)
+      const activeTenantId = localStorage.getItem('activeTenantId')
+      const activeCompanyId = localStorage.getItem('activeCompanyId')
+      const dataWithContext = {
+        ...formData,
+        tenantId: activeTenantId ? Number(activeTenantId) : undefined,
+        companyId: activeCompanyId ? Number(activeCompanyId) : undefined
+      }
+
       if (isNew) {
-        const newList = await sendingListService.create(formData)
+        const newList = await sendingListService.create(dataWithContext)
         toast.success('Lista creada exitosamente')
         router.replace(`/marketing/lists/${newList.id}`)
       } else if (list) {
-        const updated = await sendingListService.update(list.id, formData)
+        const updated = await sendingListService.update(list.id, dataWithContext)
         setList(updated)
         toast.success('Lista actualizada correctamente')
       }
