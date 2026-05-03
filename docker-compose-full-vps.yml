@@ -327,6 +327,9 @@ services:
       - "8001:8000"
     networks:
       - app-net
+    environment:
+      - APIFY_TOKEN=${APIFY_TOKEN}
+      - APIFY_BASE_URL=https://api.apify.com/v2
 
 
   # ====================

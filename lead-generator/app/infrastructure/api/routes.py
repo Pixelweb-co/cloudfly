@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from ...domain.models import LeadRequest, LeadResponse
 from ...application.lead_service import LeadService
-from ..repositories.mock_repository import MockLeadRepository
+from ..repositories.apify_repository import ApifyLeadRepository
 
 router = APIRouter()
 
 # Simple DI for the service
 def get_lead_service():
-    repository = MockLeadRepository()
+    repository = ApifyLeadRepository()
     return LeadService(repository)
 
 @router.get("/health")
