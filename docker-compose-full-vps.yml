@@ -399,7 +399,7 @@ services:
       context: ./marketing-worker
       dockerfile: Dockerfile
     environment:
-      - DB_HOST=mysql
+      - DB_HOST=db
       - DB_PORT=3306
       - DB_DATABASE=cloud_master
       - DB_USERNAME=root
@@ -412,7 +412,7 @@ services:
       - kafka-net
     depends_on:
       - kafka
-      - mysql
+      - db
 
   traefik:
     image: traefik:v2.11
