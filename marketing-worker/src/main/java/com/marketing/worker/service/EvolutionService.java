@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,23 +33,56 @@ public class EvolutionService {
     public Mono<Void> sendMessage(CampaignEntity campaign, ContactEntity contact, String formattedMessage) {
         return channelConfigRepository.findById(campaign.getChannelId())
                 .flatMap(config -> {
-                    if (campaign.getMediaUrl() != null && !campaign.getMediaUrl().isEmpty()) {
-                        return sendMedia(config, contact.getPhone(), campaign.getMediaUrl(), campaign.getMediaType(), formattedMessage);
-                    } else {
-                        return sendText(config, contact.getPhone(), formattedMessage);
-                    }
+                    String phone = contact.getPhone().replaceAll("[^0-9]", "");
+                    String apiKey = config.getApiKey() != null ? config.getApiKey() : globalApiKey;
+
+                    // 1. Simulate "composing" presence before sending
+                    return sendPresence(config.getInstanceName(), phone, apiKey)
+                            .then(Mono.delay(Duration.ofMillis(1500 + (long)(Math.random() * 2000))))
+                            .then(Mono.defer(() -> {
+                                if (campaign.getMediaUrl() != null && !campaign.getMediaUrl().isEmpty()) {
+                                    return sendMedia(config, phone, campaign.getMediaUrl(), campaign.getMediaType(), formattedMessage, apiKey);
+                                } else {
+                                    return sendText(config, phone, formattedMessage, apiKey);
+                                }
+                            }));
                 });
     }
 
-    private Mono<Void> sendText(ChannelConfig config, String phone, String text) {
-        String url = apiUrl + "/message/sendText/" + config.getInstanceName();
+    /**
+     * Sends a "composing" presence indicator so WhatsApp sees
+     * the number as "typing..." before the actual message arrives.
+     */
+    private Mono<Void> sendPresence(String instanceName, String phone, String apiKey) {
+        String url = apiUrl + "/chat/updatePresence/" + instanceName;
         Map<String, Object> body = new HashMap<>();
-        body.put("number", phone.replaceAll("[^0-9]", ""));
-        body.put("text", text);
+        body.put("number", phone);
+        body.put("presence", "composing");
 
         return webClientBuilder.build().post()
                 .uri(url)
-                .header("apikey", config.getApiKey() != null ? config.getApiKey() : globalApiKey)
+                .header("apikey", apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .onErrorResume(e -> {
+                    log.debug("Presence update skipped for {}: {}", phone, e.getMessage());
+                    return Mono.empty();
+                });
+    }
+
+    private Mono<Void> sendText(ChannelConfig config, String phone, String text, String apiKey) {
+        String url = apiUrl + "/message/sendText/" + config.getInstanceName();
+        Map<String, Object> body = new HashMap<>();
+        body.put("number", phone);
+        body.put("text", text);
+        // Evolution API delay parameter: simulates typing time on-server
+        body.put("delay", 1200 + (int)(Math.random() * 3000));
+
+        return webClientBuilder.build().post()
+                .uri(url)
+                .header("apikey", apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
                 .retrieve()
@@ -60,17 +94,18 @@ public class EvolutionService {
                 });
     }
 
-    private Mono<Void> sendMedia(ChannelConfig config, String phone, String mediaUrl, String mediaType, String caption) {
+    private Mono<Void> sendMedia(ChannelConfig config, String phone, String mediaUrl, String mediaType, String caption, String apiKey) {
         String url = apiUrl + "/message/sendMedia/" + config.getInstanceName();
         Map<String, Object> body = new HashMap<>();
-        body.put("number", phone.replaceAll("[^0-9]", ""));
+        body.put("number", phone);
         body.put("media", mediaUrl);
         body.put("mediatype", mediaType != null ? mediaType.toLowerCase() : "image");
         body.put("caption", caption);
+        body.put("delay", 1500 + (int)(Math.random() * 3000));
 
         return webClientBuilder.build().post()
                 .uri(url)
-                .header("apikey", config.getApiKey() != null ? config.getApiKey() : globalApiKey)
+                .header("apikey", apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
                 .retrieve()

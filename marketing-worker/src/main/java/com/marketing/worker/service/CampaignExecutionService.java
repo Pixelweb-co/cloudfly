@@ -2,13 +2,17 @@ package com.marketing.worker.service;
 
 import com.marketing.worker.dto.CampaignPayload;
 import com.marketing.worker.persistence.entity.CampaignEntity;
+import com.marketing.worker.persistence.entity.ContactEntity;
 import com.marketing.worker.persistence.repository.CampaignRepository;
 import com.marketing.worker.persistence.repository.ContactRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
+
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @RequiredArgsConstructor
@@ -20,39 +24,65 @@ public class CampaignExecutionService {
     private final EvolutionService evolutionService;
     private final MessageFormatterService messageFormatterService;
 
+    // Anti-spam: batch size before taking a long pause
+    private static final int BATCH_SIZE = 20;
+    private static final long BATCH_PAUSE_MS = 30_000; // 30 seconds pause every 20 messages
+
     public Mono<Void> executeCampaign(CampaignPayload payload) {
         return campaignRepository.findById(payload.getCampaignId())
                 .flatMap(campaign -> {
-                    log.info("📢 Starting execution of campaign: {}", campaign.getName());
+                    log.info("📢 Starting campaign: {} (id={})", campaign.getName(), campaign.getId());
                     
-                    // Update status to RUNNING
                     campaign.setStatus("RUNNING");
+                    AtomicInteger counter = new AtomicInteger(0);
+                    AtomicInteger sent = new AtomicInteger(0);
+                    AtomicInteger failed = new AtomicInteger(0);
+
                     return campaignRepository.save(campaign)
                             .thenMany(fetchContacts(campaign))
                             .concatMap(contact -> {
-                                long delay = 2000 + (long)(Math.random() * 8000);
-                                log.debug("⏳ Waiting {}ms before sending to {}", delay, contact.getPhone());
-                                return Mono.delay(java.time.Duration.ofMillis(delay))
+                                int idx = counter.incrementAndGet();
+
+                                // Anti-spam: Random delay between 3-12 seconds per message
+                                long delay = 3000 + (long)(Math.random() * 9000);
+
+                                // Anti-spam: Longer pause every BATCH_SIZE messages
+                                if (idx > 1 && (idx - 1) % BATCH_SIZE == 0) {
+                                    long batchDelay = BATCH_PAUSE_MS + (long)(Math.random() * 15_000);
+                                    log.info("⏸️ Anti-spam batch pause: {}s after {} messages", batchDelay / 1000, idx - 1);
+                                    delay += batchDelay;
+                                }
+
+                                long finalDelay = delay;
+                                log.info("📤 [{}/...] Sending to {} (delay: {}ms)", idx, contact.getPhone(), finalDelay);
+
+                                return Mono.delay(Duration.ofMillis(finalDelay))
                                         .then(messageFormatterService.formatMessage(campaign, contact))
                                         .flatMap(message -> evolutionService.sendMessage(campaign, contact, message))
+                                        .doOnSuccess(v -> sent.incrementAndGet())
                                         .onErrorResume(e -> {
-                                            log.error("⚠️ Failed to send message to contact {}: {}", contact.getId(), e.getMessage());
+                                            failed.incrementAndGet();
+                                            log.error("⚠️ Failed to send to contact {}: {}", contact.getId(), e.getMessage());
                                             return Mono.empty();
                                         });
                             })
                             .then(Mono.defer(() -> {
                                 campaign.setStatus("COMPLETED");
+                                campaign.setTotalSent(sent.get());
+                                campaign.setTotalFailed(failed.get());
+                                log.info("✅ Campaign {} completed. Sent: {}, Failed: {}", 
+                                        campaign.getName(), sent.get(), failed.get());
                                 return campaignRepository.save(campaign).then();
                             }));
                 });
     }
 
-    private reactor.core.publisher.Flux<com.marketing.worker.persistence.entity.ContactEntity> fetchContacts(CampaignEntity campaign) {
+    private Flux<ContactEntity> fetchContacts(CampaignEntity campaign) {
         if (campaign.getSendingListId() != null) {
             return contactRepository.findBySendingListId(campaign.getSendingListId());
         } else if (campaign.getPipelineId() != null && campaign.getPipelineStage() != null) {
             return contactRepository.findByPipelineAndStage(campaign.getPipelineId(), campaign.getPipelineStage());
         }
-        return reactor.core.publisher.Flux.empty();
+        return Flux.empty();
     }
 }

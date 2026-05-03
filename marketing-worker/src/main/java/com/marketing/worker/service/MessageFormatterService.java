@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +18,15 @@ import java.math.BigDecimal;
 public class MessageFormatterService {
 
     private final ProductRepository productRepository;
+
+    // Zero-width characters used to make each message unique
+    // WhatsApp won't display them but they prevent duplicate detection
+    private static final char[] INVISIBLE_CHARS = {
+            '\u200B', // zero-width space
+            '\u200C', // zero-width non-joiner
+            '\u200D', // zero-width joiner
+            '\uFEFF'  // zero-width no-break space
+    };
 
     public Mono<String> formatMessage(CampaignEntity campaign, ContactEntity contact) {
         String baseMessage = campaign.getMessage() != null ? campaign.getMessage() : "";
@@ -30,10 +40,25 @@ public class MessageFormatterService {
         if (campaign.getProductId() != null) {
             return productRepository.findById(campaign.getProductId())
                     .map(product -> appendProductDetails(formatted, product))
-                    .defaultIfEmpty(formatted);
+                    .defaultIfEmpty(formatted)
+                    .map(this::addInvisibleFingerprint);
         }
         
-        return Mono.just(formatted);
+        return Mono.just(addInvisibleFingerprint(formatted));
+    }
+
+    /**
+     * Appends a random sequence of invisible characters to the end of the message.
+     * This ensures no two messages are byte-identical, which helps avoid
+     * WhatsApp's duplicate/spam detection.
+     */
+    private String addInvisibleFingerprint(String message) {
+        StringBuilder sb = new StringBuilder(message);
+        int len = 3 + ThreadLocalRandom.current().nextInt(5); // 3-7 invisible chars
+        for (int i = 0; i < len; i++) {
+            sb.append(INVISIBLE_CHARS[ThreadLocalRandom.current().nextInt(INVISIBLE_CHARS.length)]);
+        }
+        return sb.toString();
     }
 
     private String appendProductDetails(String message, Product product) {
