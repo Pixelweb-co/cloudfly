@@ -54,7 +54,8 @@ public class CampaignService {
                                 saved.getName(), 
                                 saved.getScheduledAt(), 
                                 tenantId, 
-                                companyId
+                                companyId,
+                                saved.getRecurrence()
                         ).thenReturn(saved);
                     }
                     return Mono.just(saved);
@@ -84,6 +85,7 @@ public class CampaignService {
                     existing.setProductId(campaign.getProductId());
                     existing.setCategoryId(campaign.getCategoryId());
                     existing.setScheduledAt(campaign.getScheduledAt());
+                    existing.setRecurrence(campaign.getRecurrence());
                     existing.setUpdatedAt(LocalDateTime.now());
 
                     return campaignRepository.save(existing)
@@ -94,7 +96,8 @@ public class CampaignService {
                                             saved.getName(), 
                                             saved.getScheduledAt(), 
                                             tenantId, 
-                                            companyId
+                                            companyId,
+                                            saved.getRecurrence()
                                     ).thenReturn(saved);
                                 }
                                 return Mono.just(saved);

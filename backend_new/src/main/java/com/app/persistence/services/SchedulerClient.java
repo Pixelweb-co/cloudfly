@@ -24,7 +24,7 @@ public class SchedulerClient {
     @Value("${services.scheduler.url:http://scheduler-service:8080}")
     private String schedulerUrl;
 
-    public Mono<Map<String, Object>> scheduleCampaign(Long campaignId, String campaignName, LocalDateTime scheduledAt, Long tenantId, Long companyId) {
+    public Mono<Map<String, Object>> scheduleCampaign(Long campaignId, String campaignName, LocalDateTime scheduledAt, Long tenantId, Long companyId, String recurrence) {
         WebClient webClient = webClientBuilder.build();
 
         Map<String, Object> event = new HashMap<>();
@@ -39,6 +39,9 @@ public class SchedulerClient {
         event.put("allDay", false);
         event.put("relatedEntityType", "CAMPAIGN");
         event.put("relatedEntityId", campaignId);
+        if (recurrence != null && !"NONE".equalsIgnoreCase(recurrence)) {
+            event.put("recurrence", recurrence.toUpperCase());
+        }
         
         // Payload for the scheduler to know where to send
         Map<String, Object> schedulerPayload = new HashMap<>();

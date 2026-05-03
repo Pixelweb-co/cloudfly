@@ -86,6 +86,8 @@ public class CampaignEntity {
     @Column("updated_at")
     private LocalDateTime updatedAt;
 
+    private String recurrence; // NONE, DAILY, WEEKLY, MONTHLY
+
     // Explicit Getters and Setters for VPS compatibility
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

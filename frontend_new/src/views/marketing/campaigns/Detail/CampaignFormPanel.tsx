@@ -343,6 +343,40 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
               )}
             </Grid>
 
+            <Grid item xs={12}><Divider /></Grid>
+
+            {/* Sección 5: Programación */}
+            <Grid item xs={12}>
+              <Typography variant='subtitle2' sx={{ mb: 2, color: 'primary.main' }}>5. Programación de Envío</Typography>
+              <Grid container spacing={5}>
+                <Grid item xs={12} md={6}>
+                  <CustomTextField
+                    fullWidth
+                    type='datetime-local'
+                    label='Fecha y Hora de Envío'
+                    value={formData.scheduledAt || ''}
+                    onChange={e => setFormData({ ...formData, scheduledAt: e.target.value })}
+                    InputLabelProps={{ shrink: true }}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <CustomTextField
+                    select
+                    fullWidth
+                    label='Recurrencia'
+                    value={formData.recurrence || 'NONE'}
+                    onChange={e => setFormData({ ...formData, recurrence: e.target.value })}
+                  >
+                    <MenuItem value='NONE'>No se repite</MenuItem>
+                    <MenuItem value='DAILY'>Diario</MenuItem>
+                    <MenuItem value='WEEKLY'>Semanal</MenuItem>
+                    <MenuItem value='MONTHLY'>Mensual</MenuItem>
+                  </CustomTextField>
+                </Grid>
+              </Grid>
+            </Grid>
+
             <Grid item xs={12}>
               <Button 
                 type='submit' 
