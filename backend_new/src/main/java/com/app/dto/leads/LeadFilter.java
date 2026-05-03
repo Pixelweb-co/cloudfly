@@ -11,7 +11,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class LeadFilter {
     private String keyword;
-    private String location;
+    private String country;
+    private String state;
+    private String city;
     private Integer limit;
     private String source;
     private Boolean enrich;

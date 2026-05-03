@@ -45,7 +45,9 @@ type LeadPreview = {
 
 type SearchFilters = {
   keyword: string
-  location: string
+  country: string
+  state: string
+  city: string
   limit: number
   source: 'auto' | 'google_maps' | 'instagram'
   enrich: boolean
@@ -65,7 +67,9 @@ export default function B2BLeadGeneratorPage() {
   // State
   const [filters, setFilters] = useState<SearchFilters>({
     keyword: '',
-    location: '',
+    country: 'Colombia',
+    state: '',
+    city: '',
     limit: 20,
     source: 'auto',
     enrich: true
@@ -184,7 +188,7 @@ export default function B2BLeadGeneratorPage() {
           </Typography>
           <form onSubmit={handleSearch}>
             <Stack spacing={4}>
-              <Box className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+              <Box className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
                 <TextField
                   fullWidth
                   label='Palabra Clave (e.g. Restaurantes)'
@@ -195,10 +199,24 @@ export default function B2BLeadGeneratorPage() {
                 />
                 <TextField
                   fullWidth
-                  label='Ubicación (e.g. Bogotá, Colombia)'
-                  value={filters.location}
-                  onChange={e => handleFilterChange('location', e.target.value)}
-                  placeholder='¿Dónde?'
+                  label='País'
+                  value={filters.country}
+                  onChange={e => handleFilterChange('country', e.target.value)}
+                  placeholder='Colombia'
+                />
+                <TextField
+                  fullWidth
+                  label='Departamento/Estado'
+                  value={filters.state}
+                  onChange={e => handleFilterChange('state', e.target.value)}
+                  placeholder='Antioquia'
+                />
+                <TextField
+                  fullWidth
+                  label='Ciudad'
+                  value={filters.city}
+                  onChange={e => handleFilterChange('city', e.target.value)}
+                  placeholder='Medellín'
                 />
                 <TextField
                   fullWidth

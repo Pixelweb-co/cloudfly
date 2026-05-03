@@ -3,7 +3,9 @@ from typing import List, Optional
 
 class SearchFilters(BaseModel):
     keyword: str
-    location: Optional[str] = None
+    country: Optional[str] = "Colombia"
+    state: Optional[str] = None
+    city: Optional[str] = None
     limit: int = Field(default=20, ge=1, le=100)
     source: str = "auto"
     enrich: bool = True

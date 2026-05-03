@@ -25,7 +25,11 @@ class ApifyLeadRepository(LeadRepository):
             return []
 
         actor_id = self.actors.get(filters.source, self.actors["auto"])
-        search_query = f"{filters.keyword} {filters.location}" if filters.location else filters.keyword
+        
+        # Construct precise query
+        location_parts = [p for p in [filters.city, filters.state, filters.country] if p]
+        location_str = ", ".join(location_parts)
+        search_query = f"{filters.keyword} in {location_str}" if location_str else filters.keyword
         
         logger.info(f"🚀 [APIFY-SDK] Using actor {actor_id} for: {search_query}")
 
