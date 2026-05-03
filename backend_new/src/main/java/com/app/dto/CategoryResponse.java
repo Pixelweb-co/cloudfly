@@ -18,6 +18,7 @@ public class CategoryResponse {
     private Long parentCategory;
     private Boolean status;
     private Long tenantId;
+    private Long companyId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

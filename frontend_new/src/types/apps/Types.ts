@@ -31,5 +31,7 @@ export enum PaymentMethod {
 export interface Category {
   id: string;
   name: string;
+  tenantId?: number;
+  companyId?: number;
   icon?: React.ReactNode;
 }

@@ -4,9 +4,11 @@ import com.app.dto.ProductCreateRequest;
 import com.app.persistence.entity.Product;
 import com.app.persistence.entity.ProductCategory;
 import com.app.persistence.entity.ProductImage;
+import com.app.persistence.entity.Category;
 import com.app.persistence.entity.Media;
 import com.app.events.ProductEventProducer;
 import com.app.persistence.repository.ProductCategoryRepository;
+import com.app.persistence.repository.CategoryRepository;
 import com.app.persistence.repository.ProductRepository;
 import com.app.persistence.repository.ProductImageRepository;
 import com.app.persistence.repository.MediaRepository;
@@ -25,8 +27,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProductService {
 
-    private final ProductRepository productRepository;
     private final ProductCategoryRepository productCategoryRepository;
+    private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
     private final MediaRepository mediaRepository;
     private final ProductEventProducer productEventProducer;
@@ -40,6 +43,7 @@ public class ProductService {
         Product product = Product.builder()
                 .id(request.getId())
                 .tenantId(request.getTenantId())
+                .companyId(request.getCompanyId())
                 .productName(request.getProductName())
                 .description(request.getDescription())
                 .productType(request.getProductType())
@@ -146,14 +150,16 @@ public class ProductService {
                     List<Long> categoryIds = tuple.getT1();
                     List<Long> imageIds = tuple.getT2();
                     
+                    Mono<List<String>> catNamesMono = categoryRepository.findAllById(categoryIds)
+                            .map(Category::getCategoryName)
+                            .collectList();
+
                     if (imageIds.isEmpty()) {
-                        return Mono.just(mapToRequest(product, categoryIds, imageIds, List.of()));
+                        return catNamesMono.map(names -> mapToRequest(product, categoryIds, names, imageIds, List.of()));
                     }
                     
-                    return mediaRepository.findAllById(imageIds)
-                            .map(Media::getUrl)
-                            .collectList()
-                            .map(urls -> mapToRequest(product, categoryIds, imageIds, urls));
+                    return Mono.zip(catNamesMono, mediaRepository.findAllById(imageIds).map(Media::getUrl).collectList())
+                            .map(tuple2 -> mapToRequest(product, categoryIds, tuple2.getT1(), imageIds, tuple2.getT2()));
                 });
     }
 
@@ -194,10 +200,11 @@ public class ProductService {
                 .flatMap(this::enrichProduct);
     }
 
-    private ProductCreateRequest mapToRequest(Product product, List<Long> categoryIds, List<Long> imageIds, List<String> imageUrls) {
+    private ProductCreateRequest mapToRequest(Product product, List<Long> categoryIds, List<String> categoryNames, List<Long> imageIds, List<String> imageUrls) {
         return ProductCreateRequest.builder()
                 .id(product.getId())
                 .tenantId(product.getTenantId())
+                .companyId(product.getCompanyId())
                 .productName(product.getProductName())
                 .description(product.getDescription())
                 .productType(product.getProductType())
@@ -218,6 +225,7 @@ public class ProductService {
                 .brand(product.getBrand())
                 .model(product.getModel())
                 .categoryIds(categoryIds)
+                .categoryNames(categoryNames)
                 .imageIds(imageIds)
                 .imageUrls(imageUrls)
                 .build();

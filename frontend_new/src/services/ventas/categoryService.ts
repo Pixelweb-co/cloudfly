@@ -20,12 +20,16 @@ export const categoryService = {
   },
 
   createCategory: async (category: any): Promise<Category> => {
-    const response = await axiosInstance.post('/categorias', category);
+    const companyId = typeof window !== 'undefined' ? localStorage.getItem('activeCompanyId') : null;
+    const enrichedCategory = { ...category, companyId: companyId ? parseInt(companyId) : category.companyId };
+    const response = await axiosInstance.post('/categorias', enrichedCategory);
     return response.data;
   },
 
   updateCategory: async (id: number, category: any): Promise<Category> => {
-    const response = await axiosInstance.put(`/categorias/${id}`, category);
+    const companyId = typeof window !== 'undefined' ? localStorage.getItem('activeCompanyId') : null;
+    const enrichedCategory = { ...category, companyId: companyId ? parseInt(companyId) : category.companyId };
+    const response = await axiosInstance.put(`/categorias/${id}`, enrichedCategory);
     return response.data;
   },
 

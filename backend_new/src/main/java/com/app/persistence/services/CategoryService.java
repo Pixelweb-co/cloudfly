@@ -28,7 +28,8 @@ public class CategoryService {
                             .description(request.getDescription())
                             .parentCategory(request.getParentCategory())
                             .status(request.getStatus() != null ? request.getStatus() : true)
-                            .tenantId(user.getCustomerId())
+                            .tenantId(request.getTenantId() != null ? request.getTenantId() : user.getCustomerId())
+                            .companyId(request.getCompanyId()) // From controller or request
                             .createdAt(LocalDateTime.now())
                             .updatedAt(LocalDateTime.now())
                             .build();
@@ -83,6 +84,7 @@ public class CategoryService {
                 .parentCategory(category.getParentCategory())
                 .status(category.getStatus())
                 .tenantId(category.getTenantId())
+                .companyId(category.getCompanyId())
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt())
                 .build();

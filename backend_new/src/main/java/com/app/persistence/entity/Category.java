@@ -35,6 +35,9 @@ public class Category {
     @Column("tenant_id")
     private Long tenantId;
 
+    @Column("company_id")
+    private Long companyId;
+
     @Column("created_at")
     private LocalDateTime createdAt;
 
@@ -54,6 +57,8 @@ public class Category {
     public void setStatus(Boolean status) { this.status = status; }
     public Long getTenantId() { return tenantId; }
     public void setTenantId(Long tenantId) { this.tenantId = tenantId; }
+    public Long getCompanyId() { return companyId; }
+    public void setCompanyId(Long companyId) { this.companyId = companyId; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

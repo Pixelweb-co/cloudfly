@@ -1,7 +1,9 @@
 export interface Product {
   id: number;
   tenantId: number;
+  companyId?: number;
   productName: string;
+  categoryNames?: string[];
   description: string;
   productType: string;
   price: number;
