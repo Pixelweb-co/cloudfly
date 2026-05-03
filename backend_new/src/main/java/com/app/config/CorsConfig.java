@@ -22,6 +22,7 @@ public class CorsConfig {
         corsConfig.setAllowedOrigins(Arrays.asList(
             "https://dashboard.cloudfly.com.co",
             "https://api.cloudfly.com.co",
+            "http://dashboard.cloudfly.com.co:5420",
             "http://localhost:3000",
             "http://localhost:8080"
         ));
