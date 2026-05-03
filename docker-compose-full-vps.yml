@@ -75,6 +75,7 @@ services:
       - EVOLUTION_API_URL=http://evolution-api:8080
       - EVOLUTION_API_KEY=CAMBIA_ESTA_LLAVE_LARGA_Y_UNICA
       - JWT_SECRET=${JWT_SECRET}
+      - LEAD_GENERATOR_URL=http://lead-generator:8000
     networks:
       - app-net
       - kafka-net
@@ -326,15 +327,6 @@ services:
       - "8001:8000"
     networks:
       - app-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.leadgen.rule=Host(`api.cloudfly.com.co`) && PathPrefix(`/api/leads`)"
-      - "traefik.http.routers.leadgen.entrypoints=websecure"
-      - "traefik.http.routers.leadgen.tls.certresolver=le"
-      - "traefik.http.routers.leadgen.middlewares=leadgen-stripprefix"
-      - "traefik.http.middlewares.leadgen-stripprefix.stripprefix.prefixes=/api"
-      - "traefik.http.services.leadgen.loadbalancer.server.port=8000"
-      - "traefik.docker.network=cloudfly_app-net"
 
 
   # ====================
