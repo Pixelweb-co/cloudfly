@@ -65,3 +65,7 @@ facebook:
 
 lead-generator:
   url: ${LEAD_GENERATOR_URL:http://lead-generator:8000}
+
+services:
+  scheduler:
+    url: ${SCHEDULER_URL:http://scheduler-service:8080}

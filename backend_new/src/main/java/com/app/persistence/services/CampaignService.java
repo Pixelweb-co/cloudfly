@@ -18,6 +18,7 @@ import java.util.List;
 public class CampaignService {
 
     private final CampaignRepository campaignRepository;
+    private final SchedulerClient schedulerClient;
 
     public Flux<CampaignEntity> findAll(Long tenantId, Long companyId) {
         log.info("Fetching all campaigns for tenant: {}, company: {}", tenantId, companyId);
@@ -45,7 +46,19 @@ public class CampaignService {
         campaign.setUpdatedAt(LocalDateTime.now());
 
         log.info("Creating new campaign: {} for tenant: {}", campaign.getName(), tenantId);
-        return campaignRepository.save(campaign);
+        return campaignRepository.save(campaign)
+                .flatMap(saved -> {
+                    if (saved.getScheduledAt() != null) {
+                        return schedulerClient.scheduleCampaign(
+                                saved.getId(), 
+                                saved.getName(), 
+                                saved.getScheduledAt(), 
+                                tenantId, 
+                                companyId
+                        ).thenReturn(saved);
+                    }
+                    return Mono.just(saved);
+                });
     }
 
     public Mono<CampaignEntity> update(Long id, CampaignEntity campaign, Long tenantId, Long companyId) {
@@ -73,7 +86,19 @@ public class CampaignService {
                     existing.setScheduledAt(campaign.getScheduledAt());
                     existing.setUpdatedAt(LocalDateTime.now());
 
-                    return campaignRepository.save(existing);
+                    return campaignRepository.save(existing)
+                            .flatMap(saved -> {
+                                if (saved.getScheduledAt() != null) {
+                                    return schedulerClient.scheduleCampaign(
+                                            saved.getId(), 
+                                            saved.getName(), 
+                                            saved.getScheduledAt(), 
+                                            tenantId, 
+                                            companyId
+                                    ).thenReturn(saved);
+                                }
+                                return Mono.just(saved);
+                            });
                 });
     }
 
