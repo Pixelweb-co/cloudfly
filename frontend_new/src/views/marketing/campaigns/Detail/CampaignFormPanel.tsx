@@ -1,16 +1,19 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
 import { 
   Card, CardHeader, CardContent, Grid, Button, MenuItem, 
-  Typography, Divider, Box, CircularProgress, Alert, Tab, Tabs
+  Typography, Divider, Box, CircularProgress, Alert, Tab, Tabs,
+  Autocomplete
 } from '@mui/material'
 import CustomTextField from '@core/components/mui/TextField'
 import { Icon } from '@iconify/react'
 import { Campaign } from '@/types/marketing/campaignTypes'
 import { SendingList } from '@/types/marketing/sendingListTypes'
 import { Channel } from '@/types/marketing'
-import { Pipeline } from '@/types/marketing/pipelineTypes'
+import { Pipeline, Stage } from '@/types/marketing/pipelineTypes'
+import { productService } from '@/services/ventas/productService'
+import { categoryService } from '@/services/ventas/categoryService'
+import { Product, Category } from '@/types/ventas/productTypes'
 
 interface Props {
   campaign: Campaign | null
@@ -40,6 +43,11 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
     scheduledAt: ''
   })
 
+  const [availableStages, setAvailableStages] = useState<Stage[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loadingCatalog, setLoadingCatalog] = useState(false)
+
   useEffect(() => {
     if (campaign) {
       setFormData({
@@ -49,6 +57,36 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
       })
     }
   }, [campaign])
+
+  // Load Catalog Data
+  useEffect(() => {
+    const loadCatalog = async () => {
+      try {
+        setLoadingCatalog(true)
+        const [prodData, catData] = await Promise.all([
+          productService.getAllProducts(),
+          categoryService.getAllCategories()
+        ])
+        setProducts(prodData || [])
+        setCategories(catData || [])
+      } catch (err) {
+        console.error('Error loading catalog:', err)
+      } finally {
+        setLoadingCatalog(false)
+      }
+    }
+    loadCatalog()
+  }, [])
+
+  // Update stages when pipeline changes
+  useEffect(() => {
+    if (formData.pipelineId) {
+      const selectedPipeline = pipelines.find(p => p.id === formData.pipelineId)
+      setAvailableStages(selectedPipeline?.stages || [])
+    } else {
+      setAvailableStages([])
+    }
+  }, [formData.pipelineId, pipelines])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -105,6 +143,7 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
                     onChange={e => setFormData({ ...formData, channelId: e.target.value })}
                     required
                   >
+                    {channels.length === 0 && <MenuItem disabled>Cargando canales...</MenuItem>}
                     {channels.map(ch => (
                       <MenuItem key={ch.id} value={ch.id}>{ch.name} ({ch.platform})</MenuItem>
                     ))}
@@ -139,6 +178,7 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
                   onChange={e => setFormData({ ...formData, sendingListId: e.target.value })}
                   required
                 >
+                  {sendingLists.length === 0 && <MenuItem disabled>No hay listas creadas</MenuItem>}
                   {sendingLists.map(list => (
                     <MenuItem key={list.id} value={list.id}>{list.name} ({list.totalContacts} contactos)</MenuItem>
                   ))}
@@ -151,9 +191,10 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
                       fullWidth
                       label='Seleccionar Pipeline'
                       value={formData.pipelineId}
-                      onChange={e => setFormData({ ...formData, pipelineId: e.target.value })}
+                      onChange={e => setFormData({ ...formData, pipelineId: e.target.value, pipelineStage: '' })}
                       required
                     >
+                      {pipelines.length === 0 && <MenuItem disabled>Cargando pipelines...</MenuItem>}
                       {pipelines.map(p => (
                         <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
                       ))}
@@ -161,12 +202,18 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <CustomTextField
+                      select
                       fullWidth
                       label='Etapa (Stage)'
                       value={formData.pipelineStage}
                       onChange={e => setFormData({ ...formData, pipelineStage: e.target.value })}
-                      placeholder='Ej: LEAD, CONTACTADO'
-                    />
+                      disabled={!formData.pipelineId}
+                    >
+                      {availableStages.length === 0 && <MenuItem disabled>Selecciona un pipeline</MenuItem>}
+                      {availableStages.map(s => (
+                        <MenuItem key={s.id} value={s.name}>{s.name}</MenuItem>
+                      ))}
+                    </CustomTextField>
                   </Grid>
                 </Grid>
               )}
@@ -206,20 +253,44 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
               </CustomTextField>
 
               {formData.refType === 'PRODUCT' && (
-                <CustomTextField
+                <Autocomplete
                   fullWidth
-                  label='ID del Producto'
-                  value={formData.productId}
-                  onChange={e => setFormData({ ...formData, productId: e.target.value })}
+                  options={products}
+                  getOptionLabel={(option) => `${option.name} (${option.code || ''})`}
+                  value={products.find(p => p.id === formData.productId) || null}
+                  onChange={(_, newValue) => setFormData({ ...formData, productId: newValue?.id || '' })}
+                  renderInput={(params) => (
+                    <CustomTextField 
+                      {...params} 
+                      label='Buscar Producto' 
+                      placeholder='Nombre o código...'
+                    />
+                  )}
+                  renderOption={(props, option) => (
+                    <li {...props} key={option.id}>
+                      <Box>
+                        <Typography variant='body2' sx={{ fontWeight: 500 }}>{option.name}</Typography>
+                        <Typography variant='caption' color='text.secondary'>Código: {option.code || 'N/A'}</Typography>
+                      </Box>
+                    </li>
+                  )}
                 />
               )}
 
               {formData.refType === 'CATEGORY' && (
-                <CustomTextField
+                <Autocomplete
                   fullWidth
-                  label='ID de la Categoría'
-                  value={formData.categoryId}
-                  onChange={e => setFormData({ ...formData, category_id: e.target.value })}
+                  options={categories}
+                  getOptionLabel={(option) => option.name || ''}
+                  value={categories.find(c => c.id === formData.categoryId) || null}
+                  onChange={(_, newValue) => setFormData({ ...formData, categoryId: newValue?.id || '' })}
+                  renderInput={(params) => (
+                    <CustomTextField 
+                      {...params} 
+                      label='Buscar Categoría' 
+                      placeholder='Nombre de categoría...'
+                    />
+                  )}
                 />
               )}
             </Grid>
@@ -242,3 +313,4 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
     </Card>
   )
 }
+

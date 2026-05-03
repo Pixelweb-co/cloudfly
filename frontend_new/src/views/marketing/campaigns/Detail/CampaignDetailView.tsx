@@ -37,7 +37,7 @@ export default function CampaignDetailView() {
       try {
         setLoading(true)
         const [chData, listData, pipeData] = await Promise.all([
-          channelService.getAllChannels(),
+          channelService.getChannels(),
           sendingListService.getAll(),
           pipelineService.getAllPipelines()
         ])
