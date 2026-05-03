@@ -16,8 +16,8 @@ export default function ChatbotFormPage() {
   const [error, setError] = useState(null);
 
   const { data: session } = useSession();
-  const token = (session?.user as any)?.accessToken;
-  const tenantId = (session?.user as any)?.customerId || 1;
+  const token = session?.user?.accessToken;
+  const tenantId = session?.user?.customerId || 1;
 
   useEffect(() => {
     if (id) {

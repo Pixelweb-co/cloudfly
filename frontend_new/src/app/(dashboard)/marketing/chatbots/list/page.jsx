@@ -19,8 +19,8 @@ export default function ChatbotsPage() {
   const theme = useTheme();
   const { data: session } = useSession();
   
-  const token = (session?.user as any)?.accessToken;
-  const tenantId = (session?.user as any)?.customerId || 1;
+  const token = session?.user?.accessToken;
+  const tenantId = session?.user?.customerId || 1;
   
   const [chatbot, setChatbot] = useState(null);
   const [loading, setLoading] = useState(true);
