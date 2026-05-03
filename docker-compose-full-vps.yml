@@ -316,6 +316,26 @@ services:
       - db
     command: ["python", "vector_worker.py"]
 
+  lead-generator:
+    build:
+      context: ./lead-generator
+      dockerfile: Dockerfile
+    container_name: lead-generator
+    restart: always
+    ports:
+      - "8001:8000"
+    networks:
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.leadgen.rule=Host(`api.cloudfly.com.co`) && PathPrefix(`/api/leads`)"
+      - "traefik.http.routers.leadgen.entrypoints=websecure"
+      - "traefik.http.routers.leadgen.tls.certresolver=le"
+      - "traefik.http.routers.leadgen.middlewares=leadgen-stripprefix"
+      - "traefik.http.middlewares.leadgen-stripprefix.stripprefix.prefixes=/api"
+      - "traefik.http.services.leadgen.loadbalancer.server.port=8000"
+      - "traefik.docker.network=cloudfly_app-net"
+
 
   # ====================
   # N8N (Automatización)
