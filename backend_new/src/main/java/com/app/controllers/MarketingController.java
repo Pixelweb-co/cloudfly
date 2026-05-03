@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/marketing/campaigns")
+@RequestMapping("/api/v1/marketing/ads")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class MarketingController {
