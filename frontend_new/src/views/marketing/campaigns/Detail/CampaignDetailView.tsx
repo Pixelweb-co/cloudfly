@@ -63,12 +63,20 @@ export default function CampaignDetailView() {
   const handleSave = async (formData: any) => {
     try {
       setSaving(true)
+      const activeTenantId = localStorage.getItem('activeTenantId')
+      const activeCompanyId = localStorage.getItem('activeCompanyId')
+      const dataWithContext = {
+        ...formData,
+        tenantId: activeTenantId ? Number(activeTenantId) : undefined,
+        companyId: activeCompanyId ? Number(activeCompanyId) : undefined
+      }
+
       if (isNew) {
-        const created = await campaignService.create(formData)
+        const created = await campaignService.create(dataWithContext)
         toast.success('Campaña creada y programada')
         router.replace(`/marketing/campaigns/${created.id}`)
       } else if (campaign) {
-        const updated = await campaignService.update(campaign.id, formData)
+        const updated = await campaignService.update(campaign.id, dataWithContext)
         setCampaign(updated)
         toast.success('Campaña actualizada')
       }
