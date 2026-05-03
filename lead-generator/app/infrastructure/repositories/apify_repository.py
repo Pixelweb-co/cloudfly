@@ -10,7 +10,7 @@ logger = logging.getLogger("apify-repository")
 class ApifyLeadRepository(LeadRepository):
     def __init__(self):
         self.token = os.getenv("APIFY_TOKEN")
-        self.actor_id = "apify/google-maps-scraper"
+        self.actor_id = "apify~google-maps-scraper"
         self.client = ApifyClientAsync(token=self.token) if self.token else None
 
     async def generate(self, filters: SearchFilters) -> List[Lead]:
@@ -45,7 +45,7 @@ class ApifyLeadRepository(LeadRepository):
             return self._transform_results(items)
 
         except Exception as e:
-            logger.error(f"❌ [APIFY-SDK] Error during execution: {str(e)}")
+            logger.error(f"❌ [APIFY-SDK] Error during execution: {str(e)}", exc_info=True)
             return []
 
     def _transform_results(self, items: List[dict]) -> List[Lead]:
