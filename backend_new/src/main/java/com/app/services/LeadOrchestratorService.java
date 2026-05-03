@@ -30,7 +30,7 @@ public class LeadOrchestratorService {
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(LeadResponse.class)
-                .timeout(Duration.ofSeconds(10))
+                .timeout(Duration.ofSeconds(90))
                 .doOnSuccess(response -> {
                     long duration = System.currentTimeMillis() - startTime;
                     log.info("✅ [LEAD-ORCHESTRATOR] Received {} leads in {}ms", 
