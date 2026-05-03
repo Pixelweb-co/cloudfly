@@ -62,3 +62,6 @@ facebook:
     id: ${FACEBOOK_APP_ID:}
     secret: ${FACEBOOK_APP_SECRET:}
     version: v19.0
+
+lead-generator:
+  url: ${LEAD_GENERATOR_URL:http://lead-generator:8000}
