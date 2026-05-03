@@ -21,9 +21,13 @@ public class CorsConfig {
         // Orígenes permitidos
         corsConfig.setAllowedOrigins(Arrays.asList(
             "https://dashboard.cloudfly.com.co",
+            "https://devdashboard.cloudfly.com.co",
             "https://api.cloudfly.com.co",
+            "http://dashboard.cloudfly.com.co",
             "http://dashboard.cloudfly.com.co:5420",
+            "http://dashboard.cloudfly.com.co:3000",
             "http://localhost:3000",
+            "http://localhost:5420",
             "http://localhost:8080"
         ));
         

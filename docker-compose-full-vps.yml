@@ -185,13 +185,22 @@ services:
       - "5420:3000"
     environment:
       - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co
-      - NEXT_PUBLIC_BASE_URL=https://dashboard.cloudfly.com.co
-      - NEXT_PUBLIC_FRONTEND_URL=https://dashboard.cloudfly.com.co
+      - NEXT_PUBLIC_BASE_URL=https://devdashboard.cloudfly.com.co
+      - NEXT_PUBLIC_FRONTEND_URL=https://devdashboard.cloudfly.com.co
+      - NEXTAUTH_URL=https://devdashboard.cloudfly.com.co
+      - NEXTAUTH_SECRET=cloudfly-dev-secret
       - NODE_ENV=development
       - PORT=3000
     command: sh -c "npm install && npm run dev"
     networks:
       - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontdev.rule=Host(`devdashboard.cloudfly.com.co`)"
+      - "traefik.http.routers.frontdev.entrypoints=websecure"
+      - "traefik.http.routers.frontdev.tls.certresolver=le"
+      - "traefik.http.services.frontdev.loadbalancer.server.port=3000"
+      - "traefik.docker.network=cloudfly_app-net"
 
   redis:
     image: redis:latest
