@@ -16,6 +16,7 @@ import { Pipeline } from '@/types/marketing/pipelineTypes'
 import CampaignFormPanel from './CampaignFormPanel'
 import CampaignMetricsPanel from './CampaignMetricsPanel'
 import CampaignLogsPanel from './CampaignLogsPanel'
+import { showSuccessNotification } from '@/utils/notifications'
 
 export default function CampaignDetailView() {
   const params = useParams()
@@ -73,12 +74,12 @@ export default function CampaignDetailView() {
 
       if (isNew) {
         const created = await campaignService.create(dataWithContext)
-        toast.success('Campaña creada y programada')
+        showSuccessNotification('Campaña creada y programada')
         router.replace(`/marketing/campaigns/${created.id}`)
       } else if (campaign) {
         const updated = await campaignService.update(campaign.id, dataWithContext)
         setCampaign(updated)
-        toast.success('Campaña actualizada')
+        showSuccessNotification('Campaña actualizada correctamente')
       }
     } catch (err) {
       console.error(err)
@@ -93,7 +94,7 @@ export default function CampaignDetailView() {
     try {
       const updated = await campaignService.updateStatus(campaign.id, newStatus)
       setCampaign(updated)
-      toast.success(`Campaña marcada como ${newStatus}`)
+      showSuccessNotification(`Campaña marcada como ${newStatus}`)
     } catch (err) {
       toast.error('No se pudo cambiar el estado')
     }
