@@ -218,9 +218,12 @@ public class UserService {
                                         Long tenantId = user.getCustomerId();
                                         if (tenantId == null) return Mono.empty();
                                         
-                                        return companyRepository.findFirstByTenantIdAndIsPrincipalTrue(tenantId)
+                                        return companyRepository.findByTenantId(tenantId)
+                                                        .filter(CompanyEntity::getIsPrincipal)
+                                                        .next()
+                                                        .switchIfEmpty(companyRepository.findByTenantId(tenantId).next())
                                                         .map(company -> java.util.Map.of("tenantId", tenantId, "companyId", company.getId()))
-                                                        .defaultIfEmpty(java.util.Map.of("tenantId", tenantId, "companyId", 1L));
+                                                        .defaultIfEmpty(java.util.Map.of("tenantId", tenantId, "companyId", 0L));
                                 });
         }
 
