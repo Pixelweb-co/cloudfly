@@ -28,6 +28,7 @@ public class CalendarEventDto {
     private Boolean allDay;
     private String relatedEntityType;
     private Long relatedEntityId;
+    private Long campaignId;
     private String payload;
     private String recurrence;
     private LocalDateTime createdAt;
