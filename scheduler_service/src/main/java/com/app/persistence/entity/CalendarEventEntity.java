@@ -55,6 +55,9 @@ public class CalendarEventEntity {
     @Column("related_entity_id")
     private Long relatedEntityId;
 
+    @Column("campaign_id")
+    private Long campaignId;
+
     private String payload;
     private String recurrence;
 
