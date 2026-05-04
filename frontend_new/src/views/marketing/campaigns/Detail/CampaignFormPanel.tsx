@@ -230,8 +230,26 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
                         {...field}
                         fullWidth
                         label='Nombre de la Campaña'
+                        placeholder='Ej: Promoción de Verano'
                         error={!!errors.name}
                         helperText={errors.name?.message}
+                        sx={{ mb: 4 }}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name='description'
+                    control={control}
+                    render={({ field }) => (
+                      <CustomTextField
+                        {...field}
+                        fullWidth
+                        multiline
+                        rows={2}
+                        label='Descripción Interna'
+                        placeholder='Notas sobre el objetivo de esta campaña...'
+                        error={!!errors.description}
+                        helperText={errors.description?.message}
                       />
                     )}
                   />
