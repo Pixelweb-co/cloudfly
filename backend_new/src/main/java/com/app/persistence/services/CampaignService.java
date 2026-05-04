@@ -56,7 +56,10 @@ public class CampaignService {
                                 tenantId, 
                                 companyId,
                                 saved.getRecurrence()
-                        ).thenReturn(saved);
+                        ).flatMap(res -> {
+                            saved.setStatus("SCHEDULED");
+                            return campaignRepository.save(saved);
+                        });
                     }
                     return Mono.just(saved);
                 });
@@ -98,7 +101,10 @@ public class CampaignService {
                                             tenantId, 
                                             companyId,
                                             saved.getRecurrence()
-                                    ).thenReturn(saved);
+                                    ).flatMap(res -> {
+                                        saved.setStatus("SCHEDULED");
+                                        return campaignRepository.save(saved);
+                                    });
                                 }
                                 return Mono.just(saved);
                             });
