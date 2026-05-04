@@ -102,6 +102,11 @@ return
 
             // Actualizar datos del usuario en localStorage (ahora tiene Customer)
             localStorage.setItem('userData', JSON.stringify(response.data))
+            
+            // Guardar explícitamente la compañía activa para las cabeceras de Axios
+            if (response.data.activeCompanyId) {
+                localStorage.setItem('activeCompanyId', response.data.activeCompanyId.toString())
+            }
 
             if (onSuccess) {
                 // Notificar éxito al Wizard para avanzar de step

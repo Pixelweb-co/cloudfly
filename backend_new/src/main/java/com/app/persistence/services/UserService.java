@@ -168,6 +168,7 @@ public class UserService {
                                         Mono<CompanyEntity> companyMono = companyRepository.findByTenantId(user.getCustomerId())
                                                         .filter(CompanyEntity::getIsPrincipal)
                                                         .next()
+                                                        .switchIfEmpty(companyRepository.findByTenantId(user.getCustomerId()).next())
                                                         .defaultIfEmpty(new CompanyEntity());
 
                                         return Mono.zip(tenantMono, subMono, companyMono)
