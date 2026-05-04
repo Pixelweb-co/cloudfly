@@ -22,6 +22,16 @@ export const AuthManager = {
       localStorage.setItem('jwt', response.data.jwt)
       localStorage.setItem('userData', JSON.stringify(response.data.user))
 
+      // LOG PARA VERIFICACIÓN DE TENANT/COMPANY
+      const decoded: any = jwtDecode(response.data.jwt)
+      console.log('🔑 [AUTH] Token decodificado:', decoded)
+      console.log('🏢 [AUTH] Company ID extraído del token:', decoded.company_id)
+      
+      if (response.data.user && response.data.user.activeCompanyId) {
+        console.log('✅ [AUTH] activeCompanyId guardado en localStorage:', response.data.user.activeCompanyId)
+        localStorage.setItem('activeCompanyId', response.data.user.activeCompanyId.toString())
+      }
+
       return response.data
     } catch (error) {
       console.error('Error durante la autenticación:', error)
