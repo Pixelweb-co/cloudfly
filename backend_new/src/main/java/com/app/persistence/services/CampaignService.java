@@ -112,8 +112,10 @@ public class CampaignService {
     }
 
     public Mono<CampaignEntity> updateStatus(Long id, String newStatus, Long tenantId, Long companyId) {
+        log.info("🚀 Updating status for campaign {} to {} (tenant: {}, company: {})", id, newStatus, tenantId, companyId);
         return campaignRepository.findByIdAndTenantIdAndCompanyId(id, tenantId, companyId)
                 .flatMap(existing -> {
+                    log.info("✅ Found campaign {}, current status: {}", existing.getId(), existing.getStatus());
                     validateStatusTransition(existing.getStatus(), newStatus);
                     existing.setStatus(newStatus);
                     
@@ -126,8 +128,14 @@ public class CampaignService {
                     }
                     
                     existing.setUpdatedAt(LocalDateTime.now());
-                    return campaignRepository.save(existing);
-                });
+                    return campaignRepository.save(existing)
+                        .doOnSuccess(saved -> log.info("💾 Campaign status updated successfully to {}", saved.getStatus()))
+                        .doOnError(e -> log.error("❌ Error saving campaign status update", e));
+                })
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.warn("⚠️ Campaign {} not found for status update (tenant: {}, company: {})", id, tenantId, companyId);
+                    return Mono.error(new RuntimeException("Campaña no encontrada o acceso denegado"));
+                }));
     }
 
     private void validateExclusivity(CampaignEntity c) {
