@@ -27,6 +27,12 @@ interface Props {
   saving: boolean
 }
 
+const formatDateTime = (date: Date) => {
+  const d = new Date(date)
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+  return d.toISOString().slice(0, 16)
+}
+
 const schema = yup.object().shape({
   name: yup.string().required('El nombre es obligatorio'),
   channelId: yup.string().required('Debe seleccionar un canal'),
@@ -44,7 +50,11 @@ const schema = yup.object().shape({
     then: schema => schema.required('Debe seleccionar una etapa')
   }),
   message: yup.string().required('El mensaje es obligatorio').min(10, 'El mensaje es muy corto'),
-  scheduledAt: yup.string().required('Debe programar una fecha y hora'),
+  scheduledAt: yup.string().required('Debe programar una fecha y hora')
+    .test('is-future', 'La fecha debe ser en el futuro', (value) => {
+      if (!value) return false
+      return new Date(value) > new Date()
+    }),
   recurrence: yup.string().required(),
   refType: yup.string().required(),
   productId: yup.string().when('refType', {
@@ -80,7 +90,7 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
       refType: 'NONE',
       productId: '',
       categoryId: '',
-      scheduledAt: '',
+      scheduledAt: formatDateTime(new Date(Date.now() + 60000)),
       recurrence: 'NONE'
     }
   })
@@ -475,6 +485,9 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
                         error={!!errors.scheduledAt}
                         helperText={errors.scheduledAt?.message}
                         InputLabelProps={{ shrink: true }}
+                        inputProps={{
+                          min: formatDateTime(new Date())
+                        }}
                       />
                     )}
                   />
