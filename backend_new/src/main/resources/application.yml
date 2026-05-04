@@ -56,6 +56,8 @@ services:
   socket:
     url: ${SOCKET_URL:http://chat-socket-service:3001}
     secret: ${N8N_SECRET_KEY:cloudfly_secret_key_2024}
+  scheduler:
+    url: ${SCHEDULER_URL:http://scheduler-service:8080}
 
 facebook:
   app:
@@ -65,7 +67,3 @@ facebook:
 
 lead-generator:
   url: ${LEAD_GENERATOR_URL:http://lead-generator:8000}
-
-services:
-  scheduler:
-    url: ${SCHEDULER_URL:http://scheduler-service:8080}
