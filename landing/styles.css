@@ -300,6 +300,53 @@ nav {
     margin-bottom: 1.5rem;
 }
 
+/* Dropdown Menu */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: var(--surface);
+    min-width: 280px;
+    box-shadow: var(--shadow-deep);
+    border-radius: 12px;
+    z-index: 1000;
+    top: 100%;
+    left: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.dropdown-content a {
+    color: var(--text-main);
+    padding: 12px 20px;
+    text-decoration: none;
+    display: block;
+    transition: background 0.3s ease, color 0.3s ease;
+    border-bottom: 1px solid var(--border);
+}
+
+.dropdown-content a:last-child {
+    border-bottom: none;
+}
+
+.dropdown-content a:hover {
+    background-color: rgba(115, 103, 240, 0.05);
+    color: var(--primary);
+}
+
 /* Screenshots / Devices */
 .device-preview {
     margin-top: 4rem;
