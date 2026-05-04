@@ -52,10 +52,12 @@ const schema = yup.object().shape({
   message: yup.string().required('El mensaje es obligatorio').min(10, 'El mensaje es muy corto'),
   scheduledAt: yup.string().required('Debe programar una fecha y hora')
     .test('is-future', 'La fecha debe ser en el futuro', function(value) {
-      // Si estamos editando y el valor no ha cambiado, es válido aunque sea pasado
+      // Si estamos editando y el valor no ha cambiado (normalizado a minutos), es válido
       const { campaign } = this.options.context as any
-      if (campaign && value === campaign.scheduledAt) {
-        return true
+      if (campaign && campaign.scheduledAt && value) {
+        if (campaign.scheduledAt.substring(0, 16) === value.substring(0, 16)) {
+          return true
+        }
       }
       
       if (!value) return false
