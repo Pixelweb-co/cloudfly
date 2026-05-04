@@ -1,11 +1,12 @@
-'use client'
-
 import React, { useState, useEffect } from 'react'
 import { 
   Card, CardHeader, CardContent, Grid, Button, MenuItem, 
-  Typography, Divider, Box, CircularProgress, Alert, Tab, Tabs,
-  Autocomplete
+  Typography, Divider, Box, CircularProgress, Tab, Tabs,
+  Autocomplete, Avatar
 } from '@mui/material'
+import { useForm, Controller } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
+import * as yup from 'yup'
 import CustomTextField from '@core/components/mui/TextField'
 import { Icon } from '@iconify/react'
 import { Campaign } from '@/types/marketing/campaignTypes'
@@ -26,41 +27,81 @@ interface Props {
   saving: boolean
 }
 
-export default function CampaignFormPanel({ campaign, channels, sendingLists, pipelines, onSave, saving }: Props) {
-  const [formData, setFormData] = useState<any>({
-    name: '',
-    description: '',
-    channelId: '',
-    audienceType: 'LIST', // LIST or PIPELINE
-    sendingListId: '',
-    pipelineId: '',
-    pipelineStage: '',
-    message: '',
-    mediaUrl: '',
-    mediaType: 'IMAGE',
-    mediaCaption: '',
-    refType: 'NONE', // NONE, PRODUCT, CATEGORY
-    productId: '',
-    categoryId: '',
-    scheduledAt: ''
+const schema = yup.object().shape({
+  name: yup.string().required('El nombre es obligatorio'),
+  channelId: yup.string().required('Debe seleccionar un canal'),
+  audienceType: yup.string().oneOf(['LIST', 'PIPELINE']).required(),
+  sendingListId: yup.string().when('audienceType', {
+    is: 'LIST',
+    then: schema => schema.required('Debe seleccionar una lista de envío')
+  }),
+  pipelineId: yup.string().when('audienceType', {
+    is: 'PIPELINE',
+    then: schema => schema.required('Debe seleccionar un pipeline')
+  }),
+  pipelineStage: yup.string().when('audienceType', {
+    is: 'PIPELINE',
+    then: schema => schema.required('Debe seleccionar una etapa')
+  }),
+  message: yup.string().required('El mensaje es obligatorio').min(10, 'El mensaje es muy corto'),
+  scheduledAt: yup.string().required('Debe programar una fecha y hora'),
+  recurrence: yup.string().required(),
+  refType: yup.string().required(),
+  productId: yup.string().when('refType', {
+    is: 'PRODUCT',
+    then: schema => schema.required('Seleccione un producto')
+  }),
+  categoryId: yup.string().when('refType', {
+    is: 'CATEGORY',
+    then: schema => schema.required('Seleccione una categoría')
   })
+})
 
+export default function CampaignFormPanel({ campaign, channels, sendingLists, pipelines, onSave, saving }: Props) {
   const [availableStages, setAvailableStages] = useState<Stage[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loadingCatalog, setLoadingCatalog] = useState(false)
 
+  const { control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      name: '',
+      description: '',
+      channelId: '',
+      audienceType: 'LIST',
+      sendingListId: '',
+      pipelineId: '',
+      pipelineStage: '',
+      message: '',
+      mediaUrl: '',
+      mediaType: 'IMAGE',
+      mediaCaption: '',
+      refType: 'NONE',
+      productId: '',
+      categoryId: '',
+      scheduledAt: '',
+      recurrence: 'NONE'
+    }
+  })
+
+  const watchAudienceType = watch('audienceType')
+  const watchPipelineId = watch('pipelineId')
+  const watchRefType = watch('refType')
+  const watchProductId = watch('productId')
+  const watchCategoryId = watch('categoryId')
+
   useEffect(() => {
     if (campaign) {
-      setFormData({
+      reset({
         ...campaign,
         audienceType: campaign.pipelineId ? 'PIPELINE' : 'LIST',
-        refType: campaign.productId ? 'PRODUCT' : (campaign.categoryId ? 'CATEGORY' : 'NONE')
-      })
+        refType: campaign.productId ? 'PRODUCT' : (campaign.categoryId ? 'CATEGORY' : 'NONE'),
+        recurrence: campaign.recurrence || 'NONE'
+      } as any)
     }
-  }, [campaign])
+  }, [campaign, reset])
 
-  // Load Catalog Data
   useEffect(() => {
     const loadCatalog = async () => {
       try {
@@ -71,8 +112,7 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
         ])
         const enrichedProducts = (prodData || []).map((p: any) => ({
           ...p,
-          // Map backend fields to frontend-friendly ones or ensure they are present
-          name: p.productName,
+          name: p.productName || p.name,
           code: p.sku || p.barcode,
           categories: (p.categoryIds || []).map((id: number) => {
             const cat = catData.find((c: any) => c.id === id)
@@ -90,32 +130,42 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
     loadCatalog()
   }, [])
 
-  // Update stages when pipeline changes
   useEffect(() => {
-    if (formData.pipelineId) {
-      const selectedPipeline = pipelines.find(p => p.id === formData.pipelineId)
+    if (watchPipelineId) {
+      const selectedPipeline = pipelines.find(p => p.id === watchPipelineId)
       setAvailableStages(selectedPipeline?.stages || [])
     } else {
       setAvailableStages([])
     }
-  }, [formData.pipelineId, pipelines])
+  }, [watchPipelineId, pipelines])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    // Clean data based on exclusivity
-    const submission = { ...formData }
-    if (formData.audienceType === 'LIST') {
+  const truncateDescription = (desc: string) => {
+    if (!desc) return 'Sin descripción disponible.'
+    const words = desc.split(/\s+/)
+    if (words.length <= 10) return desc
+    return words.slice(0, 10).join(' ') + '...'
+  }
+
+  const getImgUrl = (url?: string) => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cloudfly.com.co'
+    if (!url) return '/images/avatars/1.png'
+    if (url.startsWith('http')) return url
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
+  }
+
+  const onSubmit = (data: any) => {
+    const submission = { ...data }
+    if (data.audienceType === 'LIST') {
       submission.pipelineId = null
       submission.pipelineStage = null
     } else {
       submission.sendingListId = null
     }
 
-    if (formData.refType === 'NONE') {
+    if (data.refType === 'NONE') {
       submission.productId = null
       submission.categoryId = null
-    } else if (formData.refType === 'PRODUCT') {
+    } else if (data.refType === 'PRODUCT') {
       submission.categoryId = null
     } else {
       submission.productId = null
@@ -124,6 +174,9 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
     onSave(submission)
   }
 
+  const selectedProduct = products.find(p => p.id === watchProductId)
+  const selectedCategory = categories.find(c => c.id === watchCategoryId)
+
   return (
     <Card>
       <CardHeader 
@@ -131,101 +184,141 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
         avatar={<Icon icon='tabler:settings-automation' fontSize='1.5rem' />}
       />
       <CardContent>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <Grid container spacing={5}>
             {/* Sección 1: Identificación */}
             <Grid item xs={12}>
               <Typography variant='subtitle2' sx={{ mb: 2, color: 'primary.main' }}>1. Identificación y Canal</Typography>
               <Grid container spacing={5}>
                 <Grid item xs={12} md={6}>
-                  <CustomTextField
-                    fullWidth
-                    label='Nombre de la Campaña'
-                    value={formData.name}
-                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    required
+                  <Controller
+                    name='name'
+                    control={control}
+                    render={({ field }) => (
+                      <CustomTextField
+                        {...field}
+                        fullWidth
+                        label='Nombre de la Campaña'
+                        error={!!errors.name}
+                        helperText={errors.name?.message}
+                      />
+                    )}
                   />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <CustomTextField
-                    select
-                    fullWidth
-                    label='Canal de Envío'
-                    value={formData.channelId}
-                    onChange={e => setFormData({ ...formData, channelId: e.target.value })}
-                    required
-                  >
-                    {channels.length === 0 && <MenuItem disabled>Cargando canales...</MenuItem>}
-                    {channels.map(ch => (
-                      <MenuItem key={ch.id} value={ch.id}>{ch.name} ({ch.platform})</MenuItem>
-                    ))}
-                  </CustomTextField>
+                  <Controller
+                    name='channelId'
+                    control={control}
+                    render={({ field }) => (
+                      <CustomTextField
+                        {...field}
+                        select
+                        fullWidth
+                        label='Canal de Envío'
+                        error={!!errors.channelId}
+                        helperText={errors.channelId?.message}
+                      >
+                        {channels.length === 0 && <MenuItem disabled>Cargando canales...</MenuItem>}
+                        {channels.map(ch => (
+                          <MenuItem key={ch.id} value={ch.id}>{ch.name} ({ch.platform})</MenuItem>
+                        ))}
+                      </CustomTextField>
+                    )}
+                  />
                 </Grid>
               </Grid>
             </Grid>
 
             <Grid item xs={12}><Divider /></Grid>
 
-            {/* Sección 2: Audiencia (Exclusiva) */}
+            {/* Sección 2: Audiencia */}
             <Grid item xs={12}>
               <Typography variant='subtitle2' sx={{ mb: 2, color: 'primary.main' }}>2. Segmentación de Audiencia</Typography>
-              <CustomTextField
-                select
-                fullWidth
-                label='Tipo de Audiencia'
-                value={formData.audienceType}
-                onChange={e => setFormData({ ...formData, audienceType: e.target.value })}
-                sx={{ mb: 4 }}
-              >
-                <MenuItem value='LIST'>Lista de Envío</MenuItem>
-                <MenuItem value='PIPELINE'>Etapa de Pipeline (CRM)</MenuItem>
-              </CustomTextField>
+              <Controller
+                name='audienceType'
+                control={control}
+                render={({ field }) => (
+                  <CustomTextField
+                    {...field}
+                    select
+                    fullWidth
+                    label='Tipo de Audiencia'
+                    sx={{ mb: 4 }}
+                  >
+                    <MenuItem value='LIST'>Lista de Envío</MenuItem>
+                    <MenuItem value='PIPELINE'>Etapa de Pipeline (CRM)</MenuItem>
+                  </CustomTextField>
+                )}
+              />
 
-              {formData.audienceType === 'LIST' ? (
-                <CustomTextField
-                  select
-                  fullWidth
-                  label='Seleccionar Lista'
-                  value={formData.sendingListId}
-                  onChange={e => setFormData({ ...formData, sendingListId: e.target.value })}
-                  required
-                >
-                  {sendingLists.length === 0 && <MenuItem disabled>No hay listas creadas</MenuItem>}
-                  {sendingLists.map(list => (
-                    <MenuItem key={list.id} value={list.id}>{list.name} ({list.totalContacts} contactos)</MenuItem>
-                  ))}
-                </CustomTextField>
+              {watchAudienceType === 'LIST' ? (
+                <Controller
+                  name='sendingListId'
+                  control={control}
+                  render={({ field }) => (
+                    <CustomTextField
+                      {...field}
+                      select
+                      fullWidth
+                      label='Seleccionar Lista'
+                      error={!!errors.sendingListId}
+                      helperText={errors.sendingListId?.message}
+                    >
+                      {sendingLists.length === 0 && <MenuItem disabled>No hay listas creadas</MenuItem>}
+                      {sendingLists.map(list => (
+                        <MenuItem key={list.id} value={list.id}>{list.name} ({list.totalContacts} contactos)</MenuItem>
+                      ))}
+                    </CustomTextField>
+                  )}
+                />
               ) : (
                 <Grid container spacing={5}>
                   <Grid item xs={12} md={6}>
-                    <CustomTextField
-                      select
-                      fullWidth
-                      label='Seleccionar Pipeline'
-                      value={formData.pipelineId}
-                      onChange={e => setFormData({ ...formData, pipelineId: e.target.value, pipelineStage: '' })}
-                      required
-                    >
-                      {pipelines.length === 0 && <MenuItem disabled>Cargando pipelines...</MenuItem>}
-                      {pipelines.map(p => (
-                        <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
-                      ))}
-                    </CustomTextField>
+                    <Controller
+                      name='pipelineId'
+                      control={control}
+                      render={({ field }) => (
+                        <CustomTextField
+                          {...field}
+                          select
+                          fullWidth
+                          label='Seleccionar Pipeline'
+                          error={!!errors.pipelineId}
+                          helperText={errors.pipelineId?.message}
+                          onChange={(e) => {
+                            field.onChange(e)
+                            setValue('pipelineStage', '')
+                          }}
+                        >
+                          {pipelines.length === 0 && <MenuItem disabled>Cargando pipelines...</MenuItem>}
+                          {pipelines.map(p => (
+                            <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
+                          ))}
+                        </CustomTextField>
+                      )}
+                    />
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <CustomTextField
-                      select
-                      fullWidth
-                      label='Etapa (Stage)'
-                      value={formData.pipelineStage}
-                      onChange={e => setFormData({ ...formData, pipelineStage: e.target.value })}
-                      disabled={!formData.pipelineId}
-                    >
-                      {availableStages.length === 0 && <MenuItem disabled>Selecciona un pipeline</MenuItem>}
-                      {availableStages.map(s => (
-                        <MenuItem key={s.id} value={s.name}>{s.name}</MenuItem>
-                      ))}
-                    </CustomTextField>
+                    <Controller
+                      name='pipelineStage'
+                      control={control}
+                      render={({ field }) => (
+                        <CustomTextField
+                          {...field}
+                          select
+                          fullWidth
+                          label='Etapa (Stage)'
+                          error={!!errors.pipelineStage}
+                          helperText={errors.pipelineStage?.message}
+                          disabled={!watchPipelineId}
+                        >
+                          {availableStages.length === 0 && <MenuItem disabled>Selecciona un pipeline</MenuItem>}
+                          {availableStages.map(s => (
+                            <MenuItem key={s.id} value={s.name}>{s.name}</MenuItem>
+                          ))}
+                        </CustomTextField>
+                      )}
+                    />
                   </Grid>
                 </Grid>
               )}
@@ -236,110 +329,130 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
             {/* Sección 3: Contenido */}
             <Grid item xs={12}>
               <Typography variant='subtitle2' sx={{ mb: 2, color: 'primary.main' }}>3. Contenido del Mensaje</Typography>
-              <CustomTextField
-                fullWidth
-                multiline
-                rows={4}
-                label='Cuerpo del Mensaje'
-                placeholder='Hola {{nombre}}, tenemos una oferta para ti...'
-                value={formData.message}
-                onChange={e => setFormData({ ...formData, message: e.target.value })}
-                helperText='Usa {{nombre}}, {{email}}, {{telefono}} como variables.'
+              <Controller
+                name='message'
+                control={control}
+                render={({ field }) => (
+                  <CustomTextField
+                    {...field}
+                    fullWidth
+                    multiline
+                    rows={4}
+                    label='Cuerpo del Mensaje'
+                    placeholder='Hola {{nombre}}, tenemos una oferta para ti...'
+                    error={!!errors.message}
+                    helperText={errors.message?.message || 'Usa {{nombre}}, {{email}}, {{telefono}} como variables.'}
+                  />
+                )}
               />
             </Grid>
 
             {/* Sección 4: Referencia a Catálogo */}
             <Grid item xs={12}>
-              <Typography variant='subtitle2' sx={{ mb: 2, color: 'primary.main' }}>4. Referencia de Catálogo (Opcional)</Typography>
-              <CustomTextField
-                select
-                fullWidth
-                label='Vincular con'
-                value={formData.refType}
-                onChange={e => setFormData({ ...formData, refType: e.target.value })}
-                sx={{ mb: 4 }}
-              >
-                <MenuItem value='NONE'>Ninguno</MenuItem>
-                <MenuItem value='PRODUCT'>Producto Específico</MenuItem>
-                <MenuItem value='CATEGORY'>Categoría Completa</MenuItem>
-              </CustomTextField>
+              <Typography variant='subtitle2' sx={{ mb: 2, color: 'primary.main' }}>4. Vincular Producto Chatbot (Catálogo)</Typography>
+              <Controller
+                name='refType'
+                control={control}
+                render={({ field }) => (
+                  <CustomTextField
+                    {...field}
+                    select
+                    fullWidth
+                    label='Vincular con'
+                    sx={{ mb: 4 }}
+                  >
+                    <MenuItem value='NONE'>Ninguno</MenuItem>
+                    <MenuItem value='PRODUCT'>Producto Específico</MenuItem>
+                    <MenuItem value='CATEGORY'>Categoría Completa</MenuItem>
+                  </CustomTextField>
+                )}
+              />
 
-              {formData.refType === 'PRODUCT' && (
-                <Autocomplete
-                  fullWidth
-                  options={products}
-                  getOptionLabel={(option) => `${option.productName || option.name} (${option.sku || option.code || ''})`}
-                  filterOptions={(options, { inputValue }) => {
-                    const search = inputValue.toLowerCase()
-                    return options.filter(option => 
-                      (option.productName || option.name || '').toLowerCase().includes(search) ||
-                      (option.sku || option.code || '').toLowerCase().includes(search) ||
-                      (option.barcode || '').toLowerCase().includes(search) ||
-                      (option.categories || '').toLowerCase().includes(search)
-                    )
-                  }}
-                  value={products.find(p => p.id === formData.productId) || null}
-                  onChange={(_, newValue) => setFormData({ ...formData, productId: newValue?.id || '' })}
-                  renderInput={(params) => (
-                    <CustomTextField 
-                      {...params} 
-                      label='Buscar Producto' 
-                      placeholder='Nombre, código o categoría...'
-                    />
-                  )}
-                  renderOption={(props, option) => {
-                    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.cloudfly.com.co'
-                    const getImgUrl = (url?: string) => {
-                      if (!url) return '/images/avatars/1.png'
-                      if (url.startsWith('http')) return url
-                      return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
-                    }
-
-                    return (
+              {watchRefType === 'PRODUCT' && (
+                <>
+                  <Autocomplete
+                    fullWidth
+                    options={products}
+                    getOptionLabel={(option) => `${option.productName || option.name} (${option.sku || option.code || ''})`}
+                    value={products.find(p => p.id === watchProductId) || null}
+                    onChange={(_, newValue) => setValue('productId', newValue?.id || '')}
+                    renderInput={(params) => (
+                      <CustomTextField 
+                        {...params} 
+                        label='Buscar Producto' 
+                        error={!!errors.productId}
+                        helperText={errors.productId?.message}
+                      />
+                    )}
+                    renderOption={(props, option) => (
                       <li {...props} key={option.id}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, width: '100%' }}>
-                          <Box 
-                            component='img' 
+                          <Avatar 
+                            variant='rounded'
                             src={getImgUrl(option.imageUrls?.[0])} 
-                            sx={{ width: 40, height: 40, borderRadius: 1, objectFit: 'cover', bgcolor: 'background.default' }}
-                            onError={(e: any) => { e.target.src = '/images/avatars/1.png' }}
+                            sx={{ width: 40, height: 40, bgcolor: 'background.default' }}
                           />
-                        <Box sx={{ flexGrow: 1 }}>
-                          <Typography variant='body2' sx={{ fontWeight: 600 }}>{option.productName || option.name}</Typography>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Box sx={{ flexGrow: 1 }}>
+                            <Typography variant='body2' sx={{ fontWeight: 600 }}>{option.productName || option.name}</Typography>
                             <Typography variant='caption' color='text.secondary'>SKU: {option.sku || option.code || 'N/A'}</Typography>
-                            <Typography variant='caption' sx={{ color: 'primary.main', fontWeight: 500 }}>{option.categories || 'Sin categoría'}</Typography>
                           </Box>
                         </Box>
+                      </li>
+                    )}
+                  />
+                  {selectedProduct && (
+                    <Box sx={{ mt: 4, p: 4, border: '1px solid', borderColor: 'divider', borderRadius: 1, display: 'flex', gap: 4, alignItems: 'center', bgcolor: 'action.hover' }}>
+                      <Box 
+                        component='img' 
+                        src={getImgUrl(selectedProduct.imageUrls?.[0])} 
+                        sx={{ width: 80, height: 80, borderRadius: 1, objectFit: 'cover' }}
+                        onError={(e: any) => { e.target.src = '/images/avatars/1.png' }}
+                      />
+                      <Box>
+                        <Typography variant='h6' color='primary'>{selectedProduct.productName || selectedProduct.name}</Typography>
+                        <Typography variant='body2' color='text.secondary' sx={{ mt: 1 }}>
+                          {truncateDescription(selectedProduct.productDescription || selectedProduct.description)}
+                        </Typography>
+                        <Typography variant='caption' sx={{ mt: 2, display: 'block', fontWeight: 600 }}>
+                          SKU: {selectedProduct.sku || selectedProduct.code || 'N/A'}
+                        </Typography>
                       </Box>
-                    </li>
-                  )
-                }}
-                />
+                    </Box>
+                  )}
+                </>
               )}
 
-              {formData.refType === 'CATEGORY' && (
-                <Autocomplete
-                  fullWidth
-                  options={categories}
-                  getOptionLabel={(option) => option.nombreCategoria || option.name || ''}
-                  value={categories.find(c => c.id === formData.categoryId) || null}
-                  onChange={(_, newValue) => setFormData({ ...formData, categoryId: newValue?.id || '' })}
-                  renderInput={(params) => (
-                    <CustomTextField 
-                      {...params} 
-                      label='Buscar Categoría' 
-                      placeholder='Nombre de categoría...'
-                    />
-                  )}
-                  renderOption={(props, option) => (
-                    <li {...props} key={option.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Typography variant='body2' sx={{ fontWeight: 500 }}>{option.nombreCategoria || option.name}</Typography>
+              {watchRefType === 'CATEGORY' && (
+                <>
+                  <Autocomplete
+                    fullWidth
+                    options={categories}
+                    getOptionLabel={(option) => option.nombreCategoria || option.name || ''}
+                    value={categories.find(c => c.id === watchCategoryId) || null}
+                    onChange={(_, newValue) => setValue('categoryId', newValue?.id || '')}
+                    renderInput={(params) => (
+                      <CustomTextField 
+                        {...params} 
+                        label='Buscar Categoría' 
+                        error={!!errors.categoryId}
+                        helperText={errors.categoryId?.message}
+                      />
+                    )}
+                  />
+                  {selectedCategory && (
+                    <Box sx={{ mt: 4, p: 4, border: '1px solid', borderColor: 'divider', borderRadius: 1, display: 'flex', gap: 4, alignItems: 'center', bgcolor: 'action.hover' }}>
+                      <Avatar sx={{ width: 60, height: 60, bgcolor: 'primary.light', color: 'primary.main' }}>
+                        <Icon icon='tabler:category' fontSize='2rem' />
+                      </Avatar>
+                      <Box>
+                        <Typography variant='h6' color='primary'>{selectedCategory.nombreCategoria || selectedCategory.name}</Typography>
+                        <Typography variant='body2' color='text.secondary'>
+                          {truncateDescription(selectedCategory.descripcion || '')}
+                        </Typography>
                       </Box>
-                    </li>
+                    </Box>
                   )}
-                />
+                </>
               )}
             </Grid>
 
@@ -350,29 +463,40 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
               <Typography variant='subtitle2' sx={{ mb: 2, color: 'primary.main' }}>5. Programación de Envío</Typography>
               <Grid container spacing={5}>
                 <Grid item xs={12} md={6}>
-                  <CustomTextField
-                    fullWidth
-                    type='datetime-local'
-                    label='Fecha y Hora de Envío'
-                    value={formData.scheduledAt || ''}
-                    onChange={e => setFormData({ ...formData, scheduledAt: e.target.value })}
-                    InputLabelProps={{ shrink: true }}
-                    required
+                  <Controller
+                    name='scheduledAt'
+                    control={control}
+                    render={({ field }) => (
+                      <CustomTextField
+                        {...field}
+                        fullWidth
+                        type='datetime-local'
+                        label='Fecha y Hora de Envío'
+                        error={!!errors.scheduledAt}
+                        helperText={errors.scheduledAt?.message}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    )}
                   />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <CustomTextField
-                    select
-                    fullWidth
-                    label='Recurrencia'
-                    value={formData.recurrence || 'NONE'}
-                    onChange={e => setFormData({ ...formData, recurrence: e.target.value })}
-                  >
-                    <MenuItem value='NONE'>No se repite</MenuItem>
-                    <MenuItem value='DAILY'>Diario</MenuItem>
-                    <MenuItem value='WEEKLY'>Semanal</MenuItem>
-                    <MenuItem value='MONTHLY'>Mensual</MenuItem>
-                  </CustomTextField>
+                  <Controller
+                    name='recurrence'
+                    control={control}
+                    render={({ field }) => (
+                      <CustomTextField
+                        {...field}
+                        select
+                        fullWidth
+                        label='Recurrencia'
+                      >
+                        <MenuItem value='NONE'>No se repite</MenuItem>
+                        <MenuItem value='DAILY'>Diario</MenuItem>
+                        <MenuItem value='WEEKLY'>Semanal</MenuItem>
+                        <MenuItem value='MONTHLY'>Mensual</MenuItem>
+                      </CustomTextField>
+                    )}
+                  />
                 </Grid>
               </Grid>
             </Grid>
