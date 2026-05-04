@@ -34,44 +34,56 @@ const formatDateTime = (date: Date) => {
 }
 
 const schema = yup.object().shape({
-  name: yup.string().required('El nombre es obligatorio'),
-  channelId: yup.string().required('Debe seleccionar un canal'),
+  name: yup.string().required('El nombre de la campaña es obligatorio').min(3, 'El nombre debe tener al menos 3 caracteres'),
+  description: yup.string().nullable().max(500, 'La descripción es muy larga'),
+  channelId: yup.string().required('Debe seleccionar un canal de envío'),
   audienceType: yup.string().oneOf(['LIST', 'PIPELINE']).required(),
+  
+  // Validación condicional para Audiencia
   sendingListId: yup.string().when('audienceType', {
     is: 'LIST',
-    then: schema => schema.required('Debe seleccionar una lista de envío')
+    then: (s) => s.required('Debe seleccionar una lista de envío para esta audiencia')
   }),
   pipelineId: yup.string().when('audienceType', {
     is: 'PIPELINE',
-    then: schema => schema.required('Debe seleccionar un pipeline')
+    then: (s) => s.required('Debe seleccionar un pipeline')
   }),
   pipelineStage: yup.string().when('audienceType', {
     is: 'PIPELINE',
-    then: schema => schema.required('Debe seleccionar una etapa')
+    then: (s) => s.required('Debe seleccionar una etapa del pipeline')
   }),
-  message: yup.string().required('El mensaje es obligatorio').min(10, 'El mensaje es muy corto'),
+
+  // Contenido y Medios
+  message: yup.string().required('El mensaje es obligatorio').min(10, 'El mensaje debe ser más descriptivo (mín. 10 caracteres)'),
+  mediaUrl: yup.string().url('Debe ser una URL válida').nullable(),
+  mediaType: yup.string().oneOf(['IMAGE', 'VIDEO', 'DOCUMENT', 'NONE']).default('IMAGE'),
+  mediaCaption: yup.string().nullable(),
+
+  // Programación
   scheduledAt: yup.string().required('Debe programar una fecha y hora')
-    .test('is-future', 'La fecha debe ser en el futuro', function(value) {
-      // Si estamos editando y el valor no ha cambiado (normalizado a minutos), es válido
+    .test('is-future', 'La fecha de programación debe ser en el futuro', function(value) {
       const { campaign } = this.options.context as any
+      // Si estamos editando y el valor no ha cambiado, es válido aunque sea pasado
       if (campaign && campaign.scheduledAt && value) {
-        if (campaign.scheduledAt.substring(0, 16) === value.substring(0, 16)) {
-          return true
-        }
+        const currentScheduled = campaign.scheduledAt.substring(0, 16)
+        const newScheduled = value.substring(0, 16)
+        if (currentScheduled === newScheduled) return true
       }
       
       if (!value) return false
       return new Date(value) > new Date()
     }),
-  recurrence: yup.string().required(),
-  refType: yup.string().required(),
+  recurrence: yup.string().oneOf(['NONE', 'DAILY', 'WEEKLY', 'MONTHLY']).required(),
+
+  // Referencia a Catálogo
+  refType: yup.string().oneOf(['NONE', 'PRODUCT', 'CATEGORY']).required(),
   productId: yup.string().when('refType', {
     is: 'PRODUCT',
-    then: schema => schema.required('Seleccione un producto')
+    then: (s) => s.required('Debe seleccionar un producto del catálogo')
   }),
   categoryId: yup.string().when('refType', {
     is: 'CATEGORY',
-    then: schema => schema.required('Seleccione una categoría')
+    then: (s) => s.required('Debe seleccionar una categoría del catálogo')
   })
 })
 
