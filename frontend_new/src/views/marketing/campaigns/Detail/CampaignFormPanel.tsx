@@ -51,7 +51,13 @@ const schema = yup.object().shape({
   }),
   message: yup.string().required('El mensaje es obligatorio').min(10, 'El mensaje es muy corto'),
   scheduledAt: yup.string().required('Debe programar una fecha y hora')
-    .test('is-future', 'La fecha debe ser en el futuro', (value) => {
+    .test('is-future', 'La fecha debe ser en el futuro', function(value) {
+      // Si estamos editando y el valor no ha cambiado, es válido aunque sea pasado
+      const { campaign } = this.options.context as any
+      if (campaign && value === campaign.scheduledAt) {
+        return true
+      }
+      
       if (!value) return false
       return new Date(value) > new Date()
     }),
@@ -75,6 +81,7 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
 
   const { control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
     resolver: yupResolver(schema),
+    context: { campaign },
     defaultValues: {
       name: '',
       description: '',
