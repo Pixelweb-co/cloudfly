@@ -93,7 +93,8 @@ public class CampaignService {
 
                     return campaignRepository.save(existing)
                             .flatMap(saved -> {
-                                if (saved.getScheduledAt() != null) {
+                                // Solo re-programar si el estado ya era SCHEDULED
+                                if (saved.getScheduledAt() != null && "SCHEDULED".equals(saved.getStatus())) {
                                     return schedulerClient.scheduleCampaign(
                                             saved.getId(), 
                                             saved.getName(), 
@@ -101,10 +102,7 @@ public class CampaignService {
                                             tenantId, 
                                             companyId,
                                             saved.getRecurrence()
-                                    ).flatMap(res -> {
-                                        saved.setStatus("SCHEDULED");
-                                        return campaignRepository.save(saved);
-                                    });
+                                    ).flatMap(res -> Mono.just(saved));
                                 }
                                 return Mono.just(saved);
                             });

@@ -95,8 +95,7 @@ public class JobGeneratorService {
                             .toList();
 
                     if (validJobs.isEmpty() && !jobs.isEmpty()) {
-                        log.warn("All calculated jobs for event {} were in the past! Forcing execution at now()", event.getId());
-                        validJobs = List.of(buildJob(event, generationTime, generationTime));
+                        log.warn("All calculated jobs for event {} were in the past! No jobs will be created.", event.getId());
                     }
 
                     return scheduledJobRepository.saveAll(validJobs).then();
