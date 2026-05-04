@@ -148,6 +148,11 @@ const Login = ({ mode }: { mode: SystemMode }) => {
         // ESTANDARIZADO: Save token usando el mismo nombre que devuelve la API
         localStorage.setItem('jwt', responseData.jwt)
         localStorage.setItem('userData', JSON.stringify(responseData))
+        
+        // Guardar explícitamente la compañía activa si viene en el perfil del usuario
+        if (responseData.user && responseData.user.activeCompanyId) {
+          localStorage.setItem('activeCompanyId', responseData.user.activeCompanyId.toString())
+        }
 
         // Also set cookie if needed for some parts
         document.cookie = `jwt=${responseData.jwt}; path=/`

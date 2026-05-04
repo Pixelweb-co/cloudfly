@@ -56,8 +56,14 @@ public class CompanyController {
                     company.setCreatedAt(LocalDateTime.now());
                     company.setUpdatedAt(LocalDateTime.now());
                     if (company.getStatus() == null) company.setStatus(true);
-                    if (company.getIsPrincipal() == null) company.setIsPrincipal(false);
-                    return companyRepository.save(company);
+                    
+                    return companyRepository.findByTenantId(user.getCustomerId())
+                            .count()
+                            .flatMap(count -> {
+                                if (count == 0) company.setIsPrincipal(true);
+                                else if (company.getIsPrincipal() == null) company.setIsPrincipal(false);
+                                return companyRepository.save(company);
+                            });
                 });
     }
 
