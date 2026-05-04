@@ -39,6 +39,7 @@ public class SchedulerClient {
         event.put("allDay", false);
         event.put("relatedEntityType", "CAMPAIGN");
         event.put("relatedEntityId", campaignId);
+        event.put("campaignId", campaignId);
         if (recurrence != null && !"NONE".equalsIgnoreCase(recurrence)) {
             event.put("recurrence", recurrence.toUpperCase());
         }
