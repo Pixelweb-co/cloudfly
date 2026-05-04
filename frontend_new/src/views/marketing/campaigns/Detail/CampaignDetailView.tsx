@@ -16,7 +16,7 @@ import { Pipeline } from '@/types/marketing/pipelineTypes'
 import CampaignFormPanel from './CampaignFormPanel'
 import CampaignMetricsPanel from './CampaignMetricsPanel'
 import CampaignLogsPanel from './CampaignLogsPanel'
-import { showSuccessNotification } from '@/utils/notifications'
+import { showSuccessNotification, showFailureNotification } from '@/utils/notifications'
 
 export default function CampaignDetailView() {
   const params = useParams()
@@ -53,7 +53,7 @@ export default function CampaignDetailView() {
         }
       } catch (err) {
         console.error(err)
-        toast.error('Error al cargar datos iniciales')
+        showFailureNotification('Error al cargar datos iniciales de la campaña')
       } finally {
         setLoading(false)
       }
@@ -82,8 +82,8 @@ export default function CampaignDetailView() {
         showSuccessNotification('Campaña actualizada correctamente')
       }
     } catch (err) {
-      console.error(err)
-      toast.error('Error al procesar la campaña')
+      console.error('Save error:', err)
+      showFailureNotification('Error al procesar la campaña: ' + (err as any).message)
     } finally {
       setSaving(false)
     }
@@ -96,7 +96,8 @@ export default function CampaignDetailView() {
       setCampaign(updated)
       showSuccessNotification(`Campaña marcada como ${newStatus}`)
     } catch (err) {
-      toast.error('No se pudo cambiar el estado')
+      console.error('Status change error:', err)
+      showFailureNotification('No se pudo cambiar el estado de la campaña')
     }
   }
 
