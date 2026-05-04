@@ -69,6 +69,7 @@ public class CalendarEventService {
                     entity.setAllDay(dto.getAllDay());
                     entity.setPayload(dto.getPayload());
                     entity.setRecurrence(dto.getRecurrence());
+                    entity.setCampaignId(dto.getCampaignId());
                     entity.setUpdatedAt(LocalDateTime.now());
                     return calendarEventRepository.save(entity);
                 })
