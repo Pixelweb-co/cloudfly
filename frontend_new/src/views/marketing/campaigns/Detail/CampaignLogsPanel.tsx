@@ -8,6 +8,7 @@ import {
 import { Icon } from '@iconify/react'
 import { CampaignSendLog } from '@/types/marketing/campaignTypes'
 import { contactService } from '@/services/marketing/contactService'
+import { campaignService } from '@/services/marketing/campaignService'
 import { Contact } from '@/types/marketing/contactTypes'
 import { format } from 'date-fns'
 
@@ -20,15 +21,17 @@ export default function CampaignLogsPanel({ campaignId }: Props) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // In a real app, fetch from logs service: /api/v1/marketing/campaigns/{id}/logs
-    // Mocking some data for the UI structure
-    const mockLogs = [
-      { id: 1, contactName: 'Juan Perez', destination: '3001234567', status: 'DELIVERED', sentAt: new Date().toISOString() },
-      { id: 2, contactName: 'Maria Garcia', destination: 'maria@example.com', status: 'READ', sentAt: new Date().toISOString() },
-      { id: 3, contactName: 'Carlos Ruiz', destination: '3119876543', status: 'FAILED', errorMessage: 'Invalid number format' }
-    ]
-    setLogs(mockLogs)
-    setLoading(false)
+    const fetchLogs = async () => {
+      try {
+        const data = await campaignService.getLogs(campaignId)
+        setLogs(data || [])
+      } catch (error) {
+        console.error('Error fetching logs:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchLogs()
   }, [campaignId])
 
   const getStatusChip = (status: string) => {
@@ -64,7 +67,7 @@ export default function CampaignLogsPanel({ campaignId }: Props) {
               {logs.map((log) => (
                 <TableRow key={log.id} hover>
                   <TableCell>
-                    <Typography variant='body2' sx={{ fontWeight: 500 }}>{log.contactName}</Typography>
+                    <Typography variant='body2' sx={{ fontWeight: 500 }}>{log.contactName || `Contacto #${log.contactId}`}</Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant='caption'>{log.destination}</Typography>
