@@ -23,6 +23,7 @@ public class CampaignExecutionService {
     private final ContactRepository contactRepository;
     private final EvolutionService evolutionService;
     private final MessageFormatterService messageFormatterService;
+    private final com.marketing.worker.persistence.repository.CampaignSendLogRepository campaignSendLogRepository;
 
     // Anti-spam: batch size before taking a long pause
     private static final int BATCH_SIZE = 20;
@@ -59,11 +60,29 @@ public class CampaignExecutionService {
                                 return Mono.delay(Duration.ofMillis(finalDelay))
                                         .then(messageFormatterService.formatMessage(campaign, contact))
                                         .flatMap(message -> evolutionService.sendMessage(campaign, contact, message))
-                                        .doOnSuccess(v -> sent.incrementAndGet())
+                                        .flatMap(providerId -> {
+                                            sent.incrementAndGet();
+                                            return campaignSendLogRepository.save(com.marketing.worker.persistence.entity.CampaignSendLogEntity.builder()
+                                                    .campaignId(campaign.getId())
+                                                    .contactId(contact.getId())
+                                                    .destination(contact.getPhone())
+                                                    .status("SENT")
+                                                    .sentAt(java.time.LocalDateTime.now())
+                                                    .createdAt(java.time.LocalDateTime.now())
+                                                    .providerMessageId(providerId)
+                                                    .build());
+                                        })
                                         .onErrorResume(e -> {
                                             failed.incrementAndGet();
                                             log.error("⚠️ Failed to send to contact {}: {}", contact.getId(), e.getMessage());
-                                            return Mono.empty();
+                                            return campaignSendLogRepository.save(com.marketing.worker.persistence.entity.CampaignSendLogEntity.builder()
+                                                    .campaignId(campaign.getId())
+                                                    .contactId(contact.getId())
+                                                    .destination(contact.getPhone())
+                                                    .status("FAILED")
+                                                    .errorMessage(e.getMessage())
+                                                    .createdAt(java.time.LocalDateTime.now())
+                                                    .build());
                                         });
                             })
                             .then(Mono.defer(() -> {
