@@ -29,7 +29,6 @@ public class EvolutionService {
 
     @Value("${evolution.api.key}")
     private String globalApiKey;
-    private final ObjectMapper objectMapper;
 
     public Mono<String> sendMessage(CampaignEntity campaign, ContactEntity contact, String formattedMessage) {
         return channelConfigRepository.findById(campaign.getChannelId())
