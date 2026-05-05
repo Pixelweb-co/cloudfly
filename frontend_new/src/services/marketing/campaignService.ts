@@ -25,5 +25,10 @@ export const campaignService = {
   updateStatus: async (id: number, status: string): Promise<Campaign> => {
     const response = await axiosInstance.patch(`/api/v1/marketing/campaigns/${id}/status`, { status });
     return response.data;
+  },
+
+  getLogs: async (id: number): Promise<any[]> => {
+    const response = await axiosInstance.get(`/api/v1/marketing/campaigns/${id}/logs`);
+    return response.data;
   }
 };
