@@ -60,7 +60,7 @@ public class CampaignExecutionService {
                                 return Mono.delay(Duration.ofMillis(finalDelay))
                                         .then(messageFormatterService.formatMessage(campaign, contact))
                                         .flatMap(message -> evolutionService.sendMessage(campaign, contact, message))
-                                        .flatMap(providerId -> {
+                                        .then(Mono.defer(() -> {
                                             sent.incrementAndGet();
                                             return campaignSendLogRepository.save(com.marketing.worker.persistence.entity.CampaignSendLogEntity.builder()
                                                     .campaignId(campaign.getId())
@@ -69,9 +69,8 @@ public class CampaignExecutionService {
                                                     .status("SENT")
                                                     .sentAt(java.time.LocalDateTime.now())
                                                     .createdAt(java.time.LocalDateTime.now())
-                                                    .providerMessageId(providerId)
                                                     .build());
-                                        })
+                                        }))
                                         .onErrorResume(e -> {
                                             failed.incrementAndGet();
                                             log.error("⚠️ Failed to send to contact {}: {}", contact.getId(), e.getMessage());
