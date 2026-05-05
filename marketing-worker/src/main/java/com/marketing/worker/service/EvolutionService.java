@@ -29,8 +29,9 @@ public class EvolutionService {
 
     @Value("${evolution.api.key}")
     private String globalApiKey;
+    private final ObjectMapper objectMapper;
 
-    public Mono<Void> sendMessage(CampaignEntity campaign, ContactEntity contact, String formattedMessage) {
+    public Mono<String> sendMessage(CampaignEntity campaign, ContactEntity contact, String formattedMessage) {
         return channelConfigRepository.findById(campaign.getChannelId())
                 .flatMap(config -> {
                     String phone = contact.getPhone().replaceAll("[^0-9]", "");
@@ -72,12 +73,11 @@ public class EvolutionService {
                 });
     }
 
-    private Mono<Void> sendText(ChannelConfig config, String phone, String text, String apiKey) {
+    private Mono<String> sendText(ChannelConfig config, String phone, String text, String apiKey) {
         String url = apiUrl + "/message/sendText/" + config.getInstanceName();
         Map<String, Object> body = new HashMap<>();
         body.put("number", phone);
         body.put("text", text);
-        // Evolution API delay parameter: simulates typing time on-server
         body.put("delay", 1200 + (int)(Math.random() * 3000));
 
         return webClientBuilder.build().post()
@@ -86,15 +86,30 @@ public class EvolutionService {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
                 .retrieve()
-                .bodyToMono(Void.class)
-                .doOnSuccess(v -> log.debug("✅ Message sent to {}", phone))
+                .bodyToMono(Map.class)
+                .map(response -> {
+                    log.debug("✅ Message sent to {}", phone);
+                    return extractMessageId(response);
+                })
                 .onErrorResume(e -> {
                     log.error("❌ Error sending message to {}: {}", phone, e.getMessage());
-                    return Mono.empty();
+                    return Mono.error(e);
                 });
     }
 
-    private Mono<Void> sendMedia(ChannelConfig config, String phone, String mediaUrl, String mediaType, String caption, String apiKey) {
+    private String extractMessageId(Map response) {
+        try {
+            if (response.containsKey("key")) {
+                Map key = (Map) response.get("key");
+                return (String) key.get("id");
+            }
+        } catch (Exception e) {
+            log.warn("Could not extract message ID from response: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private Mono<String> sendMedia(ChannelConfig config, String phone, String mediaUrl, String mediaType, String caption, String apiKey) {
         String url = apiUrl + "/message/sendMedia/" + config.getInstanceName();
         Map<String, Object> body = new HashMap<>();
         body.put("number", phone);
@@ -109,11 +124,14 @@ public class EvolutionService {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
                 .retrieve()
-                .bodyToMono(Void.class)
-                .doOnSuccess(v -> log.debug("✅ Media sent to {}", phone))
+                .bodyToMono(Map.class)
+                .map(response -> {
+                    log.debug("✅ Media sent to {}", phone);
+                    return extractMessageId(response);
+                })
                 .onErrorResume(e -> {
                     log.error("❌ Error sending media to {}: {}", phone, e.getMessage());
-                    return Mono.empty();
+                    return Mono.error(e);
                 });
     }
 }
