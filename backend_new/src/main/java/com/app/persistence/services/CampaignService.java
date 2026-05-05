@@ -171,4 +171,9 @@ public class CampaignService {
             throw new RuntimeException("No se puede completar una campaña que no ha sido iniciada.");
         }
     }
+
+    public reactor.core.publisher.Flux<com.app.persistence.entity.CampaignSendLogEntity> getLogs(Long id, Long tenantId, Long companyId) {
+        return campaignRepository.findByIdAndTenantIdAndCompanyId(id, tenantId, companyId)
+                .flatMapMany(campaign -> campaignSendLogRepository.findByCampaignId(id));
+    }
 }
