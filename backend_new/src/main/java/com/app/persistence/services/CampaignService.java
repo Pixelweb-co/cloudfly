@@ -19,6 +19,7 @@ public class CampaignService {
 
     private final CampaignRepository campaignRepository;
     private final SchedulerClient schedulerClient;
+    private final com.app.persistence.repository.CampaignSendLogRepository campaignSendLogRepository;
 
     public Flux<CampaignEntity> findAll(Long tenantId, Long companyId) {
         log.info("Fetching all campaigns for tenant: {}, company: {}", tenantId, companyId);

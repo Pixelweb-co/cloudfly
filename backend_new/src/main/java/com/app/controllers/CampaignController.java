@@ -90,4 +90,11 @@ public class CampaignController {
         return getCurrentUserContext(headers)
                 .flatMap(ctx -> campaignService.updateStatus(id, newStatus, ctx.tenantId(), ctx.companyId()));
     }
+
+    @GetMapping("/{id}/logs")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
+    public Flux<com.app.persistence.entity.CampaignSendLogEntity> getLogs(@PathVariable Long id, @RequestHeader Map<String, String> headers) {
+        return getCurrentUserContext(headers)
+                .flatMapMany(ctx -> campaignService.getLogs(id, ctx.tenantId(), ctx.companyId()));
+    }
 }
