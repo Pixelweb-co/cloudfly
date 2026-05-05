@@ -24,6 +24,18 @@ public class CalendarEventService {
     private final ApplicationEventPublisher eventPublisher;
 
     public Mono<CalendarEventDto> createEvent(CalendarEventDto dto) {
+        if (dto.getRelatedEntityType() != null && dto.getRelatedEntityId() != null) {
+            return calendarEventRepository.findByRelatedEntityTypeAndRelatedEntityId(dto.getRelatedEntityType(), dto.getRelatedEntityId())
+                    .flatMap(existing -> {
+                        // Update existing instead of creating duplicate
+                        return updateEvent(existing.getId(), dto);
+                    })
+                    .switchIfEmpty(Mono.defer(() -> createNewEvent(dto)));
+        }
+        return createNewEvent(dto);
+    }
+
+    private Mono<CalendarEventDto> createNewEvent(CalendarEventDto dto) {
         CalendarEventEntity entity = CalendarEventEntity.builder()
                 .tenantId(dto.getTenantId())
                 .companyId(dto.getCompanyId())
