@@ -22,8 +22,13 @@ class ChatService {
             return;
         }
 
+        if (type === 'MESSAGES_UPDATE') {
+            await this._handleMessagesUpdate(payload);
+            return;
+        }
+
         if (type !== 'MESSAGES_UPSERT') {
-            logger.debug(`[WEBHOOK_SKIP] Event ${type} is not MESSAGES_UPSERT. Ignoring.`);
+            logger.debug(`[WEBHOOK_SKIP] Event ${type} is not MESSAGES_UPSERT or MESSAGES_UPDATE. Ignoring.`);
             return;
         }
 
@@ -625,6 +630,77 @@ class ChatService {
         if (state === 'refused' || state === 'close' || statusReason === 428) {
             logger.warn(`⚠️ [CONN_LOST] Instance ${instance} is DISCONNECTED. Triggering admin notification...`);
             await this._notifyAdminDisconnection(instance);
+        }
+    }
+
+    /**
+     * Manejar actualizaciones de estado de mensajes (Delivered, Read)
+     */
+    async _handleMessagesUpdate(payload) {
+        const { data } = payload;
+        if (!data || !Array.isArray(data)) return;
+
+        for (const item of data) {
+            const messageId = item.key.id;
+            const status = item.update.status;
+            const remoteJid = item.key.remoteJid;
+
+            if (!messageId) continue;
+
+            logger.info(`📝 [MSG_UPDATE] ID: ${messageId} | Status: ${status} | From: ${remoteJid}`);
+
+            try {
+                // 1. Actualizar omni_channel_messages (chat normal)
+                let internalStatus = 'SENT';
+                if (status === 3) internalStatus = 'DELIVERED';
+                if (status === 4) internalStatus = 'READ';
+
+                if (status >= 3) {
+                    await db.execute(
+                        'UPDATE omni_channel_messages SET status = ? WHERE external_msg_id = ?',
+                        [internalStatus, messageId]
+                    );
+                }
+
+                // 2. Actualizar campaign_send_logs (marketing)
+                if (status === 3 || status === 4) {
+                    const marketingStatus = status === 3 ? 'DELIVERED' : 'READ';
+                    const timeColumn = status === 3 ? 'delivered_at' : 'read_at';
+
+                    const [result] = await db.execute(
+                        `UPDATE campaign_send_logs 
+                         SET status = ?, ${timeColumn} = NOW() 
+                         WHERE provider_message_id = ? AND status NOT IN ('READ')`,
+                        [marketingStatus, messageId]
+                    );
+
+                    if (result.affectedRows > 0) {
+                        logger.info(`📈 [MARKETING_METRIC] Updated campaign log for message ${messageId} to ${marketingStatus}`);
+                        
+                        // 3. Incrementar contadores en la tabla campaigns
+                        // Necesitamos el campaign_id del log
+                        const [logs] = await db.execute(
+                            'SELECT campaign_id FROM campaign_send_logs WHERE provider_message_id = ? LIMIT 1',
+                            [messageId]
+                        );
+
+                        if (logs.length > 0) {
+                            const campaignId = logs[0].campaign_id;
+                            const counterColumn = status === 3 ? 'total_delivered' : 'total_read';
+                            
+                            await db.execute(
+                                `UPDATE campaigns SET ${counterColumn} = ${counterColumn} + 1 WHERE id = ?`,
+                                [campaignId]
+                            );
+                            
+                            // Notificar al frontend que los KPIs cambiaron (opcional, vía socket)
+                            // io.emit('campaign-stats-updated', { campaignId });
+                        }
+                    }
+                }
+            } catch (error) {
+                logger.error(`❌ [MSG_UPDATE_ERROR] Error updating status for ${messageId}: ${error.message}`);
+            }
         }
     }
 
