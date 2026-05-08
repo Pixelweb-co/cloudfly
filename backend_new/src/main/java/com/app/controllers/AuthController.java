@@ -225,29 +225,36 @@ public class AuthController {
         }
 
         @PostMapping({"/complete-onboarding", "/auth/complete-onboarding"})
-        public Mono<org.springframework.http.ResponseEntity<java.util.Map<String, Object>>> completeOnboarding(@RequestBody java.util.Map<String, Long> request) {
+        public Mono<org.springframework.http.ResponseEntity<AuthResponse>> completeOnboarding(@RequestBody java.util.Map<String, Long> request) {
                 Long userId = request.get("userId");
                 log.info("🎯 [AUTH-CONTROLLER] Received request to complete onboarding for user: {}", userId);
                 
                 if (userId == null) {
-                        java.util.Map<String, Object> error = new java.util.HashMap<>();
-                        error.put("status", false);
-                        error.put("message", "userId no proporcionado.");
-                        return Mono.just(org.springframework.http.ResponseEntity.badRequest().body(error));
+                        return Mono.just(org.springframework.http.ResponseEntity.badRequest().body(
+                                AuthResponse.builder().status(false).message("userId no proporcionado.").build()
+                        ));
                 }
                 
-                return userService.completeOnboarding(userId)
-                                .then(Mono.defer(() -> {
-                                        java.util.Map<String, Object> response = new java.util.HashMap<>();
-                                        response.put("status", true);
-                                        response.put("message", "Onboarding completado exitosamente.");
-                                        return Mono.just(org.springframework.http.ResponseEntity.ok(response));
+                return ReactiveSecurityContextHolder.getContext()
+                        .map(SecurityContext::getAuthentication)
+                        .flatMap(auth -> userService.completeOnboarding(userId)
+                                .flatMap(user -> userService.convertToDto(user))
+                                .map(userDto -> {
+                                        String token = jwtProvider.createToken(auth, userDto.getCustomerId(), userDto.getActiveCompanyId());
+                                        return org.springframework.http.ResponseEntity.ok(
+                                                AuthResponse.builder()
+                                                        .status(true)
+                                                        .message("Onboarding completado exitosamente.")
+                                                        .jwt(token)
+                                                        .user(userDto)
+                                                        .build()
+                                        );
                                 }))
                                 .onErrorResume(e -> {
-                                        java.util.Map<String, Object> error = new java.util.HashMap<>();
-                                        error.put("status", false);
-                                        error.put("message", "Error: " + e.getMessage());
-                                        return Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error));
+                                        log.error("❌ [AUTH-CONTROLLER] Error completing onboarding: {}", e.getMessage());
+                                        return Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                                                AuthResponse.builder().status(false).message("Error: " + e.getMessage()).build()
+                                        ));
                                 });
         }
 }
