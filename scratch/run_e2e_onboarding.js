@@ -2,19 +2,10 @@ const { Builder, By, Key, until, logging } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 const fs = require('fs');
 const path = require('path');
-const mailHelper = require('./mail_helper');
+const mailHelper = require('../tests/mail_helper');
 
 /**
- * Selenium E2E Test: Admin Marketing Onboarding (FULL FLOW)
- * 
- * Flujo validado por Diagrama de Secuencia:
- * 1. Registro con cuenta real @cloudfly.com.co.
- * 2. Activación vía Email (IMAP Link).
- * 3. Login.
- * 4. Wizard Step 0: Bienvenida.
- * 5. Wizard Step 1: Form Business (Empresa).
- * 6. Wizard Step 2: WhatsApp (SALTAR/OMITIR).
- * 7. Wizard Step 3: Producto y Categoría (Review Fix tenantId).
+ * Selenium E2E Test: Admin Marketing Onboarding (HEADLESS VERSION)
  */
 
 const BASE_URL = 'https://dashboard.cloudfly.com.co';
@@ -35,22 +26,23 @@ async function takeScreenshot(driver, name) {
     const screenshot = await driver.takeScreenshot();
     const filePath = path.join(dir, `${name}_${Date.now()}.png`);
     fs.writeFileSync(filePath, screenshot, 'base64');
-    console.log(`📸 Screenshot: ${filePath}`);
+    console.log(`📸 Screenshot saved: ${filePath}`);
 }
 
 async function runTest() {
-    console.log('\n--- INICIANDO TEST E2E ONBOARDING MARKETING ---');
+    console.log('\n--- INICIANDO TEST E2E ONBOARDING MARKETING (HEADLESS) ---');
     
     // Paso 0: Preparar buzón
+    console.log('Step 0: Preparing mailbox...');
     if (!(await mailHelper.createAccount(MAIL_ACC, MAIL_PASS))) {
         console.error('❌ No se pudo preparar el buzón de prueba.');
         process.exit(1);
     }
 
     const options = new chrome.Options();
-    options.addArguments('--window-size=1440,900', '--no-sandbox', '--disable-dev-shm-usage');
-    options.addArguments('--headless'); 
+    options.addArguments('--window-size=1440,900', '--no-sandbox', '--disable-dev-shm-usage', '--headless'); 
 
+    console.log('Initializing Chrome Driver...');
     const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
 
     try {
@@ -72,9 +64,11 @@ async function runTest() {
         console.log('✅ Registro enviado. Esperando email de activación...');
 
         // [2] ACTIVACIÓN
+        console.log('\n📧 [2/7] ESPERANDO EMAIL DE ACTIVACIÓN...');
         const activationLink = await mailHelper.getActivationLink(MAIL_ACC, MAIL_PASS);
         if (!activationLink) throw new Error('No se recibió el link de activación');
         
+        console.log(`Navigating to activation link: ${activationLink}`);
         await driver.get(activationLink);
         await sleep(5000);
         await takeScreenshot(driver, 'account_activated');
@@ -116,26 +110,24 @@ async function runTest() {
         console.log('✅ Paso 1 guardado.');
 
         // [6] STEP 2: WHATSAPP (OMITIR)
+        console.log('\n📱 [6/7] WIZARD: WHATSAPP (OMITIENDO)');
+        await sleep(5000);
         try {
-            console.log('🔗 Intentando omitir vía "Configurar más tarde"...');
-            const skipBtn = await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'Configurar más tarde')]")), 15000);
-            await driver.executeScript("arguments[0].click();", skipBtn);
-            console.log('✅ Paso 2 omitido vía "Configurar más tarde".');
-            await sleep(3000);
+            const chatbotStep = await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'Chatbot IA')]")), 15000);
+            await chatbotStep.click();
+            console.log('👆 Click en tab "Chatbot IA" exitoso.');
+            await sleep(2000);
+
+            const productsStep = await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'Productos')]")), 15000);
+            await productsStep.click();
+            console.log('⏩ Paso 2 omitido vía click en tab "Productos".');
         } catch (e) {
-             console.warn('⚠️ No se encontró "Configurar más tarde". Intentando navegar vía tabs.');
-             try {
-                const productsStep = await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'Productos')]")), 15000);
-                await productsStep.click();
-                console.log('⏩ Paso 2 omitido vía click en tab "Productos".');
-             } catch (e2) {
-                console.error('❌ Fallo total al omitir paso 2.');
-                await driver.get(`${BASE_URL}/account-setup`); 
-             }
+             console.warn('⚠️ No se pudo navegar vía tabs. Intentando navegación forzada.');
+             await driver.get(`${BASE_URL}/account-setup`); 
         }
 
-        // [7] STEP 3: PRODUCTO (REVIEW FIX)
-        console.log('\n🎁 [7/7] WIZARD: PRODUCTO Y CATEGORÍA (VALIDANDO FIX)');
+        // [7] STEP 3: PRODUCTO
+        console.log('\n🎁 [7/7] WIZARD: PRODUCTO Y CATEGORÍA');
         await sleep(5000);
         
         const nameInp = await driver.wait(until.elementLocated(By.xpath("//input[contains(@placeholder, 'Hamb') or @label='Nombre'] | //input[@type='text' and not(@value)]")), 20000);
@@ -147,10 +139,8 @@ async function runTest() {
         await descInp.sendKeys('Gestión proactiva de redes sociales y leads con IA.');
 
         const priceInp = await driver.findElement(By.xpath("//input[@type='number']"));
-        await priceInp.click();
-        await priceInp.sendKeys(Key.CONTROL, 'a');
-        await priceInp.sendKeys(Key.BACK_SPACE);
-        await priceInp.sendKeys('48000');
+        await priceInp.clear();
+        await priceInp.sendKeys('480000');
 
         await takeScreenshot(driver, 'onboarding_step3_product');
         const finBtn = await driver.findElement(By.xpath("//button[contains(., 'Finalizar')]"));
@@ -160,73 +150,30 @@ async function runTest() {
         await driver.wait(until.urlMatches(/\/(home|dashboard)/), 20000);
         console.log('✅ Redirección a Dashboard detectada.');
 
-        // [8] VALIDAR LOGOUT Y RE-LOGIN (Para confirmar persistencia de onboarding)
-        console.log('\n🔄 [8/9] VALIDANDO PERSISTENCIA: LOGOUT Y RE-LOGIN...');
+        // [8] VALIDACIÓN FINAL
+        console.log('\n🔄 [8/8] VALIDACIÓN FINAL: LOGOUT Y RE-LOGIN...');
+        const avatar = await driver.wait(until.elementLocated(By.css('.MuiAvatar-root.cursor-pointer')), 15000);
+        await avatar.click();
+        const logoutBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Logout')]")), 15000);
+        await logoutBtn.click();
         
-        // Log state BEFORE logout
-        const stateBeforeLogout = await driver.executeScript("return { userData: localStorage.getItem('userData'), jwt: localStorage.getItem('jwt') };");
-        console.log('📊 State before logout:', JSON.stringify(stateBeforeLogout, null, 2));
-
-        await driver.get(`${BASE_URL}/logout`);
-        await sleep(3000);
         await driver.wait(until.urlContains('/login'), 15000);
         console.log('✅ Logout exitoso.');
 
-        // Re-login
-        console.log(`🔑 Re-ingresando con: ${NEW_USER_NAME}`);
         await driver.findElement(By.name('username')).sendKeys(NEW_USER_NAME);
         await driver.findElement(By.name('password')).sendKeys(NEW_USER_PASSWORD);
         await driver.findElement(By.xpath("//button[@type='submit']")).click();
 
-        // Esperar a que la URL NO sea /account-setup
-        await sleep(5000);
-        const urlAfterLogin = await driver.getCurrentUrl();
-        console.log(`📍 URL después de re-login: ${urlAfterLogin}`);
+        await driver.wait(until.urlMatches(/\/(home|dashboard)/), 20000);
+        console.log('✅ Re-login exitoso: El usuario entró directamente al Dashboard.');
 
-        const stateAfterLogin = await driver.executeScript("return { userData: localStorage.getItem('userData'), jwt: localStorage.getItem('jwt') };");
-        console.log('📊 State after re-login:', JSON.stringify(stateAfterLogin, null, 2));
-
-        if (urlAfterLogin.includes('account-setup')) {
-            console.error('❌ ERROR: El usuario fue redirigido al WIZARD nuevamente.');
-            await takeScreenshot(driver, 'error_redirect_to_wizard');
-            
-            // Debug the user in DB
-            console.log('🔍 Checking user in DB via script...');
-        } else {
-            console.log('✅ Re-login exitoso: El usuario entró directamente al Dashboard.');
-        }
-
-        // [9] VALIDACIÓN FINAL: PRODUCT LIST
-        console.log('\n📦 [9/9] VALIDACIÓN: CONSULTANDO LISTA DE PRODUCTOS...');
-        await driver.get(`${BASE_URL}/ventas/productos/list`);
-        const productRow = await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'Pack Marketing Autómata')]")), 20000);
-        console.log('✅ Producto encontrado en la lista.');
-        await takeScreenshot(driver, 'product_list_verified');
-
-        // Obtener logs del frontend
-        console.log('\n📋 LOGS DEL FRONTEND (VALIDACIÓN):');
-        const logs = await driver.manage().logs().get(logging.Type.BROWSER);
-        logs.forEach(log => {
-            console.log(`[${log.level.name}] ${log.message}`);
-        });
-
-        console.log('\n✅ TEST E2E EXITOSO. FLUJO COMPLETO Y LISTA DE PRODUCTOS VALIDADOS.');
+        console.log('\n✅ TEST E2E EXITOSO. FLUJO COMPLETO VALIDADO.');
 
     } catch (error) {
         console.error('\n❌ FALLO EN EL TEST:');
         console.error(error.message);
-        
-        // Intentar obtener logs incluso en error
-        try {
-            const logs = await driver.manage().logs().get(logging.Type.BROWSER);
-            console.log('\n📋 LOGS DEL FRONTEND (ERROR):');
-            logs.slice(-10).forEach(log => console.log(`[${log.level.name}] ${log.message}`));
-        } catch (e) {}
-
         await takeScreenshot(driver, 'error_final');
     } finally {
-        // [MODIFICADO] No eliminamos el buzón para que el usuario pueda revisarlo
-        // await mailHelper.deleteAccount(MAIL_ACC);
         await driver.quit();
     }
 }

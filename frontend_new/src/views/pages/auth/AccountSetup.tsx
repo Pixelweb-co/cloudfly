@@ -110,27 +110,43 @@ const AccountSetup = () => {
     }
   }, [activeStep, isMounted])
 
-  const handleStepComplete = async () => {
-    // Check if it was the last step
-    if (activeStep === steps.length - 1) {
-      try {
-        const user = userMethods.getUserLogin()
-        if (user?.id) {
-          console.log('🎯 [ACCOUNT-SETUP] Marking onboarding as completed in backend via handleStepComplete...')
-          await axiosInstance.post('/auth/complete-onboarding', { userId: user.id })
-          
-          // Update local storage so OnboardingGuard knows it's done
-          user.onboardingCompleted = true
-          localStorage.setItem('userData', JSON.stringify(user))
-        }
-      } catch (error) {
-        console.error('❌ [ACCOUNT-SETUP] Error marking onboarding as completed:', error)
+  const finishOnboarding = async () => {
+    try {
+      const user = userMethods.getUserLogin()
+      if (!user?.id) {
+        router.push('/login')
+        return
       }
 
+      console.log('🏁 [WIZARD] Finalizing onboarding...')
+      const response = await axiosInstance.post('/auth/complete-onboarding', { userId: user.id })
+      
+      if (response.data.status) {
+        console.log('✅ [WIZARD] Onboarding backend sync success.')
+        
+        // ACTUALIZAR TOKEN Y USERDATA (Trae el nuevo customerId y onboardingCompleted: true)
+        if (response.data.jwt) {
+          localStorage.setItem('jwt', response.data.jwt)
+          console.log('🔑 [WIZARD] JWT Token refreshed.')
+        }
+        
+        if (response.data.user) {
+          localStorage.setItem('userData', JSON.stringify(response.data.user))
+          
+          if (response.data.user.activeCompanyId) {
+            localStorage.setItem('activeCompanyId', response.data.user.activeCompanyId.toString())
+          }
+          if (response.data.user.customerId) {
+            localStorage.setItem('activeTenantId', response.data.user.customerId.toString())
+          }
+        }
+      }
+      
       localStorage.removeItem('account_setup_step')
       router.push('/home')
-    } else {
-      handleNext()
+    } catch (error) {
+      console.error('❌ [ACCOUNT-SETUP] Error finishing onboarding:', error)
+      router.push('/home') // Fallback redirect
     }
   }
 
@@ -141,25 +157,14 @@ const AccountSetup = () => {
     setTimeout(() => setIsTransitioning(false), 1000); // 1s cooldown
 
     if (activeStep === steps.length - 1) {
-      try {
-        const user = userMethods.getUserLogin()
-        if (user?.id) {
-          console.log('🎯 [ACCOUNT-SETUP] Marking onboarding as completed in backend...')
-          await axiosInstance.post('/auth/complete-onboarding', { userId: user.id })
-          
-          // Update local storage so OnboardingGuard knows it's done
-          user.onboardingCompleted = true
-          localStorage.setItem('userData', JSON.stringify(user))
-        }
-      } catch (error) {
-        console.error('❌ [ACCOUNT-SETUP] Error marking onboarding as completed:', error)
-      }
-
-      localStorage.removeItem('account_setup_step')
-      router.push('/home')
-    } else {
-      setActiveStep(activeStep + 1)
+      await finishOnboarding()
+      return
     }
+
+    const nextStep = activeStep + 1
+    setActiveStep(nextStep)
+    localStorage.setItem('account_setup_step', nextStep.toString())
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleBack = () => {
