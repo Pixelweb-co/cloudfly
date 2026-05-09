@@ -23,9 +23,6 @@ export const AuthSync = () => {
                 const newUserData = JSON.stringify(session.user)
 
                 if (currentToken !== token || prevUserData !== newUserData) {
-                    console.log('🔄 [AUTH-SYNC] Session authenticated. Syncing to localStorage...')
-                    console.log('📊 [AUTH-SYNC] Old onboarding:', prevUserData ? JSON.parse(prevUserData).onboardingCompleted : 'null')
-                    console.log('📊 [AUTH-SYNC] New onboarding:', session.user ? (session.user as any).onboardingCompleted : 'null')
                     localStorage.setItem('jwt', token)
                     localStorage.setItem('userData', newUserData)
                     window.dispatchEvent(new Event('storage'))

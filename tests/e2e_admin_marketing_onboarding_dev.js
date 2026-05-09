@@ -164,7 +164,10 @@ async function runTest() {
         const stateBefore = await driver.executeScript("return { userData: localStorage.getItem('userData'), jwt: localStorage.getItem('jwt') };");
         console.log('📊 State before logout:', JSON.stringify(stateBefore, null, 2));
 
-        await driver.get(`${BASE_URL}/logout`);
+        await driver.get(`${BASE_URL}/api/auth/signout`);
+        await sleep(2000);
+        const signoutBtn = await driver.wait(until.elementLocated(By.xpath("//button[contains(., 'Sign out')] | //button[@type='submit']")), 15000);
+        await signoutBtn.click();
         await sleep(3000);
         await driver.wait(until.urlContains('/login'), 40000);
         
