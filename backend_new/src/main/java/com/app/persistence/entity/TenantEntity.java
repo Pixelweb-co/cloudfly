@@ -132,6 +132,9 @@ public class TenantEntity {
     @Column("is_master_tenant")
     private Boolean isMasterTenant;
 
+    @Column("onboarding_completed")
+    private Boolean onboardingCompleted;
+
     @Column("notas_dian")
     private String notasDian;
 

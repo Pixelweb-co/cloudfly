@@ -202,7 +202,7 @@ public class UserService {
                                 .tenant(tenant)
                                 .customer(tenant) // Alias for frontend compatibility
                                 .hasActiveSubscription(hasActiveSub)
-                                .onboardingCompleted(user.isOnboardingCompleted())
+                                .onboardingCompleted(tenant != null && Boolean.TRUE.equals(tenant.getOnboardingCompleted()))
                                 .build();
         }
 
@@ -277,12 +277,20 @@ public class UserService {
 
     @Transactional
     public Mono<UserEntity> completeOnboarding(Long userId) {
-        log.info("🎯 [USER-SERVICE] Marking onboarding as completed for user: {}", userId);
+        log.info("🎯 [USER-SERVICE] Marking onboarding as completed for user: {} (will update tenant)", userId);
         return userRepository.findById(userId)
                 .flatMap(user -> {
-                    user.setOnboardingCompleted(true);
-                    return userRepository.save(user);
+                    if (user.getCustomerId() == null) {
+                        log.warn("⚠️ [USER-SERVICE] User {} has no tenant. Skipping tenant onboarding flag.", userId);
+                        return Mono.just(user);
+                    }
+                    return tenantRepository.findById(user.getCustomerId())
+                            .flatMap(tenant -> {
+                                tenant.setOnboardingCompleted(true);
+                                return tenantRepository.save(tenant);
+                            })
+                            .thenReturn(user);
                 })
-                .doOnSuccess(u -> log.info("✅ [USER-SERVICE] Onboarding flag set to TRUE for user: {}", userId));
+                .doOnSuccess(u -> log.info("✅ [USER-SERVICE] Onboarding flag set to TRUE for tenant of user: {}", userId));
     }
 }
