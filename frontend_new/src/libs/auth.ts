@@ -95,7 +95,7 @@ export const authOptions: NextAuthOptions = {
 
   // ** Please refer to https://next-auth.js.org/configuration/options#callbacks for more `callbacks` options
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         // When user signs in, user object maps to the return value of authorize callback
         const u = user as any
@@ -112,7 +112,8 @@ export const authOptions: NextAuthOptions = {
           token.userCapabilities = u.user.userCapabilities
           token.customerId = u.user.customerId
           token.activeCompanyId = u.user.activeCompanyId
-          token.roles = u.user.roles || [] // NEW: Pass the full roles array
+          token.roles = u.user.roles || []
+          token.onboardingCompleted = u.user.onboardingCompleted // NEW
         } else {
           token.id = u.id
           token.role = u.role
@@ -122,7 +123,17 @@ export const authOptions: NextAuthOptions = {
           token.userCapabilities = u.userCapabilities
           token.customerId = u.customerId
           token.activeCompanyId = u.activeCompanyId
-          token.roles = u.roles || [] // NEW: Pass the full roles array
+          token.roles = u.roles || []
+          token.onboardingCompleted = u.onboardingCompleted // NEW
+        }
+      }
+
+      // Handle session updates from client
+      if (trigger === "update" && session) {
+        if (session.user) {
+          token.onboardingCompleted = session.user.onboardingCompleted
+          token.activeCompanyId = session.user.activeCompanyId
+          token.customerId = session.user.customerId
         }
       }
 
@@ -141,7 +152,8 @@ export const authOptions: NextAuthOptions = {
           ; (session as any).user.userCapabilities = token.userCapabilities
           ; (session as any).user.customerId = token.customerId
           ; (session as any).user.activeCompanyId = token.activeCompanyId
-          ; (session as any).user.roles = token.roles // NEW: Pass the full roles array
+          ; (session as any).user.roles = token.roles
+          ; (session as any).user.onboardingCompleted = token.onboardingCompleted // NEW
       }
 
 

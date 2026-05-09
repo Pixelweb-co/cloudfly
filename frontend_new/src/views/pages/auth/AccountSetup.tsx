@@ -151,7 +151,13 @@ const AccountSetup = () => {
       // Update NextAuth session to reflect new user data (important for AuthSync)
       if (updateSession) {
         console.log('🔄 [WIZARD] Updating NextAuth session...')
-        await updateSession()
+        await updateSession({
+          user: {
+            onboardingCompleted: true,
+            activeCompanyId: response.data.user?.activeCompanyId,
+            customerId: response.data.user?.customerId
+          }
+        })
       }
 
       // Use hard redirect to ensure all layouts and guards (like OnboardingGuard) 

@@ -44,59 +44,76 @@ docker compose -f docker-compose-full-vps.yml up -d --build backend-api ai-agent
 *   **Caché:** Redis
 *   **Vectores:** Qdrant & PostgreSQL (pgvector)
 
-## 📊 Diagrama de Arquitectura
+## 📊 Diagrama de Arquitectura Integral
 
 ```mermaid
-graph TB
-    subgraph Clientes ["Capa de Cliente"]
-        Browser["🌐 Navegador Web (Next.js)"]
-        Mobile["📱 App Móvil (Expo/React Native)"]
-        WhatsApp["💬 WhatsApp (Usuario)"]
+graph TD
+    subgraph "External Access & Security"
+        Internet((Internet)) --> CF[Cloudflare / DNS]
+        CF --> Traefik[Traefik v3.1 Reverse Proxy]
+        Traefik -- "SSL/TLS (Let's Encrypt)" --- Auth[NextAuth.js]
     end
 
-    subgraph Gateway ["Puerta de Enlace (Traefik)"]
-        SSL["🔒 Traefik (Proxy & SSL)"]
+    subgraph "Frontend Layer"
+        Traefik --> FE_Prod[Next.js Dashboard - Prod]
+        Traefik --> FE_Dev[Next.js Dashboard - Dev]
     end
 
-    subgraph Services ["Capa de Microservicios"]
-        Backend["☕ Backend API (Java/Spring Boot)"]
-        Scheduler["📅 Scheduler Service (Calendar)"]
-        Socket["🔌 Chat Socket (Node.js)"]
-        AI["🤖 AI Agent (Python/OpenAI)"]
-        Vector["⚙️ AI Vector Worker"]
-        Notif["🔔 Notification Service"]
-        Evolution["📞 Evolution API (WhatsApp)"]
+    subgraph "Application Logic (Microservices)"
+        Traefik --> API[Backend API - Spring WebFlux]
+        Traefik --> Sched[Scheduler Service]
+        Traefik --> Socket[Chat Socket Service]
+        
+        API --> Notif[Notification Service]
+        API --> Lead[Lead Generator - Apify]
+        API --> Mkt[Marketing Worker]
+        API --> DIAN[DIAN Invoicing Service]
     end
 
-    subgraph Messaging ["Mensajería y Eventos"]
-        Kafka[("📨 Apache Kafka")]
+    subgraph "AI & Vector Engine"
+        API <--> AI_Agent[AI Agent - LLM Logic]
+        AI_Agent --> Qdrant[(Qdrant Vector DB)]
+        AI_Agent --> Worker[AI Vector Worker]
+        Worker --> Postgres[(PostgreSQL + pgvector)]
     end
 
-    subgraph Persistence ["Capa de Datos"]
-        MySQL[("🗄️ MySQL 8.0 (CRM/Orders)")]
-        Redis[("⚡ Redis (Cache/Sessions)")]
-        Qdrant[("🧠 Qdrant (Vector DB)")]
-        Postgres[("🐘 PostgreSQL (Vector Storage)")]
+    subgraph "Integrations & Automation"
+        Traefik --> Evo[Evolution API - WhatsApp]
+        Traefik --> n8n[n8n Workflows]
+        Evo <--> API
     end
 
-    %% Flujos de conexión
-    Browser & Mobile <--> SSL
-    SSL <--> Backend & Scheduler & Socket & Evolution
-    
-    %% Comunicación Interna
-    Backend & Scheduler & AI & Notif & Vector <--> Kafka
-    Socket <--> Redis & Kafka
-    
-    %% Persistencia
-    Backend & Scheduler & Notif <--> MySQL
-    Evolution <--> Redis
-    AI & Vector <--> Qdrant & Postgres & Backend
-    WhatsApp <--> Evolution
+    subgraph "Messaging & Data Backbone"
+        direction LR
+        Kafka{Kafka Message Bus}
+        Redis[(Redis Cache / Session)]
+        MySQL[(MySQL 8.0 - Master Tenant DB)]
+        
+        API & Notif & AI_Agent & Mkt <--> Kafka
+    end
 
-    style Kafka fill:#f96,stroke:#333,stroke-width:2px
-    style AI fill:#00ff00,stroke:#333,stroke-width:2px
-    style Backend fill:#6366F1,stroke:#333,stroke-width:2px
-    style SSL fill:#fff,stroke:#333,stroke-dasharray: 5 5
+    subgraph "Observability Stack (Observer)"
+        Traefik --> Grafana[Grafana Dashboards]
+        Grafana --> Prom[Prometheus Server]
+        
+        Prom --> cAdv[cAdvisor - Docker Stats]
+        Prom --> NodeExp[Node Exporter - Host VPS]
+        Prom --> K_Exp[Kafka Exporter]
+        Prom --> DB_Exp[DB Exporters - MySQL/PG/Redis]
+        Prom --> Actuator[Spring Actuator - JVM Metrics]
+    end
+
+    subgraph "Management & DevOps"
+        Traefik --> Portainer[Portainer - Container Mgmt]
+        Traefik --> PMA[phpMyAdmin]
+        Traefik --> Kafdrop[Kafdrop - Kafka UI]
+        Traefik --> RedisInsight[Redis Insight]
+    end
+
+    %% Key Relationships
+    API -- "Multi-Tenant Filter" --> MySQL
+    API -- "Event Driven" --> Kafka
+    Socket -- "Real-time" --> Redis
 ```
 
 ---
