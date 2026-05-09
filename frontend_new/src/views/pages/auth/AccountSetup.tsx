@@ -3,6 +3,7 @@
 // React Imports
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 // MUI Imports
 import Box from '@mui/material/Box'
@@ -74,6 +75,7 @@ const steps = [
 ]
 
 const AccountSetup = () => {
+  const { update: updateSession } = useSession()
   const [activeStep, setActiveStep] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
@@ -145,10 +147,19 @@ const AccountSetup = () => {
       }
       
       localStorage.removeItem('account_setup_step')
-      router.push('/home')
+      
+      // Update NextAuth session to reflect new user data (important for AuthSync)
+      if (updateSession) {
+        console.log('🔄 [WIZARD] Updating NextAuth session...')
+        await updateSession()
+      }
+
+      // Use hard redirect to ensure all layouts and guards (like OnboardingGuard) 
+      // are re-initialized with the new localStorage/session state.
+      window.location.href = '/home'
     } catch (error) {
       console.error('❌ [ACCOUNT-SETUP] Error finishing onboarding:', error)
-      router.push('/home') // Fallback redirect
+      window.location.href = '/home' // Fallback redirect
     }
   }
 
