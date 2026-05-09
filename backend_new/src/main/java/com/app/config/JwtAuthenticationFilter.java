@@ -35,10 +35,6 @@ public class JwtAuthenticationFilter implements WebFilter {
         log.info("🚀 [JWT-FILTER] Hitting path: {}", path);
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
-        // Skips auth paths
-        if (path.startsWith("/auth/") || path.equals("/login") || path.equals("/register")) {
-            return chain.filter(exchange);
-        }
 
         exchange.getRequest().getHeaders().forEach((name, values) -> {
             log.info("🔍 [HEADER] {}: {}", name, values);

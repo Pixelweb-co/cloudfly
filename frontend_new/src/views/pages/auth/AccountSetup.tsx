@@ -118,16 +118,18 @@ const AccountSetup = () => {
         return
       }
 
-      console.log('🏁 [WIZARD] Finalizing onboarding...')
+      console.log('🏁 [WIZARD] Finalizing onboarding. User:', user.id);
       const response = await axiosInstance.post('/auth/complete-onboarding', { userId: user.id })
       
+      console.log('📦 [WIZARD] Backend response received:', response.data.status, response.data.message);
+      
       if (response.data.status) {
-        console.log('✅ [WIZARD] Onboarding backend sync success.')
+        console.log('✅ [WIZARD] Onboarding backend sync success.');
         
         // ACTUALIZAR TOKEN Y USERDATA (Trae el nuevo customerId y onboardingCompleted: true)
         if (response.data.jwt) {
           localStorage.setItem('jwt', response.data.jwt)
-          console.log('🔑 [WIZARD] JWT Token refreshed.')
+          console.log('🔑 [WIZARD] JWT Token refreshed. New token iat:', JSON.parse(atob(response.data.jwt.split('.')[1])).iat);
         }
         
         if (response.data.user) {
@@ -156,12 +158,15 @@ const AccountSetup = () => {
     setIsTransitioning(true);
     setTimeout(() => setIsTransitioning(false), 1000); // 1s cooldown
 
+    console.log(`➡️ [WIZARD] handleNext called. Current Step: ${activeStep}, Steps Length: ${steps.length}`);
     if (activeStep === steps.length - 1) {
+      console.log('🎯 [WIZARD] Reached last step. Calling finishOnboarding...');
       await finishOnboarding()
       return
     }
 
     const nextStep = activeStep + 1
+    console.log(`📍 [WIZARD] Moving to next step: ${nextStep}`);
     setActiveStep(nextStep)
     localStorage.setItem('account_setup_step', nextStep.toString())
     window.scrollTo({ top: 0, behavior: 'smooth' })
