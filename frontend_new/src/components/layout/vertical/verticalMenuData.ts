@@ -102,7 +102,7 @@ export const verticalMenuData = [
             },
             {
                 label: 'Pedidos',
-                route: '/ventas/pedidos',
+                route: '/ventas/pedidos/list',
                 roles: ['MANAGER', 'ADMIN', 'USER']
             },
             {

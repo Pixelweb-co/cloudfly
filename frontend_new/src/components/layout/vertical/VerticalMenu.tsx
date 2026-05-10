@@ -240,11 +240,20 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
               label='Ventas'
               icon={<i className='tabler-shopping-cart' />}
             >
+              <MenuItem href='/ventas/categorias/list' icon={<i className='tabler-category' />}>
+                Categorías
+              </MenuItem>
               <MenuItem href='/ventas/productos/list' icon={<i className='tabler-package' />}>
                 Productos
               </MenuItem>
               <MenuItem href='/ventas/cotizaciones/list' icon={<i className='tabler-file-invoice' />}>
                 Cotizaciones
+              </MenuItem>
+              <MenuItem href='/ventas/pedidos/list' icon={<i className='tabler-clipboard-list' />}>
+                Pedidos
+              </MenuItem>
+              <MenuItem href='/ventas/facturas/list' icon={<i className='tabler-receipt' />}>
+                Facturas
               </MenuItem>
             </SubMenu>
 
