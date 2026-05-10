@@ -29,8 +29,8 @@ public class LeadController {
     @PostMapping("/save-to-crm")
     public Mono<LeadResponse> saveToCrm(@RequestBody LeadResponse request, 
                                         @org.springframework.web.bind.annotation.RequestHeader java.util.Map<String, String> headers) {
-        log.info("💾 [LEAD-CONTROLLER] Saving {} leads to CRM", 
-                 request.getLeads() != null ? request.getLeads().size() : 0);
-        return leadOrchestratorService.saveLeadsToCrm(request.getLeads(), headers);
+        log.info("💾 [LEAD-CONTROLLER] Saving {} leads to CRM with listId: {}", 
+                 request.getLeads() != null ? request.getLeads().size() : 0, request.getListId());
+        return leadOrchestratorService.saveLeadsToCrm(request.getLeads(), request.getListId(), headers);
     }
 }

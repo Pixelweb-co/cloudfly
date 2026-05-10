@@ -5,6 +5,7 @@ import com.app.dto.leads.LeadRequest;
 import com.app.dto.leads.LeadResponse;
 import com.app.persistence.entity.ContactEntity;
 import com.app.persistence.services.ContactService;
+import com.app.persistence.services.SendingListService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
@@ -26,12 +27,15 @@ public class LeadOrchestratorService {
 
     private final WebClient webClient;
     private final ContactService contactService;
+    private final SendingListService sendingListService;
 
     public LeadOrchestratorService(WebClient.Builder webClientBuilder, 
                                  ContactService contactService,
+                                 SendingListService sendingListService,
                                  @Value("${lead-generator.url:http://lead-generator:8000}") String leadGenUrl) {
         this.webClient = webClientBuilder.baseUrl(leadGenUrl).build();
         this.contactService = contactService;
+        this.sendingListService = sendingListService;
     }
 
     public Mono<LeadResponse> generateLeads(LeadRequest request) {
@@ -53,11 +57,11 @@ public class LeadOrchestratorService {
                 .onErrorResume(e -> Mono.error(new RuntimeException("Error orquestando la generación de leads: " + e.getMessage())));
     }
 
-    public Mono<LeadResponse> saveLeadsToCrm(List<LeadDTO> leads, Map<String, String> headers) {
+    public Mono<LeadResponse> saveLeadsToCrm(List<LeadDTO> leads, Long listId, Map<String, String> headers) {
         return getCurrentUserContext(headers)
                 .flatMap(ctx -> {
-                    log.info("💾 [LEAD-ORCHESTRATOR] Saving {} leads for Tenant: {}, Company: {}", 
-                             leads.size(), ctx.tenantId, ctx.companyId);
+                    log.info("💾 [LEAD-ORCHESTRATOR] Saving {} leads for Tenant: {}, Company: {} to List: {}", 
+                             leads.size(), ctx.tenantId, ctx.companyId, listId);
                     
                     return Flux.fromIterable(leads)
                             .flatMap(lead -> {
@@ -71,6 +75,13 @@ public class LeadOrchestratorService {
                                 }
                                 
                                 return contactService.create(entity, ctx.tenantId, ctx.companyId)
+                                        .flatMap(savedContact -> {
+                                            if (listId != null) {
+                                                return sendingListService.addContactToList(listId, savedContact.getId(), ctx.tenantId, ctx.companyId)
+                                                        .thenReturn(savedContact);
+                                            }
+                                            return Mono.just(savedContact);
+                                        })
                                         .onErrorResume(e -> {
                                             log.warn("⚠️ [LEAD-ORCHESTRATOR] Error saving individual lead {}: {}", 
                                                      lead.getName(), e.getMessage());

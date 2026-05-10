@@ -12,5 +12,6 @@ import java.util.List;
 @AllArgsConstructor
 public class LeadResponse {
     private String status;
+    private Long listId;
     private List<LeadDTO> leads;
 }
