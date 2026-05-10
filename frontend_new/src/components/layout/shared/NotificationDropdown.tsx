@@ -111,74 +111,78 @@ const NotificationDropdown = () => {
                   </Box>
                   <Divider sx={{ m: 0 }} />
                   
-                  {notifications.length === 0 ? (
-                    <Box sx={{ p: 6, textAlign: 'center' }}>
-                      <Typography variant='body2' color='text.secondary'>No hay notificaciones</Typography>
-                    </Box>
-                  ) : (
-                    notifications.map((notification) => (
-                      <Box key={notification.id}>
-                        <MenuItem 
-                          sx={{ 
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            alignItems: 'flex-start',
-                            py: 3,
-                            px: 4,
-                            gap: 1,
-                            backgroundColor: notification.status === 'UNREAD' ? 'action.hover' : 'transparent',
-                            '&:hover': { backgroundColor: 'action.selected' }
-                          }}
-                        >
-                          <Box sx={{ width: '100%' }}>
-                            <Typography variant='body2' sx={{ fontWeight: notification.status === 'UNREAD' ? 600 : 400, color: 'text.primary' }}>
-                              {notification.title}
-                            </Typography>
-                            <Typography variant='body2' sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 0.5 }}>
-                              {notification.description}
-                            </Typography>
-                            <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 0.5 }}>
-                              {new Date(notification.createdAt).toLocaleString()}
-                            </Typography>
-                          </Box>
-                          
-                          <Box sx={{ display: 'flex', gap: 4, mt: 1, width: '100%', justifyContent: 'flex-start' }}>
-                            {notification.status === 'UNREAD' && (
-                              <Typography 
-                                variant='caption' 
-                                sx={{ 
-                                  color: 'primary.main', 
-                                  cursor: 'pointer', 
-                                  fontWeight: 600,
-                                  textTransform: 'uppercase',
-                                  fontSize: '0.7rem',
-                                  '&:hover': { textDecoration: 'underline' }
-                                }}
-                                onClick={(e) => handleMarkAsReadAction(notification.id, e)}
-                              >
-                                Leído
-                              </Typography>
-                            )}
-                            <Typography 
-                              variant='caption' 
-                              sx={{ 
-                                color: 'error.main', 
-                                cursor: 'pointer', 
-                                fontWeight: 600,
-                                textTransform: 'uppercase',
-                                fontSize: '0.7rem',
-                                '&:hover': { textDecoration: 'underline' }
-                              }}
-                              onClick={(e) => handleDeleteAction(notification.id, e)}
-                            >
-                              Eliminar
-                            </Typography>
-                          </Box>
-                        </MenuItem>
-                        <Divider sx={{ m: 0 }} />
+                  <Box sx={{ maxHeight: '50vh', overflowY: 'auto', '&::-webkit-scrollbar': { width: '5px' }, '&::-webkit-scrollbar-thumb': { backgroundColor: 'action.hover', borderRadius: '10px' } }}>
+                    {notifications.length === 0 ? (
+                      <Box sx={{ p: 6, textAlign: 'center' }}>
+                        <Typography variant='body2' color='text.secondary'>No hay notificaciones</Typography>
                       </Box>
-                    ))
-                  )}
+                    ) : (
+                      [...notifications]
+                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                        .map((notification) => (
+                          <Box key={notification.id}>
+                            <MenuItem 
+                              sx={{ 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                alignItems: 'flex-start',
+                                py: 3,
+                                px: 4,
+                                gap: 1,
+                                backgroundColor: notification.status === 'UNREAD' ? 'action.hover' : 'transparent',
+                                '&:hover': { backgroundColor: 'action.selected' }
+                              }}
+                            >
+                              <Box sx={{ width: '100%' }}>
+                                <Typography variant='body2' sx={{ fontWeight: notification.status === 'UNREAD' ? 600 : 400, color: 'text.primary' }}>
+                                  {notification.title}
+                                </Typography>
+                                <Typography variant='body2' sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 0.5 }}>
+                                  {notification.description}
+                                </Typography>
+                                <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 0.5 }}>
+                                  {new Date(notification.createdAt).toLocaleString()}
+                                </Typography>
+                              </Box>
+                              
+                              <Box sx={{ display: 'flex', gap: 4, mt: 1, width: '100%', justifyContent: 'flex-start' }}>
+                                {notification.status === 'UNREAD' && (
+                                  <Typography 
+                                    variant='caption' 
+                                    sx={{ 
+                                      color: 'primary.main', 
+                                      cursor: 'pointer', 
+                                      fontWeight: 600,
+                                      textTransform: 'uppercase',
+                                      fontSize: '0.7rem',
+                                      '&:hover': { textDecoration: 'underline' }
+                                    }}
+                                    onClick={(e) => handleMarkAsReadAction(notification.id, e)}
+                                  >
+                                    Leído
+                                  </Typography>
+                                )}
+                                <Typography 
+                                  variant='caption' 
+                                  sx={{ 
+                                    color: 'error.main', 
+                                    cursor: 'pointer', 
+                                    fontWeight: 600,
+                                    textTransform: 'uppercase',
+                                    fontSize: '0.7rem',
+                                    '&:hover': { textDecoration: 'underline' }
+                                  }}
+                                  onClick={(e) => handleDeleteAction(notification.id, e)}
+                                >
+                                  Eliminar
+                                </Typography>
+                              </Box>
+                            </MenuItem>
+                            <Divider sx={{ m: 0 }} />
+                          </Box>
+                        ))
+                    )}
+                  </Box>
 
                   <MenuItem 
                     sx={{ 
