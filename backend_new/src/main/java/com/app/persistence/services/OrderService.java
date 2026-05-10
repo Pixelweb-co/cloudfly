@@ -9,8 +9,10 @@ import com.app.persistence.repository.ContactRepository;
 import com.app.persistence.repository.ProductRepository;
 import com.app.persistence.repository.OrderItemRepository;
 import com.app.persistence.repository.OrderRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Flux;
@@ -31,6 +33,8 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
     private final ProductRepository productRepository;
     private final ContactRepository contactRepository;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ObjectMapper objectMapper;
 
     public Flux<OrderResponseDTO> listByTenant(Long tenantId, Long companyId) {
         Flux<OrderEntity> orders;
@@ -98,7 +102,11 @@ public class OrderService {
                     return orderItemRepository.saveAll(items)
                             .collectList()
                             .then(Mono.just(savedOrder))
-                            .flatMap(this::enrichWithItemsAndCustomer);
+                            .flatMap(this::enrichWithItemsAndCustomer)
+                            .doOnSuccess(dto -> sendWebNotification(
+                                dto.getTenantId(), null,
+                                "📦 Nuevo Pedido Creado",
+                                "Pedido " + dto.getOrderNumber() + " de " + dto.getCustomerName() + " por $" + dto.getTotal()));
                 });
     }
 
@@ -139,7 +147,11 @@ public class OrderService {
                             .collectList()
                             .flatMap(newItems -> orderItemRepository.saveAll(newItems).collectList())
                             .then(orderRepository.save(existingOrder))
-                            .flatMap(this::enrichWithItemsAndCustomer);
+                            .flatMap(this::enrichWithItemsAndCustomer)
+                            .doOnSuccess(dto -> sendWebNotification(
+                                dto.getTenantId(), null,
+                                "✏️ Pedido Actualizado",
+                                "Pedido " + dto.getOrderNumber() + " actualizado. Estado: " + dto.getStatus()));
                 });
     }
 
@@ -147,6 +159,22 @@ public class OrderService {
     public Mono<Void> deleteOrder(Long id) {
         return orderItemRepository.deleteByOrderId(id)
                 .then(orderRepository.deleteById(id));
+    }
+
+    private void sendWebNotification(Long tenantId, Long userId, String title, String description) {
+        try {
+            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("tenantId", tenantId);
+            payload.put("userId", userId);
+            payload.put("title", title);
+            payload.put("description", description);
+            payload.put("type", "order");
+            String json = objectMapper.writeValueAsString(payload);
+            kafkaTemplate.send("webnotifications", json);
+            log.info("🔔 Web notification sent for tenant {}: {}", tenantId, title);
+        } catch (Exception e) {
+            log.error("❌ Error sending web notification for order: {}", e.getMessage());
+        }
     }
 
     private Mono<OrderResponseDTO> enrichWithItemsAndCustomer(OrderEntity order) {
