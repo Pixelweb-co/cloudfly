@@ -51,7 +51,12 @@ public class UserEntity {
     @Column("company_id")
     private Long companyId;
 
+    @Column("contact_id")
+    private Long contactId;
+
     // Explicit getters/setters to bypass Lombok issues on VPS
+    public Long getContactId() { return contactId; }
+    public void setContactId(Long contactId) { this.contactId = contactId; }
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getNombres() { return nombres; }
