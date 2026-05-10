@@ -90,6 +90,9 @@ public class KafkaConsumerListener {
             payload.put("description", description);
             payload.put("type", type);
 
+            LOGGER.info("Sending Web Notification to URL: " + notifyUrl);
+            LOGGER.info("Using Secret: " + secretKey);
+
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
             restTemplate.postForEntity(notifyUrl, request, String.class);
         } catch (Exception e) {
