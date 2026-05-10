@@ -142,6 +142,7 @@ services:
       - EVOLUTION_API_URL=http://evolution-api:8080
       - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
       - SOCKET_SERVICE_URL=http://chat_socket:3001
+      - N8N_SECRET_KEY=cambia_esta_llave_para_n8n
     networks:
       - kafka-net
       - app-net
