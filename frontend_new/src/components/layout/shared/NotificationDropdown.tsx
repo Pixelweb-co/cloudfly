@@ -1,8 +1,12 @@
 'use client'
 
 // React Imports
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { MouseEvent } from 'react'
+
+// Redux
+import { useAppDispatch, useAppSelector } from '@/redux/hooks'
+import { fetchNotifications, markAsRead, deleteNotification } from '@/redux/slices/notificationSlice'
 
 // MUI Imports
 import { styled } from '@mui/material/styles'
@@ -22,27 +26,23 @@ import Button from '@mui/material/Button'
 // Hook Imports
 import { useSettings } from '@core/hooks/useSettings'
 
-interface NotificationItem {
-  id: number
-  title: string
-  time: string
-  read: boolean
-}
-
 const NotificationDropdown = () => {
   // States
   const [open, setOpen] = useState(false)
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    { id: 1, title: 'Nuevo pedido recibido', time: 'Hace 5 minutos', read: false },
-    { id: 2, title: 'Nueva cotización generada', time: 'Hace 25 minutos', read: false },
-    { id: 3, title: 'Campaña de marketing finalizada', time: 'Hace 1 hora', read: false }
-  ])
+  
+  // Redux
+  const dispatch = useAppDispatch()
+  const { items: notifications, unreadCount } = useAppSelector(state => state.notifications)
 
   // Refs
   const anchorRef = useRef<HTMLButtonElement>(null)
 
   // Hooks
   const { settings } = useSettings()
+
+  useEffect(() => {
+    dispatch(fetchNotifications())
+  }, [dispatch])
 
   const handleDropdownOpen = () => {
     setOpen(!open)
@@ -56,17 +56,16 @@ const NotificationDropdown = () => {
     setOpen(false)
   }
 
-  const handleMarkAsRead = (id: number, e: React.MouseEvent) => {
+  const handleMarkAsReadAction = (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+    dispatch(markAsRead(id))
   }
 
-  const handleDelete = (id: number, e: React.MouseEvent) => {
+  const handleDeleteAction = (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    setNotifications(prev => prev.filter(n => n.id !== id))
+    dispatch(deleteNotification(id))
   }
 
-  const unreadCount = notifications.filter(n => !n.read).length
 
   return (
     <>
@@ -127,30 +126,35 @@ const NotificationDropdown = () => {
                             py: 3,
                             px: 4,
                             gap: 1,
-                            backgroundColor: notification.read ? 'transparent' : 'action.hover',
+                            backgroundColor: notification.status === 'UNREAD' ? 'action.hover' : 'transparent',
                             '&:hover': { backgroundColor: 'action.selected' }
                           }}
                         >
                           <Box sx={{ width: '100%' }}>
-                            <Typography variant='body2' sx={{ fontWeight: notification.read ? 400 : 600, color: 'text.primary' }}>
+                            <Typography variant='body2' sx={{ fontWeight: notification.status === 'UNREAD' ? 600 : 400, color: 'text.primary' }}>
                               {notification.title}
                             </Typography>
-                            <Typography variant='caption' color='text.secondary'>
-                              {notification.time}
+                            <Typography variant='body2' sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 0.5 }}>
+                              {notification.description}
+                            </Typography>
+                            <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 0.5 }}>
+                              {new Date(notification.createdAt).toLocaleString()}
                             </Typography>
                           </Box>
                           
-                          <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-                            {!notification.read && (
+                          <Box sx={{ display: 'flex', gap: 4, mt: 1, width: '100%', justifyContent: 'flex-start' }}>
+                            {notification.status === 'UNREAD' && (
                               <Typography 
                                 variant='caption' 
                                 sx={{ 
                                   color: 'primary.main', 
                                   cursor: 'pointer', 
                                   fontWeight: 600,
+                                  textTransform: 'uppercase',
+                                  fontSize: '0.7rem',
                                   '&:hover': { textDecoration: 'underline' }
                                 }}
-                                onClick={(e) => handleMarkAsRead(notification.id, e)}
+                                onClick={(e) => handleMarkAsReadAction(notification.id, e)}
                               >
                                 Leído
                               </Typography>
@@ -161,9 +165,11 @@ const NotificationDropdown = () => {
                                 color: 'error.main', 
                                 cursor: 'pointer', 
                                 fontWeight: 600,
+                                textTransform: 'uppercase',
+                                fontSize: '0.7rem',
                                 '&:hover': { textDecoration: 'underline' }
                               }}
-                              onClick={(e) => handleDelete(notification.id, e)}
+                              onClick={(e) => handleDeleteAction(notification.id, e)}
                             >
                               Eliminar
                             </Typography>

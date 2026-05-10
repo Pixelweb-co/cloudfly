@@ -9,6 +9,11 @@ import { io } from 'socket.io-client'
 import type { Message } from '@/types/apps/chatTypes'
 import { userMethods } from '@/utils/userMethods'
 
+// Redux
+import { useDispatch } from 'react-redux'
+import { fetchNotifications } from '@/redux/slices/notificationSlice'
+import type { AppDispatch } from '@/redux/store'
+
 interface SocketContextType {
     socket: Socket | null
     isConnected: boolean
@@ -36,6 +41,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     const [socket, setSocket] = useState<Socket | null>(null)
     const [isConnected, setIsConnected] = useState(false)
     const [messages, setMessages] = useState<Message[]>([])
+    const dispatch = useDispatch<AppDispatch>()
 
     useEffect(() => {
         const token = localStorage.getItem('jwt')
@@ -79,14 +85,18 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
                 if (exists) {
                     console.log('⚠️ Mensaje duplicado, ignorando')
-                    
-return prev
+                    return prev
                 }
 
                 console.log('✅ Agregando mensaje nuevo a la lista')
-                
-return [...prev, message]
+                return [...prev, message]
             })
+        })
+
+        // NEW: Real-time Web Notifications
+        newSocket.on('new-web-notification', (notification: any) => {
+            console.log('🔔 Nueva notificación web recibida:', notification)
+            dispatch(fetchNotifications())
         })
 
         setSocket(newSocket)

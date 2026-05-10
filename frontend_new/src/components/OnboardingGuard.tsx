@@ -11,7 +11,8 @@ const OnboardingGuard = () => {
   useEffect(() => {
     const checkOnboarding = () => {
       const user = userMethods.getUserLogin()
-      
+      console.log('useronboarding ----------------> :', user)
+
       if (user) {
         const roles = user.roles || []
         const isAdmin = roles.some((r: any) => r.name === 'ADMIN' || r.role === 'ADMIN')
