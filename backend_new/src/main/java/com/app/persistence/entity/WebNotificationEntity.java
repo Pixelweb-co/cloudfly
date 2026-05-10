@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 @Table("web_notifications")
 public class WebNotificationEntity {
     @Id
+    @Column("uuid")
     private String id;
 
     @Column("tenant_id")
