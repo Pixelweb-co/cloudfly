@@ -108,8 +108,22 @@ public class SchedulerEngine {
             notification.put("companyId", event.getCompanyId());
             notification.put("eventId", event.getId());
             
+            // Generate basic title/desc if missing, useful for web notifications
+            if (!notification.containsKey("title")) {
+                notification.put("title", event.getTitle());
+            }
+            if (!notification.containsKey("description")) {
+                notification.put("description", event.getDescription());
+            }
+            notification.put("type", "web"); // fallback type
+            
             String notifyVia = (String) notification.getOrDefault("notifyVia", "email");
-            String topic = "whatsapp".equalsIgnoreCase(notifyVia) ? "whatsapp-notifications" : "email-notifications";
+            String topic = "email-notifications";
+            if ("whatsapp".equalsIgnoreCase(notifyVia)) {
+                topic = "whatsapp-notifications";
+            } else if ("web".equalsIgnoreCase(notifyVia)) {
+                topic = "webnotifications";
+            }
             
             String toKey = "system";
             Object toObj = notification.get("to");
