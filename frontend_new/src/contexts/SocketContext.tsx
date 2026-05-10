@@ -13,6 +13,7 @@ import { userMethods } from '@/utils/userMethods'
 import { useDispatch } from 'react-redux'
 import { fetchNotifications } from '@/redux/slices/notificationSlice'
 import type { AppDispatch } from '@/redux/store'
+import { toast } from 'react-hot-toast'
 
 interface SocketContextType {
     socket: Socket | null
@@ -96,6 +97,28 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         // NEW: Real-time Web Notifications
         newSocket.on('new-web-notification', (notification: any) => {
             console.log('🔔 Nueva notificación web recibida:', notification)
+            
+            // Mostrar Toast
+            toast(
+              (t) => (
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <b style={{ fontSize: '0.9rem' }}>{notification.title}</b>
+                  <span style={{ fontSize: '0.8rem', color: '#666' }}>{notification.description}</span>
+                </div>
+              ),
+              {
+                duration: 5000,
+                icon: '🔔',
+                style: {
+                  borderRadius: '10px',
+                  background: '#fff',
+                  color: '#333',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  border: '1px solid #eee'
+                },
+              }
+            );
+
             dispatch(fetchNotifications())
         })
 

@@ -14,6 +14,7 @@ import { PermissionProvider } from '@/contexts/PermissionContext'
 // Redux Imports
 import { Provider } from 'react-redux'
 import { store } from '@/redux/store'
+import { Toaster } from 'react-hot-toast'
 
 type Props = ChildrenType & {
   direction: Direction
@@ -34,6 +35,7 @@ const Providers = (props: Props) => {
             <SettingsProvider settingsCookie={settingsCookie} mode={mode}>
               <ThemeProvider direction={direction} systemMode={systemMode ?? 'light'}>
                 {children}
+                <Toaster position='bottom-right' reverseOrder={false} />
               </ThemeProvider>
             </SettingsProvider>
           </PermissionProvider>
