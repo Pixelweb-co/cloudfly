@@ -134,4 +134,47 @@ router.post('/message-status', validateN8nSecret, async (req, res) => {
     }
 });
 
+/**
+ * POST /api/notify/web-notification
+ * Endpoint llamado por notification-service para emitir notificacion web
+ */
+router.post('/web-notification', validateN8nSecret, async (req, res) => {
+    try {
+        const { uuid, tenantId, userId, title, description, type } = req.body;
+
+        if (!uuid) {
+            return res.status(400).json({ error: 'Missing uuid' });
+        }
+
+        const io = req.app.get('io');
+        
+        // Emitir a una room del tenant o del user
+        let targetRoom = '';
+        if (userId) {
+            targetRoom = `tenant_${tenantId}_user_${userId}`;
+        } else if (tenantId) {
+            targetRoom = `tenant_${tenantId}`;
+        } else {
+            targetRoom = `global_notifications`; // Fallback global
+        }
+
+        const notificationPayload = {
+            id: uuid,
+            title,
+            description,
+            time: new Date().toISOString(),
+            read: false,
+            type: type || 'web'
+        };
+
+        io.to(targetRoom).emit('new-web-notification', notificationPayload);
+        logger.info(`Web notification ${uuid} broadcasted to room: ${targetRoom}`);
+
+        res.status(200).json({ success: true, room: targetRoom });
+    } catch (error) {
+        logger.error(`Error processing web notification: ${error.message}`);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 module.exports = router;
