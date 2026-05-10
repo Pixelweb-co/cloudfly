@@ -118,12 +118,9 @@ public class SchedulerEngine {
             notification.put("type", "web"); // fallback type
             
             String notifyVia = (String) notification.getOrDefault("notifyVia", "email");
-            String topic = "email-notifications";
-            if ("whatsapp".equalsIgnoreCase(notifyVia)) {
-                topic = "whatsapp-notifications";
-            } else if ("web".equalsIgnoreCase(notifyVia)) {
-                topic = "webnotifications";
-            }
+            final String topic = "whatsapp".equalsIgnoreCase(notifyVia) ? "whatsapp-notifications" 
+                               : "web".equalsIgnoreCase(notifyVia) ? "webnotifications" 
+                               : "email-notifications";
             
             String toKey = "system";
             Object toObj = notification.get("to");
