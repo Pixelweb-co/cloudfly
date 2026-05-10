@@ -49,11 +49,51 @@ public class KafkaConsumerListener {
             
             if ("whatsapp".equalsIgnoreCase(notification.getNotifyVia()) || "whatsapp".equalsIgnoreCase(notification.getType())) {
                 sendWhatsAppNotification(notification);
+            } else if ("web".equalsIgnoreCase(notification.getNotifyVia())) {
+                saveWebNotification(notification);
             } else {
                 emailService.sendEmail(notification);
             }
         } catch (Exception e) {
             LOGGER.error("Error while processing or sending notification: ", e);
+        }
+    }
+
+    private void saveWebNotification(NotificationMessage notification) {
+        try {
+            String uuid = java.util.UUID.randomUUID().toString();
+            String sql = "INSERT INTO web_notifications (uuid, tenant_id, user_id, title, description, status, created_at) VALUES (?, ?, ?, ?, ?, 'UNREAD', NOW())";
+            jdbcTemplate.update(sql, uuid, notification.getTenantId(), notification.getUserId(), notification.getSubject(), notification.getBody());
+            
+            // Push to socket service
+            pushToSocketService(uuid, notification.getTenantId(), notification.getUserId(), notification.getSubject(), notification.getBody(), notification.getType());
+        } catch (Exception e) {
+            LOGGER.error("Error saving web notification from standard topic: ", e);
+        }
+    }
+
+    private void pushToSocketService(String uuid, Long tenantId, Long userId, String title, String description, String type) {
+        try {
+            String socketUrl = System.getenv().getOrDefault("SOCKET_SERVICE_URL", "http://chat-socket-service:3001");
+            String notifyUrl = socketUrl + "/api/notify/web-notification";
+            String secretKey = System.getenv().getOrDefault("N8N_SECRET_KEY", "b4c1d848-1111-4770-b7dc-8208a00fc246");
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("x-api-secret", secretKey);
+            
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("uuid", uuid);
+            payload.put("tenantId", tenantId);
+            payload.put("userId", userId);
+            payload.put("title", title);
+            payload.put("description", description);
+            payload.put("type", type);
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
+            restTemplate.postForEntity(notifyUrl, request, String.class);
+        } catch (Exception e) {
+            LOGGER.error("Error pushing to socket service: ", e);
         }
     }
 
@@ -374,35 +414,12 @@ public class KafkaConsumerListener {
             String title = (String) data.get("title");
             String description = (String) data.get("description");
 
-            String sql = "INSERT INTO web_notifications (uuid, tenant_id, user_id, title, description, status) VALUES (?, ?, ?, ?, ?, 'UNREAD')";
+            String sql = "INSERT INTO web_notifications (uuid, tenant_id, user_id, title, description, status, created_at) VALUES (?, ?, ?, ?, ?, 'UNREAD', NOW())";
             jdbcTemplate.update(sql, uuid, tenantId, userId, title, description);
             LOGGER.info("Web notification saved to DB with UUID: " + uuid);
 
             // Now send to chat-socket-service
-            String socketUrl = System.getenv().getOrDefault("SOCKET_SERVICE_URL", "http://chat-socket-service:3001");
-            String notifyUrl = socketUrl + "/api/notify/web-notification";
-            String secretKey = System.getenv().getOrDefault("N8N_SECRET_KEY", "b4c1d848-1111-4770-b7dc-8208a00fc246"); // Standard dev secret if not found
-            
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("x-api-secret", secretKey);
-            
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("uuid", uuid);
-            payload.put("tenantId", tenantId);
-            payload.put("userId", userId);
-            payload.put("title", title);
-            payload.put("description", description);
-            payload.put("type", data.get("type"));
-
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(notifyUrl, request, String.class);
-            
-            if (response.getStatusCode().is2xxSuccessful()) {
-                LOGGER.info("Successfully pushed web notification to socket service.");
-            } else {
-                LOGGER.warn("Failed to push web notification to socket service: " + response.getStatusCode());
-            }
+            pushToSocketService(uuid, tenantId, userId, title, description, (String) data.get("type"));
 
         } catch (Exception e) {
             LOGGER.error("Error consuming web notification message: ", e);
