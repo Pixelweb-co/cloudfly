@@ -16,6 +16,7 @@ public class NotificationMessage {
     private String username;
     private Long tenantId;
     private Long companyId;
+    private Long userId;
 
     // Campos para adjuntos PDF
     private String pdfAttachment; // PDF en Base64
@@ -25,6 +26,13 @@ public class NotificationMessage {
     private Map<String, Object> templateData;
 
     // Getters y setters
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
     public String getTo() {
         return to;
     }
