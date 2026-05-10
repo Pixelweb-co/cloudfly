@@ -16,10 +16,7 @@ conn.on('ready', () => {
   console.log('✅ SSH Client Ready');
   
   const commands = [
-    'cd /apps/cloudfly',
-    'git pull origin main',
-    'docker exec -i mysql mysql -u root -pwidowmaker cloud_master < /apps/cloudfly/ai-agent/chatbots.sql',
-    'docker compose -f docker-compose-full-vps.yml up -d --build backend-api frontend-react'
+    'cd /apps/cloudfly && git pull origin main && docker exec -i mysql mysql -u root -pwidowmaker cloud_master < /apps/cloudfly/fix_menu_ventas.sql && docker exec -i mysql mysql -u root -pwidowmaker cloud_master < /apps/cloudfly/ai-agent/chatbots.sql && docker compose -f docker-compose-full-vps.yml up -d --build backend-api frontend-react'
   ];
 
   const runCommand = (cmd) => {
