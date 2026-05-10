@@ -20,7 +20,7 @@ import java.util.List;
 
 @Configuration
 public class KafkaConsumerListener {
-    
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -46,8 +46,9 @@ public class KafkaConsumerListener {
 
         try {
             NotificationMessage notification = objectMapper.readValue(message, NotificationMessage.class);
-            
-            if ("whatsapp".equalsIgnoreCase(notification.getNotifyVia()) || "whatsapp".equalsIgnoreCase(notification.getType())) {
+
+            if ("whatsapp".equalsIgnoreCase(notification.getNotifyVia())
+                    || "whatsapp".equalsIgnoreCase(notification.getType())) {
                 sendWhatsAppNotification(notification);
             } else if ("web".equalsIgnoreCase(notification.getNotifyVia())) {
                 saveWebNotification(notification);
@@ -63,25 +64,28 @@ public class KafkaConsumerListener {
         try {
             String uuid = java.util.UUID.randomUUID().toString();
             String sql = "INSERT INTO web_notifications (uuid, tenant_id, user_id, title, description, status, created_at) VALUES (?, ?, ?, ?, ?, 'UNREAD', NOW())";
-            jdbcTemplate.update(sql, uuid, notification.getTenantId(), notification.getUserId(), notification.getSubject(), notification.getBody());
-            
+            jdbcTemplate.update(sql, uuid, notification.getTenantId(), notification.getUserId(),
+                    notification.getSubject(), notification.getBody());
+
             // Push to socket service
-            pushToSocketService(uuid, notification.getTenantId(), notification.getUserId(), notification.getSubject(), notification.getBody(), notification.getType());
+            pushToSocketService(uuid, notification.getTenantId(), notification.getUserId(), notification.getSubject(),
+                    notification.getBody(), notification.getType());
         } catch (Exception e) {
             LOGGER.error("Error saving web notification from standard topic: ", e);
         }
     }
 
-    private void pushToSocketService(String uuid, Long tenantId, Long userId, String title, String description, String type) {
+    private void pushToSocketService(String uuid, Long tenantId, Long userId, String title, String description,
+            String type) {
         try {
             String socketUrl = System.getenv().getOrDefault("SOCKET_SERVICE_URL", "http://chat-socket-service:3001");
             String notifyUrl = socketUrl + "/api/notify/web-notification";
             String secretKey = System.getenv().getOrDefault("N8N_SECRET_KEY", "b4c1d848-1111-4770-b7dc-8208a00fc246");
-            
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("x-api-secret", secretKey);
-            
+
             Map<String, Object> payload = new HashMap<>();
             payload.put("uuid", uuid);
             payload.put("tenantId", tenantId);
@@ -103,7 +107,7 @@ public class KafkaConsumerListener {
     private void sendWhatsAppNotification(NotificationMessage notification) {
         String phonesStr = notification.getPhones();
         String targetStr = (phonesStr != null && !phonesStr.isEmpty()) ? phonesStr : notification.getTo();
-        
+
         if (targetStr != null && targetStr.contains(",")) {
             String[] recipients = targetStr.split(",");
             for (String recipient : recipients) {
@@ -125,10 +129,10 @@ public class KafkaConsumerListener {
 
         String instance = findInstanceFor(notification.getTenantId(), notification.getCompanyId());
         LOGGER.info("Sending WhatsApp notification to {} using instance: {}", to, instance);
-        
+
         String formattedPhone = formatPhoneNumber(to);
         boolean sent = sendWhatsAppTextWithInstance(formattedPhone, notification.getBody(), instance, evolutionApiKey);
-        
+
         if (sent) {
             LOGGER.info("WhatsApp notification sent successfully to " + formattedPhone);
         } else {
@@ -137,19 +141,20 @@ public class KafkaConsumerListener {
     }
 
     private String findInstanceFor(Long tenantId, Long companyId) {
-        if (tenantId == null || companyId == null) return instanceName;
-        
+        if (tenantId == null || companyId == null)
+            return instanceName;
+
         try {
             String sql = "SELECT instance_name FROM channels WHERE tenant_id = ? AND company_id = ? AND platform = 'WHATSAPP' AND instance_name IS NOT NULL LIMIT 1";
             List<String> results = jdbcTemplate.queryForList(sql, String.class, tenantId, companyId);
-            
+
             if (!results.isEmpty() && results.get(0) != null) {
                 return results.get(0);
             }
         } catch (Exception e) {
             LOGGER.error("Error looking up instance for tenant {} company {}: {}", tenantId, companyId, e.getMessage());
         }
-        
+
         return instanceName;
     }
 
@@ -194,44 +199,49 @@ public class KafkaConsumerListener {
         LOGGER.info("Received message from welcome-notifications topic: " + messageJson);
         try {
             WelcomeNotificationMessage message = objectMapper.readValue(messageJson, WelcomeNotificationMessage.class);
-            LOGGER.info("Processing welcome notification for: " + message.getCustomerName() + " to phone: " + message.getPhoneNumber());
+            LOGGER.info("Processing welcome notification for: " + message.getCustomerName() + " to phone: "
+                    + message.getPhoneNumber());
 
             String formattedPhone = formatPhoneNumber(message.getPhoneNumber());
             LOGGER.info("Formatted phone number: " + formattedPhone);
 
             String welcomeCaption = String.format(
-                "🚀 *¡Bienvenido a CloudFly!* 🚀\n\n" +
-                "Hola %s,\n\n" +
-                "Es un gusto saludarte. Hemos completado el flujo de configuración de tu cuenta exitosamente.\n\n" +
-                "📝 *Detalles del Registro:*\n" +
-                "🏢 *Empresa:* %s\n" +
-                "👤 *Contacto:* %s\n" +
-                "📧 *Email:* %s\n" +
-                "💼 *Tipo de Negocio:* %s\n\n" +
-                "¡Estamos emocionados de acompañarte en el crecimiento de tu negocio!\n\n" +
-                "Si necesitas ayuda, nuestro equipo de soporte está listo para asistirte.\n\n" +
-                "_Mensaje enviado automáticamente_",
-                message.getContactName(),
-                message.getCustomerName(),
-                message.getContactName(),
-                message.getEmail(),
-                message.getBusinessType());
+                    "🚀 *¡Bienvenido a CloudFly!* 🚀\n\n" +
+                            "Hola %s,\n\n" +
+                            "Es un gusto saludarte. Hemos completado el flujo de configuración de tu cuenta exitosamente.\n\n"
+                            +
+                            "📝 *Detalles del Registro:*\n" +
+                            "🏢 *Empresa:* %s\n" +
+                            "👤 *Contacto:* %s\n" +
+                            "📧 *Email:* %s\n" +
+                            "💼 *Tipo de Negocio:* %s\n\n" +
+                            "¡Estamos emocionados de acompañarte en el crecimiento de tu negocio!\n\n" +
+                            "Si necesitas ayuda, nuestro equipo de soporte está listo para asistirte.\n\n" +
+                            "_Mensaje enviado automáticamente_",
+                    message.getContactName(),
+                    message.getCustomerName(),
+                    message.getContactName(),
+                    message.getEmail(),
+                    message.getBusinessType());
 
             // Usamos la instancia del mensaje o el fallback por defecto
-            String targetInstance = (message.getInstanceName() != null && !message.getInstanceName().isEmpty()) 
-                                    ? message.getInstanceName() : instanceName;
-            
+            String targetInstance = (message.getInstanceName() != null && !message.getInstanceName().isEmpty())
+                    ? message.getInstanceName()
+                    : instanceName;
+
             // La instancia debe haber sido creada manualmente por el usuario
             // No intentamos asegurar/crear aquí para cumplir con el flujo manual
 
-            boolean sent = sendWhatsAppTextWithInstance(formattedPhone, welcomeCaption, targetInstance, evolutionApiKey);
+            boolean sent = sendWhatsAppTextWithInstance(formattedPhone, welcomeCaption, targetInstance,
+                    evolutionApiKey);
 
             if (sent)
                 LOGGER.info("Welcome WhatsApp successfully sent to " + formattedPhone + " via " + targetInstance);
             else {
-                LOGGER.warn("Failed to send Welcome WhatsApp to " + formattedPhone + " via " + targetInstance + ". Trying fallback instance: " + instanceName);
+                LOGGER.warn("Failed to send Welcome WhatsApp to " + formattedPhone + " via " + targetInstance
+                        + ". Trying fallback instance: " + instanceName);
                 if (!targetInstance.equals(instanceName)) {
-                     sendWhatsAppTextWithInstance(formattedPhone, welcomeCaption, instanceName, evolutionApiKey);
+                    sendWhatsAppTextWithInstance(formattedPhone, welcomeCaption, instanceName, evolutionApiKey);
                 }
             }
 
@@ -282,7 +292,8 @@ public class KafkaConsumerListener {
         }
     }
 
-    private boolean sendWhatsAppTextWithInstance(String phoneNumber, String message, String specificInstance, String apiKey) {
+    private boolean sendWhatsAppTextWithInstance(String phoneNumber, String message, String specificInstance,
+            String apiKey) {
         try {
             String url = evolutionApiUrl + "/message/sendText/" + specificInstance;
             LOGGER.info("Post to Evolution API URL: " + url);
@@ -292,7 +303,8 @@ public class KafkaConsumerListener {
             headers.set("apikey", apiKey);
 
             // Evolution API v2 format: { number, text }
-            // Based on https://doc.evolution-api.com/v2/api-reference/message-controller/send-text
+            // Based on
+            // https://doc.evolution-api.com/v2/api-reference/message-controller/send-text
             Map<String, Object> body = new HashMap<>();
             body.put("number", phoneNumber);
             body.put("text", message);
@@ -307,10 +319,9 @@ public class KafkaConsumerListener {
         } catch (Exception e) {
             String errorMessage = e.getMessage();
             if (e instanceof org.springframework.web.client.HttpStatusCodeException) {
-                org.springframework.web.client.HttpStatusCodeException httpEx = 
-                    (org.springframework.web.client.HttpStatusCodeException) e;
-                errorMessage = "Status: " + httpEx.getStatusCode() + 
-                               " Body: " + httpEx.getResponseBodyAsString();
+                org.springframework.web.client.HttpStatusCodeException httpEx = (org.springframework.web.client.HttpStatusCodeException) e;
+                errorMessage = "Status: " + httpEx.getStatusCode() +
+                        " Body: " + httpEx.getResponseBodyAsString();
             }
             LOGGER.error("Error sending text WhatsApp with instance " + specificInstance + ": " + errorMessage);
             return false;
@@ -410,7 +421,13 @@ public class KafkaConsumerListener {
     public void consumeWebNotification(String messageJson) {
         LOGGER.info("Received web notification message: " + messageJson);
         try {
-            Map<String, Object> data = objectMapper.readValue(messageJson, Map.class);
+            // Handle double-serialization: if the payload is a JSON-encoded string, unwrap it
+            String json = messageJson.trim();
+            if (json.startsWith("\"") && json.endsWith("\"")) {
+                json = objectMapper.readValue(json, String.class);
+            }
+
+            Map<String, Object> data = objectMapper.readValue(json, Map.class);
             String uuid = java.util.UUID.randomUUID().toString();
             Long tenantId = data.get("tenantId") != null ? Long.valueOf(data.get("tenantId").toString()) : null;
             Long userId = data.get("userId") != null ? Long.valueOf(data.get("userId").toString()) : null;
