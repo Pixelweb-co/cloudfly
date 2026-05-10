@@ -7,6 +7,7 @@ import NavToggle from './NavToggle'
 import ModeDropdown from '@components/layout/shared/ModeDropdown'
 import UserDropdown from '@components/layout/shared/UserDropdown'
 import PlanName from '@components/layout/shared/PlanName'
+import NotificationDropdown from '@components/layout/shared/NotificationDropdown'
 
 // Util Imports
 import { verticalLayoutClasses } from '@layouts/utils/layoutClasses'
@@ -22,6 +23,7 @@ const NavbarContent = () => {
       </div>
       <div className='flex items-center gap-4'>
         <PlanName />
+        <NotificationDropdown />
         <UserDropdown />
       </div>
     </div>
