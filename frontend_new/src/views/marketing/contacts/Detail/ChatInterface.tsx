@@ -15,9 +15,10 @@ import { AuthManager } from '@/utils/authManager'
 interface Props {
   contact: Contact | null;
   isNew: boolean;
+  isPopup?: boolean;
 }
 
-export default function ChatInterface({ contact, isNew }: Props) {
+export default function ChatInterface({ contact, isNew, isPopup = false }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)
   const [newMessage, setNewMessage] = useState('')
@@ -320,58 +321,68 @@ export default function ChatInterface({ contact, isNew }: Props) {
   }
 
   return (
-    <Card sx={{ height: '700px', display: 'flex', flexDirection: 'column', boxShadow: 3 }}>
-      {/* Header */}
-      <Box
-        sx={{
-          p: 4,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: 1,
-          borderColor: 'divider',
-          bgcolor: 'background.paper'
-        }}
-      >
-        <Box display="flex" alignItems="center" gap={3}>
-          <Avatar sx={{ bgcolor: 'primary.main', width: 44, height: 44 }}>
-            {getInitials(contact.name)}
-          </Avatar>
-          <Box>
-            <Typography variant="h6" sx={{ lineHeight: 1.2 }}>
-              {contact.name}
-            </Typography>
-            <Typography variant="body2" sx={{ color: activeTab === 'WHATSAPP' ? 'success.main' : 'info.main', display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: activeTab === 'WHATSAPP' ? 'success.main' : 'info.main' }} />
-              {activeTab === 'WHATSAPP' ? 'WhatsApp Online' : 'Facebook Online'}
-            </Typography>
+    <Card sx={{ 
+        height: isPopup ? '100%' : '700px', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        boxShadow: isPopup ? 0 : 3,
+        border: isPopup ? 0 : 1,
+        borderColor: 'divider',
+        borderRadius: isPopup ? 0 : 1
+    }}>
+      {/* Header - Hidden in Popup mode because the wrapper has its own */}
+      {!isPopup && (
+        <Box
+          sx={{
+            p: 4,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: 1,
+            borderColor: 'divider',
+            bgcolor: 'background.paper'
+          }}
+        >
+          <Box display="flex" alignItems="center" gap={3}>
+            <Avatar sx={{ bgcolor: 'primary.main', width: 44, height: 44 }}>
+              {getInitials(contact.name)}
+            </Avatar>
+            <Box>
+              <Typography variant="h6" sx={{ lineHeight: 1.2 }}>
+                {contact.name}
+              </Typography>
+              <Typography variant="body2" sx={{ color: activeTab === 'WHATSAPP' ? 'success.main' : 'info.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: activeTab === 'WHATSAPP' ? 'success.main' : 'info.main' }} />
+                {activeTab === 'WHATSAPP' ? 'WhatsApp Online' : 'Facebook Online'}
+              </Typography>
+            </Box>
+          </Box>
+          <Box display="flex" gap={1} alignItems="center">
+            <Tooltip title={chatbotEnabled ? 'Chatbot IA Activo' : 'Chatbot IA Desactivado'}>
+              <Box display="flex" alignItems="center" gap={0.5}>
+                <Icon
+                  icon={chatbotEnabled ? 'tabler:robot' : 'tabler:robot-off'}
+                  fontSize="1.2rem"
+                  style={{ color: chatbotEnabled ? '#4caf50' : '#9e9e9e' }}
+                />
+                <Switch
+                  size="small"
+                  checked={chatbotEnabled}
+                  onChange={handleToggleChatbot}
+                  color="success"
+                  sx={{ mr: 1 }}
+                />
+              </Box>
+            </Tooltip>
+            <IconButton color="primary" sx={{ bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.08)' }}>
+              <Icon icon="tabler:phone-call" />
+            </IconButton>
+            <IconButton color="secondary">
+              <Icon icon="tabler:dots-vertical" />
+            </IconButton>
           </Box>
         </Box>
-        <Box display="flex" gap={1} alignItems="center">
-          <Tooltip title={chatbotEnabled ? 'Chatbot IA Activo' : 'Chatbot IA Desactivado'}>
-            <Box display="flex" alignItems="center" gap={0.5}>
-              <Icon
-                icon={chatbotEnabled ? 'tabler:robot' : 'tabler:robot-off'}
-                fontSize="1.2rem"
-                style={{ color: chatbotEnabled ? '#4caf50' : '#9e9e9e' }}
-              />
-              <Switch
-                size="small"
-                checked={chatbotEnabled}
-                onChange={handleToggleChatbot}
-                color="success"
-                sx={{ mr: 1 }}
-              />
-            </Box>
-          </Tooltip>
-          <IconButton color="primary" sx={{ bgcolor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.08)' }}>
-            <Icon icon="tabler:phone-call" />
-          </IconButton>
-          <IconButton color="secondary">
-            <Icon icon="tabler:dots-vertical" />
-          </IconButton>
-        </Box>
-      </Box>
+      )}
 
       {/* Channel Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper', px: 2 }}>
@@ -402,12 +413,12 @@ export default function ChatInterface({ contact, isNew }: Props) {
         ref={scrollRef}
         sx={{
           flexGrow: 1,
-          p: 5,
+          p: isPopup ? 3 : 5,
           overflowY: 'auto',
           bgcolor: 'action.hover',
           display: 'flex',
           flexDirection: 'column',
-          gap: 3
+          gap: isPopup ? 2 : 3
         }}
       >
         {loading ? (
