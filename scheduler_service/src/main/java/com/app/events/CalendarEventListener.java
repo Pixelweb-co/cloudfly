@@ -25,4 +25,16 @@ public class CalendarEventListener {
                                                 error -> log.error("Failed to generate jobs for event {}",
                                                                 eventCreated.getEvent().getId(), error));
         }
+
+        @Async
+        @EventListener
+        public void handleCalendarEventUpdated(CalendarEventUpdated eventUpdated) {
+                log.info("Event listener caught updated event: {}", eventUpdated.getEvent().getId());
+                jobGeneratorService.generateJobsForEvent(eventUpdated.getEvent())
+                                .subscribe(
+                                                success -> log.info("Jobs RE-generated for event {}",
+                                                                eventUpdated.getEvent().getId()),
+                                                error -> log.error("Failed to RE-generate jobs for event {}",
+                                                                eventUpdated.getEvent().getId(), error));
+        }
 }
