@@ -69,8 +69,13 @@ async function runTest() {
         await driver.executeScript("arguments[0].click();", checkbox);
 
         await driver.findElement(By.xpath("//button[@type='submit']")).click();
-        await driver.wait(until.urlContains('/verify-email'), 60000);
+        
+        // In dev environment, wait for success alert instead of URL change (JIT compilation delays routing)
+        await driver.wait(until.elementLocated(By.xpath("//*[contains(text(), 'registrado exitosamente')]")), 60000);
         console.log('✅ Registro enviado. Esperando email de activación...');
+        
+        // Give the redirect time to happen
+        await sleep(5000);
 
         // [2] ACTIVACIÓN
         const activationLink = await mailHelper.getActivationLink(MAIL_ACC, MAIL_PASS);

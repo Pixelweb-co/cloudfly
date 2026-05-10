@@ -29,7 +29,7 @@ NOW(), NOW());
 -- Ventas
 INSERT INTO modules (code, name, description, icon, menu_path, display_order, is_active, menu_items, created_at, updated_at)
 VALUES ('SALES', 'Ventas', 'Módulo comercial y facturación', 'tabler-shopping-cart', '#', 5, 1, 
-'[{"label": "Categorías", "href": "/ventas/categorias/list", "icon": "tabler-category"}, {"label": "Productos", "href": "/ventas/productos/list", "icon": "tabler-box"}, {"label": "Cotizaciones", "href": "/ventas/cotizaciones/list", "icon": "tabler-file-text"}, {"label": "Pedidos", "href": "/ventas/pedidos", "icon": "tabler-truck-delivery"}, {"label": "Facturas", "href": "/ventas/facturas/list", "icon": "tabler-receipt"}]', 
+'[{"label": "Categorías", "href": "/ventas/categorias/list", "icon": "tabler-category"}, {"label": "Productos", "href": "/ventas/productos/list", "icon": "tabler-box"}, {"label": "Cotizaciones", "href": "/ventas/cotizaciones/list", "icon": "tabler-file-text"}, {"label": "Pedidos", "href": "/ventas/pedidos/list", "icon": "tabler-truck-delivery"}, {"label": "Facturas", "href": "/ventas/facturas/list", "icon": "tabler-receipt"}]', 
 NOW(), NOW());
 
 -- Contabilidad
