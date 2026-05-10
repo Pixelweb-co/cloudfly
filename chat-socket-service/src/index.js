@@ -217,6 +217,14 @@ io.use(authMiddleware);
 io.on('connection', (socket) => {
     logger.info(`✅ User connected: ${socket.userName} (ID: ${socket.userId}, Tenant: ${socket.tenantId})`);
 
+    // Auto-join global tenant and user rooms for global notifications
+    if (socket.tenantId) {
+        socket.join(`tenant_${socket.tenantId}`);
+    }
+    if (socket.userId && socket.tenantId) {
+        socket.join(`tenant_${socket.tenantId}_user_${socket.userId}`);
+    }
+
     // Manejar presencia (online)
     presenceHandler.handleUserOnline(socket, io);
 
