@@ -298,5 +298,30 @@ public class EvolutionService {
                 .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
                 .doOnSuccess(res -> log.info("✅ Webhook configured successfully for: {}", instanceName));
     }
+
+    /**
+     * Mark messages as read in WhatsApp via Evolution API
+     */
+    public Mono<Map<String, Object>> markMessagesAsRead(String instanceName, java.util.List<Map<String, Object>> readMessages) {
+        String url = apiUrl + "/chat/markMessageAsRead/" + (instanceName != null ? instanceName : "cloudfly_chatbot1");
+        
+        Map<String, Object> body = new HashMap<>();
+        body.put("readMessages", readMessages);
+
+        log.info("👁️ [EVOLUTION-SERVICE] Marking {} messages as read on instance {}", readMessages.size(), instanceName);
+
+        return webClient.post()
+                .uri(url)
+                .header("apikey", apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
+                .doOnSuccess(res -> log.info("✅ Messages marked as read in Evolution API"))
+                .onErrorResume(err -> {
+                    log.error("❌ Error marking messages as read in Evolution: {}", err.getMessage());
+                    return Mono.just(Map.of("error", err.getMessage()));
+                });
+    }
 }
 

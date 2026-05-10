@@ -13,6 +13,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -26,6 +27,7 @@ public class ChatController {
     private final SocketNotificationService socketNotificationService;
     private final UserService userService;
     private final com.app.persistence.repository.ChannelRepository channelRepository;
+    private final com.app.persistence.repository.ContactRepository contactRepository;
 
     /**
      * Get historical messages for a specific conversation
@@ -37,6 +39,96 @@ public class ChatController {
                     Long tenantId = user.getCustomerId();
                     log.info("📂 [CHAT-CONTROLLER] Fetching messages for contact: {} (Tenant: {})", contactId, tenantId);
                     return messageRepository.findByTenantIdAndContactId(tenantId, contactId);
+                });
+    }
+
+    /**
+     * Get unread message summary grouped by contact
+     */
+    @GetMapping("/unread-summary")
+    public Flux<Map<String, Object>> getUnreadSummary() {
+        return userService.getCurrentUser()
+                .flatMapMany(user -> {
+                    Long tenantId = user.getCustomerId();
+                    log.info("📬 [CHAT-CONTROLLER] Fetching unread summary for tenant: {}", tenantId);
+                    return messageRepository.countUnreadGroupedByContact(tenantId)
+                            .flatMap(row -> {
+                                Long contactId = row.get("contact_id") != null ? Long.valueOf(row.get("contact_id").toString()) : null;
+                                Long count = row.get("cnt") != null ? Long.valueOf(row.get("cnt").toString()) : 0L;
+                                if (contactId == null) return Mono.empty();
+
+                                return contactRepository.findById(contactId)
+                                        .map(contact -> {
+                                            Map<String, Object> item = new HashMap<>();
+                                            item.put("contactId", contact.getId());
+                                            item.put("contactName", contact.getName());
+                                            item.put("phone", contact.getPhone());
+                                            item.put("avatarUrl", contact.getAvatarUrl());
+                                            item.put("unreadCount", count);
+                                            return item;
+                                        })
+                                        .defaultIfEmpty(Map.of("contactId", contactId, "contactName", "Desconocido", "unreadCount", count));
+                            });
+                });
+    }
+
+    /**
+     * Mark all messages from a contact as read (DB + Evolution API)
+     */
+    @PutMapping("/mark-read/{contactId}")
+    public Mono<Map<String, Object>> markContactMessagesAsRead(@PathVariable Long contactId) {
+        return userService.getCurrentUser()
+                .flatMap(user -> {
+                    Long tenantId = user.getCustomerId();
+                    log.info("✅ [CHAT-CONTROLLER] Marking messages as read for contact: {} (Tenant: {})", contactId, tenantId);
+
+                    // 1. Get unread messages to extract externalMessageId for Evolution API
+                    return messageRepository.findUnreadByTenantIdAndContactId(tenantId, contactId)
+                            .collectList()
+                            .flatMap(unreadMessages -> {
+                                // 2. Mark as READ in DB
+                                return messageRepository.markAllReadByContact(tenantId, contactId)
+                                        .flatMap(updatedCount -> {
+                                            log.info("📝 [CHAT-CONTROLLER] Marked {} messages as READ in DB", updatedCount);
+
+                                            // 3. Send read receipts to Evolution API
+                                            if (!unreadMessages.isEmpty()) {
+                                                return channelRepository.findAll()
+                                                        .filter(c -> c.getTenantId().equals(tenantId) && Boolean.TRUE.equals(c.getStatus()))
+                                                        .next()
+                                                        .flatMap(channel -> {
+                                                            return contactRepository.findById(contactId)
+                                                                    .flatMap(contact -> {
+                                                                        String phone = contact.getPhone();
+                                                                        if (phone == null || phone.isEmpty()) {
+                                                                            return Mono.just(Map.<String, Object>of("marked", updatedCount));
+                                                                        }
+                                                                        String cleanPhone = phone.replaceAll("[^0-9]", "");
+                                                                        String remoteJid = cleanPhone + "@s.whatsapp.net";
+
+                                                                        List<Map<String, Object>> readMessages = unreadMessages.stream()
+                                                                                .filter(m -> m.getExternalMessageId() != null)
+                                                                                .map(m -> {
+                                                                                    Map<String, Object> rm = new HashMap<>();
+                                                                                    rm.put("remoteJid", remoteJid);
+                                                                                    rm.put("fromMe", false);
+                                                                                    rm.put("id", m.getExternalMessageId());
+                                                                                    return rm;
+                                                                                })
+                                                                                .collect(java.util.stream.Collectors.toList());
+
+                                                                        if (!readMessages.isEmpty()) {
+                                                                            return evolutionService.markMessagesAsRead(channel.getInstanceName(), readMessages)
+                                                                                    .then(Mono.just(Map.<String, Object>of("marked", updatedCount, "evolutionSynced", true)));
+                                                                        }
+                                                                        return Mono.just(Map.<String, Object>of("marked", updatedCount));
+                                                                    });
+                                                        })
+                                                        .defaultIfEmpty(Map.of("marked", updatedCount));
+                                            }
+                                            return Mono.just(Map.<String, Object>of("marked", updatedCount));
+                                        });
+                            });
                 });
     }
 
