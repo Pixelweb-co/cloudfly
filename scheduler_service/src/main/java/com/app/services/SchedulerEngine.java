@@ -138,9 +138,33 @@ public class SchedulerEngine {
                 java.util.Map<String, Object> webNotification = new java.util.HashMap<>(notification);
                 webNotification.put("type", "web");
                 webNotification.put("notifyVia", "web");
-                // Customize title for the manager UI
-                webNotification.put("title", "Cita Agendada/Actualizada");
-                webNotification.put("description", "Se ha programado: " + event.getTitle());
+                // Build rich description with date/time and contact name
+                String contactName = "";
+                Object notifyContacts = notification.get("notifyContacts");
+                if (notifyContacts instanceof java.util.List && !((java.util.List<?>) notifyContacts).isEmpty()) {
+                    Object first = ((java.util.List<?>) notifyContacts).get(0);
+                    if (first instanceof java.util.Map) {
+                        Object name = ((java.util.Map<?, ?>) first).get("name");
+                        if (name != null) contactName = name.toString();
+                    } else if (first instanceof String) {
+                        contactName = (String) first;
+                    }
+                }
+                if (contactName.isEmpty()) {
+                    Object subjectName = notification.get("subject");
+                    if (subjectName == null) subjectName = notification.get("contactName");
+                    if (subjectName != null) contactName = subjectName.toString();
+                }
+                String dateStr = "";
+                if (event.getStartTime() != null) {
+                    java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+                    dateStr = event.getStartTime().format(fmt);
+                }
+                String desc = event.getTitle();
+                if (!contactName.isEmpty()) desc += " - " + contactName;
+                if (!dateStr.isEmpty()) desc += " | " + dateStr;
+                webNotification.put("title", "📅 Cita Agendada/Actualizada");
+                webNotification.put("description", desc);
                 
                 Mono<Void> webSend = kafkaTemplate.send("webnotifications", "system", webNotification)
                         .doOnSuccess(result -> log.info("Parallel Web Notification sent for event {}", event.getId()))
