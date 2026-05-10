@@ -130,9 +130,26 @@ public class SchedulerEngine {
                 toKey = ((java.util.List<?>) toObj).get(0).toString();
             }
             
-            return kafkaTemplate.send(topic, toKey, notification)
+            Mono<Void> primarySend = kafkaTemplate.send(topic, toKey, notification)
                     .doOnSuccess(result -> log.info("Notification sent to Kafka topic {} for event {}", topic, event.getId()))
                     .then();
+                    
+            if (!"webnotifications".equals(topic)) {
+                java.util.Map<String, Object> webNotification = new java.util.HashMap<>(notification);
+                webNotification.put("type", "web");
+                webNotification.put("notifyVia", "web");
+                // Customize title for the manager UI
+                webNotification.put("title", "Cita Agendada/Actualizada");
+                webNotification.put("description", "Se ha programado: " + event.getTitle());
+                
+                Mono<Void> webSend = kafkaTemplate.send("webnotifications", "system", webNotification)
+                        .doOnSuccess(result -> log.info("Parallel Web Notification sent for event {}", event.getId()))
+                        .then();
+                
+                return primarySend.then(webSend);
+            }
+            
+            return primarySend;
         } catch (Exception e) {
             return Mono.error(e);
         }
