@@ -30,6 +30,7 @@ import {
 import { Icon } from '@iconify/react'
 import CustomChip from '@/@core/components/mui/Chip'
 import { axiosInstance } from '@/utils/axiosInstance'
+import SaveToCrmDialog from '@/components/dialogs/SaveToCrmDialog'
 
 // --- TYPES ---
 
@@ -79,6 +80,7 @@ export default function B2BLeadGeneratorPage() {
   const [saving, setSaving] = useState(false)
   const [leadsPreview, setLeadsPreview] = useState<LeadPreview[]>([])
   const [selectedLeads, setSelectedLeads] = useState<LeadPreview[]>([])
+  const [openDialog, setOpenDialog] = useState(false)
   
   // Feedback
   const [snackbar, setSnackbar] = useState<{
@@ -146,19 +148,27 @@ export default function B2BLeadGeneratorPage() {
     }
   }
 
-  const handleSaveToCRM = async () => {
+  const handleSaveToCRM = () => {
     if (selectedLeads.length === 0) return
+    setOpenDialog(true)
+  }
 
+  const handleConfirmSave = async (listId: number) => {
     try {
       setSaving(true)
       await axiosInstance.post('/api/leads/save-to-crm', {
-        leads: selectedLeads
+        leads: selectedLeads,
+        listId: listId
       })
 
       showSnackbar(`¡${selectedLeads.length} leads guardados exitosamente en el CRM!`, 'success')
       setSelectedLeads([])
-      // Opcional: remover de la vista los ya guardados
-      setLeadsPreview(prev => prev.filter(l => !selectedLeads.includes(l)))
+      
+      // Remover de la vista los ya guardados
+      const leadsToKeep = leadsPreview.filter(l => !selectedLeads.includes(l))
+      setLeadsPreview(leadsToKeep)
+      
+      setOpenDialog(false)
     } catch (error) {
       console.error('Error saving leads:', error)
       showSnackbar('Error al guardar leads en el CRM.', 'error')
@@ -346,6 +356,14 @@ export default function B2BLeadGeneratorPage() {
           <Typography variant='h6'>Realice una búsqueda para ver resultados</Typography>
         </Box>
       )}
+
+      {/* DIALOGS */}
+      <SaveToCrmDialog 
+        open={openDialog} 
+        onClose={() => setOpenDialog(false)} 
+        onSave={handleConfirmSave}
+        loading={saving}
+      />
 
       {/* SNACKBAR FEEDBACK */}
       <Snackbar
