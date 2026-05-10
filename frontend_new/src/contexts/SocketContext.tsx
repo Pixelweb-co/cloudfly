@@ -12,6 +12,7 @@ import { userMethods } from '@/utils/userMethods'
 // Redux
 import { useDispatch } from 'react-redux'
 import { fetchNotifications } from '@/redux/slices/notificationSlice'
+import { fetchUnreadSummary } from '@/redux/slices/unreadMessagesSlice'
 import type { AppDispatch } from '@/redux/store'
 import { toast } from 'react-hot-toast'
 
@@ -92,6 +93,11 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
                 console.log('✅ Agregando mensaje nuevo a la lista')
                 return [...prev, message]
             })
+
+            // Refresh unread messages count for INBOUND messages
+            if ((message as any).direction === 'INBOUND') {
+                dispatch(fetchUnreadSummary())
+            }
         })
 
         // NEW: Real-time Web Notifications
