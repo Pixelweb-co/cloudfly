@@ -12,10 +12,14 @@ COPY pnpm-lock.yaml* ./
 COPY .npmrc* ./
 
 # Instalar TODAS las dependencias (necesarias para el build)
-RUN npm install
+# Ignoramos scripts porque postinstall requiere el código fuente que se copia después
+RUN npm install --ignore-scripts
 
 # Copiar el resto del código
 COPY . .
+
+# Ejecutar el script que se saltó en el postinstall
+RUN npm run build:icons
 
 # Aceptar variables de entorno para el build de Next.js
 ARG NEXT_PUBLIC_API_URL
