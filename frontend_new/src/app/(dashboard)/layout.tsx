@@ -24,6 +24,11 @@ import OnboardingGuard from '@/components/OnboardingGuard'
 // Util Imports
 import { getMode, getSystemMode, getSettingsFromCookie } from '@core/utils/serverHelpers'
 
+// Context & Chat Imports
+import { SocketProvider } from '@/contexts/SocketContext'
+import { PopupChatProvider } from '@/contexts/PopupChatContext'
+import ChatPopupsContainer from '@/components/chat/ChatPopupsContainer'
+
 const Layout = async ({ children }: ChildrenType) => {
   // Vars
   const direction = 'ltr'
@@ -33,31 +38,36 @@ const Layout = async ({ children }: ChildrenType) => {
 
   return (
     <Providers direction={direction} mode={mode} systemMode={systemMode} settingsCookie={settingsCookie}>
-      <AuthSync />
-      <OnboardingGuard />
-      <LayoutWrapper
-        systemMode={systemMode}
-        verticalLayout={
-          <VerticalLayout
-            navigation={<Navigation mode={mode} systemMode={systemMode} />}
-            navbar={<Navbar />}
-            footer={<VerticalFooter />}
-          >
-            {children}
-          </VerticalLayout>
-        }
-        horizontalLayout={
-          <HorizontalLayout header={<Header />} footer={<HorizontalFooter />}>
-            {children}
-          </HorizontalLayout>
-        }
-      />
-      <ScrollToTop className='mui-fixed'>
-        <Button variant='contained' className='is-10 bs-10 rounded-full p-0 min-is-0 flex items-center justify-center'>
-          <i className='tabler-arrow-up' />
-        </Button>
-      </ScrollToTop>
-      <Customizer dir={direction} />
+      <SocketProvider>
+        <PopupChatProvider>
+          <AuthSync />
+          <OnboardingGuard />
+          <LayoutWrapper
+            systemMode={systemMode}
+            verticalLayout={
+              <VerticalLayout
+                navigation={<Navigation mode={mode} systemMode={systemMode} />}
+                navbar={<Navbar />}
+                footer={<VerticalFooter />}
+              >
+                {children}
+              </VerticalLayout>
+            }
+            horizontalLayout={
+              <HorizontalLayout header={<Header />} footer={<HorizontalFooter />}>
+                {children}
+              </HorizontalLayout>
+            }
+          />
+          <ChatPopupsContainer />
+          <ScrollToTop className='mui-fixed'>
+            <Button variant='contained' className='is-10 bs-10 rounded-full p-0 min-is-0 flex items-center justify-center'>
+              <i className='tabler-arrow-up' />
+            </Button>
+          </ScrollToTop>
+          <Customizer dir={direction} />
+        </PopupChatProvider>
+      </SocketProvider>
     </Providers>
   )
 }
