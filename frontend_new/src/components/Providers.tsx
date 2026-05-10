@@ -11,6 +11,10 @@ import ThemeProvider from '@components/theme'
 import { NextAuthProvider } from '@/contexts/nextAuthProvider'
 import { PermissionProvider } from '@/contexts/PermissionContext'
 
+// Redux Imports
+import { Provider } from 'react-redux'
+import { store } from '@/redux/store'
+
 type Props = ChildrenType & {
   direction: Direction
   mode?: Mode
@@ -23,17 +27,19 @@ const Providers = (props: Props) => {
   const { children, direction, mode, settingsCookie = null, systemMode } = props
 
   return (
-    <NextAuthProvider>
-      <VerticalNavProvider>
-        <PermissionProvider>
-          <SettingsProvider settingsCookie={settingsCookie} mode={mode}>
-            <ThemeProvider direction={direction} systemMode={systemMode ?? 'light'}>
-              {children}
-            </ThemeProvider>
-          </SettingsProvider>
-        </PermissionProvider>
-      </VerticalNavProvider>
-    </NextAuthProvider>
+    <Provider store={store}>
+      <NextAuthProvider>
+        <VerticalNavProvider>
+          <PermissionProvider>
+            <SettingsProvider settingsCookie={settingsCookie} mode={mode}>
+              <ThemeProvider direction={direction} systemMode={systemMode ?? 'light'}>
+                {children}
+              </ThemeProvider>
+            </SettingsProvider>
+          </PermissionProvider>
+        </VerticalNavProvider>
+      </NextAuthProvider>
+    </Provider>
   )
 }
 
