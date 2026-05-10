@@ -9,19 +9,22 @@ const OnboardingGuard = () => {
   const pathname = usePathname()
 
   useEffect(() => {
-    // Avoid infinite redirect if already on account-setup
-    if (pathname?.includes('account-setup')) return
-
     const checkOnboarding = () => {
       const user = userMethods.getUserLogin()
       
       if (user) {
         const roles = user.roles || []
         const isAdmin = roles.some((r: any) => r.name === 'ADMIN' || r.role === 'ADMIN')
+        const isSetupPage = pathname?.includes('/account-setup')
 
-        if (isAdmin && !user.onboardingCompleted) {
-          console.log('🚧 [ONBOARDING-GUARD] Admin onboarding not completed. Redirecting...')
-          router.push('/account-setup')
+        if (isAdmin) {
+          if (!user.onboardingCompleted && !isSetupPage) {
+            console.log('🚧 [ONBOARDING-GUARD] Admin onboarding not completed. Redirecting to /account-setup...')
+            router.push('/account-setup')
+          } else if (user.onboardingCompleted && isSetupPage) {
+            console.log('✅ [ONBOARDING-GUARD] Admin onboarding already completed. Redirecting to /home...')
+            router.push('/home')
+          }
         }
       }
     }
