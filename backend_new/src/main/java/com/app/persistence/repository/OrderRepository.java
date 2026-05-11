@@ -28,5 +28,5 @@ public interface OrderRepository extends ReactiveCrudRepository<OrderEntity, Lon
     Mono<Double> sumTotalByTenantIdAndCompanyId(Long tenantId, Long companyId);
 
     @Query("SELECT DATE(created_at) as date, SUM(total) as total, COUNT(*) as count FROM orders WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND created_at >= :since GROUP BY DATE(created_at) ORDER BY DATE(created_at) ASC")
-    Flux<java.util.Map<String, Object>> getSalesHistory(Long tenantId, Long companyId, LocalDateTime since);
+    Flux<com.app.dto.SalesHistoryDTO> getSalesHistory(Long tenantId, Long companyId, LocalDateTime since);
 }
