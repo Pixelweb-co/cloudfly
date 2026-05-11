@@ -55,16 +55,13 @@ public class ChatController {
                             .flatMap(row -> {
                                 try {
                                     log.debug("🔍 [CHAT-CONTROLLER] Processing unread row: {}", row);
-                                    Object contactIdObj = row.get("contact_id");
-                                    Object countObj = row.get("cnt");
+                                    Long contactId = row.getContactId();
+                                    Long count = row.getCnt() != null ? row.getCnt() : 0L;
                                     
-                                    if (contactIdObj == null) {
-                                        log.warn("⚠️ [CHAT-CONTROLLER] contact_id is null in summary row");
+                                    if (contactId == null) {
+                                        log.warn("⚠️ [CHAT-CONTROLLER] contactId is null in summary row");
                                         return Mono.empty();
                                     }
-                                    
-                                    Long contactId = Long.valueOf(contactIdObj.toString());
-                                    Long count = countObj != null ? Long.valueOf(countObj.toString()) : 0L;
 
                                     return contactRepository.findById(contactId)
                                             .map(contact -> {
