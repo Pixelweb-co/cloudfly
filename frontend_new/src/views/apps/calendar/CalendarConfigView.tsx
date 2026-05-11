@@ -25,6 +25,7 @@ import {
 import { Icon } from '@iconify/react'
 import { useSession } from 'next-auth/react'
 import calendarService from '@/services/calendarService'
+import { productService } from '@/services/ventas/productService'
 import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
 import { addDays, format } from 'date-fns'
 
@@ -86,11 +87,25 @@ const CalendarConfigView = () => {
 const AvailabilityTab = () => {
   const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
-  const [serviceId, setServiceId] = useState(1)
+  const [services, setServices] = useState<any[]>([])
+  const [serviceId, setServiceId] = useState<number | ''>('')
   const [genMode, setGenMode] = useState('range') // 'range' or 'indefinite'
   const [startDate, setStartDate] = useState<Date | null>(new Date())
   const [endDate, setEndDate] = useState<Date | null>(addDays(new Date(), 30))
   const [exceptions, setExceptions] = useState<any[]>([])
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const data = await productService.getProductsByType('SERVICE')
+        setServices(data)
+        if (data.length > 0) setServiceId(data[0].id)
+      } catch (error) {
+        console.error('Error fetching service products:', error)
+      }
+    }
+    fetchServices()
+  }, [])
 
   const handleSave = async () => {
     try {
@@ -143,15 +158,18 @@ const AvailabilityTab = () => {
     <Grid container spacing={6}>
       <Grid item xs={12} md={6}>
         <FormControl fullWidth>
-          <InputLabel>Servicio Asociado</InputLabel>
+          <InputLabel>Servicio (Producto tipo Servicio)</InputLabel>
           <Select 
             value={serviceId} 
-            label='Servicio Asociado'
+            label='Servicio (Producto tipo Servicio)'
             onChange={(e) => setServiceId(e.target.value as number)}
           >
-            <MenuItem value={1}>Consulta General</MenuItem>
-            <MenuItem value={2}>Asesoría Técnica</MenuItem>
-            <MenuItem value={3}>Soporte Premium</MenuItem>
+            {services.map((service) => (
+              <MenuItem key={service.id} value={service.id}>
+                {service.productName}
+              </MenuItem>
+            ))}
+            {services.length === 0 && <MenuItem disabled>No hay productos tipo servicio creados</MenuItem>}
           </Select>
         </FormControl>
       </Grid>

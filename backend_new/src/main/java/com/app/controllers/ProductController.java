@@ -95,6 +95,12 @@ public class ProductController {
         return productService.listByTenant(tenantId);
     }
 
+    @GetMapping("/type/{type}")
+    public Flux<ProductCreateRequest> listByType(@PathVariable String type, @RequestHeader Map<String, String> headers) {
+        return getCurrentUserContext(headers)
+                .flatMapMany(ctx -> productService.listByType(ctx.tenantId(), type));
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public Mono<Void> delete(@PathVariable Long id) {
