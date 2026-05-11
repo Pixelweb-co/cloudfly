@@ -28,6 +28,7 @@ const CalendarAgendaView = () => {
   const [currentDate, setCurrentDate] = React.useState(new Date())
   const [agendaItems, setAgendaItems] = React.useState<any[]>([])
   const [loading, setLoading] = React.useState(false)
+  const [serviceFilter, setServiceFilter] = React.useState<number | 'all'>('all')
 
   const fetchAgenda = React.useCallback(async () => {
     try {
@@ -46,6 +47,7 @@ const CalendarAgendaView = () => {
         const dEnd = parseISO(slot.endTime)
         return {
           id: slot.id,
+          serviceId: slot.serviceId,
           time: `${format(dStart, 'HH:mm')} - ${format(dEnd, 'HH:mm')}`,
           contact: slot.contactName || (slot.status === 'RESERVED' ? 'Cita (Sin contacto)' : '-'),
           user: 'Admin',
@@ -85,10 +87,26 @@ const CalendarAgendaView = () => {
     <Card className='shadow-lg'>
       <CardContent>
         <Box className='flex items-center justify-between mb-6'>
-          <Typography variant='h5' className='font-bold'>Agenda Diaria</Typography>
+          <Box className='flex flex-col gap-2'>
+            <Typography variant='h5' className='font-bold text-primary'>Agenda Diaria</Typography>
+            <Box className='flex items-center gap-2'>
+              <Typography variant='body2' color='textSecondary'>Filtrar Servicio:</Typography>
+              <Select 
+                size='small' 
+                value={serviceFilter} 
+                onChange={(e) => setServiceFilter(e.target.value as any)}
+                sx={{ minWidth: 200 }}
+              >
+                <MenuItem value='all'>Todos los servicios</MenuItem>
+                <MenuItem value={1}>Consulta General</MenuItem>
+                <MenuItem value={2}>Asesoría Técnica</MenuItem>
+                <MenuItem value={3}>Soporte Premium</MenuItem>
+              </Select>
+            </Box>
+          </Box>
           <Box className='flex items-center gap-2'>
             <IconButton onClick={handlePrevDay}><Icon icon='tabler:chevron-left' /></IconButton>
-            <Typography variant='h6' className='capitalize'>{format(currentDate, "EEEE, d 'de' MMMM", { locale: es })}</Typography>
+            <Typography variant='h6' className='capitalize bg-primary/10 px-4 py-1 rounded-full text-primary'>{format(currentDate, "EEEE, d 'de' MMMM", { locale: es })}</Typography>
             <IconButton onClick={handleNextDay}><Icon icon='tabler:chevron-right' /></IconButton>
           </Box>
         </Box>
@@ -111,12 +129,12 @@ const CalendarAgendaView = () => {
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 4 }}>Cargando agenda...</TableCell>
                 </TableRow>
-              ) : agendaItems.length === 0 ? (
+              ) : agendaItems.filter(item => serviceFilter === 'all' || item.serviceId === serviceFilter).length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 4 }}>No hay slots programados para este día.</TableCell>
                 </TableRow>
               ) : (
-                agendaItems.map((item) => (
+                agendaItems.filter(item => serviceFilter === 'all' || item.serviceId === serviceFilter).map((item) => (
                   <TableRow key={item.id} hover>
                     <TableCell className='font-medium'>{item.time}</TableCell>
                     <TableCell>{getStatusChip(item.status)}</TableCell>

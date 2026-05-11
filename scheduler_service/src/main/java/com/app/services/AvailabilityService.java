@@ -82,39 +82,41 @@ public class AvailabilityService {
     public Mono<Void> generateSlots(Long templateId, LocalDate startDate, LocalDate endDate) {
         return templateRepository.findById(templateId)
                 .flatMap(template -> {
-                    List<AvailabilitySlotEntity> slots = new ArrayList<>();
                     LocalDate currentGenDate = startDate != null ? startDate : LocalDate.now();
                     LocalDate endGenDate = endDate != null ? endDate : currentGenDate.plusDays(template.getMaxFutureRange() != null ? template.getMaxFutureRange() : 30);
 
-                    // Parse JSON configs
-                    Map<String, Object> weeklySchedule = parseJson(template.getWeeklySchedule());
-                    Map<String, Object> exceptions = parseJson(template.getExceptions());
+                    // Fetch all existing slots for this user to avoid overlaps
+                    return slotRepository.findByUserIdAndStartTimeBetween(template.getUserId(), currentGenDate.atStartOfDay(), endGenDate.plusDays(1).atStartOfDay())
+                            .collectList()
+                            .flatMap(existingSlots -> {
+                                List<AvailabilitySlotEntity> slotsToSave = new ArrayList<>();
+                                
+                                // Parse JSON configs
+                                Map<String, Object> weeklySchedule = parseJson(template.getWeeklySchedule());
+                                Map<String, Object> exceptions = parseJson(template.getExceptions());
 
-                    while (!currentGenDate.isAfter(endGenDate)) {
-                        String dateKey = currentGenDate.toString(); // "YYYY-MM-DD"
-                        
-                        // 1. Check for specific exceptions for this date
-                        if (exceptions.containsKey(dateKey)) {
-                            Object excConfig = exceptions.get(dateKey);
-                            processDayConfig(slots, currentGenDate, template, excConfig);
-                        } else {
-                            // 2. Regular weekly schedule
-                            DayOfWeek dow = currentGenDate.getDayOfWeek();
-                            if (template.getAllowWeekends() || (dow != DayOfWeek.SATURDAY && dow != DayOfWeek.SUNDAY)) {
-                                String dayKey = getDayKey(dow);
-                                Object dayConfig = weeklySchedule.get(dayKey);
-                                processDayConfig(slots, currentGenDate, template, dayConfig);
-                            }
-                        }
-                        currentGenDate = currentGenDate.plusDays(1);
-                    }
+                                LocalDate movingDate = currentGenDate;
+                                while (!movingDate.isAfter(endGenDate)) {
+                                    String dateKey = movingDate.toString();
+                                    
+                                    if (exceptions.containsKey(dateKey)) {
+                                        processDayConfig(slotsToSave, movingDate, template, exceptions.get(dateKey), existingSlots);
+                                    } else {
+                                        DayOfWeek dow = movingDate.getDayOfWeek();
+                                        if (template.getAllowWeekends() || (dow != DayOfWeek.SATURDAY && dow != DayOfWeek.SUNDAY)) {
+                                            processDayConfig(slotsToSave, movingDate, template, weeklySchedule.get(getDayKey(dow)), existingSlots);
+                                        }
+                                    }
+                                    movingDate = movingDate.plusDays(1);
+                                }
 
-                    log.info("Generated {} slots for template {} (Service: {})", slots.size(), templateId, template.getServiceId());
-                    return slotRepository.saveAll(slots).then();
+                                log.info("Generated {} NEW slots for template {} (Service: {}) after checking overlaps", slotsToSave.size(), templateId, template.getServiceId());
+                                return slotRepository.saveAll(slotsToSave).then();
+                            });
                 });
     }
 
-    private void processDayConfig(List<AvailabilitySlotEntity> slots, LocalDate date, AvailabilityTemplateEntity template, Object config) {
+    private void processDayConfig(List<AvailabilitySlotEntity> slots, LocalDate date, AvailabilityTemplateEntity template, Object config, List<AvailabilitySlotEntity> existingSlots) {
         if (config == null) return;
 
         int duration = template.getDurationDefault() != null ? template.getDurationDefault() : 30;
@@ -130,13 +132,41 @@ public class AvailabilityService {
                 for (Map<String, String> range : ranges) {
                     LocalTime start = LocalTime.parse(range.get("start"));
                     LocalTime end = LocalTime.parse(range.get("end"));
-                    addSlots(slots, date, start, end, duration, bufferAfter, template);
+                    addSlotsWithOverlapCheck(slots, date, start, end, duration, bufferAfter, template, existingSlots);
                 }
             }
         } else if (config instanceof Boolean && (Boolean) config) {
-            // Default hours if true
-            addSlots(slots, date, LocalTime.of(8, 0), LocalTime.of(12, 0), duration, bufferAfter, template);
-            addSlots(slots, date, LocalTime.of(14, 0), LocalTime.of(18, 0), duration, bufferAfter, template);
+            addSlotsWithOverlapCheck(slots, date, LocalTime.of(8, 0), LocalTime.of(12, 0), duration, bufferAfter, template, existingSlots);
+            addSlotsWithOverlapCheck(slots, date, LocalTime.of(14, 0), LocalTime.of(18, 0), duration, bufferAfter, template, existingSlots);
+        }
+    }
+
+    private void addSlotsWithOverlapCheck(List<AvailabilitySlotEntity> slots, LocalDate date, LocalTime start, LocalTime end, int duration, int bufferAfter, AvailabilityTemplateEntity template, List<AvailabilitySlotEntity> existingSlots) {
+        LocalTime current = start;
+        while (current.plusMinutes(duration).isBefore(end) || current.plusMinutes(duration).equals(end)) {
+            LocalDateTime slotStart = LocalDateTime.of(date, current);
+            LocalDateTime slotEnd = LocalDateTime.of(date, current.plusMinutes(duration));
+
+            // Check if this slot overlaps with ANY existing slot for this user
+            boolean overlaps = existingSlots.stream().anyMatch(existing -> 
+                (slotStart.isBefore(existing.getEndTime()) && slotEnd.isAfter(existing.getStartTime()))
+            );
+
+            if (!overlaps) {
+                slots.add(AvailabilitySlotEntity.builder()
+                        .tenantId(template.getTenantId())
+                        .companyId(template.getCompanyId())
+                        .userId(template.getUserId())
+                        .templateId(template.getId())
+                        .serviceId(template.getServiceId())
+                        .startTime(slotStart)
+                        .endTime(slotEnd)
+                        .status(EventStatus.AVAILABLE)
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .build());
+            }
+            current = current.plusMinutes(duration + bufferAfter);
         }
     }
 
