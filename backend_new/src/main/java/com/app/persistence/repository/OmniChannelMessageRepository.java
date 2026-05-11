@@ -14,8 +14,8 @@ public interface OmniChannelMessageRepository extends ReactiveCrudRepository<Omn
     @Query("SELECT * FROM omni_channel_messages WHERE tenant_id = :tenantId AND contact_id = :contactId AND direction = 'INBOUND' AND (status IS NULL OR status != 'READ') ORDER BY created_at DESC")
     Flux<OmniChannelMessageEntity> findUnreadByTenantIdAndContactId(Long tenantId, Long contactId);
 
-    @Query("SELECT contact_id, COUNT(*) as cnt FROM omni_channel_messages WHERE tenant_id = :tenantId AND direction = 'INBOUND' AND (status IS NULL OR status != 'READ') GROUP BY contact_id")
-    Flux<java.util.Map<String, Object>> countUnreadGroupedByContact(Long tenantId);
+    @Query("SELECT contact_id as contactId, COUNT(*) as cnt FROM omni_channel_messages WHERE tenant_id = :tenantId AND direction = 'INBOUND' AND (status IS NULL OR status != 'READ') GROUP BY contact_id")
+    Flux<com.app.dto.UnreadChatSummaryDto> countUnreadGroupedByContact(Long tenantId);
 
     @org.springframework.data.r2dbc.repository.Modifying
     @Query("UPDATE omni_channel_messages SET status = 'READ' WHERE tenant_id = :tenantId AND contact_id = :contactId AND direction = 'INBOUND' AND (status IS NULL OR status != 'READ')")
