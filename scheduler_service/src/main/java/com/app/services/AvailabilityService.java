@@ -79,95 +79,73 @@ public class AvailabilityService {
                 });
     }
 
-    public Mono<Void> generateSlots(Long templateId) {
+    public Mono<Void> generateSlots(Long templateId, LocalDate startDate, LocalDate endDate) {
         return templateRepository.findById(templateId)
                 .flatMap(template -> {
                     List<AvailabilitySlotEntity> slots = new ArrayList<>();
-                    LocalDate today = LocalDate.now();
-                    int daysToGenerate = template.getMaxFutureRange() != null ? template.getMaxFutureRange() : 30;
+                    LocalDate currentGenDate = startDate != null ? startDate : LocalDate.now();
+                    LocalDate endGenDate = endDate != null ? endDate : currentGenDate.plusDays(template.getMaxFutureRange() != null ? template.getMaxFutureRange() : 30);
 
-                    // Parse the weeklySchedule JSON
-                    Map<String, Object> weeklySchedule = parseWeeklySchedule(template.getWeeklySchedule());
+                    // Parse JSON configs
+                    Map<String, Object> weeklySchedule = parseJson(template.getWeeklySchedule());
+                    Map<String, Object> exceptions = parseJson(template.getExceptions());
 
-                    for (int i = 0; i < daysToGenerate; i++) {
-                        LocalDate date = today.plusDays(i);
-                        DayOfWeek dow = date.getDayOfWeek();
-
-                        // Skip weekends if not allowed
-                        if (!Boolean.TRUE.equals(template.getAllowWeekends()) && (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY)) {
-                            continue;
+                    while (!currentGenDate.isAfter(endGenDate)) {
+                        String dateKey = currentGenDate.toString(); // "YYYY-MM-DD"
+                        
+                        // 1. Check for specific exceptions for this date
+                        if (exceptions.containsKey(dateKey)) {
+                            Object excConfig = exceptions.get(dateKey);
+                            processDayConfig(slots, currentGenDate, template, excConfig);
+                        } else {
+                            // 2. Regular weekly schedule
+                            DayOfWeek dow = currentGenDate.getDayOfWeek();
+                            if (template.getAllowWeekends() || (dow != DayOfWeek.SATURDAY && dow != DayOfWeek.SUNDAY)) {
+                                String dayKey = getDayKey(dow);
+                                Object dayConfig = weeklySchedule.get(dayKey);
+                                processDayConfig(slots, currentGenDate, template, dayConfig);
+                            }
                         }
-
-                        // Get the schedule key for this day of week
-                        String dayKey = getDayKey(dow);
-                        Object dayConfig = weeklySchedule.get(dayKey);
-
-                        if (dayConfig == null) {
-                            // No configuration for this day: use defaults if weekday
-                            if (dow.getValue() >= 1 && dow.getValue() <= 5) {
-                                generateSlotsForDay(slots, date, template);
-                            }
-                            continue;
-                        }
-
-                        if (dayConfig instanceof Map) {
-                            Map<String, Object> dayMap = (Map<String, Object>) dayConfig;
-                            Boolean enabled = (Boolean) dayMap.getOrDefault("enabled", true);
-                            if (!Boolean.TRUE.equals(enabled)) {
-                                continue; // Day is disabled
-                            }
-
-                            // Parse time ranges
-                            Object rangesObj = dayMap.get("ranges");
-                            if (rangesObj instanceof List) {
-                                List<Map<String, String>> ranges = (List<Map<String, String>>) rangesObj;
-                                int duration = template.getDurationDefault() != null ? template.getDurationDefault() : 30;
-                                int bufferAfter = template.getBufferAfter() != null ? template.getBufferAfter() : 0;
-
-                                for (Map<String, String> range : ranges) {
-                                    String startStr = range.get("start");
-                                    String endStr = range.get("end");
-                                    if (startStr != null && endStr != null) {
-                                        LocalTime rangeStart = LocalTime.parse(startStr);
-                                        LocalTime rangeEnd = LocalTime.parse(endStr);
-                                        addSlots(slots, date, rangeStart, rangeEnd, duration, bufferAfter, template);
-                                    }
-                                }
-                            } else {
-                                // No ranges defined, use defaults for this enabled day
-                                generateSlotsForDay(slots, date, template);
-                            }
-                        } else if (dayConfig instanceof Boolean) {
-                            if (Boolean.TRUE.equals(dayConfig)) {
-                                generateSlotsForDay(slots, date, template);
-                            }
-                            // false means day is disabled, skip
-                        }
+                        currentGenDate = currentGenDate.plusDays(1);
                     }
 
-                    log.info("Generated {} slots for template {} over {} days", slots.size(), templateId, daysToGenerate);
+                    log.info("Generated {} slots for template {} (Service: {})", slots.size(), templateId, template.getServiceId());
                     return slotRepository.saveAll(slots).then();
                 });
     }
 
-    /**
-     * Parses the weeklySchedule JSON string into a Map.
-     * Expected JSON format:
-     * {
-     *   "lunes": { "enabled": true, "ranges": [{"start": "08:00", "end": "12:00"}, {"start": "14:00", "end": "18:00"}] },
-     *   "martes": { "enabled": true, "ranges": [{"start": "09:00", "end": "13:00"}] },
-     *   "sabado": { "enabled": false },
-     *   "domingo": false
-     * }
-     */
-    private Map<String, Object> parseWeeklySchedule(String json) {
-        if (json == null || json.isBlank() || json.equals("{}")) {
-            return Map.of(); // Empty schedule → fallback to defaults
+    private void processDayConfig(List<AvailabilitySlotEntity> slots, LocalDate date, AvailabilityTemplateEntity template, Object config) {
+        if (config == null) return;
+
+        int duration = template.getDurationDefault() != null ? template.getDurationDefault() : 30;
+        int bufferAfter = template.getBufferAfter() != null ? template.getBufferAfter() : 0;
+
+        if (config instanceof Map) {
+            Map<String, Object> dayMap = (Map<String, Object>) config;
+            Boolean enabled = (Boolean) dayMap.getOrDefault("enabled", true);
+            if (!enabled) return;
+
+            List<Map<String, String>> ranges = (List<Map<String, String>>) dayMap.get("ranges");
+            if (ranges != null) {
+                for (Map<String, String> range : ranges) {
+                    LocalTime start = LocalTime.parse(range.get("start"));
+                    LocalTime end = LocalTime.parse(range.get("end"));
+                    addSlots(slots, date, start, end, duration, bufferAfter, template);
+                }
+            }
+        } else if (config instanceof Boolean && (Boolean) config) {
+            // Default hours if true
+            addSlots(slots, date, LocalTime.of(8, 0), LocalTime.of(12, 0), duration, bufferAfter, template);
+            addSlots(slots, date, LocalTime.of(14, 0), LocalTime.of(18, 0), duration, bufferAfter, template);
         }
+    }
+
+    private Map<String, Object> parseJson(String json) {
+        if (json == null || json.isBlank()) return Map.of();
         try {
             return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
-            log.warn("Could not parse weeklySchedule JSON, using defaults: {}", e.getMessage());
+            log.warn("Could not parse JSON: {}", e.getMessage());
             return Map.of();
         }
     }
@@ -185,28 +163,15 @@ public class AvailabilityService {
         }
     }
 
-    /**
-     * Fallback: generates slots using default hours (8-12, 14-18) when no JSON config is provided.
-     */
-    private void generateSlotsForDay(List<AvailabilitySlotEntity> slots, LocalDate date, AvailabilityTemplateEntity template) {
-        int duration = template.getDurationDefault() != null ? template.getDurationDefault() : 30;
-        int bufferAfter = template.getBufferAfter() != null ? template.getBufferAfter() : 0;
-
-        addSlots(slots, date, LocalTime.of(8, 0), LocalTime.of(12, 0), duration, bufferAfter, template);
-        addSlots(slots, date, LocalTime.of(14, 0), LocalTime.of(18, 0), duration, bufferAfter, template);
-    }
-
     private void addSlots(List<AvailabilitySlotEntity> slots, LocalDate date, LocalTime start, LocalTime end, int duration, int bufferAfter, AvailabilityTemplateEntity template) {
         LocalTime current = start;
-        int dailyCount = 0;
-        int dailyLimit = template.getDailyLimit() != null ? template.getDailyLimit() : Integer.MAX_VALUE;
-
-        while ((current.plusMinutes(duration).isBefore(end) || current.plusMinutes(duration).equals(end)) && dailyCount < dailyLimit) {
+        while (current.plusMinutes(duration).isBefore(end) || current.plusMinutes(duration).equals(end)) {
             slots.add(AvailabilitySlotEntity.builder()
                     .tenantId(template.getTenantId())
                     .companyId(template.getCompanyId())
                     .userId(template.getUserId())
                     .templateId(template.getId())
+                    .serviceId(template.getServiceId())
                     .startTime(LocalDateTime.of(date, current))
                     .endTime(LocalDateTime.of(date, current.plusMinutes(duration)))
                     .status(EventStatus.AVAILABLE)
@@ -214,7 +179,6 @@ public class AvailabilityService {
                     .updatedAt(LocalDateTime.now())
                     .build());
             current = current.plusMinutes(duration + bufferAfter);
-            dailyCount++;
         }
     }
 }

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @RestController
@@ -27,8 +28,11 @@ public class AvailabilityController {
     }
 
     @PostMapping("/generate")
-    public Mono<Void> generateSlots(@RequestParam Long templateId) {
-        return availabilityService.generateSlots(templateId);
+    public Mono<Void> generateSlots(
+            @RequestParam Long templateId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return availabilityService.generateSlots(templateId, startDate, endDate);
     }
 
     @GetMapping("/slots")

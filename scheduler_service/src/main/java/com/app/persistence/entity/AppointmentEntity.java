@@ -32,6 +32,9 @@ public class AppointmentEntity {
     @Column("contact_id")
     private Long contactId;
 
+    @Column("service_id")
+    private Long serviceId;
+
     @Column("slot_id")
     private Long slotId;
 
