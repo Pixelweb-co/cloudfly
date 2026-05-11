@@ -16,7 +16,7 @@ import type { CalendarColors, CalendarType } from '@/types/apps/calendarTypes'
 // Component Imports
 import Calendar from './Calendar'
 import SidebarLeft from './SidebarLeft'
-import BookAppointmentSidebar from './AddEventSidebar'
+import AddEventSidebar from './AddEventSidebar'
 
 // Service Imports
 import calendarService from '@/services/calendarService'
@@ -253,7 +253,7 @@ const AppCalendar = () => {
           refreshEvents={fetchEvents}
         />
       </div>
-      <BookAppointmentSidebar
+      <AddEventSidebar
         calendarStore={calendarStore}
         addEventSidebarOpen={addEventSidebarOpen}
         handleAddEventSidebarToggle={handleCloseSidebar}

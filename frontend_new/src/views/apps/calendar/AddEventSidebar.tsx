@@ -86,7 +86,7 @@ type Props = {
   companyId: number
 }
 
-const BookAppointmentSidebar = (props: Props) => {
+const AddEventSidebar = (props: Props) => {
   // Props
   const { 
     calendarStore, 
