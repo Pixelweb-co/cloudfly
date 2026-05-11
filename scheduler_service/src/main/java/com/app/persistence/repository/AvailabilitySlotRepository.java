@@ -2,6 +2,7 @@ package com.app.persistence.repository;
 
 import com.app.persistence.entity.AvailabilitySlotEntity;
 import com.app.persistence.entity.EventStatus;
+import org.springframework.data.r2dbc.repository.Query;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
