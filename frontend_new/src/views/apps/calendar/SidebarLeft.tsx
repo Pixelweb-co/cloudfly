@@ -85,7 +85,7 @@ const SidebarLeft = (props: Props) => {
           }}
           startIcon={<i className='tabler-plus' />}
         >
-          Add Event
+          Nueva Notificación
         </Button>
       </div>
       <Divider className='is-full' />

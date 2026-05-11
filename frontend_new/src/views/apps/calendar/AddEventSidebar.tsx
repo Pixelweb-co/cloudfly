@@ -86,13 +86,13 @@ type Props = {
   companyId: number
 }
 
-const AddEventSidebar = (props: Props) => {
+const BookAppointmentSidebar = (props: Props) => {
   // Props
   const { 
     calendarStore, 
     addEventSidebarOpen, 
     handleAddEventSidebarToggle,
-    onAddEvent,
+    onAddEvent, // We'll use this for booking
     onUpdateEvent,
     onDeleteEvent,
     tenantId,
@@ -116,6 +116,8 @@ const AddEventSidebar = (props: Props) => {
   const [currentEditingContact, setCurrentEditingContact] = useState<Contact | null>(null)
   const [tempContactInfo, setTempContactInfo] = useState({ email: '', phone: '' })
   const [isPastEvent, setIsPastEvent] = useState(false)
+  const isSlotMode = calendarStore.selectedEvent?.extendedProps?.isSlot === true
+  const isNotificationMode = !isSlotMode
 
   // Refs
   const PickersComponent = forwardRef(({ ...props }: PickerProps, ref) => {
@@ -193,23 +195,19 @@ const AddEventSidebar = (props: Props) => {
                             r.role_name?.toLowerCase().includes('admin') || 
                             r.role_name?.toLowerCase().includes('manager'))
 
-  const fetchContacts = useCallback(async () => {
+  const handleContactSearch = useCallback(async (query: string) => {
+    if (!query || query.length < 2) return
+    
     setLoadingContacts(true)
     try {
-      const data = await contactService.getAllContacts()
+      const data = await contactService.searchContacts(query)
       setContacts(data)
     } catch (error) {
-      console.error('Error fetching contacts:', error)
+      console.error('Error searching contacts:', error)
     } finally {
       setLoadingContacts(false)
     }
   }, [])
-
-  useEffect(() => {
-    if (addEventSidebarOpen) {
-      fetchContacts()
-    }
-  }, [addEventSidebarOpen, fetchContacts])
 
   const parsePayloadToState = (payloadStr: string) => {
     try {
@@ -329,44 +327,57 @@ const AddEventSidebar = (props: Props) => {
     return true
   }
 
-  const onSubmit = (data: any) => {
-    // Construct payload
-    const to = selectedContacts.map(c => c.email).filter(Boolean) as string[]
-    const phones = selectedContacts.map(c => c.phone).filter(Boolean) as string[]
-    
-    // Add current user
-    if (session?.user?.email && !to.includes(session.user.email)) {
-      to.push(session.user.email)
-    }
+  const onSubmit = async (data: any) => {
+    if (isSlotMode) {
+      if (calendarStore.selectedEvent?.extendedProps?.status !== 'AVAILABLE') {
+        alert("Este slot no está disponible para reserva")
+        return
+      }
 
-    const payload = {
-      to,
-      phones,
-      subject: `Recordatorio: ${data.title}`,
-      body: data.description,
-      remindBefore: data.remindBefore,
-      remindUnit: data.remindUnit,
-      notifyVia: data.notifyVia
-    }
-
-    const eventData = {
-      title: data.title,
-      calendarId: 1, // Default or selected
-      startTime: format(data.startDate, "yyyy-MM-dd'T'HH:mm:ss"),
-      endTime: format(data.endDate, "yyyy-MM-dd'T'HH:mm:ss"),
-      allDay: data.allDay,
-      description: data.description,
-      eventType: 'NOTIFICATION',
-      payload: JSON.stringify(payload),
-      status: 'SCHEDULED',
-      tenantId,
-      companyId
-    }
-
-    if (calendarStore.selectedEvent === null) {
-      onAddEvent(eventData)
+      const appointmentData = {
+        tenantId,
+        companyId,
+        slotId: parseInt(calendarStore.selectedEvent.id.replace('slot-', '')),
+        contactId: selectedContacts[0]?.id,
+        observations: data.description,
+        appointmentType: 'cita',
+        channel: data.channel || 'presencial',
+        status: 'RESERVED'
+      }
+      onAddEvent(appointmentData)
     } else {
-      onUpdateEvent({ ...eventData, id: calendarStore.selectedEvent.id })
+      // Notification Logic
+      const to = selectedContacts.map(c => c.email).filter(Boolean) as string[]
+      const phones = selectedContacts.map(c => c.phone).filter(Boolean) as string[]
+      
+      const payload = {
+        to,
+        phones,
+        subject: `Recordatorio: ${data.title}`,
+        body: data.description,
+        remindBefore: data.remindBefore,
+        remindUnit: data.remindUnit,
+        notifyVia: data.notifyVia
+      }
+
+      const eventData = {
+        title: data.title,
+        calendarId: 1,
+        startTime: format(data.startDate, "yyyy-MM-dd'T'HH:mm:ss"),
+        endTime: format(data.endDate, "yyyy-MM-dd'T'HH:mm:ss"),
+        allDay: data.allDay,
+        description: data.description,
+        eventType: 'NOTIFICATION',
+        payload: JSON.stringify(payload),
+        status: 'SCHEDULED',
+        tenantId,
+        companyId
+      }
+      
+      // We need a way to call the old createEvent. 
+      // In CalendarWrapper, handleAddEvent now calls bookAppointment.
+      // I'll need to update handleAddEvent to handle both.
+      onAddEvent({ ...eventData, isNotification: true })
     }
     handleSidebarClose()
   }
@@ -408,7 +419,10 @@ const AddEventSidebar = (props: Props) => {
       >
         <Box className='flex justify-between items-center sidebar-header plb-5 pli-6 border-be'>
           <Typography variant='h5'>
-            {calendarStore.selectedEvent ? 'Actualizar Recordatorio' : 'Nuevo Recordatorio'}
+            {isSlotMode 
+              ? (calendarStore.selectedEvent?.extendedProps?.status === 'AVAILABLE' ? 'Reservar Cita' : 'Detalles de Cita')
+              : (calendarStore.selectedEvent ? 'Actualizar Notificación' : 'Nueva Notificación')
+            }
           </Typography>
           <Box className='flex items-center gap-1'>
             {calendarStore.selectedEvent && (
@@ -428,22 +442,24 @@ const AddEventSidebar = (props: Props) => {
         >
           <Box className='sidebar-body plb-5 pli-6'>
             <form onSubmit={handleSubmit(onSubmit)} autoComplete='off' className='flex flex-col gap-6'>
-              <Controller
-                name='title'
-                control={control}
-                rules={{ required: true }}
-                render={({ field: { value, onChange } }) => (
-                  <CustomTextField
-                    fullWidth
-                    label='Título del Evento'
-                    placeholder='Ej: Cita Médica, Reunión Spa...'
-                    value={value}
-                    onChange={onChange}
-                    disabled={isPastEvent}
-                    {...(errors.title && { error: true, helperText: errors.title.message })}
-                  />
-                )}
-              />
+              {isNotificationMode && (
+                <Controller
+                  name='title'
+                  control={control}
+                  rules={{ required: true }}
+                  render={({ field: { value, onChange } }) => (
+                    <CustomTextField
+                      fullWidth
+                      label='Título'
+                      placeholder='Ej: Recordatorio...'
+                      value={value}
+                      onChange={onChange}
+                      disabled={isPastEvent}
+                      {...(errors.title && { error: true, helperText: errors.title.message })}
+                    />
+                  )}
+                />
+              )}
               
               <Controller
                 name='calendar'
@@ -465,50 +481,52 @@ const AddEventSidebar = (props: Props) => {
                 )}
               />
 
-              <Box className='flex gap-4'>
-                <Controller
-                  name='startDate'
-                  control={control}
-                  render={({ field: { value, onChange } }) => (
-                    <AppReactDatepicker
-                      id='event-start-date'
-                      selected={value}
-                      showTimeSelect={!watchedAllDay}
-                      timeIntervals={5}
-                      todayButton='Hoy'
-                      dateFormat={!watchedAllDay ? 'yyyy-MM-dd hh:mm aa' : 'yyyy-MM-dd'}
-                      customInput={<PickersComponent label='Fecha Inicio' disabled={isPastEvent} error={!!errors.startDate} />}
-                      onChange={(date) => {
-                        onChange(date)
-                        if (date) {
-                          const newEndDate = addMinutes(new Date(date), 30)
-                          setValue('endDate', newEndDate)
-                        }
-                      }}
-                      disabled={isPastEvent}
-                    />
-                  )}
-                />
-                
-                <Controller
-                  name='endDate'
-                  control={control}
-                  render={({ field: { value, onChange } }) => (
-                    <AppReactDatepicker
-                      id='event-end-date'
-                      selected={value}
-                      minDate={watchedStartDate}
-                      showTimeSelect={!watchedAllDay}
-                      timeIntervals={5}
-                      todayButton='Hoy'
-                      dateFormat={!watchedAllDay ? 'yyyy-MM-dd hh:mm aa' : 'yyyy-MM-dd'}
-                      customInput={<PickersComponent label='Fecha Fin' disabled={isPastEvent} error={!!errors.endDate} />}
-                      onChange={onChange}
-                      disabled={isPastEvent}
-                    />
-                  )}
-                />
-              </Box>
+              {isNotificationMode && (
+                <Box className='flex gap-4'>
+                  <Controller
+                    name='startDate'
+                    control={control}
+                    render={({ field: { value, onChange } }) => (
+                      <AppReactDatepicker
+                        id='event-start-date'
+                        selected={value}
+                        showTimeSelect={!watchedAllDay}
+                        timeIntervals={5}
+                        todayButton='Hoy'
+                        dateFormat={!watchedAllDay ? 'yyyy-MM-dd hh:mm aa' : 'yyyy-MM-dd'}
+                        customInput={<PickersComponent label='Fecha Inicio' disabled={isPastEvent} error={!!errors.startDate} />}
+                        onChange={(date) => {
+                          onChange(date)
+                          if (date) {
+                            const newEndDate = addMinutes(new Date(date), 30)
+                            setValue('endDate', newEndDate)
+                          }
+                        }}
+                        disabled={isPastEvent}
+                      />
+                    )}
+                  />
+                  
+                  <Controller
+                    name='endDate'
+                    control={control}
+                    render={({ field: { value, onChange } }) => (
+                      <AppReactDatepicker
+                        id='event-end-date'
+                        selected={value}
+                        minDate={watchedStartDate}
+                        showTimeSelect={!watchedAllDay}
+                        timeIntervals={5}
+                        todayButton='Hoy'
+                        dateFormat={!watchedAllDay ? 'yyyy-MM-dd hh:mm aa' : 'yyyy-MM-dd'}
+                        customInput={<PickersComponent label='Fecha Fin' disabled={isPastEvent} error={!!errors.endDate} />}
+                        onChange={onChange}
+                        disabled={isPastEvent}
+                      />
+                    )}
+                  />
+                </Box>
+              )}
               {errors.endDate && <Typography color='error' variant='caption'>{errors.endDate.message}</Typography>}
               
               <Controller
@@ -545,6 +563,10 @@ const AddEventSidebar = (props: Props) => {
                 multiple
                 options={contacts}
                 loading={loadingContacts}
+                filterOptions={(x) => x} // Disable built-in filtering to use server-side search
+                onInputChange={(_, newInputValue) => {
+                  handleContactSearch(newInputValue)
+                }}
                 getOptionLabel={(option) => `${option.name} (${option.documentNumber || 'No ID'})`}
                 value={selectedContacts}
                 onChange={(_, newValue) => {
@@ -568,53 +590,67 @@ const AddEventSidebar = (props: Props) => {
                 }
               />
 
-              <Box className='flex items-center gap-4'>
-                <Controller
-                  name='remindBefore'
-                  control={control}
-                  render={({ field }) => (
-                    <CustomTextField
-                      fullWidth
-                      type='number'
-                      label='Avisar antes'
-                      {...field}
-                      disabled={isPastEvent}
-                    />
-                  )}
-                />
-                <Controller
-                  name='remindUnit'
-                  control={control}
-                  render={({ field }) => (
-                    <CustomTextField
-                      select
-                      fullWidth
-                      label='Unidad'
-                      {...field}
-                      disabled={isPastEvent}
-                    >
-                      <MenuItem value='MINUTES'>Minutos</MenuItem>
-                      <MenuItem value='HOURS'>Horas</MenuItem>
-                      <MenuItem value='DAYS'>Días</MenuItem>
-                      <MenuItem value='WEEKS'>Semanas</MenuItem>
-                    </CustomTextField>
-                  )}
-                />
-              </Box>
+              {isNotificationMode && (
+                <Box className='flex items-center gap-4'>
+                  <Controller
+                    name='remindBefore'
+                    control={control}
+                    render={({ field }) => (
+                      <CustomTextField
+                        fullWidth
+                        type='number'
+                        label='Avisar antes'
+                        {...field}
+                        disabled={isPastEvent}
+                      />
+                    )}
+                  />
+                  <Controller
+                    name='remindUnit'
+                    control={control}
+                    render={({ field }) => (
+                      <CustomTextField
+                        select
+                        fullWidth
+                        label='Unidad'
+                        {...field}
+                        disabled={isPastEvent}
+                      >
+                        <MenuItem value='MINUTES'>Minutos</MenuItem>
+                        <MenuItem value='HOURS'>Horas</MenuItem>
+                        <MenuItem value='DAYS'>Días</MenuItem>
+                        <MenuItem value='WEEKS'>Semanas</MenuItem>
+                      </CustomTextField>
+                    )}
+                  />
+                </Box>
+              )}
 
               <Controller
-                name='notifyVia'
+                name='channel'
                 control={control}
+                defaultValue='presencial'
                 render={({ field }) => (
                   <CustomTextField
                     select
                     fullWidth
-                    label='Enviar por'
+                    label={isSlotMode ? 'Canal' : 'Enviar por'}
                     {...field}
-                    disabled={isPastEvent}
+                    disabled={isPastEvent || (isSlotMode && calendarStore.selectedEvent?.extendedProps?.status !== 'AVAILABLE')}
                   >
-                    <MenuItem value='email'>Email</MenuItem>
-                    <MenuItem value='whatsapp'>WhatsApp</MenuItem>
+                    {isSlotMode ? (
+                      <>
+                        <MenuItem value='presencial'>Presencial</MenuItem>
+                        <MenuItem value='videollamada'>Videollamada</MenuItem>
+                        <MenuItem value='llamada'>Llamada</MenuItem>
+                        <MenuItem value='whatsapp'>WhatsApp</MenuItem>
+                      </>
+                    ) : (
+                      <>
+                        <MenuItem value='email'>Email</MenuItem>
+                        <MenuItem value='whatsapp'>WhatsApp</MenuItem>
+                      </>
+                    )}
                   </CustomTextField>
                 )}
               />
@@ -649,13 +685,13 @@ const AddEventSidebar = (props: Props) => {
               </Box>
               
               <div className='flex gap-4 mbs-4'>
-                {!isPastEvent && (
+                {((isSlotMode && calendarStore.selectedEvent?.extendedProps?.status === 'AVAILABLE') || isNotificationMode) && !isPastEvent && (
                   <Button type='submit' variant='contained'>
-                    {calendarStore.selectedEvent ? 'Actualizar' : 'Guardar Recordatorio'}
+                    {isSlotMode ? 'Confirmar Reserva' : 'Guardar Notificación'}
                   </Button>
                 )}
                 <Button variant='outlined' color='secondary' onClick={handleSidebarClose}>
-                  {isPastEvent ? 'Cerrar' : 'Cancelar'}
+                  Cerrar
                 </Button>
               </div>
             </form>

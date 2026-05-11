@@ -64,8 +64,25 @@ export const verticalMenuData = [
     {
         label: 'Calendario',
         icon: 'calendar',
-        route: '/calendar',
-        roles: ['MANAGER', 'BIOMEDICAL', 'ADMIN', 'USER']
+        route: '#',
+        roles: ['MANAGER', 'BIOMEDICAL', 'ADMIN', 'USER'],
+        children: [
+            {
+                label: 'Calendario',
+                route: '/calendar',
+                roles: ['MANAGER', 'BIOMEDICAL', 'ADMIN', 'USER']
+            },
+            {
+                label: 'Configuración',
+                route: '/calendar/configuracion',
+                roles: ['MANAGER', 'ADMIN']
+            },
+            {
+                label: 'Agenda Diaria',
+                route: '/calendar/agenda',
+                roles: ['MANAGER', 'BIOMEDICAL', 'ADMIN', 'USER']
+            }
+        ]
     },
     {
         label: 'Usuarios y Roles',

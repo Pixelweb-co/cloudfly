@@ -16,7 +16,7 @@ import type { CalendarColors, CalendarType } from '@/types/apps/calendarTypes'
 // Component Imports
 import Calendar from './Calendar'
 import SidebarLeft from './SidebarLeft'
-import AddEventSidebar from './AddEventSidebar'
+import BookAppointmentSidebar from './AddEventSidebar'
 
 // Service Imports
 import calendarService from '@/services/calendarService'
@@ -24,15 +24,13 @@ import { useSession } from 'next-auth/react'
 
 // CalendarColors Object
 const calendarsColor: CalendarColors = {
-  Equipos: 'danger',
-  NOTIFICATION: 'primary',
-  REST_ACTION: 'warning',
-  WHATSAPP_CAMPAIGN: 'success',
-  Personal: 'danger',
-  Business: 'primary',
-  Family: 'warning',
-  Holiday: 'success',
-  ETC: 'info'
+  AVAILABLE: 'success',
+  RESERVED: 'primary',
+  BLOCKED: 'error',
+  COMPLETED: 'secondary',
+  CANCELLED: 'warning',
+  NOTIFICATION: 'info',
+  EQUIPOS: 'danger'
 }
 
 // Aux function to parse maintenance payload
@@ -96,25 +94,44 @@ const AppCalendar = () => {
   const fetchEvents = useCallback(async () => {
     setCalendarStore(prev => ({ ...prev, loading: true }))
     try {
-      const data = await calendarService.getEvents(tenantId, companyId)
-      const mappedEvents = data.map(event => ({
-        id: event.id?.toString(),
-        title: event.title,
-        start: event.startTime.includes('T') ? event.startTime : event.startTime.replace(' ', 'T'),
-        end: event.endTime ? (event.endTime.includes('T') ? event.endTime : event.endTime.replace(' ', 'T')) : new Date(new Date(event.startTime).getTime() + 3600000).toISOString().split('Z')[0],
-        allDay: event.allDay,
+      const start = format(new Date(), "yyyy-MM-dd'T'00:00:00")
+      const end = format(new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd'T'23:59:59")
+      
+      const [slots, legacyEvents] = await Promise.all([
+        calendarService.getSlots(tenantId, companyId, start, end),
+        calendarService.getEvents(tenantId, companyId)
+      ])
+
+      const mappedSlots = slots.map((slot: any) => ({
+        id: `slot-${slot.id}`,
+        title: slot.status === 'AVAILABLE' ? 'Disponible' : (slot.status === 'RESERVED' ? 'Cita Reservada' : 'Bloqueado'),
+        start: slot.startTime,
+        end: slot.endTime,
+        allDay: false,
         extendedProps: {
-          calendar: (event.eventType === 'REST_ACTION' && event.eventSubtype === 'MAINTENANCE') ? 'Equipos' : (event.eventType || 'Business'),
-          description: event.description,
-          eventType: event.eventType,
-          calendarId: event.calendarId,
-          status: event.status,
-          payload: event.payload,
-          recurrence: event.recurrence,
-          ...parsePayload(event.payload || '')
+          calendar: slot.status,
+          status: slot.status,
+          appointmentId: slot.appointmentId,
+          templateId: slot.templateId,
+          isSlot: true
         }
       }))
-      setCalendarStore(prev => ({ ...prev, events: mappedEvents, loading: false }))
+
+      const mappedLegacy = legacyEvents.map((event: any) => ({
+        id: `legacy-${event.id}`,
+        title: event.title,
+        start: event.startTime,
+        end: event.endTime,
+        allDay: event.allDay,
+        extendedProps: {
+          calendar: 'NOTIFICATION',
+          status: event.status,
+          isSlot: false,
+          ...event
+        }
+      }))
+
+      setCalendarStore(prev => ({ ...prev, events: [...mappedSlots, ...mappedLegacy], loading: false }))
     } catch (error: any) {
       setCalendarStore(prev => ({ ...prev, error: error.message, loading: false }))
     }
@@ -126,14 +143,20 @@ const AppCalendar = () => {
 
   const handleCloseSidebar = () => setAddEventSidebarOpen(false)
 
-  const handleAddEvent = async (eventData: any) => {
+  const handleAddEvent = async (data: any) => {
     try {
-      await calendarService.createEvent({ ...eventData, tenantId, companyId })
+      if (data.isNotification) {
+        delete data.isNotification
+        await calendarService.createEvent({ ...data, tenantId, companyId })
+        alert("Notificación guardada correctamente")
+      } else {
+        await calendarService.bookAppointment(data)
+        alert("Cita reservada correctamente")
+      }
       await fetchEvents()
-      alert("Evento guardado correctamente")
     } catch (error) {
-      console.error('Error creating event:', error)
-      alert("Error al guardar el evento")
+      console.error('Error handling event creation:', error)
+      alert("Error al procesar la solicitud")
     }
   }
 
@@ -185,16 +208,9 @@ const AppCalendar = () => {
   }
 
   const handleDateClick = (info: any) => {
-    const clickedDate = new Date(info.date)
-    const now = new Date()
-    
-    if (clickedDate < now) {
-      alert("No se pueden programar eventos en el pasado")
-      return
-    }
-
-    setCalendarStore(prev => ({ ...prev, selectedEvent: null }))
-    setAddEventSidebarOpen(true)
+    // En el nuevo sistema, no se permiten eventos libres.
+    // Solo se puede interactuar con slots existentes.
+    console.log("Date click ignored. Please click on an AVAILABLE slot.")
   }
 
   const handleFilterChange = (label: string) => {
@@ -207,9 +223,7 @@ const AppCalendar = () => {
     setSelectedCalendars(val ? ['Equipos', 'NOTIFICATION', 'REST_ACTION', 'WHATSAPP_CAMPAIGN'] : [])
   }
 
-  const filteredEvents = calendarStore.events.filter(event => 
-    selectedCalendars.includes(event.extendedProps?.calendar)
-  )
+  const filteredEvents = calendarStore.events
 
   return (
     <div className='flex bs-full overflow-hidden'>
@@ -239,7 +253,7 @@ const AppCalendar = () => {
           refreshEvents={fetchEvents}
         />
       </div>
-      <AddEventSidebar
+      <BookAppointmentSidebar
         calendarStore={calendarStore}
         addEventSidebarOpen={addEventSidebarOpen}
         handleAddEventSidebarToggle={handleCloseSidebar}
