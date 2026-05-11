@@ -93,15 +93,38 @@ public class AvailabilityService {
                                 
                                 // Parse JSON configs
                                 Map<String, Object> weeklySchedule = parseJson(template.getWeeklySchedule());
-                                Map<String, Object> exceptions = parseJson(template.getExceptions());
+                                List<Map<String, Object>> exceptions = parseJsonList(template.getExceptions());
 
                                 LocalDate movingDate = currentGenDate;
                                 while (!movingDate.isAfter(endGenDate)) {
-                                    String dateKey = movingDate.toString();
-                                    
-                                    if (exceptions.containsKey(dateKey)) {
-                                        processDayConfig(slotsToSave, movingDate, template, exceptions.get(dateKey), existingSlots);
+                                    // 1. Check if movingDate is within any exception range
+                                    final LocalDate d = movingDate;
+                                    Map<String, Object> activeException = exceptions.stream()
+                                            .filter(exc -> {
+                                                LocalDate startExc = LocalDate.parse((String) exc.get("startDate"));
+                                                LocalDate endExc = LocalDate.parse((String) exc.get("endDate"));
+                                                return !d.isBefore(startExc) && !d.isAfter(endExc);
+                                            })
+                                            .findFirst()
+                                            .orElse(null);
+
+                                    if (activeException != null) {
+                                        // Apply Exception
+                                        Boolean allDay = (Boolean) activeException.getOrDefault("allDay", false);
+                                        Boolean enabled = (Boolean) activeException.getOrDefault("enabled", false);
+                                        
+                                        if (enabled && !allDay) {
+                                            // Available only in specific ranges of the exception
+                                            processDayConfig(slotsToSave, movingDate, template, activeException, existingSlots);
+                                        }
+                                        // If !enabled OR (enabled && allDay), we don't do anything here (either blocked or handled by allDay logic if it was available)
+                                        // Wait, if enabled && allDay, it should generate default hours or whatever is configured.
+                                        // But usually exceptions are for BLOCKING or CUSTOM HOURS.
+                                        if (enabled && allDay) {
+                                            processDayConfig(slotsToSave, movingDate, template, true, existingSlots);
+                                        }
                                     } else {
+                                        // 2. Regular weekly schedule
                                         DayOfWeek dow = movingDate.getDayOfWeek();
                                         if (template.getAllowWeekends() || (dow != DayOfWeek.SATURDAY && dow != DayOfWeek.SUNDAY)) {
                                             processDayConfig(slotsToSave, movingDate, template, weeklySchedule.get(getDayKey(dow)), existingSlots);
@@ -175,8 +198,18 @@ public class AvailabilityService {
         try {
             return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
-            log.warn("Could not parse JSON: {}", e.getMessage());
+            log.warn("Could not parse JSON Map: {}", e.getMessage());
             return Map.of();
+        }
+    }
+
+    private List<Map<String, Object>> parseJsonList(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {});
+        } catch (Exception e) {
+            log.warn("Could not parse JSON List: {}", e.getMessage());
+            return List.of();
         }
     }
 

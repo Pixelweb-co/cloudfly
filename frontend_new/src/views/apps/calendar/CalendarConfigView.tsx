@@ -126,12 +126,7 @@ const AvailabilityTab = () => {
           jueves: { enabled: true, ranges: [{ start: '08:00', end: '12:00' }, { start: '14:00', end: '18:00' }] },
           viernes: { enabled: true, ranges: [{ start: '08:00', end: '12:00' }, { start: '14:00', end: '18:00' }] }
         }),
-        exceptions: JSON.stringify(
-          exceptions.reduce((acc: any, curr: any) => {
-            acc[curr.date] = { enabled: curr.enabled, ranges: curr.ranges }
-            return acc
-          }, {})
-        ),
+        exceptions: JSON.stringify(exceptions),
         durationDefault: 30,
         bufferAfter: 5,
         maxFutureRange: genMode === 'indefinite' ? 365 : 30,
@@ -231,44 +226,109 @@ const AvailabilityTab = () => {
       <Grid item xs={12}>
         <Divider className='my-4' />
         <Box className='flex items-center justify-between mb-4'>
-          <Typography variant='h6'>Excepciones (Días específicos)</Typography>
+          <Box>
+            <Typography variant='h6'>Excepciones (Días especiales)</Typography>
+            <Typography variant='body2' color='textSecondary'>Configura bloqueos o cambios de horario por fechas específicas</Typography>
+          </Box>
           <Button 
             variant='tonal' 
             size='small'
             startIcon={<Icon icon='tabler:plus' />}
-            onClick={() => setExceptions([...exceptions, { date: format(new Date(), 'yyyy-MM-dd'), enabled: false, ranges: [] }])}
+            onClick={() => setExceptions([...exceptions, { 
+              detail: '', 
+              startDate: format(new Date(), 'yyyy-MM-dd'), 
+              endDate: format(new Date(), 'yyyy-MM-dd'), 
+              allDay: true, 
+              enabled: false // Default: Blocked
+            }])}
           >
-            Agregar Excepción
+            Nueva Excepción
           </Button>
         </Box>
-        <Stack spacing={2}>
+        <Stack spacing={4}>
           {exceptions.map((exc, idx) => (
-            <Box key={idx} className='flex items-center gap-4 bg-gray-50 p-2 rounded'>
-              <TextField 
-                type='date' 
-                size='small' 
-                value={exc.date} 
-                onChange={(e) => {
-                  const newExc = [...exceptions]
-                  newExc[idx].date = e.target.value
-                  setExceptions(newExc)
-                }}
-              />
-              <Chip 
-                label={exc.enabled ? 'Abierto' : 'Cerrado (Bloqueado)'} 
-                color={exc.enabled ? 'success' : 'error'} 
-                onClick={() => {
-                  const newExc = [...exceptions]
-                  newExc[idx].enabled = !newExc[idx].enabled
-                  setExceptions(newExc)
-                }}
-              />
-              <IconButton color='error' onClick={() => setExceptions(exceptions.filter((_, i) => i !== idx))}>
-                <Icon icon='tabler:trash' />
-              </IconButton>
-            </Box>
+            <Card key={idx} variant='outlined' className='p-4 bg-gray-50/50'>
+              <Grid container spacing={4} alignItems='center'>
+                <Grid item xs={12} md={4}>
+                  <TextField 
+                    fullWidth 
+                    size='small' 
+                    label='Detalle / Motivo' 
+                    placeholder='Ej: Cita Médica'
+                    value={exc.detail}
+                    onChange={(e) => {
+                      const newExc = [...exceptions]
+                      newExc[idx].detail = e.target.value
+                      setExceptions(newExc)
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={4} className='flex gap-2'>
+                  <TextField 
+                    type='date' 
+                    size='small' 
+                    label='Desde'
+                    InputLabelProps={{ shrink: true }}
+                    value={exc.startDate} 
+                    onChange={(e) => {
+                      const newExc = [...exceptions]
+                      newExc[idx].startDate = e.target.value
+                      setExceptions(newExc)
+                    }}
+                  />
+                  <TextField 
+                    type='date' 
+                    size='small' 
+                    label='Hasta'
+                    InputLabelProps={{ shrink: true }}
+                    value={exc.endDate} 
+                    onChange={(e) => {
+                      const newExc = [...exceptions]
+                      newExc[idx].endDate = e.target.value
+                      setExceptions(newExc)
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} md={3} className='flex items-center gap-4'>
+                  <Box className='flex flex-col items-center'>
+                    <Typography variant='caption'>Todo el día</Typography>
+                    <Switch 
+                      size='small'
+                      checked={exc.allDay} 
+                      onChange={(e) => {
+                        const newExc = [...exceptions]
+                        newExc[idx].allDay = e.target.checked
+                        setExceptions(newExc)
+                      }} 
+                    />
+                  </Box>
+                  <Box className='flex flex-col items-center'>
+                    <Typography variant='caption'>Habilitado</Typography>
+                    <Switch 
+                      size='small'
+                      checked={exc.enabled} 
+                      onChange={(e) => {
+                        const newExc = [...exceptions]
+                        newExc[idx].enabled = e.target.checked
+                        setExceptions(newExc)
+                      }} 
+                    />
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={1} className='flex justify-end'>
+                  <IconButton color='error' onClick={() => setExceptions(exceptions.filter((_, i) => i !== idx))}>
+                    <Icon icon='tabler:trash' />
+                  </IconButton>
+                </Grid>
+              </Grid>
+            </Card>
           ))}
-          {exceptions.length === 0 && <Typography color='textSecondary'>No hay excepciones configuradas</Typography>}
+          {exceptions.length === 0 && (
+            <Box className='flex flex-col items-center p-8 border-2 border-dashed rounded-lg bg-gray-50'>
+              <Icon icon='tabler:calendar-cancel' fontSize={40} className='text-gray-300 mb-2' />
+              <Typography color='textSecondary'>No hay excepciones configuradas</Typography>
+            </Box>
+          )}
         </Stack>
       </Grid>
 
