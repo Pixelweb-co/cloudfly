@@ -93,10 +93,7 @@ public class AppointmentService {
     }
 
     private Mono<Void> deleteNotificationEvent(AppointmentEntity appointment) {
-        return calendarEventService.deleteEvent(appointment.getId()).then(); // This might be wrong if ID is not the same, but createEvent handles relatedEntity
-        // Actually CalendarEventService.deleteEvent uses the calendar_event ID.
-        // I should probably search by relatedEntity and then delete.
-        // But for now, let's keep it simple or just update status to CANCELLED in notification.
+        // We update the notification status to CANCELLED instead of deleting it to keep history
         CalendarEventDto dto = CalendarEventDto.builder()
                 .tenantId(appointment.getTenantId())
                 .companyId(appointment.getCompanyId())
