@@ -56,15 +56,15 @@ public class DashboardService {
                 .collectList()
                 .map(rows -> {
                     List<String> categories = rows.stream()
-                            .map(r -> r.get("date").toString())
+                            .map(r -> r.getDate().toString())
                             .collect(Collectors.toList());
                     
                     List<Long> orderCounts = rows.stream()
-                            .map(r -> ((Number) r.get("count")).longValue())
+                            .map(r -> r.getCount())
                             .collect(Collectors.toList());
                             
                     List<Double> revenueSums = rows.stream()
-                            .map(r -> ((Number) r.get("total")).doubleValue())
+                            .map(r -> r.getTotal() != null ? r.getTotal() : 0.0)
                             .collect(Collectors.toList());
 
                     return com.app.dto.SalesChartDataDTO.builder()
