@@ -113,6 +113,11 @@ public class ProductService {
                 .flatMap(this::enrichProduct);
     }
 
+    public Flux<ProductCreateRequest> listByType(Long tenantId, String type) {
+        return productRepository.findByTenantIdAndProductType(tenantId, type)
+                .flatMap(this::enrichProduct);
+    }
+
     public Flux<ProductCreateRequest> findAll() {
         return productRepository.findAll()
                 .flatMap(this::enrichProduct);

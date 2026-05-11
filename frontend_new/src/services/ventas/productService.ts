@@ -36,5 +36,11 @@ export const productService = {
   deleteProduct: async (id: number): Promise<void> => {
     const url = `/productos/${id}`;
     await axiosInstance.delete(url);
+  },
+  
+  getProductsByType: async (type: string): Promise<Product[]> => {
+    const url = `/productos/type/${type}`;
+    const response = await axiosInstance.get(url);
+    return response.data;
   }
 };
