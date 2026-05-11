@@ -64,6 +64,43 @@ const calendarService = {
     await axios.delete(`${CALENDAR_API_URL}/api/events/${id}`, {
       headers: getAuthHeader()
     })
+  },
+
+  // --- NEW AVAILABILITY API ---
+  getSlots: async (tenantId: number, companyId: number, start: string, end: string) => {
+    const response = await axios.get(`${CALENDAR_API_URL}/api/availability/slots`, {
+      params: { tenantId, companyId, start, end },
+      headers: getAuthHeader()
+    })
+    return response.data
+  },
+
+  saveTemplate: async (template: any) => {
+    const response = await axios.post(`${CALENDAR_API_URL}/api/availability/templates`, template, {
+      headers: getAuthHeader()
+    })
+    return response.data
+  },
+
+  generateSlots: async (templateId: number) => {
+    await axios.post(`${CALENDAR_API_URL}/api/availability/generate`, null, {
+      params: { templateId },
+      headers: getAuthHeader()
+    })
+  },
+
+  // --- NEW APPOINTMENTS API ---
+  bookAppointment: async (appointment: any) => {
+    const response = await axios.post(`${CALENDAR_API_URL}/api/appointments`, appointment, {
+      headers: getAuthHeader()
+    })
+    return response.data
+  },
+
+  cancelAppointment: async (id: number) => {
+    await axios.patch(`${CALENDAR_API_URL}/api/appointments/${id}/cancel`, null, {
+      headers: getAuthHeader()
+    })
   }
 }
 

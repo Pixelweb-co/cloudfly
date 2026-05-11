@@ -13,50 +13,62 @@ conn.on('ready', () => {
   const sqlContent = `
 USE cloud_master;
 
--- Add column if not exists
-SET @dbname = DATABASE();
-SET @tablename = 'users';
-SET @columnname = 'contact_id';
-SET @preparedStatement = (SELECT IF(
-  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = @dbname AND TABLE_NAME = @tablename AND COLUMN_NAME = @columnname) > 0,
-  'SELECT 1',
-  'ALTER TABLE users ADD COLUMN contact_id BIGINT'
-));
-PREPARE stmt FROM @preparedStatement;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
+CREATE TABLE IF NOT EXISTS availability_templates (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id BIGINT NOT NULL,
+    company_id BIGINT NOT NULL,
+    user_id BIGINT,
+    name VARCHAR(255),
+    weekly_schedule JSON,
+    duration_default INT DEFAULT 30,
+    buffer_before INT DEFAULT 0,
+    buffer_after INT DEFAULT 0,
+    min_anticipation INT DEFAULT 24,
+    max_future_range INT DEFAULT 30,
+    daily_limit INT,
+    allow_weekends BOOLEAN DEFAULT FALSE,
+    timezone VARCHAR(50) DEFAULT 'America/Bogota',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_template_tenant_company (tenant_id, company_id)
+);
 
-DROP PROCEDURE IF EXISTS sp_create_user_with_contact;
+CREATE TABLE IF NOT EXISTS availability_slots (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id BIGINT NOT NULL,
+    company_id BIGINT NOT NULL,
+    user_id BIGINT,
+    template_id BIGINT,
+    start_time DATETIME NOT NULL,
+    end_time DATETIME NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    appointment_id BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_slot_tenant_company_time (tenant_id, company_id, start_time),
+    FOREIGN KEY (template_id) REFERENCES availability_templates(id) ON DELETE CASCADE
+);
 
-DELIMITER //
-CREATE PROCEDURE sp_create_user_with_contact(
-    IN p_nombres VARCHAR(255),
-    IN p_apellidos VARCHAR(255),
-    IN p_username VARCHAR(255),
-    IN p_password VARCHAR(255),
-    IN p_email VARCHAR(255),
-    IN p_tenant_id BIGINT,
-    IN p_company_id BIGINT
-)
-BEGIN
-    DECLARE v_contact_id BIGINT;
-    DECLARE v_uuid VARCHAR(255);
-    
-    SET v_uuid = UUID();
-    
-    -- 1. Crear el contacto
-    INSERT INTO contacts (uuid, name, email, tenant_id, company_id, is_active, created_at, type, stage)
-    VALUES (v_uuid, CONCAT(p_nombres, ' ', p_apellidos), p_email, p_tenant_id, p_company_id, 1, NOW(), 'CUSTOMER', 'NEW');
-    
-    SET v_contact_id = LAST_INSERT_ID();
-    
-    -- 2. Crear el usuario asociado al contacto
-    INSERT INTO users (nombres, apellidos, username, password, email, customer_id, company_id, contact_id, is_enabled, account_no_expired, account_no_locked, credential_no_expired)
-    VALUES (p_nombres, p_apellidos, p_username, p_password, p_email, p_tenant_id, p_company_id, v_contact_id, 0, 1, 1, 1);
-    
-    SELECT v_contact_id as contact_id, LAST_INSERT_ID() as user_id;
-END //
-DELIMITER ;
+CREATE TABLE IF NOT EXISTS appointments (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id BIGINT NOT NULL,
+    company_id BIGINT NOT NULL,
+    user_id BIGINT,
+    contact_id BIGINT,
+    slot_id BIGINT,
+    title VARCHAR(255),
+    description TEXT,
+    observations TEXT,
+    appointment_type VARCHAR(50),
+    channel VARCHAR(50),
+    status VARCHAR(50) NOT NULL,
+    start_time DATETIME NOT NULL,
+    end_time DATETIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_appointment_tenant_company (tenant_id, company_id),
+    FOREIGN KEY (slot_id) REFERENCES availability_slots(id) ON DELETE SET NULL
+);
   `;
 
   const remotePath = '/tmp/migration.sql';

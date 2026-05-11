@@ -42,5 +42,11 @@ export const contactService = {
     const url = `/api/v1/contacts/check-email?email=${email}`;
     const response = await axiosInstance.get(url);
     return response.data;
+  },
+  
+  searchContacts: async (query: string): Promise<Contact[]> => {
+    const url = `/api/v1/contacts/search?q=${query}`;
+    const response = await axiosInstance.get(url);
+    return response.data;
   }
 };

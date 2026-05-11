@@ -115,7 +115,7 @@ const Calendar = (props: CalenderProps) => {
 
     eventClassNames({ event: calendarEvent }: any) {
       // @ts-ignore
-      const colorName = calendarsColor[calendarEvent._def.extendedProps.calendar] || 'primary'
+      const colorName = calendarsColor[calendarEvent._def.extendedProps.status] || 'primary'
       return [`event-bg-${colorName}`]
     },
 
@@ -123,68 +123,21 @@ const Calendar = (props: CalenderProps) => {
       const { event } = eventInfo
       const props = event.extendedProps
       
-      if (props.nombreCliente || props.nombreProducto) {
-        const statusColor = props.status === 'COMPLETED' || props.status === 'INACTIVE' ? 'bg-green-500' : 'bg-red-500'
-        return (
-          <div className="items-center justify-between w-full pr-2">
-            <div><b>Cliente:</b> {props.nombreCliente}</div>
-            <div><b>Equipo:</b> {props.nombreProducto}</div>
-            <div className='flex items-center justify-between text-[10px]'>
-              <span><b>Marca: </b> {props.brand} </span> <span><b> Mod: </b> {props.model} </span>
-            </div>
-            <div className='flex items-center justify-between text-[10px]'>
-              <span><b> Ser: </b> {props.licencePlate} </span>
-              <span className={`w-3 h-3 rounded-full ${statusColor}`}></span>
-            </div>
-          </div>
-        )
-      }
-
       return (
         <div className="flex flex-col w-full p-1 overflow-hidden text-xs">
-          <div className="font-bold truncate">{event.title}</div>
-          <div className="opacity-75">[{props.eventType || 'EVENT'}]</div>
+          <div className="flex items-center justify-between font-bold truncate">
+            <span>{event.title}</span>
+            {props.status === 'RESERVED' && <i className='tabler-lock text-[10px]' />}
+          </div>
+          <div className="opacity-75 text-[10px] uppercase">{props.status}</div>
           {props.description && (
-            <div className="truncate italic">{props.description}</div>
+            <div className="truncate italic text-[10px]">{props.description}</div>
           )}
         </div>
       )
     },
 
     async eventClick({ event: clickedEvent }: any) {
-      if (clickedEvent.extendedProps.nombreCliente) {
-        if (clickedEvent.extendedProps.status === 'COMPLETED' || clickedEvent.extendedProps.status === 'INACTIVE') {
-          alert("El mantenimiento ya ha sido confirmado!")
-          return
-        }
-
-        setConfirmData({
-          title: 'Confirmar Mantenimiento',
-          content: '¿Deseas confirmar la realización de este mantenimiento?',
-          onConfirm: async () => {
-            try {
-              const token = localStorage.getItem('AuthToken') || localStorage.getItem('jwt')
-              if (!token) throw new Error('No session token found')
-
-              const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/schedule/set_mantenimiento`, 
-                { id: clickedEvent.id },
-                { headers: { Authorization: `Bearer ${token}` } }
-              )
-
-              if (response.data.result === 'success') {
-                alert("Mantenimiento confirmado correctamente!")
-                refreshEvents()
-              }
-            } catch (error) {
-              console.error('Error confirming maintenance:', error)
-            }
-          },
-          onCancel: () => {}
-        })
-        setConfirmOpen(true)
-        return
-      }
-
       onEventClick(clickedEvent)
     },
 
