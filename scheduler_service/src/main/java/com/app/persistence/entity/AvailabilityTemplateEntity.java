@@ -29,6 +29,9 @@ public class AvailabilityTemplateEntity {
     @Column("user_id")
     private Long userId;
 
+    @Column("service_id")
+    private Long serviceId;
+
     private String name;
 
     @Column("weekly_schedule")
@@ -54,6 +57,9 @@ public class AvailabilityTemplateEntity {
 
     @Column("allow_weekends")
     private Boolean allowWeekends;
+
+    @Column("exceptions")
+    private String exceptions; // JSON string for specific date overrides
 
     private String timezone;
 

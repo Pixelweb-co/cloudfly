@@ -32,6 +32,9 @@ public class AvailabilitySlotEntity {
     @Column("template_id")
     private Long templateId;
 
+    @Column("service_id")
+    private Long serviceId;
+
     @Column("start_time")
     private LocalDateTime startTime;
 

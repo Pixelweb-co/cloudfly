@@ -16,11 +16,17 @@ import {
   IconButton,
   Stack,
   Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   CircularProgress
 } from '@mui/material'
 import { Icon } from '@iconify/react'
 import { useSession } from 'next-auth/react'
 import calendarService from '@/services/calendarService'
+import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
+import { addDays, format } from 'date-fns'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -80,6 +86,11 @@ const CalendarConfigView = () => {
 const AvailabilityTab = () => {
   const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
+  const [serviceId, setServiceId] = useState(1)
+  const [genMode, setGenMode] = useState('range') // 'range' or 'indefinite'
+  const [startDate, setStartDate] = useState<Date | null>(new Date())
+  const [endDate, setEndDate] = useState<Date | null>(addDays(new Date(), 30))
+  const [exceptions, setExceptions] = useState<any[]>([])
 
   const handleSave = async () => {
     try {
@@ -88,27 +99,41 @@ const AvailabilityTab = () => {
       const tenantId = user?.tenantId || 1
       const companyId = user?.companyId || 1
 
-      // Dummy template data for now, ideally populated from form state
       const templateData = {
         tenantId,
         companyId,
-        name: 'Default Template',
-        weeklySchedule: '{}', // Simplified
+        serviceId,
+        name: `Template Service ${serviceId}`,
+        weeklySchedule: JSON.stringify({
+          lunes: { enabled: true, ranges: [{ start: '08:00', end: '12:00' }, { start: '14:00', end: '18:00' }] },
+          martes: { enabled: true, ranges: [{ start: '08:00', end: '12:00' }, { start: '14:00', end: '18:00' }] },
+          miercoles: { enabled: true, ranges: [{ start: '08:00', end: '12:00' }, { start: '14:00', end: '18:00' }] },
+          jueves: { enabled: true, ranges: [{ start: '08:00', end: '12:00' }, { start: '14:00', end: '18:00' }] },
+          viernes: { enabled: true, ranges: [{ start: '08:00', end: '12:00' }, { start: '14:00', end: '18:00' }] }
+        }),
+        exceptions: JSON.stringify(
+          exceptions.reduce((acc: any, curr: any) => {
+            acc[curr.date] = { enabled: curr.enabled, ranges: curr.ranges }
+            return acc
+          }, {})
+        ),
         durationDefault: 30,
-        bufferBefore: 0,
-        bufferAfter: 0,
-        minAnticipation: 24,
-        maxFutureRange: 30,
+        bufferAfter: 5,
+        maxFutureRange: genMode === 'indefinite' ? 365 : 30,
         allowWeekends: false
       }
 
       const savedTemplate = await calendarService.saveTemplate(templateData)
-      await calendarService.generateSlots(savedTemplate.id)
       
-      alert('Disponibilidad generada correctamente')
+      const sDate = startDate ? format(startDate, 'yyyy-MM-dd') : undefined
+      const eDate = genMode === 'indefinite' ? format(addDays(new Date(), 365), 'yyyy-MM-dd') : (endDate ? format(endDate, 'yyyy-MM-dd') : undefined)
+      
+      await calendarService.generateSlots(savedTemplate.id, sDate, eDate)
+      
+      alert('Disponibilidad y Servicio configurados correctamente')
     } catch (error) {
       console.error('Error saving template:', error)
-      alert('Error al generar la disponibilidad')
+      alert('Error al procesar la configuración')
     } finally {
       setLoading(false)
     }
@@ -116,10 +141,59 @@ const AvailabilityTab = () => {
 
   return (
     <Grid container spacing={6}>
+      <Grid item xs={12} md={6}>
+        <FormControl fullWidth>
+          <InputLabel>Servicio Asociado</InputLabel>
+          <Select 
+            value={serviceId} 
+            label='Servicio Asociado'
+            onChange={(e) => setServiceId(e.target.value as number)}
+          >
+            <MenuItem value={1}>Consulta General</MenuItem>
+            <MenuItem value={2}>Asesoría Técnica</MenuItem>
+            <MenuItem value={3}>Soporte Premium</MenuItem>
+          </Select>
+        </FormControl>
+      </Grid>
+
+      <Grid item xs={12} md={6}>
+        <Box className='flex items-center gap-4 h-full'>
+          <Typography>Modo de generación:</Typography>
+          <Chip 
+            label='Rango de Fechas' 
+            variant={genMode === 'range' ? 'filled' : 'outlined'} 
+            color='primary' 
+            onClick={() => setGenMode('range')} 
+          />
+          <Chip 
+            label='Indefinido (1 año)' 
+            variant={genMode === 'indefinite' ? 'filled' : 'outlined'} 
+            color='primary' 
+            onClick={() => setGenMode('indefinite')} 
+          />
+        </Box>
+      </Grid>
+
+      {genMode === 'range' && (
+        <Grid item xs={12} className='flex gap-4'>
+          <AppReactDatepicker
+            selected={startDate}
+            onChange={(date: Date) => setStartDate(date)}
+            customInput={<TextField label='Desde' fullWidth />}
+          />
+          <AppReactDatepicker
+            selected={endDate}
+            onChange={(date: Date) => setEndDate(date)}
+            customInput={<TextField label='Hasta' fullWidth />}
+          />
+        </Grid>
+      )}
+
       <Grid item xs={12}>
-        <Typography variant='h6' className='mb-4'>Horario Semanal</Typography>
+        <Divider />
+        <Typography variant='h6' className='my-4'>Horario Semanal</Typography>
         <Stack spacing={4}>
-          {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((day) => (
+          {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map((day) => (
             <Card key={day} variant='outlined' className='p-4 border-l-4 border-l-primary'>
               <Box className='flex items-center justify-between'>
                 <Box className='flex items-center gap-4'>
@@ -129,16 +203,7 @@ const AvailabilityTab = () => {
                 <Box className='flex items-center gap-4'>
                   <Typography variant='body2' color='textSecondary'>08:00 → 12:00</Typography>
                   <Typography variant='body2' color='textSecondary'>14:00 → 18:00</Typography>
-                  <IconButton color='primary' size='small'>
-                    <Icon icon='tabler:plus' />
-                  </IconButton>
-                  <IconButton color='secondary' size='small'>
-                    <Icon icon='tabler:copy' />
-                  </IconButton>
                 </Box>
-              </Box>
-              <Box className='mt-2'>
-                <Typography variant='caption' color='textSecondary'>Duración slot: 30 min</Typography>
               </Box>
             </Card>
           ))}
@@ -147,20 +212,46 @@ const AvailabilityTab = () => {
 
       <Grid item xs={12}>
         <Divider className='my-4' />
-        <Typography variant='h6' className='mb-4'>Disponibilidad Especial (Excepciones)</Typography>
-        <Button variant='tonal' startIcon={<Icon icon='tabler:calendar-plus' />}>
-          Agregar Excepción
-        </Button>
-      </Grid>
-
-      <Grid item xs={12}>
-        <Typography variant='h6' className='mb-4'>Vista Previa de Slots</Typography>
-        <Box className='flex flex-wrap gap-2'>
-          {['08:00 - 08:30', '08:30 - 09:00', '09:00 - 09:30', '09:30 - 10:00'].map(slot => (
-            <Chip key={slot} label={slot} variant='outlined' color='success' />
-          ))}
-          <Typography variant='body2' color='textSecondary' className='w-full mt-2'>...y 12 slots más</Typography>
+        <Box className='flex items-center justify-between mb-4'>
+          <Typography variant='h6'>Excepciones (Días específicos)</Typography>
+          <Button 
+            variant='tonal' 
+            size='small'
+            startIcon={<Icon icon='tabler:plus' />}
+            onClick={() => setExceptions([...exceptions, { date: format(new Date(), 'yyyy-MM-dd'), enabled: false, ranges: [] }])}
+          >
+            Agregar Excepción
+          </Button>
         </Box>
+        <Stack spacing={2}>
+          {exceptions.map((exc, idx) => (
+            <Box key={idx} className='flex items-center gap-4 bg-gray-50 p-2 rounded'>
+              <TextField 
+                type='date' 
+                size='small' 
+                value={exc.date} 
+                onChange={(e) => {
+                  const newExc = [...exceptions]
+                  newExc[idx].date = e.target.value
+                  setExceptions(newExc)
+                }}
+              />
+              <Chip 
+                label={exc.enabled ? 'Abierto' : 'Cerrado (Bloqueado)'} 
+                color={exc.enabled ? 'success' : 'error'} 
+                onClick={() => {
+                  const newExc = [...exceptions]
+                  newExc[idx].enabled = !newExc[idx].enabled
+                  setExceptions(newExc)
+                }}
+              />
+              <IconButton color='error' onClick={() => setExceptions(exceptions.filter((_, i) => i !== idx))}>
+                <Icon icon='tabler:trash' />
+              </IconButton>
+            </Box>
+          ))}
+          {exceptions.length === 0 && <Typography color='textSecondary'>No hay excepciones configuradas</Typography>}
+        </Stack>
       </Grid>
 
       <Grid item xs={12} className='flex justify-end mt-4'>

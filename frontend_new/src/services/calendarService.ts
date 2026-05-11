@@ -82,9 +82,12 @@ const calendarService = {
     return response.data
   },
 
-  generateSlots: async (templateId: number) => {
+  generateSlots: async (templateId: number, startDate?: string, endDate?: string): Promise<void> => {
+    const params: any = { templateId }
+    if (startDate) params.startDate = startDate
+    if (endDate) params.endDate = endDate
     await axios.post(`${CALENDAR_API_URL}/api/availability/generate`, null, {
-      params: { templateId },
+      params,
       headers: getAuthHeader()
     })
   },
