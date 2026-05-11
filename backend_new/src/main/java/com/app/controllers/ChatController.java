@@ -53,23 +53,37 @@ public class ChatController {
                     log.info("📬 [CHAT-CONTROLLER] Fetching unread summary for tenant: {}", tenantId);
                     return messageRepository.countUnreadGroupedByContact(tenantId)
                             .flatMap(row -> {
-                                Long contactId = row.get("contact_id") != null ? Long.valueOf(row.get("contact_id").toString()) : null;
-                                Long count = row.get("cnt") != null ? Long.valueOf(row.get("cnt").toString()) : 0L;
-                                if (contactId == null) return Mono.empty();
+                                try {
+                                    log.debug("🔍 [CHAT-CONTROLLER] Processing unread row: {}", row);
+                                    Object contactIdObj = row.get("contact_id");
+                                    Object countObj = row.get("cnt");
+                                    
+                                    if (contactIdObj == null) {
+                                        log.warn("⚠️ [CHAT-CONTROLLER] contact_id is null in summary row");
+                                        return Mono.empty();
+                                    }
+                                    
+                                    Long contactId = Long.valueOf(contactIdObj.toString());
+                                    Long count = countObj != null ? Long.valueOf(countObj.toString()) : 0L;
 
-                                return contactRepository.findById(contactId)
-                                        .map(contact -> {
-                                            Map<String, Object> item = new HashMap<>();
-                                            item.put("contactId", contact.getId());
-                                            item.put("contactName", contact.getName());
-                                            item.put("phone", contact.getPhone());
-                                            item.put("avatarUrl", contact.getAvatarUrl());
-                                            item.put("unreadCount", count);
-                                            return item;
-                                        })
-                                        .defaultIfEmpty(Map.of("contactId", contactId, "contactName", "Desconocido", "unreadCount", count));
+                                    return contactRepository.findById(contactId)
+                                            .map(contact -> {
+                                                Map<String, Object> item = new HashMap<>();
+                                                item.put("contactId", contact.getId());
+                                                item.put("contactName", contact.getName());
+                                                item.put("phone", contact.getPhone());
+                                                item.put("avatarUrl", contact.getAvatarUrl());
+                                                item.put("unreadCount", count);
+                                                return item;
+                                            })
+                                            .defaultIfEmpty(Map.of("contactId", contactId, "contactName", "Desconocido", "unreadCount", count));
+                                } catch (Exception e) {
+                                    log.error("❌ [CHAT-CONTROLLER] Error processing unread summary row: {}", e.getMessage(), e);
+                                    return Mono.error(e);
+                                }
                             });
-                });
+                })
+                .doOnError(e -> log.error("❌ [CHAT-CONTROLLER] Global error in getUnreadSummary: {}", e.getMessage(), e));
     }
 
     /**
