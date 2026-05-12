@@ -110,4 +110,8 @@ public class RbacService {
             return List.of();
         }
     }
+    public Flux<com.app.persistence.entity.ModuleEntity> getModulesList() {
+        return moduleRepository.findAll()
+                .sort(Comparator.comparingInt(m -> m.getDisplayOrder() != null ? m.getDisplayOrder() : 0));
+    }
 }
