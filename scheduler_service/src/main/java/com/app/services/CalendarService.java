@@ -37,8 +37,9 @@ public class CalendarService {
         return calendarRepository.save(entity).map(this::mapToDto);
     }
 
-    public Mono<CalendarDto> updateCalendar(Long id, CalendarDto dto) {
+    public Mono<CalendarDto> updateCalendar(Long id, Long tenantId, Long companyId, CalendarDto dto) {
         return calendarRepository.findById(id)
+                .filter(c -> c.getTenantId().equals(tenantId) && c.getCompanyId().equals(companyId))
                 .flatMap(existing -> {
                     existing.setName(dto.getName());
                     existing.setColor(dto.getColor());
@@ -48,10 +49,12 @@ public class CalendarService {
                 .map(this::mapToDto);
     }
 
-    public Mono<Void> deleteCalendar(Long id) {
-        return scheduledJobRepository.deleteByCalendarId(id)
-                .then(calendarEventRepository.deleteByCalendarId(id))
-                .then(calendarRepository.deleteById(id));
+    public Mono<Void> deleteCalendar(Long id, Long tenantId, Long companyId) {
+        return calendarRepository.findById(id)
+                .filter(c -> c.getTenantId().equals(tenantId) && c.getCompanyId().equals(companyId))
+                .flatMap(existing -> scheduledJobRepository.deleteByCalendarId(id)
+                        .then(calendarEventRepository.deleteByTenantIdAndCompanyIdAndCalendarId(tenantId, companyId, id))
+                        .then(calendarRepository.deleteById(id)));
     }
 
     private CalendarDto mapToDto(CalendarEntity entity) {
