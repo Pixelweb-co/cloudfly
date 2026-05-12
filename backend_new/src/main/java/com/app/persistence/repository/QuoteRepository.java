@@ -11,11 +11,11 @@ public interface QuoteRepository extends ReactiveCrudRepository<QuoteEntity, Lon
     Flux<QuoteEntity> findAllByTenantId(Long tenantId);
     Flux<QuoteEntity> findAllByTenantIdAndCompanyId(Long tenantId, Long companyId);
 
-    @Query("SELECT * FROM quotes WHERE quote_number = :quoteNumber AND tenant_id = :tenantId")
-    Mono<QuoteEntity> findByQuoteNumberAndTenantId(String quoteNumber, Long tenantId);
+    @Query("SELECT * FROM quotes WHERE quote_number = :quoteNumber AND tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId)")
+    Mono<QuoteEntity> findByQuoteNumberAndTenantId(String quoteNumber, Long tenantId, Long companyId);
 
-    @Query("SELECT * FROM quotes WHERE customer_id = :customerId AND tenant_id = :tenantId")
-    Flux<QuoteEntity> findByCustomerIdAndTenantId(Long customerId, Long tenantId);
+    @Query("SELECT * FROM quotes WHERE customer_id = :customerId AND tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId)")
+    Flux<QuoteEntity> findByCustomerIdAndTenantId(Long customerId, Long tenantId, Long companyId);
 
     @Query("SELECT COUNT(*) FROM quotes WHERE tenant_id = :tenantId")
     Mono<Integer> countByTenantId(Long tenantId);

@@ -36,7 +36,7 @@ public class DashboardService {
         
         Mono<Integer> totalCustomers = contactRepository.countTotalContacts(tenantId, companyId);
         Mono<Integer> totalContactsToday = contactRepository.countContactsToday(tenantId, companyId);
-        Mono<Integer> totalProducts = productRepository.countByTenantId(tenantId);
+        Mono<Integer> totalProducts = productRepository.countByTenantIdAndCompanyId(tenantId, companyId);
         Mono<Integer> totalOrders = orderRepository.countByTenantIdAndCompanyId(tenantId, companyId);
         Mono<Double> totalRevenue = orderRepository.sumTotalByTenantIdAndCompanyId(tenantId, companyId);
         
