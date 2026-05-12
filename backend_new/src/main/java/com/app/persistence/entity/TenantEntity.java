@@ -138,9 +138,16 @@ public class TenantEntity {
     @Column("notas_dian")
     private String notasDian;
 
+    @Column("admin_user_id")
+    private Long adminUserId;
+
     @Column("created_at")
     private LocalDateTime createdAt;
 
     @Column("updated_at")
     private LocalDateTime updatedAt;
+
+    // Explicit getters for VPS compatibility
+    public Long getAdminUserId() { return adminUserId; }
+    public void setAdminUserId(Long adminUserId) { this.adminUserId = adminUserId; }
 }
