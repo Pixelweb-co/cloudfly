@@ -33,11 +33,13 @@ export default function PipelinesKanbanPage() {
         tenantId ? parseInt(tenantId) : undefined, 
         companyId ? parseInt(companyId) : undefined
       )
-      setPipelines(data)
       
-      if (data.length > 0 && !selectedId) {
+      const pipelineList = Array.isArray(data) ? data : []
+      setPipelines(pipelineList)
+      
+      if (pipelineList.length > 0 && !selectedId) {
         // If no ID in URL, select the first one or default
-        const defaultPipeline = data.find(p => p.isDefault) || data[0]
+        const defaultPipeline = pipelineList.find(p => p.isDefault) || pipelineList[0]
         setSelectedId(defaultPipeline.id)
         router.push(`/marketing/pipelines/kanban?id=${defaultPipeline.id}`)
       }
@@ -95,21 +97,23 @@ export default function PipelinesKanbanPage() {
                 </Select>
               </FormControl>
             </CardContent>
+
+            <Box sx={{ p: 4, pt: 0 }}>
+              {error && <Alert severity="error" sx={{ mb: 4 }}>{error}</Alert>}
+
+              {selectedId ? (
+                <PipelineKanbanBoard pipelineId={selectedId} />
+              ) : (
+                !loading && (
+                  <Alert severity="info">
+                    Por favor selecciona un embudo para visualizar el tablero Kanban.
+                  </Alert>
+                )
+              )}
+            </Box>
           </Card>
         </Grid>
       </Grid>
-
-      {error && <Alert severity="error" sx={{ mb: 4 }}>{error}</Alert>}
-
-      {selectedId ? (
-        <PipelineKanbanBoard pipelineId={selectedId} />
-      ) : (
-        !loading && (
-          <Alert severity="info">
-            Por favor selecciona un embudo para visualizar el tablero Kanban.
-          </Alert>
-        )
-      )}
     </Box>
   )
 }
