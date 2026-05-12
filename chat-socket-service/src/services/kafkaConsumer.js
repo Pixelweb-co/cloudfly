@@ -25,25 +25,55 @@ async function initKafkaConsumer(io) {
         await consumer.connect();
         logger.info('✅ [KAFKA-CONSUMER] Connected to Kafka brokers');
 
-        await consumer.subscribe({ topic: 'messages.out', fromBeginning: false });
-        logger.info('✅ [KAFKA-CONSUMER] Subscribed to topic: messages.out');
+        await consumer.subscribe({ topics: ['messages.out', 'webnotifications'], fromBeginning: false });
+        logger.info('✅ [KAFKA-CONSUMER] Subscribed to topics: messages.out, webnotifications');
 
         await consumer.run({
             eachMessage: async ({ topic, partition, message }) => {
-                const payload = JSON.parse(message.value.toString());
-                logger.info(`📥 [KAFKA-CONSUMER] Received AI response payload: ${JSON.stringify(payload)}`);
-
                 try {
-                    const eventPayload = await chatService.processAiResponse(payload);
+                    const payload = JSON.parse(message.value.toString());
                     
-                    if (eventPayload && io) {
-                        const { tenantId, contact } = eventPayload;
-                        const roomName = `tenant_${tenantId}_contact_${contact.phone}`;
-                        io.to(roomName).emit('new-message', eventPayload);
-                        logger.info(`📡 [KAFKA-CONSUMER] Emitted AI message to socket room: ${roomName}`);
+                    if (topic === 'messages.out') {
+                        logger.info(`📥 [KAFKA-CONSUMER] Received AI response payload: ${JSON.stringify(payload)}`);
+                        const eventPayload = await chatService.processAiResponse(payload);
+                        
+                        if (eventPayload && io) {
+                            const { tenantId, contact } = eventPayload;
+                            const roomName = `tenant_${tenantId}_contact_${contact.phone}`;
+                            io.to(roomName).emit('new-message', eventPayload);
+                            logger.info(`📡 [KAFKA-CONSUMER] Emitted AI message to socket room: ${roomName}`);
+                        }
+                    } else if (topic === 'webnotifications') {
+                        logger.info(`📥 [KAFKA-CONSUMER] Received web notification payload: ${JSON.stringify(payload)}`);
+                        
+                        if (io) {
+                            const { tenantId, companyId, userId, title, description, type } = payload;
+                            
+                            // Emit to specific company room if available, else to all tenant users
+                            let roomName = `tenant_${tenantId}`;
+                            if (companyId) {
+                                roomName = `tenant_${tenantId}_company_${companyId}`;
+                            }
+                            
+                            // 1. Send the actual notification for the toast/popup
+                            io.to(roomName).emit('new-web-notification', {
+                                title,
+                                description,
+                                type,
+                                timestamp: new Date().toISOString()
+                            });
+                            
+                            // 2. Trigger dashboard refresh if it's an important update
+                            if (type === 'order' || type === 'contact' || type === 'appointment') {
+                                io.to(roomName).emit('dashboard-update', { type });
+                                logger.info(`📡 [KAFKA-CONSUMER] Emitted dashboard-update to room: ${roomName}`);
+                            }
+                            
+                            logger.info(`📡 [KAFKA-CONSUMER] Emitted new-web-notification to room: ${roomName}`);
+                        }
                     }
                 } catch (err) {
-                    logger.error(`❌ [KAFKA-CONSUMER] Error processing AI response: ${err.message}`);
+                    logger.error(`❌ [KAFKA-CONSUMER] Error processing message from topic ${topic}: ${err.message}`);
                 }
             },
         });

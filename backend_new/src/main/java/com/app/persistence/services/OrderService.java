@@ -104,7 +104,7 @@ public class OrderService {
                             .then(Mono.just(savedOrder))
                             .flatMap(this::enrichWithItemsAndCustomer)
                             .doOnSuccess(dto -> sendWebNotification(
-                                dto.getTenantId(), null,
+                                dto.getTenantId(), dto.getCompanyId(), null,
                                 "📦 Nuevo Pedido Creado",
                                 "Pedido " + dto.getOrderNumber() + " de " + dto.getCustomerName() + " por $" + dto.getTotal()));
                 });
@@ -149,7 +149,7 @@ public class OrderService {
                             .then(orderRepository.save(existingOrder))
                             .flatMap(this::enrichWithItemsAndCustomer)
                             .doOnSuccess(dto -> sendWebNotification(
-                                dto.getTenantId(), null,
+                                dto.getTenantId(), dto.getCompanyId(), null,
                                 "✏️ Pedido Actualizado",
                                 "Pedido " + dto.getOrderNumber() + " actualizado. Estado: " + dto.getStatus()));
                 });
@@ -161,10 +161,11 @@ public class OrderService {
                 .then(orderRepository.deleteById(id));
     }
 
-    private void sendWebNotification(Long tenantId, Long userId, String title, String description) {
+    private void sendWebNotification(Long tenantId, Long companyId, Long userId, String title, String description) {
         try {
             java.util.Map<String, Object> payload = new java.util.HashMap<>();
             payload.put("tenantId", tenantId);
+            payload.put("companyId", companyId);
             payload.put("userId", userId);
             payload.put("title", title);
             payload.put("description", description);
