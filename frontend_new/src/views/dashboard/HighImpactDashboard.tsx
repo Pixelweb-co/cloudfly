@@ -55,69 +55,6 @@ const HighImpactDashboard = () => {
     }, [dispatch])
  
     // Fallback series if API doesn't return enough data yet
-    const mockSeriesRequest = [{ name: 'Conversaciones', data: [2, 5, 3, 8, 5, 7, 5] }]
-    const mockSeriesUsers = [{ name: 'Usuarios', data: [10, 25, 15, 40, 20, 60, 50] }]
-    const mockSeriesMessages = [{ name: 'Mensajes', data: [45, 52, 38, 65, 48, 82, 70] }]
-    
-    // Real or mock series for key metrics
-'use client'
-
-// React Imports
-import { useEffect, useState } from 'react'
-
-// Redux Imports
-import { useAppSelector, useAppDispatch } from '@/redux/hooks'
-import { fetchDashboardData } from '@/redux/slices/dashboardSlice'
-
-// MUI Imports
-import Grid from '@mui/material/Grid'
-import Box from '@mui/material/Box'
-import Alert from '@mui/material/Alert'
-import CircularProgress from '@mui/material/CircularProgress'
-import Typography from '@mui/material/Typography'
-
-// Component Imports
-import WelcomeBanner from './WelcomeBanner'
-import CardStatsWithAreaChart from '@/components/card-statistics/StatsWithAreaChart'
-import CardStatsSquare from '@/components/card-statistics/CardStatsSquare'
-import PipelineContactsChart from './PipelineContactsChart'
-
-// Service Imports
-import dashboardService from '@/services/dashboardService'
-import usePermissions from '@/hooks/usePermissions'
-import { userMethods } from '@/utils/userMethods'
-
-// Util Imports
-import { formatCurrency } from '@/utils/format'
-
-const HighImpactDashboard = () => {
-    // Hooks
-    const { hasModule } = usePermissions()
-    const dispatch = useAppDispatch()
-    const { stats, loading, error } = useAppSelector(state => state.dashboard)
-    const [salesChart, setSalesChart] = useState<any>(null)
- 
-    useEffect(() => {
-        const user = userMethods.getUserLogin()
-        const currentCompanyId = user?.activeCompanyId || user?.company_id
-        
-        // Cargar datos vía Redux
-        dispatch(fetchDashboardData(currentCompanyId ? Number(currentCompanyId) : undefined))
-
-        // Cargar gráfica de ventas (aún local o mover a redux después)
-        const fetchSales = async () => {
-            try {
-                const salesData = await dashboardService.getSalesChart('7d')
-                setSalesChart(salesData)
-            } catch (err) {
-                console.error('Error fetching sales chart:', err)
-            }
-        }
-        fetchSales()
-    }, [dispatch])
- 
-    // Fallback series if API doesn't return enough data yet
-    const mockSeriesRequest = [{ name: 'Conversaciones', data: [2, 5, 3, 8, 5, 7, 5] }]
     const mockSeriesUsers = [{ name: 'Usuarios', data: [10, 25, 15, 40, 20, 60, 50] }]
     const mockSeriesMessages = [{ name: 'Mensajes', data: [45, 52, 38, 65, 48, 82, 70] }]
     
