@@ -18,6 +18,7 @@ public class AvailabilitySlotDto {
     private Long companyId;
     private Long userId;
     private Long templateId;
+    private Long serviceId;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private EventStatus status;
