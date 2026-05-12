@@ -1,7 +1,10 @@
 package com.app.controllers;
 
 import com.app.persistence.entity.CompanyEntity;
+import com.app.persistence.entity.UserEntity;
 import com.app.persistence.repository.CompanyRepository;
+import com.app.persistence.repository.UserRepository;
+import com.app.persistence.repository.ContactRepository;
 import com.app.persistence.services.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -19,7 +22,11 @@ import java.util.Map;
 public class CompanyController {
 
     private final CompanyRepository companyRepository;
-    private final UserService userService;    @GetMapping
+    private final UserService userService;
+    private final UserRepository userRepository;
+    private final ContactRepository contactRepository;
+
+    @GetMapping
     public Flux<CompanyEntity> getAllCompanies(
             @RequestParam(required = false) Long tenantId,
             Authentication authentication) {
@@ -63,6 +70,34 @@ public class CompanyController {
                                 if (count == 0) company.setIsPrincipal(true);
                                 else if (company.getIsPrincipal() == null) company.setIsPrincipal(false);
                                 return companyRepository.save(company);
+                            })
+                            .flatMap(savedCompany -> {
+                                // ACTUALIZAR CONTEXTO SOLO SI EL ONBOARDING NO SE HA COMPLETADO
+                                if (!user.isOnboardingCompleted()) {
+                                    user.setCompanyId(savedCompany.getId());
+                                    // Asegurar que el tenantId esté sincronizado si era nulo
+                                    if (user.getCustomerId() == null) {
+                                        user.setCustomerId(savedCompany.getTenantId());
+                                    }
+                                    
+                                    Mono<UserEntity> updateUserMono = userRepository.save(user);
+                                    
+                                    // ACTUALIZAR CONTACTO RELACIONADO SI EXISTE
+                                    if (user.getContactId() != null) {
+                                        return contactRepository.findById(user.getContactId())
+                                                .flatMap(contact -> {
+                                                    contact.setCompanyId(savedCompany.getId());
+                                                    contact.setTenantId(savedCompany.getTenantId());
+                                                    return contactRepository.save(contact);
+                                                })
+                                                .then(updateUserMono)
+                                                .thenReturn(savedCompany);
+                                    }
+                                    
+                                    return updateUserMono.thenReturn(savedCompany);
+                                }
+                                
+                                return Mono.just(savedCompany);
                             });
                 });
     }
