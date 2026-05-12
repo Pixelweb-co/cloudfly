@@ -16,12 +16,15 @@ import {
   ListItemAvatar,
   Avatar,
   ListItemText,
-  IconButton
+  IconButton,
+  Autocomplete
 } from '@mui/material'
 import { pipelineService } from '@/services/marketing/pipelineService'
 import { getInitials } from '@/utils/getInitials'
 import QuickContactForm from './QuickContactForm'
 import { Icon } from '@iconify/react'
+import { customerService } from '@/services/customers/customerService'
+import type { Customer } from '@/types/customers'
 
 interface Props {
   open: boolean
@@ -36,6 +39,7 @@ interface ContactSearchResult {
   name: string
   email: string
   phone: string
+  nit?: string
 }
 
 export default function AddProspectDialog({ open, onClose, pipelineId, targetStageId, onSuccess }: Props) {
@@ -44,15 +48,27 @@ export default function AddProspectDialog({ open, onClose, pipelineId, targetSta
   const [results, setResults] = useState<ContactSearchResult[]>([])
   const [showQuickCreate, setShowQuickCreate] = useState(false)
 
-  const handleSearch = async () => {
-    if (!searchTerm) return
+  // Fetch customers on mount
+  React.useEffect(() => {
+    if (open && results.length === 0) {
+      loadCustomers()
+    }
+  }, [open])
+
+  const loadCustomers = async () => {
     setLoading(true)
     try {
-      // Mock search or replace with actual contactApi.search(searchTerm)
-      console.log('Searching contacts mock:', searchTerm)
-      setResults([]) 
+      const customers = await customerService.getActiveCustomers()
+      const mapped = customers.map(c => ({
+        id: c.id,
+        name: c.name || 'Sin nombre',
+        email: c.email || '',
+        phone: c.phone || '',
+        nit: c.nit || undefined
+      }))
+      setResults(mapped)
     } catch (e) {
-      console.error(e)
+      console.error('Error fetching customers:', e)
     } finally {
       setLoading(false)
     }
@@ -86,65 +102,70 @@ export default function AddProspectDialog({ open, onClose, pipelineId, targetSta
       
       {!showQuickCreate ? (
         <DialogContent dividers sx={{ p: 5 }}>
-          <Box sx={{ display: 'flex', gap: 3, mb: 5 }}>
-            <TextField
+          <Box sx={{ mb: 5 }}>
+            <Autocomplete
               fullWidth
-              size="small"
-              placeholder="Buscar por nombre, email o teléfono..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            />
-            <Button variant="contained" onClick={handleSearch} disabled={loading}>
-              Buscar
-            </Button>
-          </Box>
-
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', my: 10 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <List>
-              {results.map((contact) => (
-                <ListItem 
-                  key={contact.id} 
-                  sx={{ cursor: 'pointer', mb: 1, borderRadius: 1, '&:hover': { bgcolor: 'action.hover' } }}
-                  onClick={() => handleSelectContact(contact.id)}
-                >
+              options={results}
+              getOptionLabel={(option) => `${option.name} ${option.nit ? `(${option.nit})` : ''}`}
+              filterOptions={(options, state) => {
+                const inputValue = state.inputValue.toLowerCase();
+                return options.filter(o => 
+                  o.name.toLowerCase().includes(inputValue) || 
+                  (o.nit && o.nit.toLowerCase().includes(inputValue))
+                );
+              }}
+              onChange={(event, newValue) => {
+                if (newValue) {
+                  handleSelectContact(newValue.id);
+                }
+              }}
+              renderOption={(props, option) => (
+                <li {...props} key={option.id}>
                   <ListItemAvatar>
-                    <Avatar sx={{ bgcolor: 'primary.main', color: 'primary.contrastText' }}>
-                        {getInitials(contact.name)}
+                    <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32, mr: 2 }}>
+                      {getInitials(option.name)}
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText 
-                    primary={contact.name} 
-                    secondary={`${contact.email} | ${contact.phone}`} 
-                    primaryTypographyProps={{ variant: 'body1', fontWeight: 500 }}
+                    primary={option.name} 
+                    secondary={
+                      <React.Fragment>
+                        <Typography component="span" variant="body2" color="text.primary">
+                          ID: {option.nit || 'N/A'}
+                        </Typography>
+                        {option.email && ` | ${option.email}`}
+                      </React.Fragment>
+                    } 
                   />
-                </ListItem>
-              ))}
-              
-              {results.length === 0 && searchTerm && !loading && (
-                <Box sx={{ textAlign: 'center', mt: 5 }}>
+                </li>
+              )}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Buscar por nombre o documento..."
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <React.Fragment>
+                        {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                        {params.InputProps.endAdornment}
+                      </React.Fragment>
+                    ),
+                  }}
+                />
+              )}
+              noOptionsText={
+                <Box sx={{ textAlign: 'center', p: 2 }}>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
                     No se encontraron contactos.
                   </Typography>
-                  <Button variant="text" onClick={() => setShowQuickCreate(true)} color="primary">
-                    Crear nuevo contacto
+                  <Button variant="text" onClick={() => setShowQuickCreate(true)} color="primary" size="small">
+                    Crear nuevo
                   </Button>
                 </Box>
-              )}
-              
-              {!searchTerm && !loading && (
-                <Box sx={{ textAlign: 'center', mt: 5 }}>
-                    <Typography variant="body2" color="text.disabled">
-                        Ingresa un término para buscar prospectos existentes
-                    </Typography>
-                </Box>
-              )}
-            </List>
-          )}
+              }
+            />
+          </Box>
 
         </DialogContent>
       ) : (
