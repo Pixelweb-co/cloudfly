@@ -77,8 +77,8 @@ public class CategoryController {
     }
 
     @GetMapping("/customer/{tenantId}")
-    public Flux<CategoryResponse> getAllTenantCategories(@PathVariable Long tenantId) {
-        return categoryService.getAllTenantCategories(tenantId);
+    public Flux<CategoryResponse> getAllTenantCategories(@PathVariable Long tenantId, @RequestParam(required = false) Long companyId) {
+        return categoryService.getAllTenantCategories(tenantId, companyId);
     }
 
     @PutMapping("/{id}")

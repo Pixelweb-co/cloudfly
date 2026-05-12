@@ -82,7 +82,7 @@ public class ProductController {
     @GetMapping
     public Flux<ProductCreateRequest> findAll(@RequestHeader Map<String, String> headers) {
         return getCurrentUserContext(headers)
-                .flatMapMany(ctx -> productService.listByTenant(ctx.tenantId()));
+                .flatMapMany(ctx -> productService.listByTenant(ctx.tenantId(), ctx.companyId()));
     }
 
     @GetMapping("/{id}")
@@ -91,14 +91,14 @@ public class ProductController {
     }
 
     @GetMapping("/tenant/{tenantId}")
-    public Flux<ProductCreateRequest> listByTenant(@PathVariable Long tenantId) {
-        return productService.listByTenant(tenantId);
+    public Flux<ProductCreateRequest> listByTenant(@PathVariable Long tenantId, @RequestParam(required = false) Long companyId) {
+        return productService.listByTenant(tenantId, companyId);
     }
 
     @GetMapping("/type/{type}")
     public Flux<ProductCreateRequest> listByType(@PathVariable String type, @RequestHeader Map<String, String> headers) {
         return getCurrentUserContext(headers)
-                .flatMapMany(ctx -> productService.listByType(ctx.tenantId(), type));
+                .flatMapMany(ctx -> productService.listByType(ctx.tenantId(), ctx.companyId(), type));
     }
 
     @DeleteMapping("/{id}")
@@ -108,19 +108,19 @@ public class ProductController {
     }
 
     @GetMapping("/barcode/{barcode}")
-    public Mono<ProductCreateRequest> getByBarcode(@PathVariable String barcode, @RequestParam Long tenantId) {
-        return productService.getByBarcode(barcode, tenantId);
+    public Mono<ProductCreateRequest> getByBarcode(@PathVariable String barcode, @RequestParam Long tenantId, @RequestParam(required = false) Long companyId) {
+        return productService.getByBarcode(barcode, tenantId, companyId);
     }
 
     @GetMapping("/search")
     public Flux<ProductCreateRequest> searchByName(@RequestParam String query, @RequestHeader Map<String, String> headers) {
         return getCurrentUserContext(headers)
-                .flatMapMany(ctx -> productService.searchByName(query, ctx.tenantId()));
+                .flatMapMany(ctx -> productService.searchByName(query, ctx.tenantId(), ctx.companyId()));
     }
 
     @GetMapping("/stock/multiple")
     public Flux<ProductCreateRequest> validateStockMultiple(@RequestParam List<Long> ids, @RequestHeader Map<String, String> headers) {
         return getCurrentUserContext(headers)
-                .flatMapMany(ctx -> productService.validateStockMultiple(ids, ctx.tenantId()));
+                .flatMapMany(ctx -> productService.validateStockMultiple(ids, ctx.tenantId(), ctx.companyId()));
     }
 }

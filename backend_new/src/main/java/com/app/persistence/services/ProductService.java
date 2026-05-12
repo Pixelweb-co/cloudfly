@@ -108,13 +108,13 @@ public class ProductService {
                 .flatMap(this::enrichProduct);
     }
 
-    public Flux<ProductCreateRequest> listByTenant(Long tenantId) {
-        return productRepository.findByTenantId(tenantId)
+    public Flux<ProductCreateRequest> listByTenant(Long tenantId, Long companyId) {
+        return productRepository.findByTenantIdAndCompanyId(tenantId, companyId)
                 .flatMap(this::enrichProduct);
     }
 
-    public Flux<ProductCreateRequest> listByType(Long tenantId, String type) {
-        return productRepository.findByTenantIdAndProductType(tenantId, type)
+    public Flux<ProductCreateRequest> listByType(Long tenantId, Long companyId, String type) {
+        return productRepository.findByTenantIdAndCompanyIdAndProductType(tenantId, companyId, type)
                 .flatMap(this::enrichProduct);
     }
 
@@ -131,13 +131,13 @@ public class ProductService {
                         .then(productEventProducer.publishProductDelete(id, product.getTenantId())));
     }
 
-    public Mono<ProductCreateRequest> getByBarcode(String barcode, Long tenantId) {
-        return productRepository.findByBarcodeAndTenantId(barcode, tenantId)
+    public Mono<ProductCreateRequest> getByBarcode(String barcode, Long tenantId, Long companyId) {
+        return productRepository.findByBarcodeAndTenantIdAndCompanyId(barcode, tenantId, companyId)
                 .flatMap(this::enrichProduct);
     }
 
-    public Flux<ProductCreateRequest> searchByName(String query, Long tenantId) {
-        return productRepository.findByProductNameContainingIgnoreCaseAndTenantId(query, tenantId)
+    public Flux<ProductCreateRequest> searchByName(String query, Long tenantId, Long companyId) {
+        return productRepository.findByProductNameContainingIgnoreCaseAndTenantIdAndCompanyId(query, tenantId, companyId)
                 .flatMap(this::enrichProduct);
     }
 
@@ -180,8 +180,8 @@ public class ProductService {
                 .defaultIfEmpty(false);
     }
 
-    public Flux<ProductCreateRequest> validateStockMultiple(List<Long> productIds, Long tenantId) {
-        return productRepository.findByIdInAndTenantId(productIds, tenantId)
+    public Flux<ProductCreateRequest> validateStockMultiple(List<Long> productIds, Long tenantId, Long companyId) {
+        return productRepository.findByIdInAndTenantIdAndCompanyId(productIds, tenantId, companyId)
                 .flatMap(this::enrichProduct);
     }
 
