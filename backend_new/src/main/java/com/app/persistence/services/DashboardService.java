@@ -48,17 +48,17 @@ public class DashboardService {
         // Mocking some values for now if repositories don't exist or logic is complex
         // In a real scenario, we would calculate changes based on previous periods
         
-        return Mono.zip(totalCustomers, totalProducts, totalOrders, totalRevenue, activeConversations, messagesToday, activeCampaigns, totalQuotes, totalContactsToday)
-                .map(tuple -> DashboardStatsDTO.builder()
-                        .totalCustomers(tuple.getT1().intValue())
-                        .totalContactsToday(tuple.getT9())
-                        .totalProducts(tuple.getT2().intValue())
-                        .totalOrders(tuple.getT3().intValue())
-                        .totalRevenue(tuple.getT4())
-                        .activeConversations(tuple.getT5())
-                        .totalMessagesToday(tuple.getT6())
-                        .activeCampaigns(tuple.getT7())
-                        .totalQuotes(tuple.getT8())
+        return Mono.zip(
+                objects -> DashboardStatsDTO.builder()
+                        .totalCustomers((Integer) objects[0])
+                        .totalProducts((Integer) objects[1])
+                        .totalOrders((Integer) objects[2])
+                        .totalRevenue((Double) objects[3])
+                        .activeConversations((Integer) objects[4])
+                        .totalMessagesToday((Integer) objects[5])
+                        .activeCampaigns((Integer) objects[6])
+                        .totalQuotes((Integer) objects[7])
+                        .totalContactsToday((Integer) objects[8])
                         .revenueChange(15.4) 
                         .ordersChange(8.2)
                         .customersChange(12.5)
