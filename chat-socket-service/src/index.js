@@ -219,12 +219,20 @@ io.use(authMiddleware);
 io.on('connection', (socket) => {
     logger.info(`✅ User connected: ${socket.userName} (ID: ${socket.userId}, Tenant: ${socket.tenantId})`);
 
-    // Auto-join global tenant/company and user rooms for targeted notifications
-    if (socket.tenantId && socket.companyId) {
-        socket.join(`tenant_${socket.tenantId}_company_${socket.companyId}`);
+    // Auto-join global tenant and company rooms for targeted notifications
+    if (socket.tenantId) {
+        socket.join(`tenant_${socket.tenantId}`);
+        if (socket.companyId) {
+            socket.join(`tenant_${socket.tenantId}_company_${socket.companyId}`);
+        }
     }
-    if (socket.userId && socket.tenantId && socket.companyId) {
-        socket.join(`tenant_${socket.tenantId}_company_${socket.companyId}_user_${socket.userId}`);
+    
+    if (socket.userId && socket.tenantId) {
+        let userRoom = `tenant_${socket.tenantId}_user_${socket.userId}`;
+        if (socket.companyId) {
+            userRoom = `tenant_${socket.tenantId}_company_${socket.companyId}_user_${socket.userId}`;
+        }
+        socket.join(userRoom);
     }
 
     // Manejar presencia (online)

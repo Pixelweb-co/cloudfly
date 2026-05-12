@@ -31,7 +31,16 @@ async function initKafkaConsumer(io) {
         await consumer.run({
             eachMessage: async ({ topic, partition, message }) => {
                 try {
-                    const payload = JSON.parse(message.value.toString());
+                    let payload = JSON.parse(message.value.toString());
+                    
+                    // Handle double-encoded JSON if necessary
+                    if (typeof payload === 'string') {
+                        try {
+                            payload = JSON.parse(payload);
+                        } catch (e) {
+                            // Not a JSON string, keep as is
+                        }
+                    }
                     
                     if (topic === 'messages.out') {
                         logger.info(`📥 [KAFKA-CONSUMER] Received AI response payload: ${JSON.stringify(payload)}`);
