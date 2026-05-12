@@ -35,7 +35,8 @@ router.post('/new-message', validateN8nSecret, async (req, res) => {
             displayName,
             sentAt,
             contactId,
-            mediaUrl
+            mediaUrl,
+            companyId
         } = req.body;
 
         // Validación básica
@@ -50,7 +51,9 @@ router.post('/new-message', validateN8nSecret, async (req, res) => {
         const io = req.app.get('io');
 
         // Construir room name para la conversación específica
-        const conversationRoom = `tenant_${tenantId}_conv_${conversationId}`;
+        const conversationRoom = companyId 
+            ? `tenant_${tenantId}_company_${companyId}_conv_${conversationId}`
+            : `tenant_${tenantId}_conv_${conversationId}`;
 
         // Construir mensaje formateado
         const message = {
@@ -77,7 +80,9 @@ router.post('/new-message', validateN8nSecret, async (req, res) => {
         logger.info(`Message ${messageId} broadcasted to room: ${conversationRoom}`);
 
         // También emitir evento para actualizar el card del contacto en el Kanban
-        const platformRoom = `tenant_${tenantId}_platform_${platform}`;
+        const platformRoom = companyId
+            ? `tenant_${tenantId}_company_${companyId}_platform_${platform}`
+            : `tenant_${tenantId}_platform_${platform}`;
         io.to(platformRoom).emit('contact-update', {
             contactId,
             conversationId,
@@ -109,14 +114,16 @@ router.post('/new-message', validateN8nSecret, async (req, res) => {
  */
 router.post('/message-status', validateN8nSecret, async (req, res) => {
     try {
-        const { messageId, conversationId, tenantId, status } = req.body;
+        const { messageId, conversationId, tenantId, companyId, status } = req.body;
 
         if (!messageId || !status) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
         const io = req.app.get('io');
-        const conversationRoom = `tenant_${tenantId}_conv_${conversationId}`;
+        const conversationRoom = companyId
+            ? `tenant_${tenantId}_company_${companyId}_conv_${conversationId}`
+            : `tenant_${tenantId}_conv_${conversationId}`;
 
         io.to(conversationRoom).emit('message-status-update', {
             messageId,
@@ -140,7 +147,7 @@ router.post('/message-status', validateN8nSecret, async (req, res) => {
  */
 router.post('/web-notification', validateN8nSecret, async (req, res) => {
     try {
-        const { uuid, tenantId, userId, title, description, type } = req.body;
+        const { uuid, tenantId, companyId, userId, title, description, type } = req.body;
 
         if (!uuid) {
             return res.status(400).json({ error: 'Missing uuid' });
@@ -148,12 +155,16 @@ router.post('/web-notification', validateN8nSecret, async (req, res) => {
 
         const io = req.app.get('io');
         
-        // Emitir a una room del tenant o del user
+        // Emitir a una room del tenant/company o del user
         let targetRoom = '';
         if (userId) {
-            targetRoom = `tenant_${tenantId}_user_${userId}`;
+            targetRoom = companyId 
+                ? `tenant_${tenantId}_company_${companyId}_user_${userId}`
+                : `tenant_${tenantId}_user_${userId}`;
         } else if (tenantId) {
-            targetRoom = `tenant_${tenantId}`;
+            targetRoom = companyId
+                ? `tenant_${tenantId}_company_${companyId}`
+                : `tenant_${tenantId}`;
         } else {
             targetRoom = `global_notifications`; // Fallback global
         }

@@ -19,8 +19,8 @@ class MessageHandler {
 
                 // 1. Obtener el contacto por UUID para saber su teléfono (JID) e ID real
                 const [contacts] = await require('../utils/db').execute(
-                    'SELECT id, phone, uuid FROM contacts WHERE uuid = ? AND tenant_id = ? LIMIT 1',
-                    [contactUuid, tenantId]
+                    'SELECT id, phone, uuid, company_id FROM contacts WHERE uuid = ? AND tenant_id = ? AND company_id = ? LIMIT 1',
+                    [contactUuid, tenantId, socket.companyId]
                 );
 
                 if (contacts.length === 0) {
@@ -31,7 +31,7 @@ class MessageHandler {
                 const remoteJid = contact.phone.includes('@') ? contact.phone : `${contact.phone}@s.whatsapp.net`;
 
                 // 2. Obtener canal para saber el nombre de la instancia
-                const channel = await chatService.getChannelForOutbound(tenantId);
+                const channel = await chatService.getChannelForOutbound(tenantId, socket.companyId);
                 if (!channel) {
                     return socket.emit('error', { message: 'No active WhatsApp channel found for this tenant' });
                 }
@@ -42,13 +42,15 @@ class MessageHandler {
                 // 4. Guardar en BD Cloudfly directamente
                 const savedMessage = await chatService.saveOutboundMessage(
                     tenantId,
+                    socket.companyId,
                     channel.id,
                     contact.id,
                     body
                 );
 
                 // 5. Broadcast a todos los sockets en la room del contacto
-                const roomName = `tenant_${tenantId}_contact_${contact.uuid}`;
+                const cleanPhone = contact.phone.replace(/\D/g, '');
+                const roomName = `tenant_${tenantId}_company_${socket.companyId}_contact_${cleanPhone}`;
                 
                 const eventPayload = {
                     message: {
@@ -80,8 +82,9 @@ class MessageHandler {
     handleMarkAsRead(socket, io) {
         return async (data) => {
             try {
-                const { messageIds, contactUuid } = data;
-                const roomName = `tenant_${socket.tenantId}_contact_${contactUuid}`;
+                const { contactUuid, phone } = data;
+                const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
+                const roomName = `tenant_${socket.tenantId}_company_${socket.companyId}_contact_${cleanPhone}`;
                 
                 socket.to(roomName).emit('messages-read', {
                     messageIds,

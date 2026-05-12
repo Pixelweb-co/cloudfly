@@ -19,4 +19,7 @@ public interface QuoteRepository extends ReactiveCrudRepository<QuoteEntity, Lon
 
     @Query("SELECT COUNT(*) FROM quotes WHERE tenant_id = :tenantId")
     Mono<Integer> countByTenantId(Long tenantId);
+
+    @Query("SELECT COUNT(*) FROM quotes WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId)")
+    Mono<Integer> countByTenantIdAndCompanyId(Long tenantId, Long companyId);
 }

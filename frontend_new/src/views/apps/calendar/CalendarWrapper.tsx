@@ -183,7 +183,7 @@ const AppCalendar = () => {
         delete eventData.id // Remove ID from payload body
       }
       
-      await calendarService.updateEvent(id, { ...eventData, tenantId, companyId })
+      await calendarService.updateEvent(id, tenantId, companyId, { ...eventData, tenantId, companyId })
       await fetchEvents()
       alert("Evento actualizado")
     } catch (error) {
@@ -194,7 +194,7 @@ const AppCalendar = () => {
 
   const handleDeleteEvent = async (id: number) => {
     try {
-      await calendarService.deleteEvent(id)
+      await calendarService.deleteEvent(id, tenantId, companyId)
       fetchEvents()
       alert("Evento eliminado")
     } catch (error) {

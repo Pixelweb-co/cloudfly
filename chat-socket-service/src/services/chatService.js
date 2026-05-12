@@ -125,9 +125,9 @@ class ChatService {
             logger.info(`💾 [WEBHOOK_STEP_4] Saving message to DB...`);
             const [result] = await db.execute(
                 `INSERT INTO omni_channel_messages 
-                (tenant_id, channel_id, contact_id, direction, content, status, external_msg_id, conversation_id, created_at) 
-                VALUES (?, ?, ?, 'INBOUND', ?, 'RECEIVED', ?, ?, NOW())`,
-                [tenantId, channelId, contact.id, body, data.key.id || null, conversationId]
+                (tenant_id, company_id, channel_id, contact_id, direction, content, status, external_msg_id, conversation_id, created_at) 
+                VALUES (?, ?, ?, ?, 'INBOUND', ?, 'RECEIVED', ?, ?, NOW())`,
+                [tenantId, companyId, channelId, contact.id, body, data.key.id || null, conversationId]
             );
 
             const messageId = result.insertId;
@@ -136,15 +136,15 @@ class ChatService {
             // 5. Obtener últimos 10 mensajes
             const [history] = await db.execute(
                 `SELECT * FROM omni_channel_messages 
-                WHERE tenant_id = ? AND contact_id = ? 
+                WHERE tenant_id = ? AND company_id = ? AND contact_id = ? 
                 ORDER BY created_at DESC LIMIT 10`,
-                [tenantId, contact.id]
+                [tenantId, companyId, contact.id]
             );
 
             // 6. Emitir por Socket.IO (SIEMPRE, independiente del chatbot gate)
             const isGroupJid = remoteJid.endsWith('@g.us');
             const phoneDigits = isGroupJid ? remoteJid.split('@')[0] : remoteJid.split('@')[0].replace(/\D/g, '');
-            const roomName = `tenant_${tenantId}_contact_${phoneDigits}`;
+            const roomName = `tenant_${tenantId}_company_${companyId}_contact_${phoneDigits}`;
             logger.info(`📡 [WEBHOOK_STEP_6] Emitting to Socket.io room: ${roomName}`);
             
             const eventPayload = {
@@ -262,9 +262,9 @@ class ChatService {
             // 4. Guardar mensaje
             const [result] = await db.execute(
                 `INSERT INTO omni_channel_messages 
-                (tenant_id, channel_id, contact_id, direction, content, status, external_msg_id, conversation_id, created_at) 
-                VALUES (?, ?, ?, 'INBOUND', ?, 'RECEIVED', ?, ?, NOW())`,
-                [tenantId, channelId, contact.id, body, messageIdStr, conversationId]
+                (tenant_id, company_id, channel_id, contact_id, direction, content, status, external_msg_id, conversation_id, created_at) 
+                VALUES (?, ?, ?, ?, ?, 'INBOUND', ?, 'RECEIVED', ?, ?, NOW())`,
+                [tenantId, companyId, channelId, contact.id, body, messageIdStr, conversationId]
             );
 
             const internalMessageId = result.insertId;
@@ -272,13 +272,13 @@ class ChatService {
             // 5. Historial reciente
             const [history] = await db.execute(
                 `SELECT * FROM omni_channel_messages 
-                WHERE tenant_id = ? AND contact_id = ? 
+                WHERE tenant_id = ? AND company_id = ? AND contact_id = ? 
                 ORDER BY created_at DESC LIMIT 10`,
-                [tenantId, contact.id]
+                [tenantId, companyId, contact.id]
             );
 
             // 6. Emitir por Socket.IO (La sala usa contact.phone que internamente es el Sender ID)
-            const roomName = `tenant_${tenantId}_contact_${contact.phone}`;
+            const roomName = `tenant_${tenantId}_company_${companyId || contact.company_id}_contact_${contact.phone}`;
             
             const eventPayload = {
                 message: {
@@ -433,13 +433,13 @@ class ChatService {
     /**
      * Guardar mensaje saliente (usando columnas reales)
      */
-    async saveOutboundMessage(tenantId, channelId, contactId, body) {
+    async saveOutboundMessage(tenantId, companyId, channelId, contactId, body) {
         try {
             const [result] = await db.execute(
                 `INSERT INTO omni_channel_messages 
-                (tenant_id, channel_id, contact_id, direction, content, status, created_at) 
-                VALUES (?, ?, ?, 'OUTBOUND', ?, 'SENT', NOW())`,
-                [tenantId, channelId, contactId, body]
+                (tenant_id, company_id, channel_id, contact_id, direction, content, status, created_at) 
+                VALUES (?, ?, ?, ?, ?, 'OUTBOUND', ?, NOW())`,
+                [tenantId, companyId, channelId, contactId, body]
             );
 
             const [newMessages] = await db.execute('SELECT * FROM omni_channel_messages WHERE id = ?', [result.insertId]);
@@ -453,11 +453,11 @@ class ChatService {
     /**
      * Obtener el canal de WhatsApp activo para un tenant
      */
-    async getChannelForOutbound(tenantId) {
+    async getChannelForOutbound(tenantId, companyId) {
         try {
             const [channels] = await db.execute(
-                "SELECT * FROM channels WHERE tenant_id = ? AND platform = 'WHATSAPP' AND status = 1 LIMIT 1",
-                [tenantId]
+                "SELECT * FROM channels WHERE tenant_id = ? AND company_id = ? AND platform = 'WHATSAPP' AND status = 1 LIMIT 1",
+                [tenantId, companyId]
             );
             return channels[0];
         } catch (error) {
@@ -476,9 +476,9 @@ class ChatService {
                 `SELECT m.*, c.name as contact_name, c.phone as contact_phone
                 FROM omni_channel_messages m
                 LEFT JOIN contacts c ON m.contact_id = c.id
-                WHERE m.tenant_id = ? AND m.contact_id = ?
+                WHERE m.tenant_id = ? AND m.company_id = ? AND m.contact_id = ?
                 ORDER BY m.created_at DESC LIMIT ${safeLimit}`,
-                [tenantId, contactId]
+                [tenantId, companyId, contactId]
             );
             return messages.reverse();
         } catch (error) {
@@ -495,19 +495,19 @@ class ChatService {
             const [contacts] = await db.execute(
                 `SELECT c.*, 
                     (SELECT content FROM omni_channel_messages 
-                     WHERE contact_id = c.id AND tenant_id = ? 
+                     WHERE contact_id = c.id AND tenant_id = ? AND company_id = ?
                      ORDER BY created_at DESC LIMIT 1) as last_message,
                     (SELECT created_at FROM omni_channel_messages 
-                     WHERE contact_id = c.id AND tenant_id = ? 
+                     WHERE contact_id = c.id AND tenant_id = ? AND company_id = ?
                      ORDER BY created_at DESC LIMIT 1) as last_message_at,
                     (SELECT COUNT(*) FROM omni_channel_messages 
-                     WHERE contact_id = c.id AND tenant_id = ? 
+                     WHERE contact_id = c.id AND tenant_id = ? AND company_id = ?
                      AND status = 'RECEIVED') as unread_count
                 FROM contacts c
-                WHERE c.tenant_id = ?
-                AND EXISTS (SELECT 1 FROM omni_channel_messages WHERE contact_id = c.id AND tenant_id = ?)
+                WHERE c.tenant_id = ? AND c.company_id = ?
+                AND EXISTS (SELECT 1 FROM omni_channel_messages WHERE contact_id = c.id AND tenant_id = ? AND company_id = ?)
                 ORDER BY last_message_at DESC`,
-                [tenantId, tenantId, tenantId, tenantId, tenantId]
+                [tenantId, companyId, tenantId, companyId, tenantId, companyId, tenantId, companyId, tenantId, companyId]
             );
             return contacts;
         } catch (error) {
@@ -535,7 +535,7 @@ class ChatService {
             const contact = contacts[0];
 
             // 2. Obtener canal activo (Evolution instance)
-            const channel = await this.getChannelForOutbound(tenantId);
+            const channel = await this.getChannelForOutbound(tenantId, contact.company_id);
             if (!channel) {
                 logger.error(`❌ [AI-RESPONSE] No active channel found for tenant ${tenantId}`);
                 return;
@@ -544,9 +544,9 @@ class ChatService {
             // 3. Guardar en base de datos
             const [result] = await db.execute(
                 `INSERT INTO omni_channel_messages 
-                (tenant_id, channel_id, contact_id, direction, content, status, conversation_id, created_at) 
-                VALUES (?, ?, ?, 'OUTBOUND', ?, 'SENT', ?, NOW())`,
-                [tenantId, channel.id, contactId, respuesta, conversationId]
+                (tenant_id, company_id, channel_id, contact_id, direction, content, status, conversation_id, created_at) 
+                VALUES (?, ?, ?, ?, ?, 'OUTBOUND', ?, ?, NOW())`,
+                [tenantId, contact.company_id, channel.id, contactId, respuesta, conversationId]
             );
 
             const messageId = result.insertId;
@@ -590,7 +590,7 @@ class ChatService {
             }
 
             // 5. Notificar al Frontend vía Socket.IO
-            const roomName = `tenant_${tenantId}_contact_${contact.phone}`;
+            const roomName = `tenant_${tenantId}_company_${companyId || contact.company_id}_contact_${contact.phone}`;
             const eventPayload = {
                 message: {
                     id: messageId,

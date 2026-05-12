@@ -18,7 +18,7 @@ class PresenceHandler {
                 }
 
                 // Broadcast a otros usuarios en la conversación
-                const roomName = `tenant_${socket.tenantId}_conv_${conversationId}`;
+                const roomName = `tenant_${socket.tenantId}_company_${socket.companyId}_conv_${conversationId}`;
                 socket.to(roomName).emit('user-typing', {
                     userId: socket.userId,
                     userName: socket.userName,
@@ -49,7 +49,7 @@ class PresenceHandler {
                     return;
                 }
 
-                const roomName = `tenant_${socket.tenantId}_conv_${conversationId}`;
+                const roomName = `tenant_${socket.tenantId}_company_${socket.companyId}_conv_${conversationId}`;
                 socket.to(roomName).emit('user-stop-typing', {
                     userId: socket.userId,
                     conversationId
@@ -70,7 +70,7 @@ class PresenceHandler {
      * Manejar conexión de usuario (online)
      */
     handleUserOnline(socket, io) {
-        const tenantRoom = `tenant_${socket.tenantId}_presence`;
+        const tenantRoom = `tenant_${socket.tenantId}_company_${socket.companyId}_presence`;
         socket.join(tenantRoom);
 
         // Broadcast a otros usuarios del tenant
@@ -87,7 +87,7 @@ class PresenceHandler {
      * Manejar desconexión de usuario (offline)
      */
     handleUserOffline(socket, io) {
-        const tenantRoom = `tenant_${socket.tenantId}_presence`;
+        const tenantRoom = `tenant_${socket.tenantId}_company_${socket.companyId}_presence`;
 
         // Broadcast a otros usuarios del tenant
         socket.to(tenantRoom).emit('user-offline', {
