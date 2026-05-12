@@ -50,6 +50,7 @@ public class AvailabilityService {
                             .companyId(slot.getCompanyId())
                             .userId(slot.getUserId())
                             .templateId(slot.getTemplateId())
+                            .serviceId(slot.getServiceId())
                             .startTime(slot.getStartTime())
                             .endTime(slot.getEndTime())
                             .status(slot.getStatus())
