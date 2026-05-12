@@ -18,7 +18,4 @@ public interface PipelineRepository extends ReactiveCrudRepository<PipelineEntit
 
     @Query("SELECT * FROM pipelines WHERE tenant_id = :tenantId AND is_default = TRUE AND (company_id = :companyId OR :companyId IS NULL)")
     Flux<PipelineEntity> findByTenantIdAndCompanyIdAndIsDefaultTrue(Long tenantId, Long companyId);
-
-    @Query("SELECT * FROM pipelines WHERE tenant_id = :tenantId AND is_default = TRUE")
-    Flux<PipelineEntity> findByTenantIdAndIsDefaultTrue(Long tenantId);
 }

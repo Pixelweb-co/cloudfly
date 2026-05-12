@@ -127,7 +127,7 @@ public class EvolutionWebhookController {
 
                                                 return conversationPipelineStateRepository.findByTenantIdAndConversationId(channel.getTenantId(), conversationId)
                                                         .switchIfEmpty(Mono.defer(() -> {
-                                                            return pipelineRepository.findByTenantIdAndIsDefaultTrue(channel.getTenantId())
+                                                            return pipelineRepository.findByTenantIdAndCompanyIdAndIsDefaultTrue(channel.getTenantId(), channel.getCompanyId())
                                                                     .next()
                                                                     .map(p -> p.getId())
                                                                     .flatMap(pipelineId -> {
@@ -136,6 +136,7 @@ public class EvolutionWebhookController {
                                                                                 .flatMap(stage -> {
                                                                                     com.app.persistence.entity.ConversationPipelineStateEntity newState = com.app.persistence.entity.ConversationPipelineStateEntity.builder()
                                                                                             .tenantId(channel.getTenantId())
+                                                                                            .companyId(channel.getCompanyId())
                                                                                             .conversationId(conversationId)
                                                                                             .contactId(contact.getId())
                                                                                             .pipelineId(pipelineId)

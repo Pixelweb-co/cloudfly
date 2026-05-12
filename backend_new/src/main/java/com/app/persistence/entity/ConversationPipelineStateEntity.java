@@ -20,6 +20,9 @@ public class ConversationPipelineStateEntity {
     @Column("tenant_id")
     private Long tenantId;
 
+    @Column("company_id")
+    private Long companyId;
+
     @Column("conversation_id")
     private String conversationId;
 
