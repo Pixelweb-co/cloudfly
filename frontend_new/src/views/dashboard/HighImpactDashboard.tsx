@@ -24,7 +24,7 @@ import CardContent from '@mui/material/CardContent'
 import Divider from '@mui/material/Divider'
 import Link from 'next/link'
 import Chip from '@mui/material/Chip'
-import Icon from '@/@core/components/icon'
+import EventAvailableIcon from '@mui/icons-material/EventAvailable'
 
 // Service Imports
 import dashboardService from '@/services/dashboardService'
@@ -287,7 +287,7 @@ const HighImpactDashboard = () => {
                                                         backgroundColor: 'rgba(var(--mui-palette-info-mainChannel) / 0.12)',
                                                         color: 'info.main'
                                                     }}>
-                                                        <Icon icon='tabler-calendar-check' />
+                                                        <EventAvailableIcon />
                                                     </Box>
                                                     <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                                                         <Typography sx={{ fontWeight: 500, color: 'text.primary' }}>{app.contactName}</Typography>
