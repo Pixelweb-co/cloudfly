@@ -123,4 +123,11 @@ public class PipelineController {
         return getCurrentTenantId()
                 .flatMap(tenantId -> pipelineService.deletePipeline(tenantId, id));
     }
+
+    @GetMapping("/{id}/kanban")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
+    public Mono<java.util.Map<String, java.util.List<com.app.dto.PipelineKanbanCardDTO>>> getKanbanData(@PathVariable Long id) {
+        return getCurrentTenantId()
+                .flatMap(tenantId -> pipelineService.getKanbanData(tenantId, id));
+    }
 }
