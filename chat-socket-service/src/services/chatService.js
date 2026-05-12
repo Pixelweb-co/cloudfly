@@ -590,7 +590,7 @@ class ChatService {
             }
 
             // 5. Notificar al Frontend vía Socket.IO
-            const roomName = `tenant_${tenantId}_company_${companyId || contact.company_id}_contact_${contact.phone}`;
+            const roomName = `tenant_${tenantId}_company_${contact.company_id}_contact_${contact.phone}`;
             const eventPayload = {
                 message: {
                     id: messageId,
