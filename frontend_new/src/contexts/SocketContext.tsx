@@ -51,6 +51,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
             const token = localStorage.getItem('jwt')
             const user = userMethods.getUserLogin()
             const tenantId = user?.tenant?.id || user?.tenantId || user?.customerId
+            const companyId = user?.activeCompanyId || user?.company_id || localStorage.getItem('activeCompanyId')
 
             if (!token || !tenantId) {
                 console.log('⏳ Postponing Socket.IO connection: missing token or tenantId', { hasToken: !!token, tenantId })
@@ -63,12 +64,13 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
                     ? 'http://localhost:3001'
                     : 'https://chat.cloudfly.com.co')
 
-            console.log('🔌 Conectando a Socket.IO:', socketUrl, 'Tenant:', tenantId)
+            console.log('🔌 Conectando a Socket.IO:', socketUrl, 'Tenant:', tenantId, 'Company:', companyId)
 
             const newSocket = io(socketUrl, {
                 auth: {
                     token,
-                    tenantId: Number(tenantId)
+                    tenantId: Number(tenantId),
+                    companyId: companyId ? Number(companyId) : undefined
                 },
                 reconnection: true
             })
