@@ -69,7 +69,6 @@ const UserDetails = () => {
               </div>
               <Chip label={role} color='secondary' size='small' variant='tonal' />
             </div>
-            </div>
           </div>
           <div>
             <Typography variant='h5'>Detalles del Perfil</Typography>
