@@ -24,7 +24,15 @@ export default function PipelinesKanbanPage() {
   const loadPipelines = async () => {
     try {
       setLoading(true)
-      const data = await pipelineService.getAllPipelines()
+      
+      // Obtener tenant y company actuales desde localStorage (mismo patrón que axiosInstance)
+      const tenantId = typeof window !== 'undefined' ? localStorage.getItem('activeTenantId') : null
+      const companyId = typeof window !== 'undefined' ? localStorage.getItem('activeCompanyId') : null
+      
+      const data = await pipelineService.getAllPipelines(
+        tenantId ? parseInt(tenantId) : undefined, 
+        companyId ? parseInt(companyId) : undefined
+      )
       setPipelines(data)
       
       if (data.length > 0 && !selectedId) {
