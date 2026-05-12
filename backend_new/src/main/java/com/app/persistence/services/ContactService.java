@@ -16,6 +16,8 @@ import java.time.LocalDateTime;
 public class ContactService {
 
     private final ContactRepository contactRepository;
+    private final org.springframework.kafka.core.KafkaTemplate<String, String> kafkaTemplate;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     public Flux<ContactEntity> findAll(Long tenantId, Long companyId) {
         if (companyId != null) {
@@ -46,7 +48,9 @@ public class ContactService {
         return validateContactUniqueness(contact, tenantId, companyId)
                 .then(Mono.defer(() -> {
                     log.info("Creating new contact: {} for tenant: {}", contact.getName(), tenantId);
-                    return contactRepository.save(contact);
+                    return contactRepository.save(contact)
+                            .doOnSuccess(saved -> sendWebNotification(tenantId, companyId, null,
+                                    "👤 Nuevo Contacto", "Se ha registrado a " + saved.getName()));
                 }));
     }
 
@@ -134,10 +138,30 @@ public class ContactService {
 
         return contactRepository.save(existing)
                 .doOnSuccess(
-                        saved -> log.info("Successfully saved Contact ID: {}. Persisted PipelineID: {}, StageID: {}",
-                                saved.getId(), saved.getPipelineId(), saved.getStageId()))
+                        saved -> {
+                            log.info("Successfully saved Contact ID: {}. Persisted PipelineID: {}, StageID: {}",
+                                    saved.getId(), saved.getPipelineId(), saved.getStageId());
+                            sendWebNotification(saved.getTenantId(), saved.getCompanyId(), null, "👤 Contacto Actualizado", "Datos de " + saved.getName() + " actualizados");
+                        })
                 .doOnError(err -> log.error("FALTA AL GUARDAR CONTACTO ID: {}. Error: {}", existing.getId(),
                         err.getMessage(), err));
+    }
+
+    private void sendWebNotification(Long tenantId, Long companyId, Long userId, String title, String description) {
+        try {
+            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("tenantId", tenantId);
+            payload.put("companyId", companyId);
+            payload.put("userId", userId);
+            payload.put("title", title);
+            payload.put("description", description);
+            payload.put("type", "contact");
+            String json = objectMapper.writeValueAsString(payload);
+            kafkaTemplate.send("webnotifications", json);
+            log.info("🔔 Web notification sent for contact update/creation (tenant {}): {}", tenantId, title);
+        } catch (Exception e) {
+            log.error("❌ Error sending web notification for contact: {}", e.getMessage());
+        }
     }
 
     public Mono<Void> delete(Long id, Long tenantId, Long companyId) {
@@ -170,7 +194,9 @@ public class ContactService {
                             .createdAt(LocalDateTime.now())
                             .updatedAt(LocalDateTime.now())
                             .build();
-                    return contactRepository.save(newContact);
+                    return contactRepository.save(newContact)
+                            .doOnSuccess(saved -> sendWebNotification(tenantId, companyId, null,
+                                    "👤 Nuevo Contacto", "Nuevo prospecto registrado: " + saved.getName()));
                 }));
     }
 

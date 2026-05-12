@@ -97,6 +97,9 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
                 dispatch(fetchDashboardData(companyId ? parseInt(companyId) : undefined))
             }
 
+            // Deduplication: track recent notification keys to prevent double toasts
+            const recentNotifications = new Set<string>()
+
             socketInstance.on('new-message', (message: Message) => {
                 console.log('🆕 Mensaje recibido por socket:', message)
                 setMessages((prev) => {
@@ -112,6 +115,15 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
             })
 
             socketInstance.on('new-web-notification', (notification: any) => {
+                // Deduplicate: skip if same notification arrived in the last 5 seconds
+                const notifKey = `${notification.title}_${notification.description}`
+                if (recentNotifications.has(notifKey)) {
+                    console.log('⚠️ Notificación duplicada, ignorando:', notifKey)
+                    return
+                }
+                recentNotifications.add(notifKey)
+                setTimeout(() => recentNotifications.delete(notifKey), 5000)
+
                 console.log('🔔 Nueva notificación web recibida:', notification)
                 toast(
                     (t) => (
@@ -133,7 +145,8 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
                     }
                 );
                 dispatch(fetchNotifications())
-                refreshDashboard()
+                // Small delay to let DB transaction commit before refreshing dashboard
+                setTimeout(() => refreshDashboard(), 1500)
             })
 
             socketInstance.on('contact-update', () => refreshDashboard())
