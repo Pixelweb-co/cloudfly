@@ -22,8 +22,8 @@ public class AppointmentController {
     }
 
     @PatchMapping("/{id}/cancel")
-    public Mono<Void> cancelAppointment(@PathVariable Long id) {
-        log.info("Cancelling appointment: {}", id);
-        return appointmentService.cancelAppointment(id);
+    public Mono<Void> cancelAppointment(@PathVariable Long id, @RequestParam Long tenantId, @RequestParam Long companyId) {
+        log.info("Cancelling appointment: {} (Tenant: {}, Company: {})", id, tenantId, companyId);
+        return appointmentService.cancelAppointment(id, tenantId, companyId);
     }
 }

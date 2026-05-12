@@ -25,7 +25,7 @@ public class CalendarEventService {
 
     public Mono<CalendarEventDto> createEvent(CalendarEventDto dto) {
         if (dto.getRelatedEntityType() != null && dto.getRelatedEntityId() != null) {
-            return calendarEventRepository.findByRelatedEntityTypeAndRelatedEntityId(dto.getRelatedEntityType(), dto.getRelatedEntityId())
+            return calendarEventRepository.findByTenantIdAndCompanyIdAndRelatedEntityTypeAndRelatedEntityId(dto.getTenantId(), dto.getCompanyId(), dto.getRelatedEntityType(), dto.getRelatedEntityId())
                     .flatMap(existing -> {
                         // Update existing instead of creating duplicate
                         return updateEvent(existing.getId(), dto.getTenantId(), dto.getCompanyId(), dto);

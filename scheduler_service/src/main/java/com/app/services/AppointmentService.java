@@ -51,8 +51,9 @@ public class AppointmentService {
     }
 
     @Transactional
-    public Mono<Void> cancelAppointment(Long appointmentId) {
+    public Mono<Void> cancelAppointment(Long appointmentId, Long tenantId, Long companyId) {
         return appointmentRepository.findById(appointmentId)
+                .filter(a -> a.getTenantId().equals(tenantId) && a.getCompanyId().equals(companyId))
                 .flatMap(appointment -> {
                     appointment.setStatus(EventStatus.CANCELLED);
                     appointment.setUpdatedAt(LocalDateTime.now());

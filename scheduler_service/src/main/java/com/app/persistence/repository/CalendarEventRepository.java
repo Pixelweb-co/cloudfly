@@ -18,6 +18,6 @@ public interface CalendarEventRepository extends ReactiveCrudRepository<Calendar
     @Query("DELETE FROM calendar_events WHERE tenant_id = :tenantId AND company_id = :companyId AND calendar_id = :calendarId")
     Mono<Void> deleteByTenantIdAndCompanyIdAndCalendarId(Long tenantId, Long companyId, Long calendarId);
 
-    @Query("SELECT * FROM calendar_events WHERE related_entity_type = :relatedEntityType AND related_entity_id = :relatedEntityId LIMIT 1")
-    Mono<CalendarEventEntity> findByRelatedEntityTypeAndRelatedEntityId(String relatedEntityType, Long relatedEntityId);
+    @Query("SELECT * FROM calendar_events WHERE tenant_id = :tenantId AND company_id = :companyId AND related_entity_type = :relatedEntityType AND related_entity_id = :relatedEntityId LIMIT 1")
+    Mono<CalendarEventEntity> findByTenantIdAndCompanyIdAndRelatedEntityTypeAndRelatedEntityId(Long tenantId, Long companyId, String relatedEntityType, Long relatedEntityId);
 }
