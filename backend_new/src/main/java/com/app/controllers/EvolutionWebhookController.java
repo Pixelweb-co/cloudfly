@@ -101,6 +101,7 @@ public class EvolutionWebhookController {
                                 .flatMap(contact -> {
                                     OmniChannelMessageEntity msgEntity = OmniChannelMessageEntity.builder()
                                             .tenantId(channel.getTenantId())
+                                            .companyId(channel.getCompanyId())
                                             .contactId(contact.getId())
                                             .direction("INBOUND")
                                             .body(body)
@@ -114,6 +115,7 @@ public class EvolutionWebhookController {
                                                 socketPayload.put("messageId", savedMsg.getId());
                                                 socketPayload.put("conversationId", conversationId);
                                                 socketPayload.put("tenantId", channel.getTenantId());
+                                                socketPayload.put("companyId", channel.getCompanyId());
                                                 socketPayload.put("platform", "WHATSAPP");
                                                 socketPayload.put("direction", "INBOUND");
                                                 socketPayload.put("body", body);

@@ -37,8 +37,9 @@ public class ChatController {
         return userService.getCurrentUser()
                 .flatMapMany(user -> {
                     Long tenantId = user.getCustomerId();
-                    log.info("📂 [CHAT-CONTROLLER] Fetching messages for contact: {} (Tenant: {})", contactId, tenantId);
-                    return messageRepository.findByTenantIdAndContactId(tenantId, contactId);
+                    Long companyId = user.getCompanyId();
+                    log.info("📂 [CHAT-CONTROLLER] Fetching messages for contact: {} (Tenant: {}, Company: {})", contactId, tenantId, companyId);
+                    return messageRepository.findByTenantIdAndCompanyIdAndContactId(tenantId, companyId, contactId);
                 });
     }
 
@@ -50,8 +51,9 @@ public class ChatController {
         return userService.getCurrentUser()
                 .flatMapMany(user -> {
                     Long tenantId = user.getCustomerId();
-                    log.info("📬 [CHAT-CONTROLLER] Fetching unread summary for tenant: {}", tenantId);
-                    return messageRepository.countUnreadGroupedByContact(tenantId)
+                    Long companyId = user.getCompanyId();
+                    log.info("📬 [CHAT-CONTROLLER] Fetching unread summary for tenant: {}, company: {}", tenantId, companyId);
+                    return messageRepository.countUnreadGroupedByContactAndCompany(tenantId, companyId)
                             .flatMap(row -> {
                                 try {
                                     log.debug("🔍 [CHAT-CONTROLLER] Processing unread row: {}", row);
@@ -91,21 +93,22 @@ public class ChatController {
         return userService.getCurrentUser()
                 .flatMap(user -> {
                     Long tenantId = user.getCustomerId();
-                    log.info("✅ [CHAT-CONTROLLER] Marking messages as read for contact: {} (Tenant: {})", contactId, tenantId);
+                    Long companyId = user.getCompanyId();
+                    log.info("✅ [CHAT-CONTROLLER] Marking messages as read for contact: {} (Tenant: {}, Company: {})", contactId, tenantId, companyId);
 
                     // 1. Get unread messages to extract externalMessageId for Evolution API
-                    return messageRepository.findUnreadByTenantIdAndContactId(tenantId, contactId)
+                    return messageRepository.findUnreadByTenantIdAndCompanyIdAndContactId(tenantId, companyId, contactId)
                             .collectList()
                             .flatMap(unreadMessages -> {
                                 // 2. Mark as READ in DB
-                                return messageRepository.markAllReadByContact(tenantId, contactId)
+                                return messageRepository.markAllReadByContactAndCompany(tenantId, companyId, contactId)
                                         .flatMap(updatedCount -> {
                                             log.info("📝 [CHAT-CONTROLLER] Marked {} messages as READ in DB", updatedCount);
 
                                             // 3. Send read receipts to Evolution API
                                             if (!unreadMessages.isEmpty()) {
-                                                return channelRepository.findAll()
-                                                        .filter(c -> c.getTenantId().equals(tenantId) && Boolean.TRUE.equals(c.getStatus()))
+                                                return channelRepository.findByCompanyIdAndTenantId(companyId, tenantId)
+                                                        .filter(c -> "WHATSAPP".equals(c.getPlatform()) && Boolean.TRUE.equals(c.getStatus()))
                                                         .next()
                                                         .flatMap(channel -> {
                                                             return contactRepository.findById(contactId)
@@ -163,6 +166,7 @@ public class ChatController {
                     // 1. Guardar en base de datos local
                     OmniChannelMessageEntity msgEntity = OmniChannelMessageEntity.builder()
                             .tenantId(tenantId)
+                            .companyId(user.getCompanyId())
                             .contactId(contactId)
                             .direction("OUTBOUND")
                             .body(body)
@@ -176,8 +180,8 @@ public class ChatController {
                             .flatMap(savedMsg -> {
                                 log.info("📤 [CHAT-CONTROLLER] Message saved locally (ID: {}). Looking for channel...", savedMsg.getId());
 
-                                return channelRepository.findAll()
-                                        .filter(c -> c.getTenantId().equals(tenantId) && Boolean.TRUE.equals(c.getStatus()))
+                                return channelRepository.findByCompanyIdAndTenantId(user.getCompanyId(), tenantId)
+                                        .filter(c -> "WHATSAPP".equals(c.getPlatform()) && Boolean.TRUE.equals(c.getStatus()))
                                         .next()
                                         .flatMap(channel -> {
                                             String instanceName = channel.getInstanceName();
@@ -197,6 +201,7 @@ public class ChatController {
                                                         Map<String, Object> socketPayload = new HashMap<>();
                                                         socketPayload.put("messageId", savedMsg.getId());
                                                         socketPayload.put("tenantId", tenantId);
+                                                        socketPayload.put("companyId", savedMsg.getCompanyId());
                                                         socketPayload.put("direction", "OUTBOUND");
                                                         socketPayload.put("body", body);
                                                         socketPayload.put("contactId", contactId);
