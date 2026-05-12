@@ -320,8 +320,37 @@ public class EvolutionService {
                 .doOnSuccess(res -> log.info("✅ Messages marked as read in Evolution API"))
                 .onErrorResume(err -> {
                     log.error("❌ Error marking messages as read in Evolution: {}", err.getMessage());
-                    return Mono.just(Map.of("error", err.getMessage()));
                 });
+    }
+
+    /**
+     * Logout WhatsApp from an instance
+     */
+    public Mono<Void> logoutInstance(String instanceName) {
+        String url = apiUrl + "/instance/logout/" + instanceName;
+        log.info("🚪 [EVOLUTION-SERVICE] Logging out instance: {}", instanceName);
+        return webClient.post()
+                .uri(url)
+                .header("apikey", apiKey)
+                .retrieve()
+                .onStatus(status -> status.isError(), response -> Mono.empty())
+                .toBodilessEntity()
+                .then();
+    }
+
+    /**
+     * Delete an instance from Evolution API
+     */
+    public Mono<Void> deleteInstance(String instanceName) {
+        String url = apiUrl + "/instance/delete/" + instanceName;
+        log.info("🗑️ [EVOLUTION-SERVICE] Deleting instance: {}", instanceName);
+        return webClient.delete()
+                .uri(url)
+                .header("apikey", apiKey)
+                .retrieve()
+                .onStatus(status -> status.isError(), response -> Mono.empty())
+                .toBodilessEntity()
+                .then();
     }
 }
 
