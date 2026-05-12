@@ -94,7 +94,7 @@ public class PipelineService {
                 .build();
 
         Mono<Void> clearDefaultsMono = Boolean.TRUE.equals(request.getIsDefault()) 
-                ? clearOtherDefaults(tenantId, null) 
+                ? clearOtherDefaults(tenantId, companyId, null) 
                 : Mono.empty();
 
         return clearDefaultsMono.then(pipelineRepository.save(pipeline))
