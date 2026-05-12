@@ -19,6 +19,9 @@ public class OmniChannelMessageEntity {
     @Column("tenant_id")
     private Long tenantId;
 
+    @Column("company_id")
+    private Long companyId;
+
     @Column("channel_id")
     private Long channelId;
 
