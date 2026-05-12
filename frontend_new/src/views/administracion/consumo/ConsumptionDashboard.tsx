@@ -13,6 +13,7 @@ import Chip from '@mui/material/Chip'
 import Alert from '@mui/material/Alert'
 import Stack from '@mui/material/Stack'
 import { toast } from 'react-hot-toast'
+import { userMethods } from '@/utils/userMethods'
 
 // Imports locales adaptados
 
@@ -44,9 +45,9 @@ const ConsumptionDashboard = () => {
 
     const [isLoading, setIsLoading] = useState(true)
 
-    // TODO: Obtener tenantId del usuario autenticado o del contexto
-    // Por ahora harcodeado para pruebas, igual que en el original
-    const TENANT_ID = 1
+    const user = userMethods.getUserLogin()
+    const sessionUser = user?.user || user
+    const TENANT_ID = sessionUser?.tenantId || 1
 
     useEffect(() => {
         const fetchData = async () => {
