@@ -12,11 +12,11 @@ public interface OrderRepository extends ReactiveCrudRepository<OrderEntity, Lon
     Flux<OrderEntity> findAllByTenantId(Long tenantId);
     Flux<OrderEntity> findAllByTenantIdAndCompanyId(Long tenantId, Long companyId);
 
-    @Query("SELECT * FROM orders WHERE order_number = :orderNumber AND tenant_id = :tenantId")
-    Mono<OrderEntity> findByOrderNumberAndTenantId(String orderNumber, Long tenantId);
+    @Query("SELECT * FROM orders WHERE order_number = :orderNumber AND tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId)")
+    Mono<OrderEntity> findByOrderNumberAndTenantId(String orderNumber, Long tenantId, Long companyId);
 
-    @Query("SELECT * FROM orders WHERE customer_id = :customerId AND tenant_id = :tenantId")
-    Flux<OrderEntity> findByCustomerIdAndTenantId(Long customerId, Long tenantId);
+    @Query("SELECT * FROM orders WHERE customer_id = :customerId AND tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId)")
+    Flux<OrderEntity> findByCustomerIdAndTenantId(Long customerId, Long tenantId, Long companyId);
 
     @Query("SELECT COUNT(*) FROM orders WHERE tenant_id = :tenantId")
     Mono<Integer> countByTenantId(Long tenantId);
