@@ -31,6 +31,24 @@ export interface DashboardStats {
     activeCampaigns?: number
     totalQuotes?: number
     totalInvoicesCount?: number
+    recentOrders?: RecentOrder[]
+    todayAppointments?: TodayAppointment[]
+}
+
+export interface RecentOrder {
+    id: number
+    customerName: string
+    total: number
+    status: string
+    date: string
+}
+
+export interface TodayAppointment {
+    id: number
+    contactName: string
+    time: string
+    service: string
+    status: string
 }
 
 export interface PipelineStageStats {

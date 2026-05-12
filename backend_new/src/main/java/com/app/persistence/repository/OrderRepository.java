@@ -29,4 +29,7 @@ public interface OrderRepository extends ReactiveCrudRepository<OrderEntity, Lon
 
     @Query("SELECT DATE(created_at) as date, SUM(total) as total, COUNT(*) as count FROM orders WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND created_at >= :since GROUP BY DATE(created_at) ORDER BY DATE(created_at) ASC")
     Flux<com.app.dto.SalesHistoryDTO> getSalesHistory(Long tenantId, Long companyId, LocalDateTime since);
+
+    @Query("SELECT * FROM orders WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) ORDER BY created_at DESC LIMIT 5")
+    Flux<OrderEntity> findRecentOrders(Long tenantId, Long companyId);
 }
