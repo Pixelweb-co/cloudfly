@@ -30,24 +30,67 @@ public class DashboardService {
     private final OmniChannelMessageRepository messageRepository;
     private final MarketingCampaignRepository campaignRepository;
     private final QuoteRepository quoteRepository;
+    private final AppointmentRepository appointmentRepository;
 
     public Mono<DashboardStatsDTO> getStats(Long tenantId, Long companyId) {
         log.info("📊 Fetching comprehensive dashboard stats for tenant: {} and company: {}", tenantId, companyId);
         
-        Mono<Integer> totalCustomers = contactRepository.countTotalContacts(tenantId, companyId);
-        Mono<Integer> totalContactsToday = contactRepository.countContactsToday(tenantId, companyId);
-        Mono<Integer> totalProducts = productRepository.countByTenantIdAndCompanyId(tenantId, companyId);
-        Mono<Integer> totalOrders = orderRepository.countByTenantIdAndCompanyId(tenantId, companyId);
-        Mono<Double> totalRevenue = orderRepository.sumTotalByTenantIdAndCompanyId(tenantId, companyId);
+        Mono<Integer> totalCustomers = contactRepository.countTotalContacts(tenantId, companyId).defaultIfEmpty(0);
+        Mono<Integer> totalContactsToday = contactRepository.countContactsToday(tenantId, companyId).defaultIfEmpty(0);
+        Mono<Integer> totalProducts = productRepository.countByTenantIdAndCompanyId(tenantId, companyId).defaultIfEmpty(0);
+        Mono<Integer> totalOrders = orderRepository.countByTenantIdAndCompanyId(tenantId, companyId).defaultIfEmpty(0);
+        Mono<Double> totalRevenue = orderRepository.sumTotalByTenantIdAndCompanyId(tenantId, companyId).defaultIfEmpty(0.0);
         
-        Mono<Integer> activeConversations = messageRepository.countActiveConversations(tenantId, companyId);
-        Mono<Integer> messagesToday = messageRepository.countMessagesToday(tenantId, companyId);
-        Mono<Integer> activeCampaigns = campaignRepository.countActiveCampaigns(tenantId, companyId);
-        Mono<Integer> totalQuotes = quoteRepository.countByTenantIdAndCompanyId(tenantId, companyId);
+        Mono<Integer> activeConversations = messageRepository.countActiveConversations(tenantId, companyId).defaultIfEmpty(0);
+        Mono<Integer> messagesToday = messageRepository.countMessagesToday(tenantId, companyId).defaultIfEmpty(0);
+        Mono<Integer> activeCampaigns = campaignRepository.countActiveCampaigns(tenantId, companyId).defaultIfEmpty(0);
+        Mono<Integer> totalQuotes = quoteRepository.countByTenantIdAndCompanyId(tenantId, companyId).defaultIfEmpty(0);
+        Mono<Integer> pendingAppointments = appointmentRepository.countPendingAppointments(tenantId, companyId).defaultIfEmpty(0);
         
-        // Mocking some values for now if repositories don't exist or logic is complex
-        // In a real scenario, we would calculate changes based on previous periods
+        LocalDateTime startOfDay = LocalDateTime.now().with(java.time.LocalTime.MIN);
+        LocalDateTime endOfDay = LocalDateTime.now().with(java.time.LocalTime.MAX);
         
+        Mono<List<com.app.dto.RecentOrderDTO>> recentOrders = orderRepository.findRecentOrders(tenantId, companyId)
+                .map(order -> com.app.dto.RecentOrderDTO.builder()
+                        .id(order.getId())
+                        .customerName(order.getCustomerName() != null ? order.getCustomerName() : "Consumidor Final")
+                        .total(order.getTotal() != null ? order.getTotal().doubleValue() : 0.0)
+                        .status(order.getStatus() != null ? order.getStatus().toString() : "PENDING")
+                        .date(order.getCreatedAt().toString())
+                        .build())
+                .collectList()
+                .defaultIfEmpty(List.of());
+
+        Mono<List<com.app.dto.TodayAppointmentDTO>> todayAppointments = appointmentRepository.findTodayAppointments(tenantId, companyId, startOfDay, endOfDay)
+                .flatMap(app -> {
+                    if (app.getContactId() != null) {
+                        return contactRepository.findById(app.getContactId())
+                                .map(contact -> com.app.dto.TodayAppointmentDTO.builder()
+                                        .id(app.getId())
+                                        .contactName(contact.getName())
+                                        .time(app.getStartTime().toLocalTime().toString())
+                                        .service(app.getTitle())
+                                        .status(app.getStatus())
+                                        .build())
+                                .defaultIfEmpty(com.app.dto.TodayAppointmentDTO.builder()
+                                        .id(app.getId())
+                                        .contactName("Invitado")
+                                        .time(app.getStartTime().toLocalTime().toString())
+                                        .service(app.getTitle())
+                                        .status(app.getStatus())
+                                        .build());
+                    }
+                    return Mono.just(com.app.dto.TodayAppointmentDTO.builder()
+                            .id(app.getId())
+                            .contactName("Invitado")
+                            .time(app.getStartTime().toLocalTime().toString())
+                            .service(app.getTitle())
+                            .status(app.getStatus())
+                            .build());
+                })
+                .collectList()
+                .defaultIfEmpty(List.of());
+
         return Mono.zip(
                 objects -> DashboardStatsDTO.builder()
                         .totalCustomers((Integer) objects[0])
@@ -59,14 +102,17 @@ public class DashboardService {
                         .activeCampaigns((Integer) objects[6])
                         .totalQuotes((Integer) objects[7])
                         .totalContactsToday((Integer) objects[8])
-                        .revenueChange(15.4) 
+                        .pendingAppointments((Integer) objects[9])
+                        .recentOrders((List<com.app.dto.RecentOrderDTO>) objects[10])
+                        .todayAppointments((List<com.app.dto.TodayAppointmentDTO>) objects[11])
+                        .revenueChange(15.4)
                         .ordersChange(8.2)
                         .customersChange(12.5)
                         .messagesChange(24.0)
                         .lowStockProducts(2)
                         .pendingQuotes(5)
-                        .pendingAppointments(0) // Will update if we integrate scheduler
-                        .build());
+                        .build(),
+                totalCustomers, totalProducts, totalOrders, totalRevenue, activeConversations, messagesToday, activeCampaigns, totalQuotes, totalContactsToday, pendingAppointments, recentOrders, todayAppointments);
     }
 
     public Mono<SalesChartDataDTO> getSalesChart(Long tenantId, Long companyId, String period) {
@@ -121,14 +167,11 @@ public class DashboardService {
                     return pipelineStageRepository.findByPipelineIdOrderByPositionAsc(pipeline.getId())
                             .collectList()
                             .flatMap(stages -> {
-                                    // NEW: Fetch ALL contacts for the tenant once (very efficient for current scale ~11 contacts)
-                                    // This bypasses ANY database-level filtering issues with parameters
                                     LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
                                     
                                     return contactRepository.findByTenantId(tenantId)
                                             .collectList()
                                             .map(allContacts -> {
-                                                // Filter by company AND date (last 30 days)
                                                 List<ContactEntity> contacts = allContacts.stream()
                                                         .filter(c -> companyId == null || (c.getCompanyId() != null && c.getCompanyId().equals(companyId)))
                                                         .filter(c -> c.getCreatedAt() == null || c.getCreatedAt().isAfter(thirtyDaysAgo))
@@ -138,13 +181,11 @@ public class DashboardService {
                                                     pipeline.getName(), pipeline.getId(), contacts.size());
                                             
                                             List<PipelineStageStatsDTO> stageStats = stages.stream().map(stage -> {
-                                                // Count by ID (precise) or by Name (fallback)
                                                 long count = contacts.stream()
                                                         .filter(c -> {
                                                             boolean matchId = c.getStageId() != null && c.getStageId().equals(stage.getId());
                                                             boolean matchName = c.getStage() != null && c.getStage().equalsIgnoreCase(stage.getName());
                                                             
-                                                            // Special case: if contact is 'LEAD' and we are looking at the first stage
                                                             boolean isFirstStageLEADFallback = (stage.getPosition() == 0 || stage.getName().equalsIgnoreCase("Prospecto")) 
                                                                     && "LEAD".equalsIgnoreCase(c.getStage());
 
@@ -155,7 +196,6 @@ public class DashboardService {
                                                 log.info("  - Stage: {} (ID: {}), Count: {}", stage.getName(), stage.getId(), count);
                                                 
                                                 return PipelineStageStatsDTO.builder()
-
                                                         .stageId(stage.getId())
                                                         .name(stage.getName())
                                                         .color(stage.getColor())

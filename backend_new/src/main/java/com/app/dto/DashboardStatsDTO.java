@@ -37,4 +37,7 @@ public class DashboardStatsDTO {
     private Integer activeCampaigns;
     private Integer totalQuotes;
     private Integer totalInvoicesCount;
+    
+    private java.util.List<RecentOrderDTO> recentOrders;
+    private java.util.List<TodayAppointmentDTO> todayAppointments;
 }

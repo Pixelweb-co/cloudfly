@@ -16,9 +16,15 @@ import Typography from '@mui/material/Typography'
 
 // Component Imports
 import WelcomeBanner from './WelcomeBanner'
-import CardStatsWithAreaChart from '@/components/card-statistics/StatsWithAreaChart'
 import CardStatsSquare from '@/components/card-statistics/CardStatsSquare'
 import PipelineContactsChart from './PipelineContactsChart'
+import Card from '@mui/material/Card'
+import CardHeader from '@mui/material/CardHeader'
+import CardContent from '@mui/material/CardContent'
+import Divider from '@mui/material/Divider'
+import Link from 'next/link'
+import Chip from '@mui/material/Chip'
+import Icon from '@/@core/components/icon'
 
 // Service Imports
 import dashboardService from '@/services/dashboardService'
@@ -201,9 +207,107 @@ const HighImpactDashboard = () => {
                         </Grid>
                     </Grid>
 
-                    {/* Funnel/Pipeline Chart */}
+                    {/* Row 3: Pipeline, Orders, and Appointments */}
                     <Grid item xs={12}>
-                        <PipelineContactsChart />
+                        <Grid container spacing={6}>
+                            {/* Column 1: Pipeline Chart */}
+                            <Grid item xs={12} md={4}>
+                                <PipelineContactsChart />
+                            </Grid>
+
+                            {/* Column 2: Recent Orders */}
+                            <Grid item xs={12} md={4}>
+                                <Card sx={{ height: '100%' }}>
+                                    <CardHeader 
+                                        title='Últimos 5 Pedidos' 
+                                        action={
+                                            <Typography component={Link} href='/ventas/pedidos/list' variant='body2' color='primary' sx={{ fontWeight: 500 }}>
+                                                Ver lista
+                                            </Typography>
+                                        }
+                                    />
+                                    <Divider />
+                                    <CardContent sx={{ p: '0 !important' }}>
+                                        {stats.recentOrders && stats.recentOrders.length > 0 ? (
+                                            stats.recentOrders.map((order, index) => (
+                                                <Box key={order.id} sx={{ 
+                                                    p: 4, 
+                                                    display: 'flex', 
+                                                    alignItems: 'center', 
+                                                    justifyContent: 'space-between',
+                                                    borderBottom: index !== stats.recentOrders!.length - 1 ? '1px solid var(--mui-palette-divider)' : 'none'
+                                                }}>
+                                                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                                        <Typography sx={{ fontWeight: 500, color: 'text.primary' }}>{order.customerName}</Typography>
+                                                        <Typography variant='caption'>{new Date(order.date).toLocaleDateString()}</Typography>
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                        <Typography sx={{ fontWeight: 600, color: 'primary.main' }}>{formatCurrency(order.total)}</Typography>
+                                                        <Chip 
+                                                            label={order.status} 
+                                                            size='small' 
+                                                            color={order.status === 'PAID' || order.status === 'COMPLETED' ? 'success' : 'warning'} 
+                                                            variant='tonal' 
+                                                            sx={{ height: 20, fontSize: '0.65rem' }}
+                                                        />
+                                                    </Box>
+                                                </Box>
+                                            ))
+                                        ) : (
+                                            <Box sx={{ p: 10, textAlign: 'center' }}>
+                                                <Typography variant='body2' color='text.secondary'>No hay pedidos recientes</Typography>
+                                            </Box>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+
+                            {/* Column 3: Today's Appointments */}
+                            <Grid item xs={12} md={4}>
+                                <Card sx={{ height: '100%' }}>
+                                    <CardHeader title='Citas Agendadas Hoy' />
+                                    <Divider />
+                                    <CardContent sx={{ p: '0 !important' }}>
+                                        {stats.todayAppointments && stats.todayAppointments.length > 0 ? (
+                                            stats.todayAppointments.map((app, index) => (
+                                                <Box key={app.id} sx={{ 
+                                                    p: 4, 
+                                                    display: 'flex', 
+                                                    alignItems: 'center',
+                                                    borderBottom: index !== stats.todayAppointments!.length - 1 ? '1px solid var(--mui-palette-divider)' : 'none'
+                                                }}>
+                                                    <Box sx={{ 
+                                                        mr: 3, 
+                                                        display: 'flex', 
+                                                        alignItems: 'center', 
+                                                        justifyContent: 'center',
+                                                        width: 38,
+                                                        height: 38,
+                                                        borderRadius: '8px',
+                                                        backgroundColor: 'rgba(var(--mui-palette-info-mainChannel) / 0.12)',
+                                                        color: 'info.main'
+                                                    }}>
+                                                        <Icon icon='tabler-calendar-check' />
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                                                        <Typography sx={{ fontWeight: 500, color: 'text.primary' }}>{app.contactName}</Typography>
+                                                        <Typography variant='caption'>{app.service}</Typography>
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                        <Typography sx={{ fontWeight: 500, color: 'text.secondary' }}>{app.time}</Typography>
+                                                        <Typography variant='caption' color='success.main'>{app.status}</Typography>
+                                                    </Box>
+                                                </Box>
+                                            ))
+                                        ) : (
+                                            <Box sx={{ p: 10, textAlign: 'center' }}>
+                                                <Typography variant='body2' color='text.secondary'>No hay citas para hoy</Typography>
+                                            </Box>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        </Grid>
                     </Grid>
                 </>
             ) : null}
