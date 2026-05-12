@@ -29,10 +29,12 @@ public class AvailabilityController {
 
     @PostMapping("/generate")
     public Mono<Void> generateSlots(
+            @RequestParam Long tenantId,
+            @RequestParam Long companyId,
             @RequestParam Long templateId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return availabilityService.generateSlots(templateId, startDate, endDate);
+        return availabilityService.generateSlots(tenantId, companyId, templateId, startDate, endDate);
     }
 
     @GetMapping("/slots")

@@ -80,8 +80,9 @@ public class AvailabilityService {
                 });
     }
 
-    public Mono<Void> generateSlots(Long templateId, LocalDate startDate, LocalDate endDate) {
+    public Mono<Void> generateSlots(Long tenantId, Long companyId, Long templateId, LocalDate startDate, LocalDate endDate) {
         return templateRepository.findById(templateId)
+                .filter(t -> t.getTenantId().equals(tenantId) && t.getCompanyId().equals(companyId))
                 .flatMap(template -> {
                     LocalDate currentGenDate = startDate != null ? startDate : LocalDate.now();
                     LocalDate endGenDate = endDate != null ? endDate : currentGenDate.plusDays(template.getMaxFutureRange() != null ? template.getMaxFutureRange() : 30);
