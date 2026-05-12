@@ -22,6 +22,7 @@ public class PipelineService {
 
     private final PipelineRepository pipelineRepository;
     private final PipelineStageRepository pipelineStageRepository;
+    private final com.app.persistence.repository.ConversationPipelineStateRepository stateRepository;
 
     public Mono<PipelineEntity> createDefaultPipeline(Long tenantId) {
         log.info("🛠️ Creating default pipeline for tenant: {}", tenantId);
@@ -218,5 +219,20 @@ public class PipelineService {
                     return pipelineRepository.save(p);
                 })
                 .then();
+    }
+
+    public Mono<java.util.Map<String, java.util.List<PipelineKanbanCardDTO>>> getKanbanData(Long tenantId, Long pipelineId) {
+        return stateRepository.findByTenantIdAndPipelineIdAndIsActiveTrue(tenantId, pipelineId)
+                .map(state -> {
+                    return PipelineKanbanCardDTO.builder()
+                            .contactId(state.getContactId())
+                            .name(state.getContactId() != null ? "Contact #" + state.getContactId() : "Desconocido")
+                            .conversationId(state.getConversationId())
+                            .stage(String.valueOf(state.getCurrentStageId()))
+                            .priority(state.getPriority())
+                            .build();
+                })
+                .collectList()
+                .map(cards -> cards.stream().collect(java.util.stream.Collectors.groupingBy(PipelineKanbanCardDTO::getStage)));
     }
 }
