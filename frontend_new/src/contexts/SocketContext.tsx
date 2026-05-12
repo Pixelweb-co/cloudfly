@@ -80,6 +80,12 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
             setIsConnected(false)
         })
 
+        // Eventos generales que disparan refresco de dashboard
+        const refreshDashboard = () => {
+            const companyId = localStorage.getItem('activeCompanyId')
+            dispatch(fetchDashboardData(companyId ? parseInt(companyId) : undefined))
+        }
+
         // Escuchar nuevo mensaje
         newSocket.on('new-message', (message: Message) => {
             console.log('🆕 Mensaje recibido por socket:', message)
@@ -101,8 +107,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
             }
 
             // REQUERIMIENTO: Cualquier evento del socket refresca el dashboard
-            const companyId = localStorage.getItem('activeCompanyId')
-            dispatch(fetchDashboardData(companyId ? parseInt(companyId) : undefined))
+            refreshDashboard()
         })
 
         // NEW: Real-time Web Notifications
@@ -133,8 +138,25 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
             dispatch(fetchNotifications())
             
             // Refrescar dashboard al recibir notificación
-            const companyId = localStorage.getItem('activeCompanyId')
-            dispatch(fetchDashboardData(companyId ? parseInt(companyId) : undefined))
+            refreshDashboard()
+        })
+
+        // Escuchar actualizaciones de contacto
+        newSocket.on('contact-update', () => {
+            console.log('👤 Contacto actualizado, refrescando dashboard')
+            refreshDashboard()
+        })
+
+        // Escuchar actualizaciones de estado de mensaje
+        newSocket.on('message-status-update', () => {
+            console.log('📨 Estado de mensaje actualizado, refrescando dashboard')
+            refreshDashboard()
+        })
+
+        // Escuchar evento explícito de dashboard si existiera
+        newSocket.on('dashboard-update', () => {
+            console.log('📊 Dashboard update recibido')
+            refreshDashboard()
         })
 
         setSocket(newSocket)
