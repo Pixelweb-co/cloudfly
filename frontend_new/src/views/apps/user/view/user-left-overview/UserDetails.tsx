@@ -69,76 +69,57 @@ const UserDetails = () => {
               </div>
               <Chip label={role} color='secondary' size='small' variant='tonal' />
             </div>
-            <div className='flex items-center justify-around flex-wrap gap-4'>
-              <div className='flex items-center gap-4'>
-                <CustomAvatar variant='rounded' color='primary' skin='light'>
-                  <i className='tabler-checkbox' />
-                </CustomAvatar>
-                <div>
-                  <Typography variant='h5'>1.23k</Typography>
-                  <Typography>Task Done</Typography>
-                </div>
-              </div>
-              <div className='flex items-center gap-4'>
-                <CustomAvatar variant='rounded' color='primary' skin='light'>
-                  <i className='tabler-briefcase' />
-                </CustomAvatar>
-                <div>
-                  <Typography variant='h5'>568</Typography>
-                  <Typography>Project Done</Typography>
-                </div>
-              </div>
             </div>
           </div>
           <div>
-            <Typography variant='h5'>Details</Typography>
+            <Typography variant='h5'>Detalles del Perfil</Typography>
             <Divider className='mlb-4' />
             <div className='flex flex-col gap-2'>
               <div className='flex items-center flex-wrap gap-x-1.5'>
                 <Typography className='font-medium' color='text.primary'>
-                  Username:
+                  Usuario:
                 </Typography>
                 <Typography>{userName || '-'}</Typography>
               </div>
               <div className='flex items-center flex-wrap gap-x-1.5'>
                 <Typography className='font-medium' color='text.primary'>
-                  Billing Email:
+                  Email de Facturación:
                 </Typography>
                 <Typography>{billingEmail || '-'}</Typography>
               </div>
               <div className='flex items-center flex-wrap gap-x-1.5'>
                 <Typography className='font-medium' color='text.primary'>
-                  Status
+                  Estado:
                 </Typography>
                 <Typography color='text.primary'>{status}</Typography>
               </div>
               <div className='flex items-center flex-wrap gap-x-1.5'>
                 <Typography className='font-medium' color='text.primary'>
-                  Role:
+                  Rol:
                 </Typography>
                 <Typography color='text.primary'>{role}</Typography>
               </div>
               <div className='flex items-center flex-wrap gap-x-1.5'>
                 <Typography className='font-medium' color='text.primary'>
-                  Tax ID:
+                  NIT/RUT:
                 </Typography>
                 <Typography color='text.primary'>{taxId}</Typography>
               </div>
               <div className='flex items-center flex-wrap gap-x-1.5'>
                 <Typography className='font-medium' color='text.primary'>
-                  Contact:
+                  Contacto:
                 </Typography>
                 <Typography color='text.primary'>{contact}</Typography>
               </div>
               <div className='flex items-center flex-wrap gap-x-1.5'>
                 <Typography className='font-medium' color='text.primary'>
-                  Language:
+                  Idioma:
                 </Typography>
                 <Typography color='text.primary'>{language.join(', ')}</Typography>
               </div>
               <div className='flex items-center flex-wrap gap-x-1.5'>
                 <Typography className='font-medium' color='text.primary'>
-                  Country:
+                  País:
                 </Typography>
                 <Typography color='text.primary'>{country}</Typography>
               </div>
@@ -147,13 +128,13 @@ const UserDetails = () => {
           <div className='flex gap-4 justify-center'>
             <OpenDialogOnElementClick
               element={Button}
-              elementProps={buttonProps('Edit', 'primary', 'contained')}
+              elementProps={buttonProps('Editar', 'primary', 'contained')}
               dialog={EditUserInfo}
               dialogProps={{ data: userData }}
             />
             <OpenDialogOnElementClick
               element={Button}
-              elementProps={buttonProps('Suspend', 'error', 'tonal')}
+              elementProps={buttonProps('Suspender', 'error', 'tonal')}
               dialog={ConfirmationDialog}
               dialogProps={{ type: 'suspend-account' }}
             />
