@@ -28,7 +28,7 @@ public class CalendarEventService {
             return calendarEventRepository.findByRelatedEntityTypeAndRelatedEntityId(dto.getRelatedEntityType(), dto.getRelatedEntityId())
                     .flatMap(existing -> {
                         // Update existing instead of creating duplicate
-                        return updateEvent(existing.getId(), dto);
+                        return updateEvent(existing.getId(), dto.getTenantId(), dto.getCompanyId(), dto);
                     })
                     .switchIfEmpty(Mono.defer(() -> createNewEvent(dto)));
         }
