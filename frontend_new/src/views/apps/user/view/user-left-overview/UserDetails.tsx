@@ -23,16 +23,17 @@ import { userMethods } from '@/utils/userMethods'
 
 const UserDetails = () => {
   // Read session user safely on client
-  const sessionUser: any = userMethods.getUserLogin?.() || null
+  const fullUser: any = userMethods.getUserLogin?.() || null
+  const sessionUser = fullUser?.user || fullUser
 
-  const firstName = sessionUser?.nombres || ''
-  const lastName = sessionUser?.apellidos || ''
+  const firstName = sessionUser?.nombres || sessionUser?.firstName || ''
+  const lastName = sessionUser?.apellidos || sessionUser?.lastName || ''
   const userName = sessionUser?.username || sessionUser?.email || ''
   const billingEmail = sessionUser?.email || ''
   const status = sessionUser?.enabled ? 'Activo' : 'Inactivo'
   const role = sessionUser?.roles?.[0]?.name || sessionUser?.roles?.[0]?.role || 'USER'
-  const taxId = sessionUser?.taxId || '-'
-  const contact = sessionUser?.phone || '-'
+  const taxId = sessionUser?.taxId || sessionUser?.nit || '-'
+  const contact = sessionUser?.phone || sessionUser?.cellphone || sessionUser?.telefono || '-'
   const language = [sessionUser?.language || 'Español']
   const country = sessionUser?.country || '-'
 
