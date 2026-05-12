@@ -87,7 +87,7 @@ public class AvailabilityService {
                     LocalDate endGenDate = endDate != null ? endDate : currentGenDate.plusDays(template.getMaxFutureRange() != null ? template.getMaxFutureRange() : 30);
 
                     // Fetch all existing slots for this user to avoid overlaps
-                    return slotRepository.findByUserIdAndStartTimeBetween(template.getUserId(), currentGenDate.atStartOfDay(), endGenDate.plusDays(1).atStartOfDay())
+                    return slotRepository.findByTenantIdAndCompanyIdAndUserIdAndStartTimeBetween(template.getTenantId(), template.getCompanyId(), template.getUserId(), currentGenDate.atStartOfDay(), endGenDate.plusDays(1).atStartOfDay())
                             .collectList()
                             .flatMap(existingSlots -> {
                                 List<AvailabilitySlotEntity> slotsToSave = new ArrayList<>();
