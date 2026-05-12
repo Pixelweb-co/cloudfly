@@ -24,6 +24,7 @@ import PipelineContactsChart from './PipelineContactsChart'
 import dashboardService from '@/services/dashboardService'
 import usePermissions from '@/hooks/usePermissions'
 import { userMethods } from '@/utils/userMethods'
+import { useSocket } from '@/contexts/SocketContext'
 
 // Util Imports
 import { formatCurrency } from '@/utils/format'
@@ -32,6 +33,7 @@ const HighImpactDashboard = () => {
     // Hooks
     const { hasModule } = usePermissions()
     const dispatch = useAppDispatch()
+    const { socket, subscribeDashboard, unsubscribeDashboard } = useSocket()
     const { stats, loading, error } = useAppSelector(state => state.dashboard)
     const [salesChart, setSalesChart] = useState<any>(null)
  
@@ -41,6 +43,11 @@ const HighImpactDashboard = () => {
         
         // Cargar datos vía Redux
         dispatch(fetchDashboardData(currentCompanyId ? Number(currentCompanyId) : undefined))
+
+        // Suscribir a actualizaciones del socket para el dashboard
+        if (subscribeDashboard) {
+            subscribeDashboard()
+        }
 
         // Cargar gráfica de ventas (aún local o mover a redux después)
         const fetchSales = async () => {
@@ -52,6 +59,12 @@ const HighImpactDashboard = () => {
             }
         }
         fetchSales()
+
+        return () => {
+            if (unsubscribeDashboard) {
+                unsubscribeDashboard()
+            }
+        }
     }, [dispatch])
  
     // Fallback series if API doesn't return enough data yet

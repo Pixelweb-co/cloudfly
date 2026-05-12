@@ -545,7 +545,7 @@ class ChatService {
             const [result] = await db.execute(
                 `INSERT INTO omni_channel_messages 
                 (tenant_id, company_id, channel_id, contact_id, direction, content, status, conversation_id, created_at) 
-                VALUES (?, ?, ?, ?, ?, 'OUTBOUND', ?, ?, NOW())`,
+                VALUES (?, ?, ?, ?, 'OUTBOUND', ?, 'SENT', ?, NOW())`,
                 [tenantId, contact.company_id, channel.id, contactId, respuesta, conversationId]
             );
 
