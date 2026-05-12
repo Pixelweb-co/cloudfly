@@ -39,8 +39,8 @@ public class CategoryService {
                 });
     }
 
-    public Flux<CategoryResponse> getAllTenantCategories(Long tenantId) {
-        return categoryRepository.findByTenantId(tenantId)
+    public Flux<CategoryResponse> getAllTenantCategories(Long tenantId, Long companyId) {
+        return categoryRepository.findByTenantIdAndCompanyId(tenantId, companyId)
                 .map(this::toResponse);
     }
 
