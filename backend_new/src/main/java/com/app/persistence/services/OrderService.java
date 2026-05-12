@@ -53,29 +53,36 @@ public class OrderService {
 
     @Transactional
     public Mono<OrderResponseDTO> createOrder(OrderRequestDTO request) {
-        log.info("🚀 [ORDER-SERVICE] Creating order for Tenant: {}, Company: {}", request.getTenantId(),
-                request.getCompanyId());
+        Mono<String> customerNameMono = (request.getCustomerName() != null && !request.getCustomerName().isEmpty())
+                ? Mono.just(request.getCustomerName())
+                : (request.getCustomerId() != null)
+                        ? contactRepository.findById(request.getCustomerId())
+                                .map(contact -> contact.getName())
+                                .defaultIfEmpty("Cliente Desconocido")
+                        : Mono.just("Cliente Desconocido");
 
-        OrderEntity order = OrderEntity.builder()
-                .tenantId(request.getTenantId())
-                .companyId(request.getCompanyId())
-                .customerId(request.getCustomerId())
-                .customerName(request.getCustomerName())
-                .orderDate(LocalDateTime.now())
-                .expirationDate(request.getExpirationDate())
-                .status(request.getStatus() != null ? request.getStatus() : OrderStatus.PROCESANDO)
-                .notes(request.getNotes())
-                .terms(request.getTerms())
-                .orderNumber("ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
-                .subtotal(request.getSubtotal() != null ? request.getSubtotal() : BigDecimal.ZERO)
-                .tax(request.getTax() != null ? request.getTax() : BigDecimal.ZERO)
-                .discount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO)
-                .total(request.getTotal() != null ? request.getTotal() : BigDecimal.ZERO)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
+        return customerNameMono.flatMap(customerName -> {
+            OrderEntity order = OrderEntity.builder()
+                    .tenantId(request.getTenantId())
+                    .companyId(request.getCompanyId())
+                    .customerId(request.getCustomerId())
+                    .customerName(customerName)
+                    .orderDate(LocalDateTime.now())
+                    .expirationDate(request.getExpirationDate())
+                    .status(request.getStatus() != null ? request.getStatus() : OrderStatus.PROCESANDO)
+                    .notes(request.getNotes())
+                    .terms(request.getTerms())
+                    .orderNumber("ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                    .subtotal(request.getSubtotal() != null ? request.getSubtotal() : BigDecimal.ZERO)
+                    .tax(request.getTax() != null ? request.getTax() : BigDecimal.ZERO)
+                    .discount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO)
+                    .total(request.getTotal() != null ? request.getTotal() : BigDecimal.ZERO)
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
 
-        return orderRepository.save(order)
+            return orderRepository.save(order);
+        })
                 .flatMap(savedOrder -> {
                     if (request.getItems() == null || request.getItems().isEmpty()) {
                         return Mono.just(savedOrder).flatMap(o -> enrichWithItemsAndCustomer(o));
