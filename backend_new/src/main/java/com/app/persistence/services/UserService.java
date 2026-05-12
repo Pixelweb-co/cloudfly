@@ -94,10 +94,20 @@ public class UserService {
                                                                                 ? Flux.just("ADMIN")
                                                                                 : Flux.fromIterable(request.getRoles());
 
+                                                // ACTUALIZAR EL TENANT CON EL ID DEL USUARIO ADMIN
+                                                Mono<Void> updateTenantAdminMono = (finalCustId != null)
+                                                                ? tenantRepository.findById(finalCustId)
+                                                                                .flatMap(tenant -> {
+                                                                                        tenant.setAdminUserId(savedUser.getId());
+                                                                                        return tenantRepository.save(tenant);
+                                                                                }).then()
+                                                                : Mono.empty();
+
                                                 return rolesToAssign
                                                                 .flatMap(roleName -> roleRepository
                                                                                 .findByName(roleName))
                                                                 .flatMap(role -> userRoleRepository.insertRole(savedUser.getId(), role.getId()))
+                                                                .then(updateTenantAdminMono)
                                                                 .then(handleAutomaticSubscription(finalCustId))
                                                                 .then(Mono.defer(() -> {
                                                                         sendRegistrationEmail(savedUser);
