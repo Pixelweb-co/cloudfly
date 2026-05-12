@@ -69,4 +69,11 @@ public class RbacController {
                 })
                 .defaultIfEmpty(ResponseEntity.status(401).build());
     }
+    /**
+     * Devuelve la lista completa de módulos (admin only)
+     */
+    @GetMapping("/modules-list")
+    public Flux<com.app.persistence.entity.ModuleEntity> getModulesList() {
+        return rbacService.getModulesList();
+    }
 }
