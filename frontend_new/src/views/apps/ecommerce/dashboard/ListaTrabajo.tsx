@@ -62,7 +62,8 @@ const ListaTrabajo = () => {
   const [error, setError] = useState<string | null>(null)
   const [items, setItems] = useState<{ abierta: SolicitudItem[]; proceso: SolicitudItem[]; finalizada: SolicitudItem[] }>({ abierta: [], proceso: [], finalizada: [] })
 
-  const user = userMethods.getUserLogin?.()
+  const fullUser = userMethods.getUserLogin?.()
+  const user = fullUser?.user || fullUser
   const userId = user?.id as number | undefined
   const router = useRouter()
 
