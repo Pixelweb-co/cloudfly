@@ -28,9 +28,10 @@ export default function PipelineKanbanCard({
   onClick
 }: Props) {
 
-  const displayId = card.conversationId.length > 10 
-    ? `...${card.conversationId.slice(-6)}` 
-    : card.conversationId
+  const conversationId = card.conversationId || ''
+  const displayId = conversationId.length > 10 
+    ? `...${conversationId.slice(-6)}` 
+    : conversationId || 'N/A'
 
   return (
     <Card
