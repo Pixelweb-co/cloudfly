@@ -320,6 +320,7 @@ public class EvolutionService {
                 .doOnSuccess(res -> log.info("✅ Messages marked as read in Evolution API"))
                 .onErrorResume(err -> {
                     log.error("❌ Error marking messages as read in Evolution: {}", err.getMessage());
+                    return Mono.just(Map.of("error", err.getMessage()));
                 });
     }
 
