@@ -33,32 +33,14 @@ type DataType = {
 // Vars
 const data: DataType[] = [
   {
-    cardCvv: '587',
-    name: 'Tom McBride',
-    expiryDate: '12/24',
+    cardCvv: '***',
+    name: 'Usuario Principal',
+    expiryDate: '12/26',
     imgAlt: 'Mastercard',
     badgeColor: 'primary',
-    cardStatus: 'Primary',
-    cardNumber: '5577 0000 5577 9865',
+    cardStatus: 'Principal',
+    cardNumber: '**** **** **** 9865',
     imgSrc: '/images/logos/mastercard.png'
-  },
-  {
-    cardCvv: '681',
-    imgAlt: 'Visa card',
-    expiryDate: '02/24',
-    name: 'Mildred Wagner',
-    cardNumber: '4532 3616 2070 5678',
-    imgSrc: '/images/logos/visa.png'
-  },
-  {
-    cardCvv: '3845',
-    expiryDate: '08/20',
-    badgeColor: 'error',
-    cardStatus: 'Expired',
-    name: 'Lester Jennings',
-    imgAlt: 'American Express card',
-    cardNumber: '3700 000000 00002',
-    imgSrc: '/images/logos/american-express.png'
   }
 ]
 
@@ -77,7 +59,7 @@ const PaymentMethod = () => {
   // Vars
   const addButtonProps: ButtonProps = {
     variant: 'contained',
-    children: 'Add Card',
+    children: 'Añadir Tarjeta',
     size: 'small',
     color: 'primary',
     startIcon: <i className='tabler-plus' />,
@@ -86,7 +68,7 @@ const PaymentMethod = () => {
 
   const editButtonProps = (index: number): ButtonProps => ({
     variant: 'tonal',
-    children: 'Edit',
+    children: 'Editar',
     size: 'small',
     onClick: () => handleClickOpen(index)
   })
@@ -127,10 +109,10 @@ const PaymentMethod = () => {
                     dialogProps={{ data: data[creditCard] }}
                   />
                   <Button variant='tonal' color='error' size='small'>
-                    Delete
+                    Eliminar
                   </Button>
                 </div>
-                <Typography variant='body2'>Card expires at {item.expiryDate}</Typography>
+                <Typography variant='body2'>La tarjeta vence el {item.expiryDate}</Typography>
               </div>
             </div>
           ))}

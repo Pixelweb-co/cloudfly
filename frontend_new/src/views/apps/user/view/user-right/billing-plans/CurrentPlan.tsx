@@ -31,56 +31,56 @@ const CurrentPlan = ({ data }: { data?: PricingPlanType[] }) => {
 
   return (
     <Card>
-      <CardHeader title='Current Plan' />
+      <CardHeader title='Plan de Suscripción Actual' />
       <CardContent>
         <Grid container spacing={6}>
           <Grid item xs={12} md={6} className='flex flex-col gap-4'>
             <div>
-              <Typography className='font-medium text-textPrimary'>Your Current Plan is Basic</Typography>
-              <Typography>A simple start for everyone</Typography>
+              <Typography className='font-medium text-textPrimary'>Tu plan actual es CloudFly Premium</Typography>
+              <Typography>SaaS especializado para gestión de negocios</Typography>
             </div>
             <div>
               <Typography className='font-medium' color='text.primary'>
-                Active until Dec 09, 2021
+                Próximo pago: 15 de Junio, 2026
               </Typography>
-              <Typography>We will send you a notification upon Subscription expiration</Typography>
+              <Typography>Se enviará una notificación automática 3 días antes del vencimiento</Typography>
             </div>
             <div className='flex flex-col gap-1'>
               <div className='flex items-center gap-2'>
                 <Typography className='font-medium' color='text.primary'>
-                  $99 Per Month
+                  $49.00 USD / Mes
                 </Typography>
-                <Chip color='primary' label='Popular' size='small' variant='tonal' />
+                <Chip color='primary' label='Activo' size='small' variant='tonal' />
               </div>
-              <Typography>Standard plan for small to medium businesses</Typography>
+              <Typography>Acceso total a CRM, Inventarios y Campañas IA</Typography>
             </div>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Alert icon={false} severity='warning' className='mbe-4'>
-              <AlertTitle>We need your attention!</AlertTitle>
-              Your plan requires update
+            <Alert icon={false} severity='success' className='mbe-4'>
+              <AlertTitle>¡Tu cuenta está al día!</AlertTitle>
+              Gracias por ser parte del ecosistema CloudFly.
             </Alert>
             <div className='flex items-center justify-between'>
               <Typography className='font-medium' color='text.primary'>
-                Days
+                Uso del Ciclo
               </Typography>
               <Typography className='font-medium' color='text.primary'>
-                26 of 30 Days
+                26 de 30 Días
               </Typography>
             </div>
-            <LinearProgress variant='determinate' value={80} className='mlb-1 bs-2.5' />
-            <Typography variant='body2'>Your plan requires update</Typography>
+            <LinearProgress variant='determinate' value={86} className='mlb-1 bs-2.5' />
+            <Typography variant='body2'>4 días restantes del periodo actual</Typography>
           </Grid>
           <Grid item xs={12} className='flex gap-4 flex-wrap'>
             <OpenDialogOnElementClick
               element={Button}
-              elementProps={buttonProps('Upgrade plan', 'contained', 'primary')}
+              elementProps={buttonProps('Mejorar Plan', 'contained', 'primary')}
               dialog={UpgradePlan}
               dialogProps={{ data: data }}
             />
             <OpenDialogOnElementClick
               element={Button}
-              elementProps={buttonProps('Cancel Subscription', 'tonal', 'error')}
+              elementProps={buttonProps('Cancelar Suscripción', 'tonal', 'error')}
               dialog={ConfirmationDialog}
               dialogProps={{ type: 'unsubscribe' }}
             />

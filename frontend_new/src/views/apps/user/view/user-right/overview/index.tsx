@@ -31,15 +31,17 @@ import { userMethods } from '@/utils/userMethods'
 } */
 
 const OverViewTab = () => {
-  const canSeeWorklist = userMethods.isRole('MANAGER') || userMethods.isRole('BIOMEDICAL')
-
   return (
     <Grid container spacing={6}>
-      {canSeeWorklist && (
-        <Grid item xs={12}>
-          <ListaTrabajo />
-        </Grid>
-      )}
+      <Grid item xs={12}>
+        <div className='flex flex-col gap-4'>
+          <Typography variant='h4'>¡Bienvenido a tu Panel de Perfil!</Typography>
+          <Typography>Desde aquí puedes gestionar tu información personal, seguridad y detalles de facturación de CloudFly.</Typography>
+        </div>
+      </Grid>
+      <Grid item xs={12}>
+        <UserActivityTimeLine />
+      </Grid>
     </Grid>
   )
 }
