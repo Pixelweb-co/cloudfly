@@ -10,5 +10,5 @@ import java.time.LocalDateTime;
 @Repository
 public interface AppointmentRepository extends ReactiveCrudRepository<AppointmentEntity, Long> {
     Flux<AppointmentEntity> findByTenantIdAndCompanyIdAndStartTimeBetween(Long tenantId, Long companyId, LocalDateTime start, LocalDateTime end);
-    Flux<AppointmentEntity> findByUserIdAndStartTimeBetween(Long userId, LocalDateTime start, LocalDateTime end);
+    Flux<AppointmentEntity> findByTenantIdAndCompanyIdAndUserIdAndStartTimeBetween(Long tenantId, Long companyId, Long userId, LocalDateTime start, LocalDateTime end);
 }

@@ -8,5 +8,5 @@ import reactor.core.publisher.Flux;
 @Repository
 public interface AvailabilityTemplateRepository extends ReactiveCrudRepository<AvailabilityTemplateEntity, Long> {
     Flux<AvailabilityTemplateEntity> findByTenantIdAndCompanyId(Long tenantId, Long companyId);
-    Flux<AvailabilityTemplateEntity> findByUserId(Long userId);
+    Flux<AvailabilityTemplateEntity> findByTenantIdAndCompanyIdAndUserId(Long tenantId, Long companyId, Long userId);
 }

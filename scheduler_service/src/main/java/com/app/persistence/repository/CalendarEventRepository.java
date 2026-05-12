@@ -13,10 +13,10 @@ public interface CalendarEventRepository extends ReactiveCrudRepository<Calendar
     @Query("SELECT * FROM calendar_events WHERE tenant_id = :tenantId AND company_id = :companyId AND start_time BETWEEN :start AND :end")
     Flux<CalendarEventEntity> findByRange(Long tenantId, Long companyId, LocalDateTime start, LocalDateTime end);
 
-    @Query("SELECT * FROM calendar_events WHERE calendar_id = :calendarId")
-    Flux<CalendarEventEntity> findByCalendarId(Long calendarId);
-    @Query("DELETE FROM calendar_events WHERE calendar_id = :calendarId")
-    Mono<Void> deleteByCalendarId(Long calendarId);
+    @Query("SELECT * FROM calendar_events WHERE tenant_id = :tenantId AND company_id = :companyId AND calendar_id = :calendarId")
+    Flux<CalendarEventEntity> findByTenantIdAndCompanyIdAndCalendarId(Long tenantId, Long companyId, Long calendarId);
+    @Query("DELETE FROM calendar_events WHERE tenant_id = :tenantId AND company_id = :companyId AND calendar_id = :calendarId")
+    Mono<Void> deleteByTenantIdAndCompanyIdAndCalendarId(Long tenantId, Long companyId, Long calendarId);
 
     @Query("SELECT * FROM calendar_events WHERE related_entity_type = :relatedEntityType AND related_entity_id = :relatedEntityId LIMIT 1")
     Mono<CalendarEventEntity> findByRelatedEntityTypeAndRelatedEntityId(String relatedEntityType, Long relatedEntityId);
