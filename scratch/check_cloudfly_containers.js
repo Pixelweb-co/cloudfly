@@ -11,7 +11,7 @@ const config = {
 };
 
 conn.on('ready', () => {
-  const cmd = 'docker ps';
+  const cmd = 'docker ps -a --filter "name=cloudfly"';
   conn.exec(cmd, (err, stream) => {
     if (err) throw err;
     stream.on('close', () => conn.end()).on('data', d => process.stdout.write(d)).stderr.on('data', d => process.stderr.write(d));

@@ -11,7 +11,8 @@ const config = {
 };
 
 conn.on('ready', () => {
-  const cmd = 'docker ps';
+  // Get last 500 lines of backend logs and filter for unread-summary errors
+  const cmd = 'docker logs --tail 1000 backend-api | grep "unread-summary" -A 50 -B 10';
   conn.exec(cmd, (err, stream) => {
     if (err) throw err;
     stream.on('close', () => conn.end()).on('data', d => process.stdout.write(d)).stderr.on('data', d => process.stderr.write(d));

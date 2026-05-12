@@ -11,7 +11,7 @@ const config = {
 };
 
 conn.on('ready', () => {
-  const cmd = 'docker ps';
+  const cmd = 'docker logs --tail 500 backend-api | grep ERROR -A 20';
   conn.exec(cmd, (err, stream) => {
     if (err) throw err;
     stream.on('close', () => conn.end()).on('data', d => process.stdout.write(d)).stderr.on('data', d => process.stderr.write(d));
