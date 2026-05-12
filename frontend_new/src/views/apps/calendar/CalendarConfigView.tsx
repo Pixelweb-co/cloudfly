@@ -27,7 +27,9 @@ import { useSession } from 'next-auth/react'
 import calendarService from '@/services/calendarService'
 import { productService } from '@/services/ventas/productService'
 import AppReactDatepicker from '@/libs/styles/AppReactDatepicker'
-import { addDays, format } from 'date-fns'
+import { addDays, format, startOfDay, isBefore } from 'date-fns'
+import * as yup from 'yup'
+import { toast } from 'react-hot-toast'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -93,6 +95,34 @@ const AvailabilityTab = () => {
   const [startDate, setStartDate] = useState<Date | null>(new Date())
   const [endDate, setEndDate] = useState<Date | null>(addDays(new Date(), 30))
   const [exceptions, setExceptions] = useState<any[]>([])
+  const [errors, setErrors] = useState<{ startDate?: string; endDate?: string; serviceId?: string }>({})
+
+  const validateDates = async () => {
+    const schema = yup.object().shape({
+      startDate: yup.date()
+        .required('La fecha de inicio es requerida')
+        .test('not-past', 'La fecha de inicio no puede ser anterior a hoy', (value) => {
+          if (!value) return false
+          return !isBefore(startOfDay(value), startOfDay(new Date()))
+        }),
+      endDate: yup.date()
+        .required('La fecha de fin es requerida')
+        .min(yup.ref('startDate'), 'La fecha de fin debe ser posterior a la fecha de inicio')
+    })
+
+    try {
+      await schema.validate({ startDate, endDate }, { abortEarly: false })
+      setErrors({})
+      return true
+    } catch (err: any) {
+      const newErrors: any = {}
+      err.inner.forEach((error: any) => {
+        newErrors[error.path] = error.message
+      })
+      setErrors(newErrors)
+      return false
+    }
+  }
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -109,10 +139,44 @@ const AvailabilityTab = () => {
 
   const handleSave = async () => {
     try {
+      // 1. Validaciones básicas
+      if (!serviceId) {
+        toast.error('Por favor seleccione un servicio')
+        return
+      }
+
+      if (genMode === 'range') {
+        const isValid = await validateDates()
+        if (!isValid) return
+      }
+
       setLoading(true)
       const user = session?.user as any
       const tenantId = user?.tenantId || 1
       const companyId = user?.companyId || 1
+
+      // 2. Verificar programación existente si es modo rango
+      if (genMode === 'range' && startDate && endDate) {
+        const existingSlots = await calendarService.getSlots(
+          tenantId,
+          companyId,
+          format(startDate, "yyyy-MM-dd'T'00:00:00"),
+          format(endDate, "yyyy-MM-dd'T'23:59:59")
+        )
+
+        // Filtrar slots por el servicio seleccionado
+        const serviceSlots = existingSlots.filter((s: any) => s.serviceId === serviceId)
+
+        if (serviceSlots.length > 0) {
+          const confirmOverlap = window.confirm(
+            `Ya existe programación para este servicio en el rango seleccionado (${serviceSlots.length} espacios). ¿Desea continuar? (Los espacios nuevos no se duplicarán si coinciden exactamente en hora).`
+          )
+          if (!confirmOverlap) {
+            setLoading(false)
+            return
+          }
+        }
+      }
 
       const templateData = {
         tenantId,
@@ -140,10 +204,10 @@ const AvailabilityTab = () => {
       
       await calendarService.generateSlots(savedTemplate.id, sDate, eDate)
       
-      alert('Disponibilidad y Servicio configurados correctamente')
+      toast.success('Disponibilidad y Servicio configurados correctamente')
     } catch (error) {
       console.error('Error saving template:', error)
-      alert('Error al procesar la configuración')
+      toast.error('Error al procesar la configuración')
     } finally {
       setLoading(false)
     }
@@ -189,16 +253,34 @@ const AvailabilityTab = () => {
 
       {genMode === 'range' && (
         <Grid item xs={12} className='flex gap-4'>
-          <AppReactDatepicker
-            selected={startDate}
-            onChange={(date: Date) => setStartDate(date)}
-            customInput={<TextField label='Desde' fullWidth />}
-          />
-          <AppReactDatepicker
-            selected={endDate}
-            onChange={(date: Date) => setEndDate(date)}
-            customInput={<TextField label='Hasta' fullWidth />}
-          />
+          <Box sx={{ flex: 1 }}>
+            <AppReactDatepicker
+              selected={startDate}
+              onChange={(date: Date) => setStartDate(date)}
+              customInput={
+                <TextField 
+                  label='Desde' 
+                  fullWidth 
+                  error={!!errors.startDate}
+                  helperText={errors.startDate}
+                />
+              }
+            />
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <AppReactDatepicker
+              selected={endDate}
+              onChange={(date: Date) => setEndDate(date)}
+              customInput={
+                <TextField 
+                  label='Hasta' 
+                  fullWidth 
+                  error={!!errors.endDate}
+                  helperText={errors.endDate}
+                />
+              }
+            />
+          </Box>
         </Grid>
       )}
 
