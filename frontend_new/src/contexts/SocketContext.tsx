@@ -47,121 +47,118 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     const dispatch = useDispatch<AppDispatch>()
 
     useEffect(() => {
-        const token = localStorage.getItem('jwt')
+        const connectSocket = () => {
+            const token = localStorage.getItem('jwt')
+            const user = userMethods.getUserLogin()
+            const tenantId = user?.tenant?.id || user?.tenantId || user?.customerId
 
-        if (!token) return
-
-        const user = userMethods.getUserLogin()
-        const tenantId = user?.tenant?.id || user?.tenantId
-
-        // URL dinámica según entorno - ACTUALIZADO PARA PRODUCCIÓN
-        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL ||
-            (typeof window !== 'undefined' && window.location.hostname === 'localhost'
-                ? 'http://localhost:3001'
-                : 'https://chat.cloudfly.com.co')
-
-        console.log('🔌 Conectando a Socket.IO:', socketUrl, 'Tenant:', tenantId)
-
-        const newSocket = io(socketUrl, {
-            auth: {
-                token,
-                tenantId
-            },
-            reconnection: true
-        })
-
-        newSocket.on('connect', () => {
-            console.log('✅ Socket conectado:', newSocket.id)
-            setIsConnected(true)
-        })
-
-        newSocket.on('disconnect', () => {
-            console.log('❌ Socket desconectado')
-            setIsConnected(false)
-        })
-
-        // Eventos generales que disparan refresco de dashboard
-        const refreshDashboard = () => {
-            const companyId = localStorage.getItem('activeCompanyId')
-            dispatch(fetchDashboardData(companyId ? parseInt(companyId) : undefined))
-        }
-
-        // Escuchar nuevo mensaje
-        newSocket.on('new-message', (message: Message) => {
-            console.log('🆕 Mensaje recibido por socket:', message)
-            setMessages((prev) => {
-                const exists = prev.some(m => m.id === message.id)
-
-                if (exists) {
-                    console.log('⚠️ Mensaje duplicado, ignorando')
-                    return prev
-                }
-
-                console.log('✅ Agregando mensaje nuevo a la lista')
-                return [...prev, message]
-            })
-
-            // Refresh unread messages count for INBOUND messages
-            if ((message as any).direction === 'INBOUND') {
-                dispatch(fetchUnreadSummary())
+            if (!token || !tenantId) {
+                console.log('⏳ Postponing Socket.IO connection: missing token or tenantId', { hasToken: !!token, tenantId })
+                return null
             }
 
-            // REQUERIMIENTO: Cualquier evento del socket refresca el dashboard
-            refreshDashboard()
-        })
+            // URL dinámica según entorno
+            const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL ||
+                (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+                    ? 'http://localhost:3001'
+                    : 'https://chat.cloudfly.com.co')
 
-        // NEW: Real-time Web Notifications
-        newSocket.on('new-web-notification', (notification: any) => {
-            console.log('🔔 Nueva notificación web recibida:', notification)
-            
-            // Mostrar Toast
-            toast(
-              (t) => (
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <b style={{ fontSize: '0.9rem' }}>{notification.title}</b>
-                  <span style={{ fontSize: '0.8rem', color: '#666' }}>{notification.description}</span>
-                </div>
-              ),
-              {
-                duration: 5000,
-                icon: '🔔',
-                style: {
-                  borderRadius: '10px',
-                  background: '#fff',
-                  color: '#333',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                  border: '1px solid #eee'
+            console.log('🔌 Conectando a Socket.IO:', socketUrl, 'Tenant:', tenantId)
+
+            const newSocket = io(socketUrl, {
+                auth: {
+                    token,
+                    tenantId: Number(tenantId)
                 },
-              }
-            );
+                reconnection: true
+            })
 
-            dispatch(fetchNotifications())
-            
-            // Refrescar dashboard al recibir notificación
-            refreshDashboard()
-        })
+            newSocket.on('connect', () => {
+                console.log('✅ Socket conectado:', newSocket.id, 'Room:', `tenant_${tenantId}`)
+                setIsConnected(true)
+            })
 
-        // Escuchar actualizaciones de contacto
-        newSocket.on('contact-update', () => {
-            console.log('👤 Contacto actualizado, refrescando dashboard')
-            refreshDashboard()
-        })
+            newSocket.on('disconnect', () => {
+                console.log('❌ Socket desconectado')
+                setIsConnected(false)
+            })
 
-        // Escuchar actualizaciones de estado de mensaje
-        newSocket.on('message-status-update', () => {
-            console.log('📨 Estado de mensaje actualizado, refrescando dashboard')
-            refreshDashboard()
-        })
+            // ... (rest of listeners)
+            setupListeners(newSocket)
 
-        // Escuchar evento explícito de dashboard si existiera
-        newSocket.on('dashboard-update', () => {
-            console.log('📊 Dashboard update recibido')
-            refreshDashboard()
-        })
+            return newSocket
+        }
 
-        setSocket(newSocket)
+        const setupListeners = (socketInstance: Socket) => {
+            const refreshDashboard = () => {
+                const companyId = localStorage.getItem('activeCompanyId')
+                dispatch(fetchDashboardData(companyId ? parseInt(companyId) : undefined))
+            }
 
-        return () => { newSocket.close() }
+            socketInstance.on('new-message', (message: Message) => {
+                console.log('🆕 Mensaje recibido por socket:', message)
+                setMessages((prev) => {
+                    const exists = prev.some(m => m.id === message.id)
+                    if (exists) return prev
+                    return [...prev, message]
+                })
+
+                if ((message as any).direction === 'INBOUND') {
+                    dispatch(fetchUnreadSummary())
+                }
+                refreshDashboard()
+            })
+
+            socketInstance.on('new-web-notification', (notification: any) => {
+                console.log('🔔 Nueva notificación web recibida:', notification)
+                toast(
+                    (t) => (
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <b style={{ fontSize: '0.9rem' }}>{notification.title}</b>
+                            <span style={{ fontSize: '0.8rem', color: '#666' }}>{notification.description}</span>
+                        </div>
+                    ),
+                    {
+                        duration: 5000,
+                        icon: '🔔',
+                        style: {
+                            borderRadius: '10px',
+                            background: '#fff',
+                            color: '#333',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            border: '1px solid #eee'
+                        },
+                    }
+                );
+                dispatch(fetchNotifications())
+                refreshDashboard()
+            })
+
+            socketInstance.on('contact-update', () => refreshDashboard())
+            socketInstance.on('message-status-update', () => refreshDashboard())
+            socketInstance.on('dashboard-update', () => refreshDashboard())
+        }
+
+        let socketInstance = connectSocket()
+
+        // Si no hay socket (porque faltaba tenantId), intentar de nuevo cada 2 segundos hasta que esté disponible
+        // Esto es útil durante la hidratación de la sesión
+        const checkInterval = setInterval(() => {
+            if (!socketInstance) {
+                socketInstance = connectSocket()
+                if (socketInstance) {
+                    setSocket(socketInstance)
+                    clearInterval(checkInterval)
+                }
+            }
+        }, 2000)
+
+        setSocket(socketInstance)
+
+        return () => {
+            if (socketInstance) socketInstance.close()
+            clearInterval(checkInterval)
+        }
     }, [])
 
     const sendMessage = (conversationId: string, body: string, messageType = 'TEXT', platform = 'WHATSAPP') => {
