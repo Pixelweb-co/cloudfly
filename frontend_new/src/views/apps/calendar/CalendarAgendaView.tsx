@@ -23,12 +23,14 @@ import { Icon } from '@iconify/react'
 import { format, addDays, subDays, parseISO } from 'date-fns'
 import es from 'date-fns/locale/es'
 import calendarService from '@/services/calendarService'
+import { productService } from '@/services/ventas/productService'
 import { useSession } from 'next-auth/react'
 
 const CalendarAgendaView = () => {
   const { data: session } = useSession()
   const [currentDate, setCurrentDate] = React.useState(new Date())
   const [agendaItems, setAgendaItems] = React.useState<any[]>([])
+  const [services, setServices] = React.useState<any[]>([])
   const [loading, setLoading] = React.useState(false)
   const [serviceFilter, setServiceFilter] = React.useState<number | 'all'>('all')
 
@@ -66,11 +68,21 @@ const CalendarAgendaView = () => {
     }
   }, [currentDate, session])
 
+  const fetchServices = React.useCallback(async () => {
+    try {
+      const data = await productService.getProductsByType('SERVICE')
+      setServices(data)
+    } catch (error) {
+      console.error('Error fetching services:', error)
+    }
+  }, [])
+
   React.useEffect(() => {
     if (session) {
       fetchAgenda()
+      fetchServices()
     }
-  }, [fetchAgenda, session])
+  }, [fetchAgenda, fetchServices, session])
 
   const handlePrevDay = () => setCurrentDate(prev => subDays(prev, 1))
   const handleNextDay = () => setCurrentDate(prev => addDays(prev, 1))
@@ -100,9 +112,11 @@ const CalendarAgendaView = () => {
                 sx={{ minWidth: 200 }}
               >
                 <MenuItem value='all'>Todos los servicios</MenuItem>
-                <MenuItem value={1}>Consulta General</MenuItem>
-                <MenuItem value={2}>Asesoría Técnica</MenuItem>
-                <MenuItem value={3}>Soporte Premium</MenuItem>
+                {services.map(service => (
+                  <MenuItem key={service.id} value={service.id}>
+                    {service.productName}
+                  </MenuItem>
+                ))}
               </Select>
             </Box>
           </Box>
