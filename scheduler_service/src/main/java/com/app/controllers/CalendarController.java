@@ -25,12 +25,12 @@ public class CalendarController {
     }
 
     @PutMapping("/{id}")
-    public Mono<CalendarDto> update(@PathVariable Long id, @RequestBody CalendarDto dto) {
-        return calendarService.updateCalendar(id, dto);
+    public Mono<CalendarDto> update(@PathVariable Long id, @RequestParam Long tenantId, @RequestParam Long companyId, @RequestBody CalendarDto dto) {
+        return calendarService.updateCalendar(id, tenantId, companyId, dto);
     }
 
     @DeleteMapping("/{id}")
-    public Mono<Void> delete(@PathVariable Long id) {
-        return calendarService.deleteCalendar(id);
+    public Mono<Void> delete(@PathVariable Long id, @RequestParam Long tenantId, @RequestParam Long companyId) {
+        return calendarService.deleteCalendar(id, tenantId, companyId);
     }
 }

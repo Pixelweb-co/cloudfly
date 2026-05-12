@@ -67,12 +67,15 @@ public class CalendarEventService {
                 .map(this::mapToDto);
     }
 
-    public Mono<CalendarEventDto> getEvent(Long id) {
-        return calendarEventRepository.findById(id).map(this::mapToDto);
+    public Mono<CalendarEventDto> getEvent(Long id, Long tenantId, Long companyId) {
+        return calendarEventRepository.findById(id)
+                .filter(e -> e.getTenantId().equals(tenantId) && e.getCompanyId().equals(companyId))
+                .map(this::mapToDto);
     }
 
-    public Mono<CalendarEventDto> updateEvent(Long id, CalendarEventDto dto) {
+    public Mono<CalendarEventDto> updateEvent(Long id, Long tenantId, Long companyId, CalendarEventDto dto) {
         return calendarEventRepository.findById(id)
+                .filter(e -> e.getTenantId().equals(tenantId) && e.getCompanyId().equals(companyId))
                 .flatMap(entity -> {
                     entity.setTitle(dto.getTitle());
                     entity.setDescription(dto.getDescription());
@@ -89,9 +92,11 @@ public class CalendarEventService {
                 .map(this::mapToDto);
     }
 
-    public Mono<Void> deleteEvent(Long id) {
-        return scheduledJobRepository.deleteByEventId(id)
-                .then(calendarEventRepository.deleteById(id));
+    public Mono<Void> deleteEvent(Long id, Long tenantId, Long companyId) {
+        return calendarEventRepository.findById(id)
+                .filter(e -> e.getTenantId().equals(tenantId) && e.getCompanyId().equals(companyId))
+                .flatMap(entity -> scheduledJobRepository.deleteByEventId(id)
+                        .then(calendarEventRepository.deleteById(id)));
     }
 
     private CalendarEventDto mapToDto(CalendarEventEntity entity) {
