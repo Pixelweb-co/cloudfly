@@ -11,27 +11,28 @@ import type { ButtonProps } from '@mui/material/Button'
 import AddNewAddress from '@components/dialogs/add-edit-address'
 import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementClick'
 
-// Vars
-const data = {
-  firstName: 'John',
-  lastName: 'Doe',
-  email: 'johndoe@gmail.com',
-  country: 'US',
-  address1: '100 Water Plant Avenue,',
-  address2: 'Building 1303 Wake Island',
-  landmark: 'Near Water Plant',
-  city: 'New York',
-  state: 'Capholim',
-  zipCode: '403114',
-  taxId: 'TAX-875623',
-  vatNumber: 'SDF754K77',
-  contact: '+1(609) 933-44-22'
-}
+// Utils
+import { userMethods } from '@/utils/userMethods'
 
 const BillingAddress = () => {
+  // Read session user safely on client
+  const fullUser: any = userMethods.getUserLogin?.() || null
+  const sessionUser = fullUser?.user || fullUser
+
+  const firstName = sessionUser?.nombres || sessionUser?.firstName || ''
+  const lastName = sessionUser?.apellidos || sessionUser?.lastName || ''
+  const email = sessionUser?.email || ''
+  const country = sessionUser?.country || 'Colombia'
+  const address1 = sessionUser?.address || '-'
+  const city = sessionUser?.city || '-'
+  const state = sessionUser?.state || '-'
+  const zipCode = sessionUser?.zipCode || '-'
+  const taxId = sessionUser?.taxId || sessionUser?.nit || '-'
+  const contact = sessionUser?.phone || sessionUser?.cellphone || sessionUser?.telefono || '-'
+
   const buttonProps: ButtonProps = {
     variant: 'contained',
-    children: 'Edit Address',
+    children: 'Editar Dirección',
     size: 'small',
     startIcon: <i className='tabler-plus' />
   }
@@ -40,69 +41,59 @@ const BillingAddress = () => {
     <>
       <Card>
         <CardHeader
-          title='Billing Address'
+          title='Dirección de Facturación'
           action={
             <OpenDialogOnElementClick
               element={Button}
               elementProps={buttonProps}
               dialog={AddNewAddress}
-              dialogProps={{ data }}
+              dialogProps={{ data: { firstName, lastName, email, country, address1, city, state, zipCode, taxId, contact } }}
             />
           }
         />
         <CardContent>
-          <Grid container>
+          <Grid container spacing={6}>
             <Grid item xs={12} md={6}>
               <table>
                 <tbody className='align-top'>
                   <tr>
                     <td className='p-1 pis-0 is-[150px]'>
                       <Typography className='font-medium' color='text.primary'>
-                        Name:
+                        Nombre:
                       </Typography>
                     </td>
                     <td className='p-1'>
-                      <Typography>{`${data.firstName} ${data.lastName}`}</Typography>
+                      <Typography>{`${firstName} ${lastName}`.trim() || 'Usuario'}</Typography>
                     </td>
                   </tr>
                   <tr>
                     <td className='p-1 pis-0 is-[150px]'>
                       <Typography className='font-medium' color='text.primary'>
-                        Billing Email:
+                        Email Facturación:
                       </Typography>
                     </td>
                     <td className='p-1'>
-                      <Typography>{data.email}</Typography>
+                      <Typography>{email || '-'}</Typography>
                     </td>
                   </tr>
                   <tr>
                     <td className='p-1 pis-0 is-[150px]'>
                       <Typography className='font-medium' color='text.primary'>
-                        Tax ID:
+                        NIT/RUT:
                       </Typography>
                     </td>
                     <td className='p-1'>
-                      <Typography>{data.taxId}</Typography>
+                      <Typography>{taxId}</Typography>
                     </td>
                   </tr>
                   <tr>
                     <td className='p-1 pis-0 is-[150px]'>
                       <Typography className='font-medium' color='text.primary'>
-                        VAT Number:
+                        Dirección:
                       </Typography>
                     </td>
                     <td className='p-1'>
-                      <Typography>{data.vatNumber}</Typography>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className='p-1 pis-0 is-[150px]'>
-                      <Typography className='font-medium' color='text.primary'>
-                        Billing Address:
-                      </Typography>
-                    </td>
-                    <td className='p-1'>
-                      <Typography>{`${data.address1} ${data.address2}`}</Typography>
+                      <Typography>{address1}</Typography>
                     </td>
                   </tr>
                 </tbody>
@@ -114,61 +105,41 @@ const BillingAddress = () => {
                   <tr>
                     <td className='p-1 pis-0 is-[150px]'>
                       <Typography className='font-medium' color='text.primary'>
-                        Contact:
+                        Contacto:
                       </Typography>
                     </td>
                     <td className='p-1'>
-                      <Typography>{data.contact}</Typography>
+                      <Typography>{contact}</Typography>
                     </td>
                   </tr>
                   <tr>
                     <td className='p-1 pis-0 is-[150px]'>
                       <Typography className='font-medium' color='text.primary'>
-                        Landmark:
+                        Ciudad:
                       </Typography>
                     </td>
                     <td className='p-1'>
-                      <Typography>{data.landmark}</Typography>
+                      <Typography>{city}</Typography>
                     </td>
                   </tr>
                   <tr>
                     <td className='p-1 pis-0 is-[150px]'>
                       <Typography className='font-medium' color='text.primary'>
-                        Landmark:
+                        País:
                       </Typography>
                     </td>
                     <td className='p-1'>
-                      <Typography>{data.city}</Typography>
+                      <Typography>{country}</Typography>
                     </td>
                   </tr>
                   <tr>
                     <td className='p-1 pis-0 is-[150px]'>
                       <Typography className='font-medium' color='text.primary'>
-                        Country:
+                        Código Postal:
                       </Typography>
                     </td>
                     <td className='p-1'>
-                      <Typography>{data.country}</Typography>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className='p-1 pis-0 is-[150px]'>
-                      <Typography className='font-medium' color='text.primary'>
-                        State:
-                      </Typography>
-                    </td>
-                    <td className='p-1'>
-                      <Typography>{data.state}</Typography>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className='p-1 pis-0 is-[150px]'>
-                      <Typography className='font-medium' color='text.primary'>
-                        Zip Code:
-                      </Typography>
-                    </td>
-                    <td className='p-1'>
-                      <Typography>{data.zipCode}</Typography>
+                      <Typography>{zipCode}</Typography>
                     </td>
                   </tr>
                 </tbody>

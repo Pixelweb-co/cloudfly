@@ -26,9 +26,9 @@ const UserDetails = () => {
   const fullUser: any = userMethods.getUserLogin?.() || null
   const sessionUser = fullUser?.user || fullUser
 
-  const firstName = sessionUser?.nombres || sessionUser?.firstName || ''
-  const lastName = sessionUser?.apellidos || sessionUser?.lastName || ''
-  const userName = sessionUser?.username || sessionUser?.email || ''
+  const firstName = sessionUser?.nombres || sessionUser?.firstName || sessionUser?.name?.split(' ')[0] || ''
+  const lastName = sessionUser?.apellidos || sessionUser?.lastName || sessionUser?.name?.split(' ').slice(1).join(' ') || ''
+  const userName = sessionUser?.username || sessionUser?.email || sessionUser?.user_name || '-'
   const billingEmail = sessionUser?.email || ''
   const status = sessionUser?.enabled ? 'Activo' : 'Inactivo'
   const role = sessionUser?.roles?.[0]?.name || sessionUser?.roles?.[0]?.role || 'USER'
