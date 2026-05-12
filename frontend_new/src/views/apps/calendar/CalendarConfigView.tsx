@@ -137,6 +137,49 @@ const AvailabilityTab = () => {
     fetchServices()
   }, [])
 
+  const handleExceptionDateChange = async (idx: number, field: 'startDate' | 'endDate', value: string) => {
+    const today = format(new Date(), 'yyyy-MM-dd')
+    
+    // 1. Validar que no sea fecha pasada
+    if (value < today) {
+      toast.error('La fecha seleccionada no puede ser anterior al día de hoy')
+      return
+    }
+
+    const newExc = [...exceptions]
+    newExc[idx][field] = value
+    const exc = newExc[idx]
+
+    if (exc.startDate && exc.endDate) {
+      if (exc.endDate < exc.startDate) {
+        if (field === 'startDate') newExc[idx].endDate = value
+        else newExc[idx].startDate = value
+      }
+
+      // 2. Validar que no existan citas
+      try {
+        const user = session?.user as any
+        const tenantId = user?.tenantId || 1
+        const companyId = user?.companyId || 1
+
+        const start = `${newExc[idx].startDate}T00:00:00`
+        const end = `${newExc[idx].endDate}T23:59:59`
+
+        const slots = await calendarService.getSlots(tenantId, companyId, start, end)
+        const appointments = slots.filter((s: any) => s.status === 'RESERVED' && (!serviceId || s.serviceId === serviceId))
+
+        if (appointments.length > 0) {
+          toast.error(`No se puede aplicar la excepción: Hay ${appointments.length} cita(s) programada(s) en este rango.`)
+          return
+        }
+      } catch (error) {
+        console.error('Error verifying existing appointments:', error)
+      }
+    }
+
+    setExceptions(newExc)
+  }
+
   const handleSave = async () => {
     try {
       // 1. Validaciones básicas
@@ -352,11 +395,7 @@ const AvailabilityTab = () => {
                     label='Desde'
                     InputLabelProps={{ shrink: true }}
                     value={exc.startDate} 
-                    onChange={(e) => {
-                      const newExc = [...exceptions]
-                      newExc[idx].startDate = e.target.value
-                      setExceptions(newExc)
-                    }}
+                    onChange={(e) => handleExceptionDateChange(idx, 'startDate', e.target.value)}
                   />
                   <TextField 
                     type='date' 
@@ -364,11 +403,7 @@ const AvailabilityTab = () => {
                     label='Hasta'
                     InputLabelProps={{ shrink: true }}
                     value={exc.endDate} 
-                    onChange={(e) => {
-                      const newExc = [...exceptions]
-                      newExc[idx].endDate = e.target.value
-                      setExceptions(newExc)
-                    }}
+                    onChange={(e) => handleExceptionDateChange(idx, 'endDate', e.target.value)}
                   />
                 </Grid>
                 <Grid item xs={12} md={3} className='flex items-center gap-4'>
