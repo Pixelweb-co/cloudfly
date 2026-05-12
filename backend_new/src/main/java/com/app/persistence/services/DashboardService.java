@@ -91,12 +91,8 @@ public class DashboardService {
                 .collectList()
                 .defaultIfEmpty(List.of());
 
-        log.info("📊 Step 1: Starting queries zip...");
-        
         return Mono.zip(
-                objects -> {
-                    log.info("📊 Step 2: All queries completed. Building DTO...");
-                    return DashboardStatsDTO.builder()
+                objects -> DashboardStatsDTO.builder()
                         .totalCustomers((Integer) objects[0])
                         .totalProducts((Integer) objects[1])
                         .totalOrders((Integer) objects[2])
@@ -115,10 +111,8 @@ public class DashboardService {
                         .messagesChange(24.0)
                         .lowStockProducts(2)
                         .pendingQuotes(5)
-                        .build();
-                },
-                totalCustomers, totalProducts, totalOrders, totalRevenue, activeConversations, messagesToday, activeCampaigns, totalQuotes, totalContactsToday, pendingAppointments, recentOrders, todayAppointments)
-                .doOnError(e -> log.error("❌ Error in dashboard stats zip: {}", e.getMessage(), e));
+                        .build(),
+                totalCustomers, totalProducts, totalOrders, totalRevenue, activeConversations, messagesToday, activeCampaigns, totalQuotes, totalContactsToday, pendingAppointments, recentOrders, todayAppointments);
     }
 
     public Mono<SalesChartDataDTO> getSalesChart(Long tenantId, Long companyId, String period) {

@@ -73,10 +73,9 @@ public class DashboardController {
         
         return getEffectiveTenantId(request)
                 .flatMap(tenantId -> {
-                    log.info("📊 [DASHBOARD] Found TenantId: {}. Proceeding to fetch stats for Company: {}", tenantId, effectiveCompanyId);
+                    log.info("📊 [DASHBOARD] Fetching Stats - Tenant: {}, Company: {}", tenantId, effectiveCompanyId);
                     return dashboardService.getStats(tenantId, effectiveCompanyId);
-                })
-                .doOnTerminate(() -> log.info("📊 [DASHBOARD] getStats request terminated"));
+                });
     }
 
     @GetMapping("/pipeline-stats")
