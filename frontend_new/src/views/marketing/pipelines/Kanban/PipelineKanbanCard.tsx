@@ -63,11 +63,11 @@ export default function PipelineKanbanCard({
               {getInitials(card.name)}
             </Avatar>
             <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }} noWrap>
+                ID: {displayId}
+              </Typography>
               <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                 {card.name}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" noWrap>
-                ID: {displayId}
               </Typography>
             </Box>
           </Box>
