@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Box, Grid, Typography, CircularProgress, Alert, Paper, IconButton } from '@mui/material'
+import { Box, Grid, Typography, CircularProgress, Alert, Paper, IconButton, TextField, Select, MenuItem, FormControl, InputLabel, InputAdornment, FormControlLabel, Switch } from '@mui/material'
 import PipelineKanbanCard from './PipelineKanbanCard'
 import AddProspectDialog from './AddProspectDialog'
 import { pipelineService } from '@/services/marketing/pipelineService'
@@ -39,7 +39,7 @@ export default function PipelineKanbanBoard({ pipelineId }: Props) {
         pipelineService.getKanbanData(pipelineId)
       ])
       setPipeline(pipelineData)
-      setBoardData(kanbanData)
+      setBoardData(kanbanData || {})
       setError(null)
     } catch (err: any) {
       setError('Error al cargar el Kanban: ' + err.message)
@@ -92,6 +92,10 @@ export default function PipelineKanbanBoard({ pipelineId }: Props) {
     setIsAddProspectOpen(true)
   }
 
+  const [searchFilter, setSearchFilter] = useState('')
+  const [priorityFilter, setPriorityFilter] = useState('ALL')
+  const [unreadFilter, setUnreadFilter] = useState(false)
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -105,10 +109,66 @@ export default function PipelineKanbanBoard({ pipelineId }: Props) {
   }
 
   return (
-    <Grid container spacing={3} sx={{ overflowX: 'auto', flexWrap: 'nowrap', pb: 2 }}>
-      {pipeline.stages?.map((stage) => {
-        const stageCards = boardData[String(stage.id)] || []
-        const columnKey = `stage-${stage.id}-${stageCards.length}`
+    <Box>
+      <Box sx={{ display: 'flex', gap: 3, mb: 4, flexWrap: 'wrap', alignItems: 'center', bgcolor: 'background.paper', p: 2, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+        <TextField
+          size="small"
+          placeholder="Buscar prospecto o ID..."
+          value={searchFilter}
+          onChange={(e) => setSearchFilter(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Icon icon="tabler:search" fontSize={20} />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ minWidth: 250 }}
+        />
+        
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel id="priority-filter-label">Prioridad</InputLabel>
+          <Select
+            labelId="priority-filter-label"
+            value={priorityFilter}
+            label="Prioridad"
+            onChange={(e) => setPriorityFilter(e.target.value)}
+          >
+            <MenuItem value="ALL">Todas</MenuItem>
+            <MenuItem value="URGENT">Urgente</MenuItem>
+            <MenuItem value="HIGH">Alta</MenuItem>
+            <MenuItem value="MEDIUM">Media</MenuItem>
+            <MenuItem value="LOW">Baja</MenuItem>
+          </Select>
+        </FormControl>
+
+        <FormControlLabel
+          control={
+            <Switch 
+              checked={unreadFilter}
+              onChange={(e) => setUnreadFilter(e.target.checked)}
+              color="primary"
+            />
+          }
+          label="Solo no leídos"
+        />
+      </Box>
+      <Grid container spacing={3} sx={{ overflowX: 'auto', flexWrap: 'nowrap', pb: 2 }}>
+        {pipeline.stages?.map((stage) => {
+          let stageCards = boardData[String(stage.id)] || []
+          
+          if (searchFilter) {
+            stageCards = stageCards.filter(c => 
+              c.name.toLowerCase().includes(searchFilter.toLowerCase()) || 
+              String(c.conversationId).toLowerCase().includes(searchFilter.toLowerCase())
+            )
+          }
+          if (priorityFilter !== 'ALL') {
+            stageCards = stageCards.filter(c => c.priority === priorityFilter)
+          }
+          // Note: Unread filter requires backend support for unreadCount, skipped for now or mocked.
+
+          const columnKey = `stage-${stage.id}-${stageCards.length}`
 
         return (
           <Grid item xs={12} md={4} lg={3} key={columnKey} sx={{ minWidth: 320, maxWidth: 400 }}>
@@ -188,5 +248,6 @@ export default function PipelineKanbanBoard({ pipelineId }: Props) {
         />
       )}
     </Grid>
+  </Box>
   )
 }
