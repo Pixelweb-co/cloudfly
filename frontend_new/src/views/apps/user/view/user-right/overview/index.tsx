@@ -30,16 +30,43 @@ import { userMethods } from '@/utils/userMethods'
   return res.json()
 } */
 
+import ConsumptionDashboard from '@/views/administracion/consumo/ConsumptionDashboard'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import CardHeader from '@mui/material/CardHeader'
+import Divider from '@mui/material/Divider'
+
 const OverViewTab = () => {
   return (
     <Grid container spacing={6}>
       <Grid item xs={12}>
-        <div className='flex flex-col gap-4'>
-          <Typography variant='h4'>¡Bienvenido a tu Panel de Perfil!</Typography>
-          <Typography>Desde aquí puedes gestionar tu información personal, seguridad y detalles de facturación de CloudFly.</Typography>
-        </div>
+        <ConsumptionDashboard />
       </Grid>
-      <Grid item xs={12}>
+      
+      <Grid item xs={12} md={6}>
+        <Card>
+          <CardHeader title='Resumen de Pagos' />
+          <CardContent>
+            <div className='flex flex-col gap-4'>
+              <div className='flex justify-between items-center'>
+                <Typography color='text.primary' className='font-medium'>Estado de Cuenta:</Typography>
+                <Chip label='Al día' color='success' size='small' variant='tonal' />
+              </div>
+              <Divider />
+              <div className='flex justify-between items-center'>
+                <Typography color='text.primary' className='font-medium'>Último Pago:</Typography>
+                <Typography>$49.00 USD - 15 Mayo, 2026</Typography>
+              </div>
+              <div className='flex justify-between items-center'>
+                <Typography color='text.primary' className='font-medium'>Próximo Cobro:</Typography>
+                <Typography>$49.00 USD - 15 Junio, 2026</Typography>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      <Grid item xs={12} md={6}>
         <UserActivityTimeLine />
       </Grid>
     </Grid>
