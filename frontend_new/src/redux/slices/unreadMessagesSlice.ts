@@ -28,7 +28,9 @@ export const fetchUnreadSummary = createAsyncThunk(
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/chat/unread-summary`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+          'Authorization': `Bearer ${localStorage.getItem('jwt')}`,
+          'X-Tenant-Id': localStorage.getItem('tenantId') || '',
+          'X-Company-Id': localStorage.getItem('activeCompanyId') || localStorage.getItem('companyId') || ''
         }
       });
       if (!response.ok) throw new Error('Failed to fetch unread summary');
@@ -46,7 +48,9 @@ export const markContactAsRead = createAsyncThunk(
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/chat/mark-read/${contactId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('jwt')}`
+          'Authorization': `Bearer ${localStorage.getItem('jwt')}`,
+          'X-Tenant-Id': localStorage.getItem('tenantId') || '',
+          'X-Company-Id': localStorage.getItem('activeCompanyId') || localStorage.getItem('companyId') || ''
         }
       });
       if (!response.ok) throw new Error('Failed to mark as read');

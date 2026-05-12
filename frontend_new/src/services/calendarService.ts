@@ -23,7 +23,15 @@ export interface CalendarEvent {
 
 const getAuthHeader = () => {
   const token = typeof window !== 'undefined' ? (localStorage.getItem('AuthToken') || localStorage.getItem('jwt')) : null
-  return token ? { Authorization: `Bearer ${token}` } : {}
+  const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenantId') : null
+  const companyId = typeof window !== 'undefined' ? (localStorage.getItem('activeCompanyId') || localStorage.getItem('companyId')) : null
+  
+  const headers: any = {}
+  if (token) headers.Authorization = `Bearer ${token}`
+  if (tenantId) headers['X-Tenant-Id'] = tenantId
+  if (companyId) headers['X-Company-Id'] = companyId
+  
+  return headers
 }
 
 const calendarService = {
@@ -39,8 +47,9 @@ const calendarService = {
     return response.data
   },
 
-  getEventById: async (id: number) => {
+  getEventById: async (id: number, tenantId: number, companyId: number) => {
     const response = await axios.get<CalendarEvent>(`${CALENDAR_API_URL}/api/events/${id}`, {
+      params: { tenantId, companyId },
       headers: getAuthHeader()
     })
     return response.data
@@ -53,15 +62,17 @@ const calendarService = {
     return response.data
   },
 
-  updateEvent: async (id: number, event: Partial<CalendarEvent>) => {
+  updateEvent: async (id: number, tenantId: number, companyId: number, event: Partial<CalendarEvent>) => {
     const response = await axios.put<CalendarEvent>(`${CALENDAR_API_URL}/api/events/${id}`, event, {
+      params: { tenantId, companyId },
       headers: getAuthHeader()
     })
     return response.data
   },
 
-  deleteEvent: async (id: number) => {
+  deleteEvent: async (id: number, tenantId: number, companyId: number) => {
     await axios.delete(`${CALENDAR_API_URL}/api/events/${id}`, {
+      params: { tenantId, companyId },
       headers: getAuthHeader()
     })
   },
@@ -82,8 +93,8 @@ const calendarService = {
     return response.data
   },
 
-  generateSlots: async (templateId: number, startDate?: string, endDate?: string): Promise<void> => {
-    const params: any = { templateId }
+  generateSlots: async (tenantId: number, companyId: number, templateId: number, startDate?: string, endDate?: string): Promise<void> => {
+    const params: any = { tenantId, companyId, templateId }
     if (startDate) params.startDate = startDate
     if (endDate) params.endDate = endDate
     await axios.post(`${CALENDAR_API_URL}/api/availability/generate`, null, {
@@ -100,8 +111,9 @@ const calendarService = {
     return response.data
   },
 
-  cancelAppointment: async (id: number) => {
+  cancelAppointment: async (id: number, tenantId: number, companyId: number) => {
     await axios.patch(`${CALENDAR_API_URL}/api/appointments/${id}/cancel`, null, {
+      params: { tenantId, companyId },
       headers: getAuthHeader()
     })
   }

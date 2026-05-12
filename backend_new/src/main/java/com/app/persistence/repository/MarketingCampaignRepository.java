@@ -13,4 +13,7 @@ public interface MarketingCampaignRepository extends ReactiveCrudRepository<Mark
     
     @Query("SELECT * FROM marketing_campaigns WHERE tenant_id = :tenantId")
     Flux<MarketingCampaignEntity> queryByTenant(Long tenantId);
+
+    @Query("SELECT COUNT(*) FROM marketing_campaigns WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND status = 'ACTIVE'")
+    reactor.core.publisher.Mono<Integer> countActiveCampaigns(Long tenantId, Long companyId);
 }

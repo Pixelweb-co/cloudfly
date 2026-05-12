@@ -14,6 +14,7 @@ export interface DashboardStats {
     totalOrders: number
     ordersChange: number
     totalCustomers: number
+    totalContactsToday?: number
     customersChange: number
     totalProducts: number
     productsChange: number
@@ -25,6 +26,11 @@ export interface DashboardStats {
     lowStockProducts?: number
     activeConversations?: number
     messagesChange?: number
+    totalMessagesToday?: number
+    pendingAppointments?: number
+    activeCampaigns?: number
+    totalQuotes?: number
+    totalInvoicesCount?: number
 }
 
 export interface PipelineStageStats {

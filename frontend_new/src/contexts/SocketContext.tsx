@@ -13,6 +13,7 @@ import { userMethods } from '@/utils/userMethods'
 import { useDispatch } from 'react-redux'
 import { fetchNotifications } from '@/redux/slices/notificationSlice'
 import { fetchUnreadSummary } from '@/redux/slices/unreadMessagesSlice'
+import { fetchDashboardData } from '@/redux/slices/dashboardSlice'
 import type { AppDispatch } from '@/redux/store'
 import { toast } from 'react-hot-toast'
 
@@ -98,6 +99,10 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
             if ((message as any).direction === 'INBOUND') {
                 dispatch(fetchUnreadSummary())
             }
+
+            // REQUERIMIENTO: Cualquier evento del socket refresca el dashboard
+            const companyId = localStorage.getItem('activeCompanyId')
+            dispatch(fetchDashboardData(companyId ? parseInt(companyId) : undefined))
         })
 
         // NEW: Real-time Web Notifications
@@ -126,6 +131,10 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
             );
 
             dispatch(fetchNotifications())
+            
+            // Refrescar dashboard al recibir notificación
+            const companyId = localStorage.getItem('activeCompanyId')
+            dispatch(fetchDashboardData(companyId ? parseInt(companyId) : undefined))
         })
 
         setSocket(newSocket)

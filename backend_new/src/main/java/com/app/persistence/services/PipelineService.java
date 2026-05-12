@@ -70,8 +70,8 @@ public class PipelineService {
                         .map(stages -> mapToDto(pipeline, stages)));
     }
 
-    public Mono<PipelineDto> getPipelineById(Long tenantId, Long id) {
-        return pipelineRepository.findByIdAndTenantId(id, tenantId)
+    public Mono<PipelineDto> getPipelineById(Long tenantId, Long companyId, Long id) {
+        return pipelineRepository.findByIdAndTenantIdAndCompanyId(id, tenantId, companyId)
                 .flatMap(pipeline -> pipelineStageRepository.findByPipelineIdOrderByPositionAsc(pipeline.getId())
                         .collectList()
                         .map(stages -> mapToDto(pipeline, stages)));
@@ -123,8 +123,8 @@ public class PipelineService {
     }
 
     @Transactional
-    public Mono<PipelineDto> updatePipeline(Long tenantId, Long id, PipelineCreateRequest request) {
-        return pipelineRepository.findByIdAndTenantId(id, tenantId)
+    public Mono<PipelineDto> updatePipeline(Long tenantId, Long companyId, Long id, PipelineCreateRequest request) {
+        return pipelineRepository.findByIdAndTenantIdAndCompanyId(id, tenantId, companyId)
                 .flatMap(existing -> {
                     existing.setName(request.getName());
                     existing.setDescription(request.getDescription());
@@ -134,7 +134,7 @@ public class PipelineService {
                     existing.setDefault(request.getIsDefault() != null ? request.getIsDefault() : existing.isDefault());
                     existing.setUpdatedAt(LocalDateTime.now());
                     Mono<Void> clearDefaultsMono = Boolean.TRUE.equals(request.getIsDefault()) 
-                            ? clearOtherDefaults(tenantId, id) 
+                            ? clearOtherDefaults(tenantId, companyId, id) 
                             : Mono.empty();
 
                     return clearDefaultsMono.then(pipelineRepository.save(existing));
@@ -160,8 +160,8 @@ public class PipelineService {
     }
 
     @Transactional
-    public Mono<Void> deletePipeline(Long tenantId, Long id) {
-        return pipelineRepository.findByIdAndTenantId(id, tenantId)
+    public Mono<Void> deletePipeline(Long tenantId, Long companyId, Long id) {
+        return pipelineRepository.findByIdAndTenantIdAndCompanyId(id, tenantId, companyId)
                 .flatMap(pipeline -> pipelineStageRepository.deleteByPipelineId(pipeline.getId())
                         .then(pipelineRepository.delete(pipeline)));
     }
@@ -211,8 +211,8 @@ public class PipelineService {
                 .build();
     }
 
-    private Mono<Void> clearOtherDefaults(Long tenantId, Long excludeId) {
-        return pipelineRepository.findByTenantIdAndIsDefaultTrue(tenantId)
+    private Mono<Void> clearOtherDefaults(Long tenantId, Long companyId, Long excludeId) {
+        return pipelineRepository.findByTenantIdAndCompanyIdAndIsDefaultTrue(tenantId, companyId)
                 .filter(p -> excludeId == null || !p.getId().equals(excludeId))
                 .flatMap(p -> {
                     p.setDefault(false);
@@ -221,7 +221,8 @@ public class PipelineService {
                 .then();
     }
 
-    public Mono<java.util.Map<String, java.util.List<PipelineKanbanCardDTO>>> getKanbanData(Long tenantId, Long pipelineId) {
+    public Mono<java.util.Map<String, java.util.List<PipelineKanbanCardDTO>>> getKanbanData(Long tenantId, Long companyId, Long pipelineId) {
+        // Here we could filter stateRepository by companyId too if the table has it
         return stateRepository.findByTenantIdAndPipelineIdAndIsActiveTrue(tenantId, pipelineId)
                 .map(state -> {
                     return PipelineKanbanCardDTO.builder()

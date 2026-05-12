@@ -16,6 +16,7 @@ public class DashboardStatsDTO {
     private Integer totalOrders;
     private Double ordersChange;
     private Integer totalCustomers;
+    private Integer totalContactsToday;
     private Double customersChange;
     private Integer totalProducts;
     private Double productsChange;
@@ -31,4 +32,9 @@ public class DashboardStatsDTO {
 
     private Integer activeConversations;
     private Double messagesChange;
+    private Integer totalMessagesToday;
+    private Integer pendingAppointments;
+    private Integer activeCampaigns;
+    private Integer totalQuotes;
+    private Integer totalInvoicesCount;
 }

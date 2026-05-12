@@ -245,7 +245,7 @@ const AvailabilityTab = () => {
       const sDate = startDate ? format(startDate, 'yyyy-MM-dd') : undefined
       const eDate = genMode === 'indefinite' ? format(addDays(new Date(), 365), 'yyyy-MM-dd') : (endDate ? format(endDate, 'yyyy-MM-dd') : undefined)
       
-      await calendarService.generateSlots(savedTemplate.id, sDate, eDate)
+      await calendarService.generateSlots(tenantId, companyId, savedTemplate.id, sDate, eDate)
       
       toast.success('Disponibilidad y Servicio configurados correctamente')
     } catch (error) {

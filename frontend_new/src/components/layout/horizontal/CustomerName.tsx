@@ -5,6 +5,9 @@ import { Autocomplete, TextField, Box, CircularProgress, Typography } from '@mui
 import { useRouter } from 'next/navigation'
 import { userMethods } from '@/utils/userMethods'
 import axiosInstance from '@/utils/axiosInstance'
+import { useDispatch } from 'react-redux'
+import { fetchDashboardData } from '@/redux/slices/dashboardSlice'
+import type { AppDispatch } from '@/redux/store'
 
 const CustomerName = () => {
   const [userData, setUserData] = useState<any>(null)
@@ -15,6 +18,7 @@ const CustomerName = () => {
   const [loadingTenants, setLoadingTenants] = useState(false)
   const [loadingCompanies, setLoadingCompanies] = useState(false)
   const router = useRouter()
+  const dispatch = useDispatch<AppDispatch>()
 
   // Role detection
   const isManager = useMemo(() => {
@@ -97,10 +101,13 @@ const CustomerName = () => {
     localStorage.setItem('activeCompanyId', company.id)
     localStorage.setItem('activeTenantId', selectedTenant.id)
     
+    // REQUERIMIENTO: Refrescar dashboard al cambiar compañía
+    dispatch(fetchDashboardData(company.id))
+
     // Switch to soft navigation for better session persistence
     // After changing localStorage, we go to home. Dashboard will re-mount and pick up new ID.
     router.push('/home')
-  }, [userData, selectedTenant, router])
+  }, [userData, selectedTenant, router, dispatch])
 
   if (!userData) return null
 

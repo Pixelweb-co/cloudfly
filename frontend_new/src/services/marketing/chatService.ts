@@ -23,8 +23,15 @@ export const chatService = {
    * NEW: Points to chat.cloudfly.com.co directly for history
    */
   getMessages: async (contactUuid: string, tenantId: string | number): Promise<ChatMessage[]> => {
+    const companyId = typeof window !== 'undefined' ? (localStorage.getItem('activeCompanyId') || localStorage.getItem('companyId')) : null;
+    
     const response = await axios.get(`${CHAT_API_URL}/api/chat/messages/${contactUuid}`, {
-      params: { tenantId, limit: 50 }
+      params: { tenantId, limit: 50 },
+      headers: {
+        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('jwt') : ''}`,
+        'X-Tenant-Id': tenantId,
+        'X-Company-Id': companyId || ''
+      }
     });
     
     // Normalize response: if it uses 'content' instead of 'body'

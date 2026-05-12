@@ -147,19 +147,20 @@ app.get('/api/chat/messages/:contactUuid', async (req, res) => {
     try {
         const { contactUuid } = req.params;
         const tenantId = req.query.tenantId;
+        const companyId = req.query.companyId || req.headers['x-company-id'];
         const limit = parseInt(req.query.limit) || 10;
 
-        if (!tenantId) {
-            return res.status(400).json({ error: 'tenantId is required' });
+        if (!tenantId || !companyId) {
+            return res.status(400).json({ error: 'tenantId and companyId are required' });
         }
 
         // Primero buscar el ID numérico por el UUID
-        const [contacts] = await db.execute('SELECT id FROM contacts WHERE uuid = ? AND tenant_id = ?', [contactUuid, tenantId]);
+        const [contacts] = await db.execute('SELECT id FROM contacts WHERE uuid = ? AND tenant_id = ? AND company_id = ?', [contactUuid, tenantId, companyId]);
         if (contacts.length === 0) {
             return res.status(404).json({ error: 'Contact not found' });
         }
 
-        const messages = await chatService.getMessageHistory(tenantId, contacts[0].id, limit);
+        const messages = await chatService.getMessageHistory(tenantId, companyId, contacts[0].id, limit);
         res.json(messages);
     } catch (error) {
         logger.error(`Error fetching messages: ${error.message}`);
@@ -174,12 +175,13 @@ app.get('/api/chat/messages/:contactUuid', async (req, res) => {
 app.get('/api/chat/contacts', async (req, res) => {
     try {
         const tenantId = req.query.tenantId;
+        const companyId = req.query.companyId || req.headers['x-company-id'];
 
-        if (!tenantId) {
-            return res.status(400).json({ error: 'tenantId is required' });
+        if (!tenantId || !companyId) {
+            return res.status(400).json({ error: 'tenantId and companyId are required' });
         }
 
-        const contacts = await chatService.getContactsWithMessages(tenantId);
+        const contacts = await chatService.getContactsWithMessages(tenantId, companyId);
         res.json(contacts);
     } catch (error) {
         logger.error(`Error fetching contacts: ${error.message}`);
@@ -217,12 +219,12 @@ io.use(authMiddleware);
 io.on('connection', (socket) => {
     logger.info(`✅ User connected: ${socket.userName} (ID: ${socket.userId}, Tenant: ${socket.tenantId})`);
 
-    // Auto-join global tenant and user rooms for global notifications
-    if (socket.tenantId) {
-        socket.join(`tenant_${socket.tenantId}`);
+    // Auto-join global tenant/company and user rooms for targeted notifications
+    if (socket.tenantId && socket.companyId) {
+        socket.join(`tenant_${socket.tenantId}_company_${socket.companyId}`);
     }
-    if (socket.userId && socket.tenantId) {
-        socket.join(`tenant_${socket.tenantId}_user_${socket.userId}`);
+    if (socket.userId && socket.tenantId && socket.companyId) {
+        socket.join(`tenant_${socket.tenantId}_company_${socket.companyId}_user_${socket.userId}`);
     }
 
     // Manejar presencia (online)
@@ -245,7 +247,7 @@ io.on('connection', (socket) => {
             }
 
             const cleanPhone = phone.replace(/\D/g, '');
-            const roomName = `tenant_${socket.tenantId}_contact_${cleanPhone}`;
+            const roomName = `tenant_${socket.tenantId}_company_${socket.companyId}_contact_${cleanPhone}`;
             socket.join(roomName);
 
             logger.info(`Socket ${socket.id} joined contact room: ${roomName}`);
@@ -269,7 +271,7 @@ io.on('connection', (socket) => {
             const { phone } = data;
             if (phone) {
                 const cleanPhone = phone.replace(/\D/g, '');
-                const roomName = `tenant_${socket.tenantId}_contact_${cleanPhone}`;
+                const roomName = `tenant_${socket.tenantId}_company_${socket.companyId}_contact_${cleanPhone}`;
                 socket.leave(roomName);
                 logger.info(`Socket ${socket.id} left contact room: ${roomName}`);
                 socket.emit('left-conversation', { phone: cleanPhone });
@@ -289,7 +291,7 @@ io.on('connection', (socket) => {
                 return;
             }
 
-            const roomName = `tenant_${socket.tenantId}_platform_${platform}`;
+            const roomName = `tenant_${socket.tenantId}_company_${socket.companyId}_platform_${platform}`;
             socket.join(roomName);
 
             logger.info(`Socket ${socket.id} subscribed to platform: ${platform}`);

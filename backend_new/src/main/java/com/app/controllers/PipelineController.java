@@ -74,9 +74,12 @@ public class PipelineController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
-    public Mono<PipelineDto> getPipelineById(@PathVariable Long id) {
-        return getCurrentTenantId()
-                .flatMap(tenantId -> pipelineService.getPipelineById(tenantId, id));
+    public Mono<PipelineDto> getPipelineById(@PathVariable Long id, @RequestParam(required = false) Long companyId) {
+        return getCurrentUser()
+                .flatMap(user -> {
+                    Long effectiveCompanyId = (companyId != null) ? companyId : user.getCompanyId();
+                    return pipelineService.getPipelineById(user.getCustomerId(), effectiveCompanyId, id);
+                });
     }
 
     @PostMapping
@@ -111,23 +114,32 @@ public class PipelineController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN')")
-    public Mono<PipelineDto> updatePipeline(@PathVariable Long id, @RequestBody PipelineCreateRequest request) {
-        return getCurrentTenantId()
-                .flatMap(tenantId -> pipelineService.updatePipeline(tenantId, id, request));
+    public Mono<PipelineDto> updatePipeline(@PathVariable Long id, @RequestBody PipelineCreateRequest request, @RequestParam(required = false) Long companyId) {
+        return getCurrentUser()
+                .flatMap(user -> {
+                    Long effectiveCompanyId = (companyId != null) ? companyId : user.getCompanyId();
+                    return pipelineService.updatePipeline(user.getCustomerId(), effectiveCompanyId, id, request);
+                });
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN')")
-    public Mono<Void> deletePipeline(@PathVariable Long id) {
-        return getCurrentTenantId()
-                .flatMap(tenantId -> pipelineService.deletePipeline(tenantId, id));
+    public Mono<Void> deletePipeline(@PathVariable Long id, @RequestParam(required = false) Long companyId) {
+        return getCurrentUser()
+                .flatMap(user -> {
+                    Long effectiveCompanyId = (companyId != null) ? companyId : user.getCompanyId();
+                    return pipelineService.deletePipeline(user.getCustomerId(), effectiveCompanyId, id);
+                });
     }
 
     @GetMapping("/{id}/kanban")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
-    public Mono<java.util.Map<String, java.util.List<com.app.dto.PipelineKanbanCardDTO>>> getKanbanData(@PathVariable Long id) {
-        return getCurrentTenantId()
-                .flatMap(tenantId -> pipelineService.getKanbanData(tenantId, id));
+    public Mono<java.util.Map<String, java.util.List<com.app.dto.PipelineKanbanCardDTO>>> getKanbanData(@PathVariable Long id, @RequestParam(required = false) Long companyId) {
+        return getCurrentUser()
+                .flatMap(user -> {
+                    Long effectiveCompanyId = (companyId != null) ? companyId : user.getCompanyId();
+                    return pipelineService.getKanbanData(user.getCustomerId(), effectiveCompanyId, id);
+                });
     }
 }
