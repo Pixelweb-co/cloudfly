@@ -72,6 +72,9 @@ const CalendarAgendaView = () => {
     try {
       const data = await productService.getProductsByType('SERVICE')
       setServices(data)
+      if (data.length > 0) {
+        setServiceFilter(Number(data[0].id))
+      }
     } catch (error) {
       console.error('Error fetching services:', error)
     }
@@ -111,9 +114,8 @@ const CalendarAgendaView = () => {
                 onChange={(e) => setServiceFilter(e.target.value as any)}
                 sx={{ minWidth: 200 }}
               >
-                <MenuItem value='all'>Todos los servicios</MenuItem>
                 {services.map(service => (
-                  <MenuItem key={service.id} value={service.id}>
+                  <MenuItem key={service.id} value={Number(service.id)}>
                     {service.productName}
                   </MenuItem>
                 ))}
@@ -145,12 +147,12 @@ const CalendarAgendaView = () => {
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 4 }}>Cargando agenda...</TableCell>
                 </TableRow>
-              ) : agendaItems.filter(item => serviceFilter === 'all' || item.serviceId === serviceFilter).length === 0 ? (
+              ) : agendaItems.filter(item => serviceFilter === 'all' || Number(item.serviceId) === Number(serviceFilter)).length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 4 }}>No hay slots programados para este día.</TableCell>
                 </TableRow>
               ) : (
-                agendaItems.filter(item => serviceFilter === 'all' || item.serviceId === serviceFilter).map((item) => (
+                agendaItems.filter(item => serviceFilter === 'all' || Number(item.serviceId) === Number(serviceFilter)).map((item) => (
                   <TableRow key={item.id} hover>
                     <TableCell className='font-medium'>{item.time}</TableCell>
                     <TableCell>{getStatusChip(item.status)}</TableCell>
