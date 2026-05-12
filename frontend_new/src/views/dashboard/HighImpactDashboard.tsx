@@ -16,6 +16,7 @@ import Typography from '@mui/material/Typography'
 
 // Component Imports
 import WelcomeBanner from './WelcomeBanner'
+import CardStatsWithAreaChart from '@/components/card-statistics/StatsWithAreaChart'
 import CardStatsSquare from '@/components/card-statistics/CardStatsSquare'
 import PipelineContactsChart from './PipelineContactsChart'
 import Card from '@mui/material/Card'
