@@ -15,7 +15,7 @@ const UserPlan = () => {
   // Vars
   const buttonProps: ButtonProps = {
     variant: 'contained',
-    children: 'Upgrade Plan'
+    children: 'Mejorar Plan'
   }
 
   return (
@@ -23,44 +23,44 @@ const UserPlan = () => {
       <Card className='border-2 border-primary rounded shadow-primarySm'>
         <CardContent className='flex flex-col gap-6'>
           <div className='flex justify-between'>
-            <Chip label='Standard' size='small' color='primary' variant='tonal' />
+            <Chip label='Plan Premium' size='small' color='primary' variant='tonal' />
             <div className='flex justify-center'>
               <Typography variant='h5' component='sup' className='self-start' color='primary'>
                 $
               </Typography>
               <Typography component='span' variant='h1' color='primary'>
-                99
+                49
               </Typography>
               <Typography component='sub' className='self-end' color='text.primary'>
-                /month
+                /mes
               </Typography>
             </div>
           </div>
           <div className='flex flex-col gap-2'>
             <div className='flex items-center gap-2'>
               <i className='tabler-circle-filled text-[10px] text-secondary' />
-              <Typography component='span'>10 Users</Typography>
+              <Typography component='span'>Acceso Ilimitado CRM</Typography>
             </div>
             <div className='flex items-center gap-2'>
               <i className='tabler-circle-filled text-[10px] text-secondary' />
-              <Typography component='span'>Up to 10 GB storage</Typography>
+              <Typography component='span'>Hasta 20 GB de Almacenamiento</Typography>
             </div>
             <div className='flex items-center gap-2'>
               <i className='tabler-circle-filled text-[10px] text-secondary' />
-              <Typography component='span'>Basic Support</Typography>
+              <Typography component='span'>Soporte Prioritario 24/7</Typography>
             </div>
           </div>
           <div className='flex flex-col gap-1'>
             <div className='flex items-center justify-between'>
               <Typography className='font-medium' color='text.primary'>
-                Days
+                Uso Mensual
               </Typography>
               <Typography className='font-medium' color='text.primary'>
-                26 of 30 Days
+                26 de 30 Días
               </Typography>
             </div>
-            <LinearProgress variant='determinate' value={65} />
-            <Typography variant='body2'>4 days remaining</Typography>
+            <LinearProgress variant='determinate' value={86} />
+            <Typography variant='body2'>4 días restantes del ciclo</Typography>
           </div>
           <OpenDialogOnElementClick element={Button} elementProps={buttonProps} dialog={UpgradePlan} />
         </CardContent>
