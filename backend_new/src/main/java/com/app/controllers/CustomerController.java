@@ -225,15 +225,6 @@ public class CustomerController {
     @DeleteMapping("/purge-all-except-master")
     @PreAuthorize("hasRole('MANAGER')")
     public Mono<ResponseEntity<String>> purgeAllExceptMaster() {
-        return executePurge();
-    }
-
-    @DeleteMapping("/purge-unsecure-temp")
-    public Mono<ResponseEntity<String>> purgeUnsecure() {
-        return executePurge();
-    }
-
-    private Mono<ResponseEntity<String>> executePurge() {
         log.info("💣 [PURGE] Executing purge of all tenants except master (ID 1)");
         return tenantRepository.findAll()
                 .filter(tenant -> tenant.getId() != 1L)
