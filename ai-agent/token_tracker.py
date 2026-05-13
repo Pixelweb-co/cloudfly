@@ -28,8 +28,8 @@ class TokenTracker:
             self.redis_client = None
 
         # Pricing from config
-        self.prompt_price = getattr(config, 'PROMPT_TOKEN_PRICE', 0.00000015)
-        self.completion_price = getattr(config, 'COMPLETION_TOKEN_PRICE', 0.0000006)
+        self.prompt_price = getattr(config, 'PROMPT_TOKEN_PRICE', 0.0000025)
+        self.completion_price = getattr(config, 'COMPLETION_TOKEN_PRICE', 0.00001)
         self.model = getattr(config, 'OPENAI_MODEL', 'gpt-4o-mini')
 
     def track(self, usage, label: str, tenant_id: int, conversation_id: str):

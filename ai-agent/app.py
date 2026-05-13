@@ -103,8 +103,8 @@ class AIAgentApp:
             logger.error("OPENAI_API_KEY is not set. Exiting...")
             sys.exit(1)
 
-        self.ai_service = AIService()
         self.redis_client = RedisMemoryClient()
+        self.ai_service = AIService(redis_client=self.redis_client)
         self.producer = MessageProducer()
         self.consumer = MessageConsumer(self.process_message)
 

@@ -1,6 +1,7 @@
 import redis
 import json
 import logging
+import hashlib
 import config
 
 logger = logging.getLogger(__name__)
@@ -57,3 +58,34 @@ class RedisMemoryClient:
         except Exception as e:
             logger.error(f"Error checking idempotency in Redis: {e}")
             return False
+
+    def check_tool_idempotency(self, key_data: str, ttl: int = 60):
+        """
+        Checks if a tool call with same data is in progress or done.
+        Returns (is_duplicate, stored_result)
+        """
+        digest = hashlib.sha256(key_data.encode()).hexdigest()[:24]
+        key = f"tool_idem:{digest}"
+        try:
+            res = self.client.get(key)
+            if res:
+                return True, res
+            
+            # SET NX to block concurrent calls
+            # Use a placeholder "PROCESSING"
+            self.client.set(key, "PROCESSING", ex=ttl, nx=True)
+            return False, None
+        except Exception as e:
+            logger.error(f"Error checking tool idempotency: {e}")
+            return False, None
+
+    def save_tool_result(self, key_data: str, result: str, ttl: int = 120):
+        """
+        Saves the final result of a tool call to Redis.
+        """
+        digest = hashlib.sha256(key_data.encode()).hexdigest()[:24]
+        key = f"tool_idem:{digest}"
+        try:
+            self.client.set(key, result, ex=ttl)
+        except Exception as e:
+            logger.error(f"Error saving tool result: {e}")

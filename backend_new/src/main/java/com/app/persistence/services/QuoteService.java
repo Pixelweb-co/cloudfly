@@ -74,6 +74,7 @@ public class QuoteService {
                 .tax(request.getTax() != null ? request.getTax() : BigDecimal.ZERO)
                 .discount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO)
                 .total(request.getTotal() != null ? request.getTotal() : BigDecimal.ZERO)
+                .externalReference(request.getExternalReference())
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
@@ -242,6 +243,7 @@ public class QuoteService {
         dto.setTotal(quote.getTotal());
         dto.setNotes(quote.getNotes());
         dto.setTerms(quote.getTerms());
+        dto.setExternalReference(quote.getExternalReference());
         return dto;
     }
 

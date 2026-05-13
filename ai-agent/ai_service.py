@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import json
+import hashlib
 import requests
 from functools import lru_cache
 from openai import OpenAI
@@ -19,9 +20,9 @@ API_TIMEOUT = getattr(config, 'API_TIMEOUT', 10)
 CHARTS_LOCAL_PATH = getattr(config, 'CHARTS_LOCAL_PATH', "/app/uploads/charts")
 CHARTS_PUBLIC_URL = getattr(config, 'CHARTS_PUBLIC_URL', "https://api.cloudfly.com.co/uploads/charts/")
 ALLOWED_CONTACT_FIELDS = {"name", "email", "phone", "address", "tax_id", "document_type", "document_number"}
-MAX_HISTORY = 10
-PROMPT_TOKEN_PRICE = getattr(config, 'PROMPT_TOKEN_PRICE', 0.00000015)
-COMPLETION_TOKEN_PRICE = getattr(config, 'COMPLETION_TOKEN_PRICE', 0.0000006)
+MAX_HISTORY = 6
+PROMPT_TOKEN_PRICE = getattr(config, 'PROMPT_TOKEN_PRICE', 0.0000025)
+COMPLETION_TOKEN_PRICE = getattr(config, 'COMPLETION_TOKEN_PRICE', 0.00001)
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +51,10 @@ def _fetch_company_context(tenant_id: int):
 
 
 class AIService:
-    def __init__(self):
+    def __init__(self, redis_client=None):
         self.client = OpenAI(api_key=config.OPENAI_API_KEY)
         self.qdrant = None
+        self.redis_client = redis_client
         try:
             self.qdrant = QdrantClient(host=config.QDRANT_HOST, port=config.QDRANT_PORT)
             # Inicializar pool de conexiones MySQL
@@ -236,9 +238,24 @@ class AIService:
             logger.error(f"Error managing contact: {e}")
             return json.dumps({"error": str(e)})
 
-    async def create_order(self, customer_id: int, items: list, tenant_id: int, notes: str = None):
-        """Crea un pedido en el sistema."""
+    async def create_order(self, customer_id: int, items: list, tenant_id: int, notes: str = None, conversation_id: str = None):
+        """Crea un pedido en el sistema con protección de duplicados."""
         logger.info(f"Creating order for customer {customer_id} (Tenant: {tenant_id})")
+        
+        # 1. Idempotency Key Generation
+        items_json = json.dumps(items, sort_keys=True)
+        # Unique identifier based on payload + context
+        idem_data = f"order:{customer_id}:{items_json}:{conversation_id or 'no-conv'}"
+        
+        if self.redis_client:
+            is_dup, stored_res = self.redis_client.check_tool_idempotency(idem_data, ttl=90)
+            if is_dup:
+                if stored_res == "PROCESSING":
+                    logger.warning(f"Order creation already in progress for {customer_id}")
+                    return json.dumps({"error": "Order is being processed. Please wait.", "status": "processing"})
+                logger.info(f"Returning cached order result for {customer_id}")
+                return stored_res
+
         try:
             def _post():
                 order_items = []
@@ -257,10 +274,10 @@ class AIService:
                     "status": "PROCESANDO",
                     "notes": notes,
                     "items": order_items,
-                    "total": sum(item["subtotal"] for item in order_items)
+                    "total": sum(item["subtotal"] for item in order_items),
+                    "externalReference": f"AI-{hashlib.md5(idem_data.encode()).hexdigest()[:12]}"
                 }
 
-                # Eliminado &ai_secret de la URL
                 url = f"{config.JAVA_API_URL}/orders?tenantId={tenant_id}"
                 headers = {
                     "X-AI-Secret": config.AI_API_SECRET,
@@ -271,18 +288,37 @@ class AIService:
                 res = requests.post(url, json=payload, headers=headers, timeout=API_TIMEOUT)
                 
                 logger.info(f"📥 [AI-API-TOOL] Response Status: {res.status_code}")
+                result_json = ""
                 if res.status_code in [200, 201]:
-                    return json.dumps(res.json())
-                return json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})
+                    result_json = json.dumps(res.json())
+                else:
+                    result_json = json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})
+                
+                # 2. Save result in Redis
+                if self.redis_client:
+                    self.redis_client.save_tool_result(idem_data, result_json, ttl=180)
+                
+                return result_json
             
             return await asyncio.to_thread(_post)
         except Exception as e:
             logger.error(f"Error creating order: {e}")
             return json.dumps({"error": str(e)})
 
-    async def create_quote(self, customer_id: int, items: list, tenant_id: int, notes: str = None):
-        """Crea una cotización en el sistema."""
+    async def create_quote(self, customer_id: int, items: list, tenant_id: int, notes: str = None, conversation_id: str = None):
+        """Crea una cotización en el sistema con protección de duplicados."""
         logger.info(f"Creating quote for customer {customer_id} (Tenant: {tenant_id})")
+        
+        items_json = json.dumps(items, sort_keys=True)
+        idem_data = f"quote:{customer_id}:{items_json}:{conversation_id or 'no-conv'}"
+
+        if self.redis_client:
+            is_dup, stored_res = self.redis_client.check_tool_idempotency(idem_data, ttl=90)
+            if is_dup:
+                if stored_res == "PROCESSING":
+                    return json.dumps({"error": "Quote is being processed. Please wait.", "status": "processing"})
+                return stored_res
+
         try:
             def _post():
                 quote_items = []
@@ -301,7 +337,8 @@ class AIService:
                     "status": "PENDING",
                     "notes": notes,
                     "items": quote_items,
-                    "total": sum(item["subtotal"] for item in quote_items)
+                    "total": sum(item["subtotal"] for item in quote_items),
+                    "externalReference": f"AI-Q-{hashlib.md5(idem_data.encode()).hexdigest()[:12]}"
                 }
 
                 url = f"{config.JAVA_API_URL}/quotes?tenantId={tenant_id}"
@@ -310,9 +347,17 @@ class AIService:
                     "Authorization": f"AI-Secret {config.AI_API_SECRET}"
                 }
                 res = requests.post(url, json=payload, headers=headers, timeout=API_TIMEOUT)
+                
+                result_json = ""
                 if res.status_code in [200, 201]:
-                    return json.dumps(res.json())
-                return json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})
+                    result_json = json.dumps(res.json())
+                else:
+                    result_json = json.dumps({"error": f"API returned {res.status_code}", "detail": res.text})
+                
+                if self.redis_client:
+                    self.redis_client.save_tool_result(idem_data, result_json, ttl=180)
+                
+                return result_json
             
             return await asyncio.to_thread(_post)
         except Exception as e:
@@ -528,7 +573,7 @@ class AIService:
             logger.error(f"Error generating chart: {e}")
             return json.dumps({"error": str(e)})
 
-    async def _dispatch_tool(self, function_name: str, args: dict, tenant_id: int) -> str:
+    async def _dispatch_tool(self, function_name: str, args: dict, tenant_id: int, conversation_id: str = None) -> str:
         """Despacha llamadas a herramientas usando un diccionario de handlers."""
         handlers = {
             "search_products_semantically": lambda a: self.search_products(a.get("query"), int(tenant_id)),
@@ -538,8 +583,8 @@ class AIService:
             "update_pipeline_stage": lambda a: self.update_pipeline_stage(a.get("contact_id"), a.get("stage_id"), int(tenant_id)),
             "generate_pipeline_chart": lambda a: self.generate_pipeline_chart(int(tenant_id)),
             "get_contact_pipeline": lambda a: self.get_contact_pipeline(a.get("contact_id"), int(tenant_id)),
-            "create_order": lambda a: self.create_order(a.get("customer_id"), a.get("items"), int(tenant_id), notes=a.get("notes")),
-            "create_quote": lambda a: self.create_quote(a.get("customer_id"), a.get("items"), int(tenant_id), notes=a.get("notes")),
+            "create_order": lambda a: self.create_order(a.get("customer_id"), a.get("items"), int(tenant_id), notes=a.get("notes"), conversation_id=conversation_id),
+            "create_quote": lambda a: self.create_quote(a.get("customer_id"), a.get("items"), int(tenant_id), notes=a.get("notes"), conversation_id=conversation_id),
             "convert_quote_to_order": lambda a: self.convert_quote_to_order(a.get("quote_id"), int(tenant_id)),
             "get_order": lambda a: self.get_order(a.get("order_id"), int(tenant_id)),
             "modify_order": lambda a: self.modify_order(a.get("order_id"), a.get("items"), int(tenant_id), notes=a.get("notes"))
@@ -550,92 +595,33 @@ class AIService:
             return await handler(args)
         return json.dumps({"error": f"Tool {function_name} not found"})
 
-    async def generate_response(self, tenant_id, contact_id, conversation_id, message, history, pipeline_state=None, message_id=None):
-        # 3. Truncar historial
-        history = history[-MAX_HISTORY:] if len(history) > MAX_HISTORY else history
-
-        # 10. Integración de detección de intención en el prompt
-        msg_lower = message.lower()
-        detected_intent = "GENERAL"
-        if any(greet in msg_lower for greet in ["hola", "buen", "saludos", "hi", "hello"]):
-            detected_intent = "GREETING"
-        elif any(prod in msg_lower for prod in ["precio", "comprar", "costo", "producto", "servicios"]):
-            detected_intent = "PRODUCT_INQUIRY"
-
-        company_info = self.get_company_context(tenant_id)
-
-        # Fetch pipeline state for this contact
-        pipeline_info_json = await self.get_contact_pipeline(contact_id, tenant_id)
-        pipeline_data = json.loads(pipeline_info_json)
+    def _get_tools_for_context(self, message: str, history: list) -> list:
+        """Selecciona herramientas relevantes para ahorrar tokens."""
+        context = (message + " ".join([h.get("content", "") for h in history[-3:]])).lower()
         
-        pipeline_context = ""
-        if "error" not in pipeline_data:
-            stages = pipeline_data['stages']
-            current_stage_name = "Desconocido"
-            for s in stages:
-                if s['id'] == pipeline_data['current_stage_id']:
-                    current_stage_name = s['name']
-                    break
-            
-            # 1. Comprimir pipeline context
-            stages_compressed = "|".join([f"{s['name']}:{s['id']}" for s in stages])
-            pipeline_context = f"[PIPELINE] Etapa actual: {current_stage_name} (ID:{pipeline_data['current_stage_id']}) | Disponibles: {stages_compressed}"
+        # Categorías de herramientas
+        sales_tools = {"check_products_stock", "create_order", "create_quote", "convert_quote_to_order", "get_order", "modify_order"}
+        mgmt_tools = {"manage_contact", "update_pipeline_stage", "generate_pipeline_chart", "get_contact_pipeline"}
+        base_tools = {"search_products_semantically", "get_contact"}
 
-        system_prompt = f"""Eres un asistente de ventas profesional humano.
-Tu objetivo es ayudar al cliente con sus dudas y ventas de manera entusiasta e inmediata. usando neuromarketing
+        # Heurísticas de activación
+        sales_keywords = {"pedir", "comprar", "pedido", "cotiz", "orden", "presupuesto", "quiero", "confirmo", "acepto", "precio", "stock", "inventario", "catalogo", "productos"}
+        mgmt_keywords = {"pipeline", "etapa", "contacto", "actualizar", "gráfico", "chart", "dato", "nit", "email", "identificación", "direccion", "teléfono"}
+        
+        include_sales = any(kw in context for kw in sales_keywords)
+        include_mgmt = any(kw in context for kw in mgmt_keywords)
 
-INTENCIÓN DETECTADA DEL USUARIO: {detected_intent}
+        # Si no hay match claro, solo enviar base tools para ahorrar ~1,400 tokens
+        active_names = base_tools.copy()
+        if include_sales: active_names.update(sales_tools)
+        if include_mgmt: active_names.update(mgmt_tools)
 
-INFORMACIÓN DE LA EMPRESA ACTUAL EN LA QUE PRESTAS ATIENDES CLIENTES :
-{company_info}
-{pipeline_context}
+        # Retornar esquemas filtrados
+        return [t for t in self._get_all_tool_schemas() if t["function"]["name"] in active_names]
 
-REGLAS ESTRICTAS DE FORMATO SI HABLAS DE UN PRODUCTO:
-¡CUANDO MENCIONES UN PRODUCTO QUE ENCONTRASTE, DEBES USAR OBLIGATORIAMENTE ESTE FORMATO TEXTUAL EXACTO POR CADA PRODUCTO!
-Si el producto tiene imagen (image_url válida), escribe el primer renglón con la URL. Si no tiene o es nula, omite la primera línea.
-
-[URL_DE_LA_IMAGEN]
-*{'{'}Nombre del Producto{'}'}*
-{'{'}Descripción breve{'}'}
-Precio: ${'{'}Precio{'}'}
-Estado: {'{'}Disponible (X unidades) / Agotado{'}'}
-
-GESTIÓN AUTÓNOMA DEL PIPELINE (PROCESO INTERNO - NUNCA MENCIONAR AL USUARIO):
-- Las herramientas de pipeline son operaciones internas silenciosas. El usuario NUNCA debe saber que existen.
-- Ya tienes arriba el [ESTADO INTERNO DEL PIPELINE]. Úsalo para decidir si cambiar la etapa.
-- Evalúa el contexto de la conversación y decide AUTÓNOMAMENTE si cambiar la etapa usando update_pipeline_stage con el ID correcto.
-- Si detectas que el usuario avanza en su interés, muévelo a la siguiente etapa lógica.
-- Usa update_pipeline_stage SOLO cuando el cambio sea relevante y esté justificado.
-- FLUJO DE CIERRE DE PEDIDO (IMPORTANTE):
-  1. Identifica los productos que el cliente quiere.
-  2. Confirma si sus datos de contacto (Nombre, Email, NIT, Dirección, etc.) están actualizados usando get_contact. Si falta información o es incorrecta, usa manage_contact(action='update').
-  3. Si el cliente solo está pidiendo un presupuesto o precio total, usa create_quote.
-  4. Si el cliente confirma la compra o acepta una cotización previa, usa create_order (para pedido directo) o convert_quote_to_order (si ya existe una cotización).
-  5. Una vez creado el pedido, usa update_pipeline_stage para mover al contacto a la etapa de "Facturado" o "Cierre de Venta" (usa get_contact_pipeline para saber el ID correcto de la etapa).
-  6. Informa amigablemente al cliente que su pedido o cotización ha sido procesado.
-
-- FLUJO DE RECTIFICACIÓN:
-  1. Si un cliente quiere corregir algo en su pedido actual o previo, usa get_order para ver los detalles.
-  2. Ajusta los productos/cantidades mediante modify_order.
-
-PROHIBICIONES ABSOLUTAS - NUNCA HAGAS ESTO:
-- JAMÁS menciones pipelines, etapas, stages, IDs, bases de datos o procesos técnicos al usuario.
-- JAMÁS digas frases como "te moví de etapa", "ya estás en el pipeline", etc.
-- JAMÁS menciones errores internos o fallos de herramientas.
-- JAMÁS pidas al usuario que visite páginas de registro externas a menos que sea parte del producto.
-
-OTRAS REGLAS:
-- Saluda de forma amigable y mantén la respuesta natural.
-- Si te piden Catálogo, usa search_products_semantically.
-- Responde siempre en el idioma que use el cliente.
-"""
-
-        messages = [{"role": "system", "content": system_prompt}]
-        for h in history:
-            messages.append({"role": h["role"], "content": h["content"]})
-        messages.append({"role": "user", "content": message})
-
-        tools = [
+    def _get_all_tool_schemas(self):
+        """Define todos los esquemas de herramientas disponibles."""
+        return [
             {
                 "type": "function",
                 "function": {
@@ -844,13 +830,92 @@ OTRAS REGLAS:
             }
         ]
 
+    def _select_model(self, message: str) -> str:
+        """Decide qué modelo usar para optimizar costos."""
+        msg = message.lower().strip()
+        words = msg.split()
+        
+        # Patrones de mensajes simples/cortos
+        simple_responses = {"hola", "buenos días", "buenas tardes", "gracias", "ok", "vale", "si", "no", "perfecto", "chao", "adios", "listo"}
+        
+        if len(words) < 6 and any(sr in msg for sr in simple_responses):
+            return "gpt-4o-mini"
+        
+        return config.OPENAI_MODEL # gpt-4o
+
+    def _compress_history(self, history: list) -> list:
+        """Mantiene los últimos 4 mensajes literales y resume los anteriores."""
+        if len(history) <= 4:
+            return history
+        
+        recent = history[-4:]
+        old = history[:-4]
+        
+        summary_parts = []
+        for h in old:
+            role = "U" if h["role"] == "user" else "A"
+            content = h.get("content", "")
+            if content:
+                summary_parts.append(f"{role}:{content[:50]}..")
+        
+        summary = {"role": "system", "content": f"[CONTEXTO PREVIO: {' | '.join(summary_parts)}]"}
+        return [summary] + recent
+
+    async def generate_response(self, tenant_id, contact_id, conversation_id, message, history, pipeline_state=None, message_id=None):
+        # 3. Truncar historial según MAX_HISTORY
+        history = history[-MAX_HISTORY:] if len(history) > MAX_HISTORY else history
+        
+        # 4. Comprimir historial para ahorrar tokens
+        history = self._compress_history(history)
+
+        company_info = self.get_company_context(tenant_id)
+
+        # Contexto reducido: El modelo lo pedirá si lo necesita
+        pipeline_context = "[PIPELINE] Usa get_contact_pipeline para consultar el estado del proceso interno cuando sea relevante."
+
+        system_prompt = f"""Asistente de ventas profesional. Objetivo: ayudar con dudas y ventas usando neuromarketing.
+
+EMPRESA:
+{company_info}
+{pipeline_context}
+
+FORMATO PRODUCTO (obligatorio si muestras productos):
+[IMAGE_URL] (solo si existe)
+*{{Nombre}}* | {{Descripción breve}}
+Precio: ${{Precio}} | Estado: {{Disponible (X uds) / Agotado}}
+
+GESTIÓN INTERNA (NUNCA mencionar al usuario):
+- Pipeline: Operaciones silenciosas. Usa update_pipeline_stage para mover al cliente según avance su interés.
+- Cierre: get_contact -> confirmar/actualizar datos (manage_contact) -> create_order/create_quote.
+- Post-venta: Mover a 'Facturado' o similar tras pedido.
+- Rectificar: get_order -> modify_order.
+
+PROHIBIDO:
+- Mencionar pipelines, etapas, IDs, errores técnicos o procesos internos.
+- Pedir registros externos.
+
+REGLAS: Naturalidad, saludar amigablemente, usar search_products_semantically para catálogo y responder en el idioma del cliente."""
+
+        messages = [{"role": "system", "content": system_prompt}]
+        for h in history:
+            messages.append({"role": h["role"], "content": h["content"]})
+        messages.append({"role": "user", "content": message})
+
+        tools = self._get_tools_for_context(message, history)
+
+        selected_model = self._select_model(message)
+
         try:
             total_usage = SimpleNamespace(prompt_tokens=0, completion_tokens=0, total_tokens=0)
             iterations = 0
-            while iterations < 10:
+            while iterations < 5:
+                # Usar el modelo económico en la 1ra llamada si es simple.
+                # Si requiere herramientas (iter > 0), escalar a gpt-4o para precisión.
+                current_model = selected_model if iterations == 0 else config.OPENAI_MODEL
+                
                 response = await asyncio.to_thread(
                     self.client.chat.completions.create,
-                    model=config.OPENAI_MODEL,
+                    model=current_model,
                     messages=messages,
                     tools=tools,
                     temperature=0.7,
@@ -881,7 +946,7 @@ OTRAS REGLAS:
                     function_args = json.loads(tool_call.function.arguments)
                     
                     logger.info(f"🛠️ [AGENT-LOOP] Dispatching tool: {function_name}")
-                    function_response = await self._dispatch_tool(function_name, function_args, tenant_id)
+                    function_response = await self._dispatch_tool(function_name, function_args, tenant_id, conversation_id)
                     
                     messages.append({
                         "tool_call_id": tool_call.id,

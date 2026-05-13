@@ -23,6 +23,7 @@ public class OrderResponseDTO {
     private BigDecimal total;
     private String notes;
     private String terms;
+    private String externalReference;
     private Long createdBy;
     private List<OrderItemResponseDTO> items;
 

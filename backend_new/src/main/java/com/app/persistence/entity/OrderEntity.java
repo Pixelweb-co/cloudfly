@@ -60,6 +60,9 @@ public class OrderEntity {
     @Column("customer_name")
     private String customerName;
 
+    @Column("external_reference")
+    private String externalReference;
+
     // Explicit Getters and Setters for VPS environment compatibility
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -114,4 +117,7 @@ public class OrderEntity {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getExternalReference() { return externalReference; }
+    public void setExternalReference(String externalReference) { this.externalReference = externalReference; }
 }
