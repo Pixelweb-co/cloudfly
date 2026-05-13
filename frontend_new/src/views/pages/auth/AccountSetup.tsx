@@ -313,66 +313,68 @@ const AccountSetup = () => {
             <Logo />
           </Link>
 
-          {/* Stepper */}
-          <Stepper activeStep={activeStep} alternativeLabel className='mb-8'>
-            {steps.map((step, index) => (
-              <Step 
-                key={step.title} 
-                onClick={() => setActiveStep(index)}
-                sx={{ cursor: 'pointer' }}
-              >
-                <StepLabel
-                  StepIconComponent={() => (
-                    <CustomStepIcon
-                      active={activeStep === index}
-                      completed={activeStep > index}
-                      icon={step.icon}
-                      index={index}
-                    />
-                  )}
+          {/* Stepper & Content - Only render after mount to avoid hydration mismatch with localStorage step */}
+          {isMounted && (
+            <>
+              <Stepper activeStep={activeStep} alternativeLabel className='mb-8'>
+                {steps.map((step, index) => (
+                  <Step 
+                    key={step.title} 
+                    onClick={() => setActiveStep(index)}
+                    sx={{ cursor: 'pointer' }}
+                  >
+                    <StepLabel
+                      icon={
+                        <CustomStepIcon
+                          active={activeStep === index}
+                          completed={activeStep > index}
+                          icon={step.icon}
+                          index={index}
+                        />
+                      }
+                    >
+                      <Typography variant='body2' className='font-semibold'>
+                        {step.title}
+                      </Typography>
+                      <Typography variant='caption' className='text-textSecondary'>
+                        {step.subtitle}
+                      </Typography>
+                    </StepLabel>
+                  </Step>
+                ))}
+              </Stepper>
+
+              {/* Step Content */}
+              <Box className='min-h-[400px]'>
+                <Box
+                  key={activeStep}
+                  className='wizard-step-container'
                 >
-                  <Typography variant='body2' className='font-semibold'>
-                    {step.title}
-                  </Typography>
-                  <Typography variant='caption' className='text-textSecondary'>
-                    {step.subtitle}
-                  </Typography>
-                </StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-
-          {/* Step Content */}
-          <Box className='min-h-[400px]'>
-            {isMounted && (
-              <Box
-                key={activeStep}
-                className='wizard-step-container'
-              >
-                {renderStepContent(activeStep)}
+                  {renderStepContent(activeStep)}
+                </Box>
               </Box>
-            )}
-          </Box>
 
-          {/* Navigation Buttons */}
-          {activeStep !== 1 && activeStep !== 2 && activeStep !== 3 && ( // Pasos con botones propios
-            <Box className='flex justify-between mt-8'>
-              <Button
-                disabled={activeStep === 0}
-                onClick={handleBack}
-                variant='outlined'
-              >
-                Atrás
-              </Button>
-              <Button
-                variant='contained'
-                onClick={handleNext}
-                size='large'
-                className='min-w-[120px] next-wizard-step'
-              >
-                {activeStep === steps.length - 1 ? 'Finalizar' : 'Continuar'}
-              </Button>
-            </Box>
+              {/* Navigation Buttons */}
+              {activeStep !== 1 && activeStep !== 2 && activeStep !== 3 && ( 
+                <Box className='flex justify-between mt-8'>
+                  <Button
+                    disabled={activeStep === 0}
+                    onClick={handleBack}
+                    variant='outlined'
+                  >
+                    Atrás
+                  </Button>
+                  <Button
+                    variant='contained'
+                    onClick={handleNext}
+                    size='large'
+                    className='min-w-[120px] next-wizard-step'
+                  >
+                    {activeStep === steps.length - 1 ? 'Finalizar' : 'Continuar'}
+                  </Button>
+                </Box>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
