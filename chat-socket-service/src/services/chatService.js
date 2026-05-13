@@ -40,7 +40,12 @@ class ChatService {
         const pushName = data.pushName;
         const messageId = data.key.id;
 
-        // 0. FILTER: No groups
+        // 0. FILTER: No groups, No status, No echoes (fromMe)
+        if (data.key.fromMe) {
+            logger.debug(`[WEBHOOK_SKIP] Message is an echo (fromMe=true). Ignoring.`);
+            return;
+        }
+
         if (remoteJid && remoteJid.endsWith('@g.us')) {
             logger.debug(`[WEBHOOK_SKIP] Group message detected (${remoteJid}). Ignoring as per user request.`);
             return;

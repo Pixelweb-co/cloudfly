@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import {
     Card,
@@ -35,6 +35,7 @@ const OrderForm = () => {
     const id = params?.id
 
     const [loading, setLoading] = useState(false)
+    const submitting = useRef(false)
     const [customers, setCustomers] = useState<Contact[]>([])
     const [products, setProducts] = useState<Product[]>([])
     const [searchTerm, setSearchTerm] = useState('')
@@ -158,6 +159,7 @@ const OrderForm = () => {
     }
 
     const handleSubmit = async () => {
+        if (submitting.current) return  // Prevent double submission
         if (!formData.customerId) {
             toast.error('Seleccione un cliente')
             return
@@ -168,6 +170,7 @@ const OrderForm = () => {
         }
 
         try {
+            submitting.current = true
             setLoading(true)
 
             const totals = calculateTotals()
@@ -204,6 +207,7 @@ const OrderForm = () => {
             toast.error('Error al guardar el pedido')
         } finally {
             setLoading(false)
+            submitting.current = false
         }
     }
 

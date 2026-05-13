@@ -21,6 +21,7 @@ public class QuoteRequestDTO {
     private BigDecimal discount;
     private BigDecimal tax;
     private BigDecimal total;
+    private String externalReference;
     private List<QuoteItemRequestDTO> items;
 
     @Data

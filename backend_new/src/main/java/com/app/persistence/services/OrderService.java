@@ -77,6 +77,7 @@ public class OrderService {
                     .tax(request.getTax() != null ? request.getTax() : BigDecimal.ZERO)
                     .discount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO)
                     .total(request.getTotal() != null ? request.getTotal() : BigDecimal.ZERO)
+                    .externalReference(request.getExternalReference())
                     .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
                     .build();
@@ -226,6 +227,7 @@ public class OrderService {
         dto.setTotal(order.getTotal());
         dto.setNotes(order.getNotes());
         dto.setTerms(order.getTerms());
+        dto.setExternalReference(order.getExternalReference());
         return dto;
     }
 
