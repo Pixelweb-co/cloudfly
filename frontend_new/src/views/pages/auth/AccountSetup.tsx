@@ -265,6 +265,25 @@ const AccountSetup = () => {
                 💡 <strong>Tiempo estimado:</strong> 10-15 minutos para completar toda la configuración
               </Typography>
             </Box>
+
+            {/* Navigation Buttons for Step 0 */}
+            <Box className='flex justify-between mt-12'>
+              <Button
+                disabled={activeStep === 0}
+                onClick={handleBack}
+                variant='outlined'
+              >
+                Atrás
+              </Button>
+              <Button
+                variant='contained'
+                onClick={handleNext}
+                size='large'
+                className='min-w-[120px] next-wizard-step'
+              >
+                Continuar
+              </Button>
+            </Box>
           </Box>
         )
 
@@ -346,31 +365,10 @@ const AccountSetup = () => {
 
               {/* Step Content */}
               <Box className='min-h-[400px]'>
-                <Box className='wizard-step-container'>
+                <Box className='wizard-step-container' key={activeStep}>
                   {renderStepContent(activeStep)}
                 </Box>
               </Box>
-
-              {/* Navigation Buttons */}
-              {activeStep === 0 && (
-                <Box className='flex justify-between mt-8'>
-                  <Button
-                    disabled={activeStep === 0}
-                    onClick={handleBack}
-                    variant='outlined'
-                  >
-                    Atrás
-                  </Button>
-                  <Button
-                    variant='contained'
-                    onClick={handleNext}
-                    size='large'
-                    className='min-w-[120px] next-wizard-step'
-                  >
-                    {activeStep === steps.length - 1 ? 'Finalizar' : 'Continuar'}
-                  </Button>
-                </Box>
-              )}
             </>
           )}
         </CardContent>
