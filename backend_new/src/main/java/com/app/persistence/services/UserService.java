@@ -294,11 +294,7 @@ public class UserService {
                         log.warn("⚠️ [USER-SERVICE] User {} has no tenant. Skipping tenant onboarding flag.", userId);
                         return Mono.just(user);
                     }
-                    return tenantRepository.findById(user.getCustomerId())
-                            .flatMap(tenant -> {
-                                tenant.setOnboardingCompleted(true);
-                                return tenantRepository.save(tenant);
-                            })
+                    return tenantRepository.updateOnboardingStatus(user.getCustomerId(), true)
                             .thenReturn(user);
                 })
                 .doOnSuccess(u -> log.info("✅ [USER-SERVICE] Onboarding flag set to TRUE for tenant of user: {}", userId));
