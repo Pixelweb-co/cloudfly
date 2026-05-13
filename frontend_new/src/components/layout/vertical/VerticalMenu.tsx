@@ -233,29 +233,39 @@ const VerticalMenu = ({ scrollMenu }: Props) => {
         {/* Render dynamic menu from backend (Modules from subscription) */}
         {renderMenuItems(menuData)}
 
+
         {/* Fallback Harcodeado para ítems críticos (Seguridad SaaS) */}
-        {(userRole === 'MANAGER' || userRole === 'ADMIN') && (
+        {(userRole === 'ADMIN') && (
           <>
+
             <SubMenu
-              label='Ventas'
-              icon={<i className='tabler-shopping-cart' />}
+              label='Administración'
+              icon={<i className='tabler-adjustments-code' />}
             >
-              <MenuItem href='/ventas/categorias/list' icon={<i className='tabler-category' />}>
-                Categorías
+
+              <MenuItem href='/administracion/companies' icon={<i className='tabler-building' />}>
+                Compañías
               </MenuItem>
-              <MenuItem href='/ventas/productos/list' icon={<i className='tabler-package' />}>
-                Productos
-              </MenuItem>
-              <MenuItem href='/ventas/cotizaciones/list' icon={<i className='tabler-file-invoice' />}>
-                Cotizaciones
-              </MenuItem>
-              <MenuItem href='/ventas/pedidos/list' icon={<i className='tabler-clipboard-list' />}>
-                Pedidos
-              </MenuItem>
-              <MenuItem href='/ventas/facturas/list' icon={<i className='tabler-receipt' />}>
-                Facturas
+
+
+            </SubMenu>
+
+            <SubMenu
+              label='Usuarios y Roles'
+              icon={<i className='tabler-shield-lock' />}
+            >
+              <MenuItem href='/accounts/user/list' icon={<i className='tabler-user-cog' />}>
+                Gestión de Usuarios
               </MenuItem>
             </SubMenu>
+
+          </>
+        )}
+
+        {/* Fallback Harcodeado para ítems críticos (Seguridad SaaS) */}
+        {(userRole === 'MANAGER') && (
+          <>
+
 
             <SubMenu
               label='Administración SaaS'
