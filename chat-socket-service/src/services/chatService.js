@@ -540,6 +540,7 @@ class ChatService {
      */
     async processAiResponse(payload) {
         const { tenantId, contactId, conversationId, respuesta } = payload;
+        let finalRespuesta = respuesta;
         
         let resPreview = respuesta ? (respuesta.length > 50 ? respuesta.substring(0, 50) + '...' : respuesta) : '[Empty]';
         logger.info(`🤖 [AI-RESPONSE] Processing response for contact ${contactId} in conv ${conversationId.substring(0, 8)}... Content: "${resPreview}"`);
@@ -582,12 +583,12 @@ class ChatService {
                     logger.info(`✅ [AI-RESPONSE] AudioMessage sent to WhatsApp for contact ${contactId}`);
                 } else {
                     let finalMediaUrl = mediaUrl;
-                    let textContent = respuesta;
+                    let textContent = finalRespuesta;
                     
                     const imageExtensions = /\.(jpg|jpeg|png|webp|gif|bmp)(?:\?.*)?$/i;
                     const mediaRegex = /(!?\[.*?\]\((https?:\/\/[^\)]+)\)|\[(https?:\/\/[^\]]+)\]|(https?:\/\/[^\s\)]+\.(?:jpg|jpeg|png|webp|gif|bmp)(?:\?[^\s\)]+)?))/gi;
                     
-                    const matches = [...respuesta.matchAll(mediaRegex)];
+                    const matches = [...finalRespuesta.matchAll(mediaRegex)];
                     for (const match of matches) {
                         const fullMatch = match[1] || match[0];
                         const markdownUrl = match[2];
@@ -600,12 +601,12 @@ class ChatService {
 
                         if (foundUrl && (isExplicitImage || hasImageExt)) {
                             if (!finalMediaUrl) finalMediaUrl = foundUrl;
-                            respuesta = respuesta.replace(fullMatch, '');
+                            finalRespuesta = finalRespuesta.replace(fullMatch, '');
                         }
                     }
                     
                     if (finalMediaUrl) {
-                        textContent = respuesta.trim();
+                        textContent = finalRespuesta.trim();
                         textContent = textContent.replace(/\n\s*\n/g, '\n\n');
                     }
 
@@ -613,7 +614,7 @@ class ChatService {
                         await evolutionClient.sendMedia(channel.instance_name, remoteJid, finalMediaUrl, textContent);
                         logger.info(`✅ [AI-RESPONSE] MediaMessage sent to WhatsApp for contact ${contactId}`);
                     } else {
-                        await evolutionClient.sendMessage(channel.instance_name, remoteJid, respuesta);
+                        await evolutionClient.sendMessage(channel.instance_name, remoteJid, finalRespuesta);
                         logger.info(`✅ [AI-RESPONSE] TextMessage sent to WhatsApp for contact ${contactId}`);
                     }
                 }
