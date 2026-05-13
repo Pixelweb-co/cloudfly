@@ -24,11 +24,12 @@ public class PipelineService {
     private final PipelineStageRepository pipelineStageRepository;
     private final com.app.persistence.repository.ConversationPipelineStateRepository stateRepository;
 
-    public Mono<PipelineEntity> createDefaultPipeline(Long tenantId) {
-        log.info("🛠️ Creating default pipeline for tenant: {}", tenantId);
+    public Mono<PipelineEntity> createDefaultPipeline(Long tenantId, Long companyId) {
+        log.info("🛠️ Creating default pipeline for tenant: {} and company: {}", tenantId, companyId);
         
         PipelineEntity pipeline = PipelineEntity.builder()
                 .tenantId(tenantId)
+                .companyId(companyId)
                 .name("Atención a Clientes")
                 .description("Pipeline base para la gestión de prospectos y clientes.")
                 .type("MARKETING")

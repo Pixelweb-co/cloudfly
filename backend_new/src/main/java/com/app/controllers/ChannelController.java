@@ -35,8 +35,10 @@ public class ChannelController {
                             java.util.Map<String, Object> details = (java.util.Map<String, Object>) detailsObj;
                             if (details.containsKey("customer_id")) {
                                 Object cid = details.get("customer_id");
-                                if (cid instanceof Number) return ((Number) cid).longValue();
-                                return Long.parseLong(cid.toString());
+                                if (cid != null) {
+                                    if (cid instanceof Number) return ((Number) cid).longValue();
+                                    return Long.parseLong(cid.toString());
+                                }
                             }
                         }
                     } catch (Exception e) {
@@ -60,14 +62,18 @@ public class ChannelController {
                             java.util.Map<String, Object> details = (java.util.Map<String, Object>) detailsObj;
                             if (details.containsKey("company_id")) {
                                 Object cid = details.get("company_id");
-                                if (cid instanceof Number) return ((Number) cid).longValue();
-                                return Long.parseLong(cid.toString());
+                                if (cid != null) {
+                                    if (cid instanceof Number) return ((Number) cid).longValue();
+                                    return Long.parseLong(cid.toString());
+                                }
                             }
-                            // Fallback to customer_id if company_id is missing
+                            // Fallback to customer_id if company_id is missing or null
                             if (details.containsKey("customer_id")) {
                                 Object cid = details.get("customer_id");
-                                if (cid instanceof Number) return ((Number) cid).longValue();
-                                return Long.parseLong(cid.toString());
+                                if (cid != null) {
+                                    if (cid instanceof Number) return ((Number) cid).longValue();
+                                    return Long.parseLong(cid.toString());
+                                }
                             }
                         }
                     } catch (Exception e) {
