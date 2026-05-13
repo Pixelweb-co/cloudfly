@@ -421,10 +421,10 @@ class AIService:
         )
 
     def _select_model(self, message: str) -> str:
-        """Enruta mensajes simples a modelos más económicos."""
-        simple_keywords = ["hola", "buen día", "gracias", "ok", "vale", "chao", "adiós", "quien eres"]
+        """Enruta mensajes cortos a modelos más económicos."""
         msg = message.lower()
-        if len(msg) < 30 and any(k in msg for k in simple_keywords):
+        # Cualquier mensaje de menos de 50 caracteres usa el modelo económico
+        if len(msg) < 50:
             return "gpt-4o-mini"
         return config.openai_model
 
