@@ -5,9 +5,10 @@ import { userMethods } from '@/utils/userMethods'
 
 interface ProductCreationStepProps {
     onProductCreated: () => void
+    onBack?: () => void
 }
 
-const ProductCreationStep = ({ onProductCreated }: ProductCreationStepProps) => {
+const ProductCreationStep = ({ onProductCreated, onBack }: ProductCreationStepProps) => {
     const [loading, setLoading] = useState(false)
     const [categoryLoading, setCategoryLoading] = useState(true)
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -223,29 +224,45 @@ const ProductCreationStep = ({ onProductCreated }: ProductCreationStepProps) => 
                             </Grid>
 
                             <Grid item xs={12} className='mt-4'>
-                                <Button
-                                    type='submit'
-                                    variant='contained'
-                                    size='large'
-                                    fullWidth
-                                    disabled={loading || !productName.trim() || !productPrice}
-                                    className='final-wizard-step'
-                                    sx={{
-                                        py: 1.5,
-                                        borderRadius: 3,
-                                        fontSize: '1.1rem',
-                                        textTransform: 'none',
-                                        boxShadow: (theme) => theme.shadows[8],
-                                        '&:hover': {
-                                            transform: 'translateY(-2px)',
-                                            boxShadow: (theme) => theme.shadows[12]
-                                        },
-                                        transition: 'all 0.3s'
-                                    }}
-                                    startIcon={loading ? <CircularProgress size={20} color='inherit' /> : null}
-                                >
-                                    {loading ? 'Guardando...' : 'Finalizar Configuración ✨'}
-                                </Button>
+                                <Box sx={{ display: 'flex', gap: 3 }}>
+                                    <Button
+                                        variant='outlined'
+                                        size='large'
+                                        onClick={onBack}
+                                        sx={{
+                                            py: 1.5,
+                                            px: 4,
+                                            borderRadius: 3,
+                                            textTransform: 'none',
+                                            fontSize: '1.1rem'
+                                        }}
+                                    >
+                                        Atrás
+                                    </Button>
+                                    <Button
+                                        type='submit'
+                                        variant='contained'
+                                        size='large'
+                                        fullWidth
+                                        disabled={loading || !productName.trim() || !productPrice}
+                                        className='final-wizard-step'
+                                        sx={{
+                                            py: 1.5,
+                                            borderRadius: 3,
+                                            fontSize: '1.1rem',
+                                            textTransform: 'none',
+                                            boxShadow: (theme) => theme.shadows[8],
+                                            '&:hover': {
+                                                transform: 'translateY(-2px)',
+                                                boxShadow: (theme) => theme.shadows[12]
+                                            },
+                                            transition: 'all 0.3s'
+                                        }}
+                                        startIcon={loading ? <CircularProgress size={20} color='inherit' /> : null}
+                                    >
+                                        {loading ? 'Guardando...' : 'Finalizar Configuración ✨'}
+                                    </Button>
+                                </Box>
                                 <Typography variant='caption' display='block' textAlign='center' sx={{ mt: 2 }} color='text.secondary'>
                                     ¡Al terminar, podrás acceder a tu panel de control completo!
                                 </Typography>

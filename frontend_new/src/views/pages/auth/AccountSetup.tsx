@@ -277,7 +277,7 @@ const AccountSetup = () => {
             <Typography variant='body2' className='mb-6 text-textSecondary text-center'>
               Esta información nos ayudará a personalizar CloudFly específicamente para tu empresa
             </Typography>
-            <FormCustomer onSuccess={handleCustomerSuccess} />
+            <FormCustomer onSuccess={handleCustomerSuccess} onBack={handleBack} />
           </Box>
         )
 
@@ -290,14 +290,14 @@ const AccountSetup = () => {
             <Typography variant='body2' className='mb-6 text-textSecondary text-center'>
               Conecta tu número de WhatsApp Business y personaliza tu asistente IA
             </Typography>
-            <WhatsAppConfigForm onSuccess={handleNext} mode="onboarding" />
+            <WhatsAppConfigForm onSuccess={handleNext} onBack={handleBack} mode="onboarding" />
           </Box>
         )
 
 
       case 3:
         return (
-          <ProductCreationStep onProductCreated={handleNext} />
+          <ProductCreationStep onProductCreated={handleNext} onBack={handleBack} />
         )
 
       default:
@@ -352,26 +352,25 @@ const AccountSetup = () => {
               </Box>
 
               {/* Navigation Buttons */}
-              <Box 
-                className='flex justify-between mt-8' 
-                sx={{ display: (activeStep === 0) ? 'flex' : 'none' }}
-              >
-                <Button
-                  disabled={activeStep === 0}
-                  onClick={handleBack}
-                  variant='outlined'
-                >
-                  Atrás
-                </Button>
-                <Button
-                  variant='contained'
-                  onClick={handleNext}
-                  size='large'
-                  className='min-w-[120px] next-wizard-step'
-                >
-                  {activeStep === steps.length - 1 ? 'Finalizar' : 'Continuar'}
-                </Button>
-              </Box>
+              {activeStep === 0 && (
+                <Box className='flex justify-between mt-8'>
+                  <Button
+                    disabled={activeStep === 0}
+                    onClick={handleBack}
+                    variant='outlined'
+                  >
+                    Atrás
+                  </Button>
+                  <Button
+                    variant='contained'
+                    onClick={handleNext}
+                    size='large'
+                    className='min-w-[120px] next-wizard-step'
+                  >
+                    {activeStep === steps.length - 1 ? 'Finalizar' : 'Continuar'}
+                  </Button>
+                </Box>
+              )}
             </>
           )}
         </CardContent>

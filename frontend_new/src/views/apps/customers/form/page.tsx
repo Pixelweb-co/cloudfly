@@ -35,6 +35,7 @@ const schema = yup.object().shape({
 
 interface FormCustomerProps {
     onSuccess?: (customerData: any) => void
+    onBack?: () => void
 }
 
 const BUSINESS_TYPES = [
@@ -52,7 +53,7 @@ const BUSINESS_TYPES = [
     { value: 'legal', label: '⚖️ Despacho Jurídico', model: 'Agendamiento' }
 ]
 
-const FormCustomer = ({ onSuccess }: FormCustomerProps) => {
+const FormCustomer = ({ onSuccess, onBack }: FormCustomerProps) => {
     const {
         control,
         handleSubmit,
@@ -309,7 +310,14 @@ return
                     />
                 </Grid>
             </Grid>
-            <Box sx={{ mt: 6, display: 'flex', justifyContent: 'flex-end' }}>
+            <Box sx={{ mt: 6, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                <Button
+                    variant='outlined'
+                    size='large'
+                    onClick={onBack}
+                >
+                    Atrás
+                </Button>
                 <Button
                     type='submit'
                     variant='contained'
@@ -317,7 +325,7 @@ return
                     disabled={loading}
                     startIcon={loading ? <i className='tabler-loader animate-spin' /> : null}
                 >
-                    {loading ? 'Procesando...' : 'Siguiente'}
+                    {loading ? 'Procesando...' : 'Continuar'}
                 </Button>
             </Box>
         </Box>
