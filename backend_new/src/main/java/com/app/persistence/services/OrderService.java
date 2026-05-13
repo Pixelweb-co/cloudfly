@@ -85,7 +85,11 @@ public class OrderService {
         })
                 .flatMap(savedOrder -> {
                     if (request.getItems() == null || request.getItems().isEmpty()) {
-                        return Mono.just(savedOrder).flatMap(o -> enrichWithItemsAndCustomer(o));
+                        return Mono.just(savedOrder).flatMap(o -> enrichWithItemsAndCustomer(o))
+                                .doOnSuccess(dto -> sendWebNotification(
+                                    dto.getTenantId(), dto.getCompanyId(), null,
+                                    "📦 Nuevo Pedido Creado",
+                                    "Pedido " + dto.getOrderNumber() + " de " + dto.getCustomerName() + " por $" + dto.getTotal()));
                     }
 
                     List<OrderItemEntity> items = request.getItems().stream()
