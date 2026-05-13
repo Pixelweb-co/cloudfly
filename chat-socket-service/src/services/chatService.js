@@ -581,29 +581,32 @@ class ChatService {
                     await evolutionClient.sendWhatsAppAudio(channel.instance_name, remoteJid, mediaUrl);
                     logger.info(`✅ [AI-RESPONSE] AudioMessage sent to WhatsApp for contact ${contactId}`);
                 } else {
-                    // Interceptar MediaMessage format (legacy / fallback)
                     let finalMediaUrl = mediaUrl;
                     let textContent = respuesta;
                     
-                    // Buscar [URL] o [texto](URL) o ![texto](URL) o URL pura en el texto
-                    if (!finalMediaUrl) {
-                        const imageExtensions = /\.(jpg|jpeg|png|webp|gif|bmp)(\?.*)?$/i;
-                        const mediaRegex = /!?\[.*?\]\((https?:\/\/[^\)]+)\)|\[(https?:\/\/[^\]]+)\]|(https?:\/\/[^\s\)]+\.(?:jpg|jpeg|png|webp|gif|bmp)(?:\?[^\s\)]+)?)/gi;
+                    const imageExtensions = /\.(jpg|jpeg|png|webp|gif|bmp)(?:\?.*)?$/i;
+                    const mediaRegex = /(!?\[.*?\]\((https?:\/\/[^\)]+)\)|\[(https?:\/\/[^\]]+)\]|(https?:\/\/[^\s\)]+\.(?:jpg|jpeg|png|webp|gif|bmp)(?:\?[^\s\)]+)?))/gi;
+                    
+                    const matches = [...respuesta.matchAll(mediaRegex)];
+                    for (const match of matches) {
+                        const fullMatch = match[1] || match[0];
+                        const markdownUrl = match[2];
+                        const bracketUrl = match[3];
+                        const rawUrl = match[4];
                         
-                        let match;
-                        while ((match = mediaRegex.exec(respuesta)) !== null) {
-                            const foundUrl = match[1] || match[2] || match[3];
-                            if (foundUrl) {
-                                finalMediaUrl = foundUrl;
-                                // No cortamos el loop porque queremos limpiar TODAS las URLs del texto, 
-                                // pero nos quedamos con la primera para el finalMediaUrl
-                            }
+                        const foundUrl = markdownUrl || bracketUrl || rawUrl;
+                        const isExplicitImage = fullMatch.startsWith('!');
+                        const hasImageExt = foundUrl && imageExtensions.test(foundUrl);
+
+                        if (foundUrl && (isExplicitImage || hasImageExt)) {
+                            if (!finalMediaUrl) finalMediaUrl = foundUrl;
+                            respuesta = respuesta.replace(fullMatch, '');
                         }
-                        
-                        if (finalMediaUrl) {
-                            textContent = respuesta.replace(mediaRegex, '').trim();
-                            textContent = textContent.replace(/\n\s*\n/g, '\n\n');
-                        }
+                    }
+                    
+                    if (finalMediaUrl) {
+                        textContent = respuesta.trim();
+                        textContent = textContent.replace(/\n\s*\n/g, '\n\n');
                     }
 
                     if (finalMediaUrl) {
