@@ -17,6 +17,7 @@ import logging
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
 import requests
+import httpx
 from openai import AsyncOpenAI, RateLimitError, APITimeoutError, APIConnectionError
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue
@@ -85,20 +86,21 @@ FORMATO DE PRODUCTO (Obligatorio):
 Si el producto tiene imagen, DEBES mostrarla así: [URL_DE_LA_IMAGEN]
 *Nombre del Producto* - Precio: $X.XXX
 
-REGLA DE ORO: Antes de usar 'create_order' o 'manage_calendar_event', DEBES:
-1. Validar que el Nombre y Email estén en el sistema (revisa el estado interno).
-2. Si falta algo o el usuario proporciona datos nuevos, usa 'manage_contact' (action: update) inmediatamente.
-3. Solicita confirmación explícita de los datos (ej: "¿Mantenemos el correo [email]?").
+REGLA DE ORO: Antes de usar 'create_order', 'book_appointment' o 'manage_calendar_event', DEBES:
+1. Validar si el contacto ya tiene Nombre y Email en su ficha. Si no, pídela.
+2. Para agendamientos de servicios (ej: Barbería), DEBES usar 'get_availability_slots' y 'book_appointment' (Módulo Agenda).
+3. Por seguridad, antes de MOSTRAR, REPROGRAMAR o CANCELAR una cita, solicita el Número de Identificación y usa 'search_contact_by_identification' para validar al cliente.
+4. Si el agendamiento es para un servicio, después de 'book_appointment', DEBES llamar a 'create_order' para registrar la venta.
+5. Para simples recordatorios (Llamar luego, etc.), usa 'manage_calendar_event'.
 
-NO intentes cerrar el trato sin tener estos datos validados y guardados en el CRM.
-
-Para la gestión de pedidos, utiliza 'create_order'. Asegúrate de haber confirmado los productos, cantidades y precios antes de llamar a esta herramienta.
-
-Para la gestión de citas o agendamientos, utiliza 'manage_calendar_event'. Antes de agendar, usa 'search_calendar_events' para revisar la disponibilidad general. Para consultar visitas previas del contacto, usa 'filter_by_contact': true. Las citas duran 30 min por defecto con recordatorio de 5 min.
+Para la gestión de citas o agendamientos:
+- Si es un SERVICIO: ofrece disponibilidad con 'get_availability_slots' y reserva con 'book_appointment'. 
+- Las citas duran 30 min por defecto.
+- Siempre confirma los datos finales antes de ejecutar la reserva dual (Cita + Pedido).
 
 REGLA DE TIPO DE ITEM: Cuando busques productos, revisa el campo 'product_type' del resultado:
 - Si product_type es 'PRODUCT': ofrece crear un PEDIDO con 'create_order'.
-- Si product_type es 'SERVICE': ofrece AGENDAR UNA CITA con 'manage_calendar_event'.
+- Si product_type es 'SERVICE': ofrece AGENDAR UNA CITA con 'book_appointment'.
 Si el campo no existe o está vacío, trátalo como PRODUCT por defecto.
 
 REGLA ESTRICTA: Es TU responsabilidad cerrar el trato o agendar las citas necesarias. JAMÁS delegues esta tarea a un humano a menos que sea estrictamente necesario mediante 'transfer_to_human'."""
@@ -358,52 +360,66 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "get_availability_slots",
+            "description": "Busca espacios libres en la agenda para una fecha específica.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "start_date": {"type": "string", "description": "Fecha inicio ISO (YYYY-MM-DD)"},
+                    "end_date": {"type": "string", "description": "Fecha fin ISO (YYYY-MM-DD)"}
+                },
+                "required": ["start_date"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_contact_by_identification",
+            "description": "Busca un contacto usando su número de identificación (cédula/DNI). Úsalo para validar identidad antes de gestionar citas.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "identification": {"type": "string", "description": "Número de documento"}
+                },
+                "required": ["identification"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "book_appointment",
+            "description": "Reserva una cita real en el módulo de agenda vinculada a un producto tipo servicio.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "slot_id": {"type": "integer", "description": "ID del slot de disponibilidad elegido"},
+                    "title": {"type": "string", "description": "Título de la cita (ej: Corte de Cabello)"},
+                    "observations": {"type": "string", "description": "Notas adicionales"}
+                },
+                "required": ["slot_id", "title"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "manage_calendar_event",
-            "description": "Crea o actualiza un evento en el Calendario IA. Llama a esto SOLO después de haber solicitado y confirmado el Nombre y Email del cliente para actualizar su ficha.",
+            "description": "Gestiona eventos tipo RECORDATORIO o NOTIFICACIÓN en el calendario general. NO usar para citas de servicio con agenda.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "action": {"type": "string", "enum": ["create", "update"]},
-                    "event_id": {"type": "integer", "description": "Requerido para update."},
-                    "title": {"type": "string", "description": "Título creativo basado en el motivo."},
-                    "description": {"type": "string"},
-                    "start_time": {"type": "string", "description": "ISO 8601 (ej: 2024-04-28T15:00:00)"},
-                    "email": {"type": "string", "description": "Email del contacto para confirmación."},
-                },
-                "required": ["action", "title", "start_time"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "search_calendar_events",
-            "description": "Busca eventos existentes en un rango de fechas para verificar disponibilidad.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "start_time": {"type": "string", "description": "Inicio del rango ISO 8601 (ej: 2024-04-28T00:00:00)"},
-                    "end_time": {"type": "string", "description": "Fin del rango ISO 8601 (ej: 2024-04-30T23:59:59)"},
-                    "filter_by_contact": {"type": "boolean", "description": "Si es true, solo busca eventos del contacto actual."}
-                },
-                "required": ["start_time", "end_time"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "delete_calendar_event",
-            "description": "Elimina o cancela una cita del calendario.",
-            "parameters": {
-                "type": "object",
-                "properties": {
+                    "action": {"type": "string", "enum": ["create", "update", "cancel"]},
                     "event_id": {"type": "integer"},
+                    "title": {"type": "string"},
+                    "start_time": {"type": "string", "description": "ISO 8601"},
+                    "description": {"type": "string"},
                 },
-                "required": ["event_id"],
-            },
-        },
-    },
+                "required": ["action"]
+            }
+        }
+    }
 ]
 
 
@@ -457,10 +473,10 @@ class AIService:
         if any(k in msg for k in order_intent):
             essential += ["create_order", "create_quote", "check_products_stock"]
             
-        # Herramientas de calendario
-        calendar_intent = ["cita", "agenda", "visita", "reprogramar", "horario", "disponibilidad"]
+        # Herramientas de calendario y agenda
+        calendar_intent = ["cita", "agenda", "visita", "reprogramar", "horario", "disponibilidad", "slot", "cedula", "identificacion", "dni", "cancelar"]
         if any(k in msg for k in calendar_intent):
-            essential += ["manage_calendar_event", "search_calendar_events", "delete_calendar_event"]
+            essential += ["manage_calendar_event", "get_availability_slots", "book_appointment", "search_contact_by_identification"]
 
         # Si el mensaje es muy corto, limitamos para ahorrar tokens
         if len(msg) < 15:
@@ -496,6 +512,7 @@ class AIService:
         function_args: Dict[str, Any],
         tenant_id: int,
         contact_id: int,
+        company_id: Optional[int] = None,
         message_id: str = "unknown",
     ) -> str:
         """Dispatch a tool call to its implementation. Returns a JSON string."""
@@ -544,6 +561,27 @@ class AIService:
                 )
             elif function_name == "convert_quote_to_order":
                 return await self._convert_quote_to_order(function_args["quote_id"], tenant_id)
+            elif function_name == "get_availability_slots":
+                resolved_company_id = company_id or 1
+                return await self._get_availability_slots(
+                    function_args.get("start_date"),
+                    function_args.get("end_date"),
+                    tenant_id, resolved_company_id
+                )
+            elif function_name == "search_contact_by_identification":
+                resolved_company_id = company_id or 1
+                return await self._search_contact_by_identification(
+                    function_args.get("identification"),
+                    tenant_id, resolved_company_id
+                )
+            elif function_name == "book_appointment":
+                resolved_company_id = company_id or 1
+                return await self._book_appointment(
+                    function_args.get("slot_id"),
+                    function_args.get("title"),
+                    function_args.get("observations", ""),
+                    tenant_id, resolved_company_id, contact_id
+                )
             elif function_name == "manage_calendar_event":
                 return await self._manage_calendar_event(function_args, tenant_id, contact_id)
             elif function_name == "search_calendar_events":
@@ -670,7 +708,7 @@ class AIService:
                 fn_name = tool_call.function.name
                 fn_args = json.loads(tool_call.function.arguments)
 
-                tool_result = await self._execute_tool(fn_name, fn_args, tenant_id, contact_id, conversation_id)
+                tool_result = await self._execute_tool(fn_name, fn_args, tenant_id, contact_id, company_id=company_id, message_id=conversation_id)
                 tool_data = json.loads(tool_result)
 
                 # Capture pipeline update intent (executed async by orchestrator)
@@ -838,6 +876,7 @@ class AIService:
         return json.dumps(contact)
 
     async def _manage_contact(self, args: Dict[str, Any], tenant_id: int) -> str:
+        args = dict(args)  # Avoid mutating the original dict
         action = args.pop("action")
         
         # Ensure company_id is present if not provided (Default to principal company)
@@ -1058,6 +1097,61 @@ class AIService:
         except Exception as exc:
             logger.error("Quote conversion failed", extra={"error": str(exc)})
             return json.dumps({"error": str(exc)})
+
+    async def _get_availability_slots(self, start_date: str, end_date: str = None, tenant_id: int = 1, company_id: int = 1) -> str:
+        if not end_date:
+            end_date = start_date
+        
+        try:
+            url = f"http://scheduler-service:8080/api/availability/slots"
+            params = {
+                "tenantId": tenant_id,
+                "companyId": company_id,
+                "start": f"{start_date}T00:00:00",
+                "end": f"{end_date}T23:59:59"
+            }
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(url, params=params, timeout=10.0)
+                if resp.status_code == 200:
+                    slots = resp.json()
+                    # Solo devolver slots disponibles para ahorrar tokens
+                    available = [s for s in slots if s.get("status") == "AVAILABLE"]
+                    return json.dumps(available[:15]) # Limitar a 15 para no saturar contexto
+                return json.dumps({"error": f"API Error: {resp.status_code}"})
+        except Exception as e:
+            return json.dumps({"error": str(e)})
+
+    async def _search_contact_by_identification(self, identification: str, tenant_id: int, company_id: int) -> str:
+        try:
+            url = f"{config.java_api_url}/api/v1/contacts/search"
+            headers = {"x-tenant-id": str(tenant_id), "x-company-id": str(company_id)}
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(url, params={"q": identification}, headers=headers, timeout=10.0)
+                if resp.status_code == 200:
+                    return json.dumps(resp.json())
+                return json.dumps({"error": "No se encontró el contacto"})
+        except Exception as e:
+            return json.dumps({"error": str(e)})
+
+    async def _book_appointment(self, slot_id: int, title: str, observations: str = "", tenant_id: int = 1, company_id: int = 1, contact_id: int = 0) -> str:
+        try:
+            url = f"http://scheduler-service:8080/api/appointments"
+            payload = {
+                "tenantId": tenant_id,
+                "companyId": company_id,
+                "contactId": contact_id,
+                "slotId": slot_id,
+                "title": title,
+                "observations": observations,
+                "status": "RESERVED"
+            }
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(url, json=payload, timeout=10.0)
+                if resp.status_code == 200:
+                    return json.dumps({"status": "success", "data": resp.json()})
+                return json.dumps({"error": f"API Error: {resp.status_code}"})
+        except Exception as e:
+            return json.dumps({"error": str(e)})
 
     async def _manage_calendar_event(self, args: Dict[str, Any], tenant_id: int, contact_id: int) -> str:
         action = args.pop("action")

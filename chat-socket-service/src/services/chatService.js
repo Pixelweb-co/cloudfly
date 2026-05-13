@@ -457,7 +457,7 @@ class ChatService {
             const [result] = await db.execute(
                 `INSERT INTO omni_channel_messages 
                 (tenant_id, company_id, channel_id, contact_id, direction, content, status, created_at) 
-                VALUES (?, ?, ?, ?, ?, 'OUTBOUND', ?, NOW())`,
+                VALUES (?, ?, ?, ?, 'OUTBOUND', ?, 'SENT', NOW())`,
                 [tenantId, companyId, channelId, contactId, body]
             );
 
@@ -495,9 +495,9 @@ class ChatService {
                 `SELECT m.*, c.name as contact_name, c.phone as contact_phone
                 FROM omni_channel_messages m
                 LEFT JOIN contacts c ON m.contact_id = c.id
-                WHERE m.tenant_id = ? AND m.company_id = ? AND m.contact_id = ?
+                WHERE m.tenant_id = ? AND m.contact_id = ?
                 ORDER BY m.created_at DESC LIMIT ${safeLimit}`,
-                [tenantId, companyId, contactId]
+                [tenantId, contactId]
             );
             return messages.reverse();
         } catch (error) {
@@ -509,7 +509,7 @@ class ChatService {
     /**
      * Obtener contactos que tienen mensajes (conversaciones activas)
      */
-    async getContactsWithMessages(tenantId) {
+    async getContactsWithMessages(tenantId, companyId) {
         try {
             const [contacts] = await db.execute(
                 `SELECT c.*, 
