@@ -32,7 +32,7 @@ class TokenTracker:
         self.completion_price = getattr(config, 'COMPLETION_TOKEN_PRICE', 0.00001)
         self.model = getattr(config, 'OPENAI_MODEL', 'gpt-4o-mini')
 
-    def track(self, usage, label: str, tenant_id: int, conversation_id: str):
+    def track(self, usage, label: str, tenant_id: int, conversation_id: str, contact_id: int = None):
         """Calcula costo, loguea y persiste el uso de tokens."""
         try:
             prompt = usage.prompt_tokens
@@ -52,12 +52,11 @@ class TokenTracker:
             except Exception as e:
                 logger.warning(f"[TOKENS] Redis update failed (non-critical): {e}")
 
-            # Persist to MySQL for specific labels
-            if label in ("TOTAL_TURNO", "LLAMADA_DIRECTA"):
-                try:
-                    self._persist_mysql(tenant_id, conversation_id, label, prompt, completion, total, cost)
-                except Exception as e:
-                    logger.warning(f"[TOKENS] MySQL persist failed (non-critical): {e}")
+            # Persist to MySQL for tracking
+            try:
+                self._persist_mysql(tenant_id, contact_id, conversation_id, label, prompt, completion, total, cost)
+            except Exception as e:
+                logger.warning(f"[TOKENS] MySQL persist failed (non-critical): {e}")
                     
         except Exception as e:
             logger.error(f"[TOKENS] Critical error in tracker: {e}")
@@ -90,7 +89,7 @@ class TokenTracker:
             
         pipe.execute()
 
-    def _persist_mysql(self, tenant_id, conversation_id, label, prompt, completion, total, cost):
+    def _persist_mysql(self, tenant_id, contact_id, conversation_id, label, prompt, completion, total, cost):
         conn = None
         try:
             conn = mysql.connector.connect(
@@ -102,10 +101,10 @@ class TokenTracker:
             cursor = conn.cursor()
             query = """
                 INSERT INTO token_usage_log 
-                (tenant_id, conversation_id, label, prompt_tokens, completion_tokens, total_tokens, cost_usd, model) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                (tenant_id, contact_id, conversation_id, label, prompt_tokens, completion_tokens, total_tokens, cost_usd, model) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
-            cursor.execute(query, (tenant_id, conversation_id, label, prompt, completion, total, cost, self.model))
+            cursor.execute(query, (tenant_id, contact_id, conversation_id, label, prompt, completion, total, cost, self.model))
             conn.commit()
         finally:
             if conn:
