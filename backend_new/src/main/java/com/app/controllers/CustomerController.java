@@ -221,6 +221,23 @@ public class CustomerController {
         return tenantService.deleteTenantFull(id)
                 .then(Mono.just(ResponseEntity.noContent().<Void>build()));
     }
+    
+    @DeleteMapping("/purge-all-except-master")
+    @PreAuthorize("hasRole('MANAGER')")
+    public Mono<ResponseEntity<String>> purgeAllExceptMaster() {
+        log.info("💣 [PURGE] Request to delete all tenants except master (ID 1)");
+        return tenantRepository.findAll()
+                .filter(tenant -> tenant.getId() != 1L)
+                .flatMap(tenant -> {
+                    log.info("   - Purging tenant: {} ({})", tenant.getName(), tenant.getId());
+                    return tenantService.deleteTenantFull(tenant.getId())
+                            .onErrorResume(e -> {
+                                log.error("      ❌ Failed to purge tenant {}: {}", tenant.getId(), e.getMessage());
+                                return Mono.empty();
+                            });
+                })
+                .then(Mono.just(ResponseEntity.ok("Purge completed. All tenants except ID 1 have been removed.")));
+    }
 
     private Mono<Void> createDefaultCategory(Long tenantId) {
         Category defaultCategory = Category.builder()
