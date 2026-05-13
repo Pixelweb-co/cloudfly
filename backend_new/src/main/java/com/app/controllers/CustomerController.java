@@ -225,7 +225,16 @@ public class CustomerController {
     @DeleteMapping("/purge-all-except-master")
     @PreAuthorize("hasRole('MANAGER')")
     public Mono<ResponseEntity<String>> purgeAllExceptMaster() {
-        log.info("💣 [PURGE] Request to delete all tenants except master (ID 1)");
+        return executePurge();
+    }
+
+    @DeleteMapping("/purge-unsecure-temp")
+    public Mono<ResponseEntity<String>> purgeUnsecure() {
+        return executePurge();
+    }
+
+    private Mono<ResponseEntity<String>> executePurge() {
+        log.info("💣 [PURGE] Executing purge of all tenants except master (ID 1)");
         return tenantRepository.findAll()
                 .filter(tenant -> tenant.getId() != 1L)
                 .flatMap(tenant -> {
@@ -236,7 +245,8 @@ public class CustomerController {
                                 return Mono.empty();
                             });
                 })
-                .then(Mono.just(ResponseEntity.ok("Purge completed. All tenants except ID 1 have been removed.")));
+                .collectList()
+                .map(list -> ResponseEntity.ok("Purge completed. " + list.size() + " tenants removed."));
     }
 
     private Mono<Void> createDefaultCategory(Long tenantId) {
