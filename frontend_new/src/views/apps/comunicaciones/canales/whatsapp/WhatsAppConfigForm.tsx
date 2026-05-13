@@ -7,10 +7,11 @@ import { userMethods } from '@/utils/userMethods'
 
 interface Props {
   onSuccess: () => void
+  onBack?: () => void
   mode?: string
 }
 
-const WhatsAppConfigForm = ({ onSuccess }: Props) => {
+const WhatsAppConfigForm = ({ onSuccess, onBack }: Props) => {
   const [loading, setLoading] = useState(false)
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'generating' | 'waiting' | 'connected' | 'error'>('idle')
@@ -104,14 +105,23 @@ const WhatsAppConfigForm = ({ onSuccess }: Props) => {
           <Typography variant="body1" sx={{ mb: 6, color: 'text.secondary' }}>
             Para que tu Chatbot IA pueda responder por ti, necesitamos vincular tu número de WhatsApp.
           </Typography>
-          <Button 
-            variant="contained" 
-            size="large" 
-            onClick={handleStartConnection}
-            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <i className='tabler-brand-whatsapp' />}
-          >
-            Generar Código QR
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+            <Button 
+              variant="outlined" 
+              size="large" 
+              onClick={onBack}
+            >
+              Atrás
+            </Button>
+            <Button 
+              variant="contained" 
+              size="large" 
+              onClick={handleStartConnection}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <i className='tabler-brand-whatsapp' />}
+            >
+              Generar Código QR
+            </Button>
+          </Box>
           <Box sx={{ mt: 4 }}>
             <Button 
                 variant="text" 
