@@ -32,7 +32,7 @@ class TokenTracker:
         self.completion_price = getattr(config, 'COMPLETION_TOKEN_PRICE', 0.00001)
         self.model = getattr(config, 'OPENAI_MODEL', 'gpt-4o-mini')
 
-    def track(self, usage, label: str, tenant_id: int, conversation_id: str, contact_id: int = None):
+    def track(self, usage, label: str, tenant_id: int, conversation_id: str, contact_id: int = None, model_name: str = None):
         """Calcula costo, loguea y persiste el uso de tokens."""
         try:
             prompt = usage.prompt_tokens
@@ -54,7 +54,7 @@ class TokenTracker:
 
             # Persist to MySQL for tracking
             try:
-                self._persist_mysql(tenant_id, contact_id, conversation_id, label, prompt, completion, total, cost)
+                self._persist_mysql(tenant_id, contact_id, conversation_id, label, prompt, completion, total, cost, model_name or self.model)
             except Exception as e:
                 logger.warning(f"[TOKENS] MySQL persist failed (non-critical): {e}")
                     
@@ -89,7 +89,7 @@ class TokenTracker:
             
         pipe.execute()
 
-    def _persist_mysql(self, tenant_id, contact_id, conversation_id, label, prompt, completion, total, cost):
+    def _persist_mysql(self, tenant_id, contact_id, conversation_id, label, prompt, completion, total, cost, model_name):
         conn = None
         try:
             conn = mysql.connector.connect(
@@ -104,7 +104,7 @@ class TokenTracker:
                 (tenant_id, contact_id, conversation_id, label, prompt_tokens, completion_tokens, total_tokens, cost_usd, model) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
-            cursor.execute(query, (tenant_id, contact_id, conversation_id, label, prompt, completion, total, cost, self.model))
+            cursor.execute(query, (tenant_id, contact_id, conversation_id, label, prompt, completion, total, cost, model_name))
             conn.commit()
         finally:
             if conn:
