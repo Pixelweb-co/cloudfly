@@ -32,22 +32,32 @@ class ChatService {
             return;
         }
 
-        const data = payload.data;
+        let data = payload.data;
+        // Evolution API can send data as an object or an array
+        if (Array.isArray(data)) {
+            data = data[0];
+        }
+
+        if (!data || !data.key) {
+            logger.warn(`⚠️ [WEBHOOK_DATA] No data or key found in payload: ${JSON.stringify(payload)}`);
+            return;
+        }
+
         const message = data.message;
         
         // Extract remoteJid (conversationId) and messageId
         let remoteJid = data.key.remoteJid;
-        const pushName = data.pushName;
+        const pushName = data.pushName || 'Unknown';
         const messageId = data.key.id;
 
         // 0. FILTER: No groups, No status, No echoes (fromMe)
         if (data.key.fromMe) {
-            logger.debug(`[WEBHOOK_SKIP] Message is an echo (fromMe=true). Ignoring.`);
+            logger.info(`ℹ️ [WEBHOOK_SKIP] Message is an echo (fromMe=true) from ${remoteJid}. Ignoring.`);
             return;
         }
 
         if (remoteJid && remoteJid.endsWith('@g.us')) {
-            logger.debug(`[WEBHOOK_SKIP] Group message detected (${remoteJid}). Ignoring as per user request.`);
+            logger.info(`ℹ️ [WEBHOOK_SKIP] Group message detected (${remoteJid}). Ignoring.`);
             return;
         }
 
@@ -55,6 +65,8 @@ class ChatService {
         if (remoteJid === 'status@broadcast') {
             return;
         }
+
+        logger.info(`📥 [WEBHOOK_PROCEED] Processing message ${messageId} from ${remoteJid}`);
 
         // Extract body and media
         let body = '';
