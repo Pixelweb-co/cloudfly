@@ -5,6 +5,7 @@ import com.app.dto.AuthResponse;
 import com.app.dto.LoginRequest;
 import com.app.dto.AvailabilityResponse;
 import com.app.persistence.services.UserService;
+import com.app.persistence.repository.RoleRepository;
 import com.app.util.JwtProvider;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -33,13 +34,16 @@ public class AuthController {
         private final ReactiveAuthenticationManager authenticationManager;
         private final JwtProvider jwtProvider;
         private final UserService userService;
+        private final RoleRepository roleRepository;
 
         public AuthController(ReactiveAuthenticationManager authenticationManager, 
                               JwtProvider jwtProvider, 
-                              UserService userService) {
+                              UserService userService,
+                              RoleRepository roleRepository) {
                 this.authenticationManager = authenticationManager;
                 this.jwtProvider = jwtProvider;
                 this.userService = userService;
+                this.roleRepository = roleRepository;
         }
 
         public static class RecoveryRequest {
@@ -235,26 +239,32 @@ public class AuthController {
                         ));
                 }
                 
-                return ReactiveSecurityContextHolder.getContext()
-                        .map(SecurityContext::getAuthentication)
-                        .flatMap(auth -> userService.completeOnboarding(userId)
-                                .flatMap(user -> userService.convertToDto(user))
-                                .map(userDto -> {
-                                        String token = jwtProvider.createToken(auth, userDto.getCustomerId(), userDto.getActiveCompanyId());
-                                        return org.springframework.http.ResponseEntity.ok(
-                                                AuthResponse.builder()
-                                                        .status(true)
-                                                        .message("Onboarding completado exitosamente.")
-                                                        .jwt(token)
-                                                        .user(userDto)
-                                                        .build()
-                                        );
+                return userService.completeOnboarding(userId)
+                        .flatMap(user -> roleRepository.findRolesByUserId(user.getId())
+                                .map(role -> "ROLE_" + role.getName())
+                                .collectList()
+                                .defaultIfEmpty(List.of("ROLE_USER"))
+                                .flatMap(roles -> {
+                                        String authorities = String.join(",", roles);
+                                        return userService.convertToDto(user)
+                                                .map(userDto -> {
+                                                        String token = jwtProvider.createToken(user.getUsername(), authorities, userDto.getCustomerId(), userDto.getActiveCompanyId());
+                                                        log.info("✅ [AUTH-CONTROLLER] Onboarding completed for user: {}. Authorities: {}. New token generated.", user.getUsername(), authorities);
+                                                        return org.springframework.http.ResponseEntity.ok(
+                                                                AuthResponse.builder()
+                                                                        .status(true)
+                                                                        .message("Onboarding completado exitosamente.")
+                                                                        .jwt(token)
+                                                                        .user(userDto)
+                                                                        .build()
+                                                        );
+                                                });
                                 }))
-                                .onErrorResume(e -> {
-                                        log.error("❌ [AUTH-CONTROLLER] Error completing onboarding: {}", e.getMessage());
-                                        return Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                                                AuthResponse.builder().status(false).message("Error: " + e.getMessage()).build()
-                                        ));
-                                });
+                        .onErrorResume(e -> {
+                                log.error("❌ [AUTH-CONTROLLER] Error completing onboarding: {}", e.getMessage());
+                                return Mono.just(org.springframework.http.ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                                        AuthResponse.builder().status(false).message("Error: " + e.getMessage()).build()
+                                ));
+                        });
         }
 }
