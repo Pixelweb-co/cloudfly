@@ -38,7 +38,16 @@ class TokenTracker:
             prompt = usage.prompt_tokens
             completion = usage.completion_tokens
             total = usage.total_tokens
-            cost = (prompt * self.prompt_price) + (completion * self.completion_price)
+            # Tiered pricing based on model
+            p_price = self.prompt_price
+            c_price = self.completion_price
+            
+            # gpt-4o-mini rates (~16x cheaper than 4o)
+            if model_name and "mini" in model_name.lower():
+                p_price = 0.00000015 # $0.15 / 1M
+                c_price = 0.00000060 # $0.60 / 1M
+            
+            cost = (prompt * p_price) + (completion * c_price)
             
             logger.info(
                 f"[TOKENS] {label} | tenant={tenant_id} conv={conversation_id} | "
