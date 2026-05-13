@@ -31,8 +31,14 @@ from tenacity import (
 from application.config import config
 from domain.models import ChatMessage, ContactPipelineState, TokenUsage
 from domain.exceptions import RetryableError, NonRetryableError
+from token_tracker import TokenTracker
 
 logger = logging.getLogger(__name__)
+
+# Constants for optimization
+MAX_HISTORY = 6
+PROMPT_TOKEN_PRICE = getattr(config, 'prompt_token_price', 0.0000025)
+COMPLETION_TOKEN_PRICE = getattr(config, 'completion_token_price', 0.00001)
 
 # Transient OpenAI errors that are worth retrying
 _OPENAI_RETRYABLE = (RateLimitError, APITimeoutError, APIConnectionError)
@@ -394,6 +400,7 @@ class AIService:
         self._openai = AsyncOpenAI(api_key=config.openai_api_key)
         self._db = db
         self._qdrant = qdrant
+        self.tracker = TokenTracker()
 
     # ── OpenAI Call (with retries) ─────────────────────────────────────────
 
@@ -404,14 +411,65 @@ class AIService:
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
-    async def _call_openai_dynamic(self, messages: List[Dict], tools: Optional[List[Dict]], temperature: float) -> Any:
+    async def _call_openai_dynamic(self, messages: List[Dict], tools: Optional[List[Dict]], temperature: float, model: Optional[str] = None) -> Any:
         return await self._openai.chat.completions.create(
-            model=config.openai_model,
+            model=model or config.openai_model,
             messages=messages,
             tools=tools if tools else None,
             temperature=temperature,
             timeout=config.openai_timeout_seconds,
         )
+
+    def _select_model(self, message: str) -> str:
+        """Enruta mensajes simples a modelos más económicos."""
+        simple_keywords = ["hola", "buen día", "gracias", "ok", "vale", "chao", "adiós", "quien eres"]
+        msg = message.lower()
+        if len(msg) < 30 and any(k in msg for k in simple_keywords):
+            return "gpt-4o-mini"
+        return config.openai_model
+
+    def _get_tools_for_context(self, message: str, history: List[ChatMessage]) -> Optional[List[Dict]]:
+        """Filtra herramientas dinámicamente para reducir tokens de sistema."""
+        msg = message.lower()
+        
+        # Herramientas base (siempre útiles)
+        essential = ["search_products_semantically", "manage_contact"]
+        
+        # Herramientas de orden/cotización
+        order_intent = ["comprar", "pedido", "orden", "cotizar", "cotizacion", "precio", "cuanto", "vale"]
+        if any(k in msg for k in order_intent):
+            essential += ["create_order", "create_quote", "check_products_stock"]
+            
+        # Herramientas de calendario
+        calendar_intent = ["cita", "agenda", "visita", "reprogramar", "horario", "disponibilidad"]
+        if any(k in msg for k in calendar_intent):
+            essential += ["manage_calendar_event", "search_calendar_events", "delete_calendar_event"]
+
+        # Si el mensaje es muy corto, limitamos para ahorrar tokens
+        if len(msg) < 15:
+            return [t for t in TOOLS if t["function"]["name"] in essential]
+            
+        return TOOLS
+
+    def _compress_history(self, history: List[ChatMessage]) -> List[ChatMessage]:
+        """Comprime el historial para mantener el contexto sin exceder límites de tokens."""
+        if len(history) <= 4:
+            return history
+        
+        recent = history[-4:]
+        old = history[:-4]
+        
+        summary_parts = []
+        for h in old:
+            role = "U" if h.role == "user" else "A"
+            content = h.content or ""
+            if content:
+                summary_parts.append(f"{role}:{content[:50]}..")
+        
+        summary_content = f"[CONTEXTO PREVIO: {' | '.join(summary_parts)}]"
+        summary_msg = ChatMessage(role="system", content=summary_content)
+        
+        return [summary_msg] + recent
 
     # ── Tool Dispatcher ───────────────────────────────────────────────────
 
@@ -516,26 +574,30 @@ class AIService:
         except Exception as e:
             logger.warning(f"Could not fetch pipeline data: {e}", extra=log_ctx)
 
-        # 2. Classify Mode and Set Dynamic Parameters
+        # 2.1 Truncar y Comprimir Historial
+        history = history[-MAX_HISTORY:] if len(history) > MAX_HISTORY else history
+        history = self._compress_history(history)
+
+        # 2.2 Classify Mode and Set Dynamic Parameters
         mode = classify_mode_by_pipeline(pipeline_data, message)
         logger.info(f"AI Mode: {mode}", extra=log_ctx)
 
         if mode == "EXPLORE":
             system_prompt = PROMPT_EXPLORE.format(company_info=company_info_str)
             temp = 0.7
-            active_tools = TOOLS
+            active_tools = self._get_tools_for_context(message, history)
         elif mode == "INTENT":
             pipeline_context = json.dumps(pipeline_data, indent=2)
             logger.info(f"Pipeline Context for LLM (INTENT): {pipeline_context}", extra=log_ctx)
             system_prompt = PROMPT_INTENT.format(company_info=company_info_str, pipeline_context=pipeline_context)
             temp = 0.5
-            active_tools = TOOLS
+            active_tools = self._get_tools_for_context(message, history)
         else: # CLOSING
             pipeline_context = json.dumps(pipeline_data, indent=2)
             logger.info(f"Pipeline Context for LLM: {pipeline_context}", extra=log_ctx)
             system_prompt = PROMPT_CLOSING.format(company_info=company_info_str, pipeline_context=pipeline_context)
             temp = 0.3
-            active_tools = TOOLS
+            active_tools = TOOLS # En cierre, permitir todas las herramientas por seguridad
             
         # Append current datetime to system prompt
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -551,10 +613,15 @@ class AIService:
         usage = TokenUsage()
         final_text = ""
 
+        selected_model = self._select_model(message)
+
         # Loop to handle sequential tool calls (max 5 iterations)
-        for _ in range(5):
+        for i in range(5):
             try:
-                response = await self._call_openai_dynamic(messages, active_tools, temp)
+                # Usar modelo económico si es la primera llamada y es simple. 
+                # Escalar a modelo potente si hay herramientas involucradas.
+                current_model = selected_model if i == 0 else config.openai_model
+                response = await self._call_openai_dynamic(messages, active_tools, temp, model=current_model)
             except _OPENAI_RETRYABLE as exc:
                 raise RetryableError(f"OpenAI transient error: {exc}") from exc
             except Exception as exc:
@@ -562,6 +629,9 @@ class AIService:
 
             # Track token usage
             if response.usage:
+                label = "PRIMERA_LLAMADA" if i == 0 else f"LLAMADA_{i+1}"
+                self.tracker.track(response.usage, label, tenant_id, conversation_id, contact_id=contact_id)
+                
                 usage.prompt_tokens += response.usage.prompt_tokens
                 usage.completion_tokens += response.usage.completion_tokens
                 usage.total_tokens += response.usage.total_tokens
@@ -572,6 +642,10 @@ class AIService:
             if not response_message.tool_calls:
                 # No more tools to call, we have a final text response
                 final_text = response_message.content or ""
+                if i == 0:
+                    self.tracker.track(usage, "LLAMADA_DIRECTA", tenant_id, conversation_id, contact_id=contact_id)
+                else:
+                    self.tracker.track(usage, "TOTAL_TURNO", tenant_id, conversation_id, contact_id=contact_id)
                 break
 
             # Handle tool calls
