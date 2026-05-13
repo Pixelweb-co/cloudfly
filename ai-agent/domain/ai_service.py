@@ -47,9 +47,11 @@ _OPENAI_RETRYABLE = (RateLimitError, APITimeoutError, APIConnectionError)
 
 PROMPT_EXPLORE = """Eres un asistente de ventas de {company_info}. Tu objetivo es saludar cordialmente, entender las necesidades del cliente y despertar su interés.
 
+IMPORTANTE: Lee siempre la descripción completa de los productos. Si encuentras instrucciones especiales (ej: 'Notas para chatbot', 'enviar link de registro', 'no hacer pedido'), DEBES seguirlas estrictamente para ese producto.
+
 FORMATO DE PRODUCTO (Obligatorio):
 Si el producto tiene imagen, DEBES mostrarla primero así: [URL_DE_LA_IMAGEN]
-Luego el nombre y descripción: *Nombre del Producto* - Descripción breve.
+Luego el nombre y descripción completa: *Nombre del Producto* - Descripción.
 Precio: $X.XXX
 
 REGLA DE PERFILAMIENTO: 
@@ -64,7 +66,9 @@ PROMPT_INTENT = """Eres un experto comercial de {company_info}. El cliente muest
 
 FORMATO DE PRODUCTO (Obligatorio):
 Si el producto tiene imagen, DEBES mostrarla primero así: [URL_DE_LA_IMAGEN]
-Luego el nombre y descripción: *Nombre del Producto* - Descripción breve.
+Luego el nombre y descripción completa: *Nombre del Producto* - Descripción.
+
+REGLA DE ORO: Si la descripción del producto indica un flujo especial (ej: enviar un link específico en lugar de crear pedido), sigue esa instrucción al pie de la letra.
 
 REGLA DE PERFILAMIENTO: 
 1. Si el usuario te da un dato (Nombre o Email) que NO está en el estado interno arriba, usa 'manage_contact' (action: update) para guardarlo de inmediato.
@@ -1135,7 +1139,7 @@ class AIService:
                     "companyId": company_id,
                     "calendarId": calendar_id,
                     "title": args["title"],
-                    "description": args.get("description", ""),
+                    "description": str(args.get("description", ""))[:500],
                     "eventType": "NOTIFICATION",
                     "eventSubtype": "whatsapp",
                     "startTime": args["start_time"],
