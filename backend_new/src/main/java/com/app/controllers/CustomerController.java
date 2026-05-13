@@ -13,6 +13,8 @@ import com.app.persistence.repository.ChannelConfigRepository;
 import com.app.persistence.entity.ChannelConfig;
 import com.app.persistence.entity.ChannelType;
 import com.app.persistence.services.ChannelConfigService;
+import com.app.persistence.services.TenantService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -45,6 +47,8 @@ public class CustomerController {
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final com.app.persistence.services.OnboardingDefaultsService onboardingDefaultsService;
+    private final TenantService tenantService;
+
 
     @GetMapping
     public Flux<CustomerDto> getAllCustomers() {
@@ -208,6 +212,14 @@ public class CustomerController {
                 })
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}/full")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN', 'SUPERADMIN')")
+    public Mono<ResponseEntity<Void>> deleteTenantFull(@PathVariable Long id) {
+        log.info("🗑️ [DELETE-TENANT] Request to purge tenant: {}", id);
+        return tenantService.deleteTenantFull(id)
+                .then(Mono.just(ResponseEntity.noContent().<Void>build()));
     }
 
     private Mono<Void> createDefaultCategory(Long tenantId) {
