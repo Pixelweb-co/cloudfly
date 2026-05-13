@@ -30,12 +30,16 @@ public class JwtProvider {
 
     public String createToken(Authentication authentication, Long customerId, Long companyId) {
         log.info("🔑 Creating token for user: {}, customerId: {}, companyId: {}", authentication.getName(), customerId, companyId);
-        Algorithm algorithm = Algorithm.HMAC256(secretKey);
-
         String username = authentication.getName();
         String authorities = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
+        return createToken(username, authorities, customerId, companyId);
+    }
+
+    public String createToken(String username, String authorities, Long customerId, Long companyId) {
+        log.info("🔑 Creating token for user: {}, customerId: {}, companyId: {}", username, customerId, companyId);
+        Algorithm algorithm = Algorithm.HMAC256(secretKey);
 
         return JWT.create()
                 .withIssuer(issuer)
