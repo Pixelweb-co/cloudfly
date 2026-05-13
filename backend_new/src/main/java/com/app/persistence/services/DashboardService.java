@@ -155,7 +155,12 @@ public class DashboardService {
                 .collectList()
                 .flatMap(pipelines -> {
                     if (pipelines.isEmpty()) {
-                        return Mono.error(new RuntimeException("No se encontró un pipeline activo para esta empresa."));
+                        log.warn("No active pipeline found for company: {}, returning empty stats.", companyId);
+                        return Mono.just(PipelineStatsDTO.builder()
+                                .pipelineId(-1L)
+                                .pipelineName("Sin Pipeline Activo")
+                                .stages(List.of())
+                                .build());
                     }
                     
                     // Prioritize default pipeline

@@ -40,7 +40,7 @@ public class OnboardingDefaultsService {
                     log.info("✅ Subscription created: {} for tenant {}", subscription.getId(), tenantId);
                     return assignAllModulesToSubscription(subscription.getId());
                 })
-                .then(pipelineService.createDefaultPipeline(tenantId))
+                .then(pipelineService.createDefaultPipeline(tenantId, companyId))
                 .flatMap(pipeline -> {
                     log.info("✅ Pipeline created: {}. Creating Marketing Campaign...", pipeline.getName());
 
