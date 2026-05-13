@@ -585,12 +585,22 @@ class ChatService {
                     let finalMediaUrl = mediaUrl;
                     let textContent = respuesta;
                     
-                    // Buscar [URL] o [texto](URL) o ![texto](URL) en el texto si no viene mediaUrl explícito
+                    // Buscar [URL] o [texto](URL) o ![texto](URL) o URL pura en el texto
                     if (!finalMediaUrl) {
-                        const mediaRegex = /!?\[.*?\]\((https?:\/\/[^\)]+)\)|\[(https?:\/\/[^\]]+)\]/;
-                        const match = respuesta.match(mediaRegex);
-                        if (match) {
-                            finalMediaUrl = match[1] || match[2];
+                        const imageExtensions = /\.(jpg|jpeg|png|webp|gif|bmp)(\?.*)?$/i;
+                        const mediaRegex = /!?\[.*?\]\((https?:\/\/[^\)]+)\)|\[(https?:\/\/[^\]]+)\]|(https?:\/\/[^\s\)]+\.(?:jpg|jpeg|png|webp|gif|bmp)(?:\?[^\s\)]+)?)/gi;
+                        
+                        let match;
+                        while ((match = mediaRegex.exec(respuesta)) !== null) {
+                            const foundUrl = match[1] || match[2] || match[3];
+                            if (foundUrl) {
+                                finalMediaUrl = foundUrl;
+                                // No cortamos el loop porque queremos limpiar TODAS las URLs del texto, 
+                                // pero nos quedamos con la primera para el finalMediaUrl
+                            }
+                        }
+                        
+                        if (finalMediaUrl) {
                             textContent = respuesta.replace(mediaRegex, '').trim();
                             textContent = textContent.replace(/\n\s*\n/g, '\n\n');
                         }
