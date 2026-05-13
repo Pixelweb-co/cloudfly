@@ -630,7 +630,7 @@ class AIService:
             # Track token usage
             if response.usage:
                 label = "PRIMERA_LLAMADA" if i == 0 else f"LLAMADA_{i+1}"
-                self.tracker.track(response.usage, label, tenant_id, conversation_id, contact_id=contact_id)
+                self.tracker.track(response.usage, label, tenant_id, conversation_id, contact_id=contact_id, model_name=current_model)
                 
                 usage.prompt_tokens += response.usage.prompt_tokens
                 usage.completion_tokens += response.usage.completion_tokens
@@ -643,9 +643,9 @@ class AIService:
                 # No more tools to call, we have a final text response
                 final_text = response_message.content or ""
                 if i == 0:
-                    self.tracker.track(usage, "LLAMADA_DIRECTA", tenant_id, conversation_id, contact_id=contact_id)
+                    self.tracker.track(usage, "LLAMADA_DIRECTA", tenant_id, conversation_id, contact_id=contact_id, model_name=current_model)
                 else:
-                    self.tracker.track(usage, "TOTAL_TURNO", tenant_id, conversation_id, contact_id=contact_id)
+                    self.tracker.track(usage, "TOTAL_TURNO", tenant_id, conversation_id, contact_id=contact_id, model_name=current_model)
                 break
 
             # Handle tool calls
