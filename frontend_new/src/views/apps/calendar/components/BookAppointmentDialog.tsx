@@ -155,10 +155,11 @@ const BookAppointmentDialog = ({ open, onClose, onSuccess, initialServiceId, ini
 
   const handleCustomerSelect = (customer: any | null) => {
     if (customer) {
+      const name = customer.name || (customer.nombres ? `${customer.nombres} ${customer.apellidos}` : '')
       setValue('contactId', customer.id)
-      setValue('contactName', `${customer.nombres} ${customer.apellidos}`)
+      setValue('contactName', name)
       setValue('contactEmail', customer.email)
-      setValue('contactPhone', customer.telefono || '')
+      setValue('contactPhone', customer.phone || customer.telefono || '')
     } else {
       setValue('contactId', null)
       setValue('contactName', '')
@@ -183,7 +184,11 @@ const BookAppointmentDialog = ({ open, onClose, onSuccess, initialServiceId, ini
             <Grid item xs={12}>
               <Autocomplete
                 options={customers}
-                getOptionLabel={(option) => `${option.nombres} ${option.apellidos} (${option.identificacion || 'S/I'}) - ${option.email}`}
+                getOptionLabel={(option) => {
+                  const name = option.name || (option.nombres ? `${option.nombres} ${option.apellidos}` : 'Sin nombre')
+                  const id = option.nit || option.identificacion || 'S/I'
+                  return `${name} (${id}) - ${option.email}`
+                }}
                 onChange={(_, newValue) => handleCustomerSelect(newValue)}
                 renderInput={(params) => (
                   <TextField
@@ -196,13 +201,17 @@ const BookAppointmentDialog = ({ open, onClose, onSuccess, initialServiceId, ini
                 )}
                 filterOptions={(options, state) => {
                   const search = state.inputValue.toLowerCase()
-                  return options.filter(o => 
-                    o.nombres?.toLowerCase().includes(search) ||
-                    o.apellidos?.toLowerCase().includes(search) ||
-                    o.email?.toLowerCase().includes(search) ||
-                    o.identificacion?.includes(search) ||
-                    o.telefono?.includes(search)
-                  )
+                  return options.filter(o => {
+                    const name = (o.name || `${o.nombres || ''} ${o.apellidos || ''}`).toLowerCase()
+                    const email = (o.email || '').toLowerCase()
+                    const nit = (o.nit || o.identificacion || '').toLowerCase()
+                    const phone = (o.phone || o.telefono || '').toLowerCase()
+                    
+                    return name.includes(search) ||
+                      email.includes(search) ||
+                      nit.includes(search) ||
+                      phone.includes(search)
+                  })
                 }}
               />
             </Grid>
