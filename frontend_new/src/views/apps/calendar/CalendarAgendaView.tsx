@@ -37,6 +37,7 @@ const CalendarAgendaView = () => {
   const [loading, setLoading] = React.useState(false)
   const [serviceFilter, setServiceFilter] = React.useState<number | 'all'>('all')
   const [selectedSlot, setSelectedSlot] = React.useState<any>(null)
+  const [isBookDialogOpen, setIsBookDialogOpen] = React.useState(false)
   const [isManageDialogOpen, setIsManageDialogOpen] = React.useState(false)
 
   const fetchAgenda = React.useCallback(async () => {
