@@ -1,6 +1,7 @@
 package com.app.controllers;
 
 import com.app.dto.AvailabilitySlotDto;
+import com.app.dto.ServiceAvailabilityDto;
 import com.app.persistence.entity.AvailabilitySlotEntity;
 import com.app.persistence.entity.AvailabilityTemplateEntity;
 import com.app.services.AvailabilityService;
@@ -44,6 +45,17 @@ public class AvailabilityController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
         return availabilityService.getSlots(tenantId, companyId, start, end);
+    }
+
+    @GetMapping("/slots/by-service")
+    public Mono<ServiceAvailabilityDto> getSlotsByService(
+            @RequestParam Long tenantId,
+            @RequestParam Long companyId,
+            @RequestParam Long serviceId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
+        log.info("Getting slots by service: serviceId={}, tenant={}, company={}", serviceId, tenantId, companyId);
+        return availabilityService.getSlotsByService(tenantId, companyId, serviceId, start, end);
     }
 
     @PatchMapping("/slots/{id}")

@@ -1,6 +1,7 @@
 package com.app.services;
 
 import com.app.dto.AvailabilitySlotDto;
+import com.app.dto.ServiceAvailabilityDto;
 import com.app.persistence.entity.AvailabilitySlotEntity;
 import com.app.persistence.entity.AvailabilityTemplateEntity;
 import com.app.persistence.entity.EventStatus;
@@ -8,6 +9,7 @@ import com.app.persistence.repository.AppointmentRepository;
 import com.app.persistence.repository.AvailabilitySlotRepository;
 import com.app.persistence.repository.AvailabilityTemplateRepository;
 import com.app.persistence.repository.ContactRepository;
+import com.app.persistence.repository.UserRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +22,11 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -33,6 +37,7 @@ public class AvailabilityService {
     private final AvailabilitySlotRepository slotRepository;
     private final AppointmentRepository appointmentRepository;
     private final ContactRepository contactRepository;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
     public Mono<AvailabilityTemplateEntity> saveTemplate(AvailabilityTemplateEntity template) {
@@ -245,5 +250,83 @@ public class AvailabilityService {
                     .build());
             current = current.plusMinutes(duration + bufferAfter);
         }
+    }
+
+    // ── Service-based availability (grouped by provider) ──────────────
+
+    public Mono<ServiceAvailabilityDto> getSlotsByService(Long tenantId, Long companyId, Long serviceId, LocalDateTime start, LocalDateTime end) {
+        DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+        return slotRepository.findAvailableByService(tenantId, companyId, serviceId, start, end)
+                .collectList()
+                .flatMap(slots -> {
+                    if (slots.isEmpty()) {
+                        return Mono.just(ServiceAvailabilityDto.builder()
+                                .serviceId(serviceId)
+                                .noSchedule(true)
+                                .providers(List.of())
+                                .build());
+                    }
+
+                    // Group slots by user_id
+                    Map<Long, List<AvailabilitySlotEntity>> grouped = slots.stream()
+                            .collect(Collectors.groupingBy(s -> s.getUserId() != null ? s.getUserId() : 0L));
+
+                    // Resolve provider names and build response
+                    List<Mono<ServiceAvailabilityDto.ProviderAvailability>> providerMonos = new ArrayList<>();
+
+                    for (Map.Entry<Long, List<AvailabilitySlotEntity>> entry : grouped.entrySet()) {
+                        Long userId = entry.getKey();
+                        List<AvailabilitySlotEntity> userSlots = entry.getValue();
+
+                        List<ServiceAvailabilityDto.SlotSummary> slotSummaries = userSlots.stream()
+                                .map(s -> ServiceAvailabilityDto.SlotSummary.builder()
+                                        .id(s.getId())
+                                        .start(s.getStartTime().format(timeFmt))
+                                        .end(s.getEndTime().format(timeFmt))
+                                        .build())
+                                .collect(Collectors.toList());
+
+                        providerMonos.add(
+                                resolveProviderName(userId)
+                                        .map(name -> ServiceAvailabilityDto.ProviderAvailability.builder()
+                                                .userId(userId)
+                                                .providerName(name)
+                                                .availableSlots(slotSummaries)
+                                                .build())
+                        );
+                    }
+
+                    return Flux.merge(providerMonos)
+                            .collectList()
+                            .map(providers -> ServiceAvailabilityDto.builder()
+                                    .serviceId(serviceId)
+                                    .noSchedule(false)
+                                    .providers(providers)
+                                    .build());
+                });
+    }
+
+    private Mono<String> resolveProviderName(Long userId) {
+        if (userId == null || userId == 0L) {
+            return Mono.just("Sin asignar");
+        }
+        return userRepository.findById(userId)
+                .flatMap(user -> {
+                    if (user.getContactId() != null) {
+                        return contactRepository.findById(user.getContactId())
+                                .map(contact -> contact.getName() != null ? contact.getName() : buildUserName(user))
+                                .defaultIfEmpty(buildUserName(user));
+                    }
+                    return Mono.just(buildUserName(user));
+                })
+                .defaultIfEmpty("Proveedor " + userId);
+    }
+
+    private String buildUserName(com.app.persistence.entity.UserEntity user) {
+        String nombres = user.getNombres() != null ? user.getNombres() : "";
+        String apellidos = user.getApellidos() != null ? user.getApellidos() : "";
+        String full = (nombres + " " + apellidos).trim();
+        return full.isEmpty() ? "Proveedor " + user.getId() : full;
     }
 }
