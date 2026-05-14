@@ -73,10 +73,17 @@ const BookAppointmentDialog = ({ open, onClose, onSuccess, initialServiceId, ini
       contactEmail: '',
       contactPhone: '',
       date: format(initialDate || new Date(), 'yyyy-MM-dd'),
-      slotId: undefined,
+      slotId: initialSlotId || undefined,
       serviceId: initialServiceId || undefined
     }
   })
+
+  useEffect(() => {
+    if (open) {
+      if (initialSlotId) setValue('slotId', initialSlotId)
+      if (initialServiceId) setValue('serviceId', initialServiceId)
+    }
+  }, [open, initialSlotId, initialServiceId, setValue])
 
   const watchedServiceId = watch('serviceId')
   const watchedDate = watch('date')
