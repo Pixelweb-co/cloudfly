@@ -51,7 +51,7 @@ const schema = yup.object().shape({
   serviceId: yup.number().required('El servicio es requerido')
 })
 
-const BookAppointmentDialog = ({ open, onClose, onSuccess, initialServiceId, initialDate }: BookAppointmentDialogProps) => {
+const BookAppointmentDialog = ({ open, onClose, onSuccess, initialServiceId, initialDate, initialSlotId }: BookAppointmentDialogProps) => {
   const { data: session } = useSession()
   const [loading, setLoading] = useState(false)
   const [fetchingSlots, setFetchingSlots] = useState(false)
