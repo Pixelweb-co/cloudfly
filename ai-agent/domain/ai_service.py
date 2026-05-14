@@ -485,8 +485,13 @@ class AIService:
             essential += ["create_order", "create_quote", "check_products_stock"]
             
         # Herramientas de calendario y agenda
-        calendar_intent = ["cita", "agenda", "visita", "reprogramar", "horario", "disponibilidad", "slot", "cedula", "identificacion", "dni", "cancelar"]
-        if any(k in msg for k in calendar_intent):
+        calendar_intent = ["cita", "agenda", "visita", "reprogramar", "horario", "disponibilidad", "slot", "cedula", "identificacion", "dni", "cancelar", "hoy", "mañana", "mañana", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
+        
+        # Check for time patterns (e.g. 9:10, 10am, 15:00)
+        import re
+        time_pattern = r"\d{1,2}(:\d{2}|am|pm|:)"
+        
+        if any(k in msg for k in calendar_intent) or re.search(time_pattern, msg):
             essential += ["manage_calendar_event", "get_availability_slots", "book_appointment", "search_contact_by_identification"]
 
         # Si el mensaje es muy corto, limitamos para ahorrar tokens
@@ -1161,7 +1166,8 @@ class AIService:
                 "slotId": slot_id,
                 "title": title,
                 "observations": observations,
-                "status": "RESERVED"
+                "status": "RESERVED",
+                "channel": "Agente IA"
             }
             if service_id:
                 payload["serviceId"] = service_id
