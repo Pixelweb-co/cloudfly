@@ -6,6 +6,7 @@ import com.app.persistence.entity.EventStatus;
 import com.app.persistence.entity.EventType;
 import com.app.persistence.repository.AppointmentRepository;
 import com.app.persistence.repository.AvailabilitySlotRepository;
+import com.app.persistence.repository.ContactRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class AppointmentService {
     private final AppointmentRepository appointmentRepository;
     private final AvailabilitySlotRepository slotRepository;
     private final CalendarEventService calendarEventService;
+    private final ContactRepository contactRepository;
 
     @Transactional
     public Mono<AppointmentEntity> bookAppointment(AppointmentEntity appointment) {
@@ -72,25 +74,54 @@ public class AppointmentService {
     }
 
     private Mono<Void> createNotificationEvent(AppointmentEntity appointment) {
-        // Create payload for reminders (e.g., 24 hours before)
-        String payload = "{\"remindBefore\": 24, \"remindUnit\": \"HOURS\", \"sendConfirmation\": true}";
+        return contactRepository.findById(appointment.getContactId())
+                .flatMap(contact -> {
+                    String email = contact.getEmail() != null ? contact.getEmail() : "";
+                    String name = contact.getName() != null ? contact.getName() : "Cliente";
+                    
+                    // Create payload with recipient email, type notification, and notifyVia email
+                    String payload = String.format(
+                        "{\"remindBefore\": 24, \"remindUnit\": \"HOURS\", \"sendConfirmation\": true, \"to\": \"%s\", \"username\": \"%s\", \"contactName\": \"%s\", \"type\": \"notification\", \"notifyVia\": \"email\"}",
+                        email, name, name
+                    );
 
-        CalendarEventDto dto = CalendarEventDto.builder()
-                .tenantId(appointment.getTenantId())
-                .companyId(appointment.getCompanyId())
-                .calendarId(1L)
-                .title("Cita: " + appointment.getTitle())
-                .description(appointment.getObservations())
-                .eventType(EventType.NOTIFICATION)
-                .startTime(appointment.getStartTime())
-                .endTime(appointment.getEndTime())
-                .allDay(false)
-                .relatedEntityType("APPOINTMENT")
-                .relatedEntityId(appointment.getId())
-                .payload(payload)
-                .build();
-        
-        return calendarEventService.createEvent(dto).then();
+                    CalendarEventDto dto = CalendarEventDto.builder()
+                            .tenantId(appointment.getTenantId())
+                            .companyId(appointment.getCompanyId())
+                            .calendarId(1L)
+                            .title("Cita: " + appointment.getTitle())
+                            .description(appointment.getObservations())
+                            .eventType(EventType.NOTIFICATION)
+                            .startTime(appointment.getStartTime())
+                            .endTime(appointment.getEndTime())
+                            .allDay(false)
+                            .relatedEntityType("APPOINTMENT")
+                            .relatedEntityId(appointment.getId())
+                            .payload(payload)
+                            .build();
+                    
+                    return calendarEventService.createEvent(dto);
+                })
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.warn("Contact not found for appointment {}, skipping notification email recipient", appointment.getId());
+                    String payload = "{\"remindBefore\": 24, \"remindUnit\": \"HOURS\", \"sendConfirmation\": true, \"type\": \"notification\", \"notifyVia\": \"email\"}";
+                    CalendarEventDto dto = CalendarEventDto.builder()
+                            .tenantId(appointment.getTenantId())
+                            .companyId(appointment.getCompanyId())
+                            .calendarId(1L)
+                            .title("Cita: " + appointment.getTitle())
+                            .description(appointment.getObservations())
+                            .eventType(EventType.NOTIFICATION)
+                            .startTime(appointment.getStartTime())
+                            .endTime(appointment.getEndTime())
+                            .allDay(false)
+                            .relatedEntityType("APPOINTMENT")
+                            .relatedEntityId(appointment.getId())
+                            .payload(payload)
+                            .build();
+                    return calendarEventService.createEvent(dto);
+                }))
+                .then();
     }
 
     private Mono<Void> deleteNotificationEvent(AppointmentEntity appointment) {
