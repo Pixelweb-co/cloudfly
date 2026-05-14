@@ -38,6 +38,7 @@ interface BookAppointmentDialogProps {
   onSuccess: () => void
   initialServiceId?: number
   initialDate?: Date
+  initialSlotId?: number
 }
 
 const schema = yup.object().shape({
