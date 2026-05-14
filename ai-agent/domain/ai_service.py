@@ -93,8 +93,12 @@ REGLA DE ORO: Antes de usar 'create_order', 'book_appointment' o 'manage_calenda
 4. Si el agendamiento es para un servicio, después de 'book_appointment', DEBES llamar a 'create_order' para registrar la venta.
 5. Para simples recordatorios (Llamar luego, etc.), usa 'manage_calendar_event'.
 
-Para la gestión de citas o agendamientos:
-- Si es un SERVICIO: ofrece disponibilidad con 'get_availability_slots' y reserva con 'book_appointment'. 
+REGLA DE AGENDA POR SERVICIO:
+1. Usa 'get_availability_slots' con el service_id del producto tipo SERVICIO y la fecha.
+2. El resultado incluye PROVEEDORES con sus horarios. DEBES decirle al cliente con qué proveedor tiene disponibilidad.
+3. Pregunta al cliente si está de acuerdo con el proveedor asignado ANTES de reservar.
+4. Si el resultado dice noSchedule=true, transfiere al asesor con transfer_to_human (razón: sin programación para el servicio).
+5. Al reservar con 'book_appointment', pasa el service_id para vincular la cita al servicio.
 - Las citas duran 30 min por defecto.
 - Siempre confirma los datos finales antes de ejecutar la reserva dual (Cita + Pedido).
 
@@ -361,14 +365,15 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "get_availability_slots",
-            "description": "Busca espacios libres en la agenda para una fecha específica.",
+            "description": "Busca disponibilidad de un servicio por fecha. Devuelve proveedores con sus horarios libres.",
             "parameters": {
                 "type": "object",
                 "properties": {
+                    "service_id": {"type": "integer", "description": "ID del producto tipo SERVICIO"},
                     "start_date": {"type": "string", "description": "Fecha inicio ISO (YYYY-MM-DD)"},
                     "end_date": {"type": "string", "description": "Fecha fin ISO (YYYY-MM-DD)"}
                 },
-                "required": ["start_date"]
+                "required": ["service_id", "start_date"]
             }
         }
     },
@@ -395,6 +400,7 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "slot_id": {"type": "integer", "description": "ID del slot de disponibilidad elegido"},
+                    "service_id": {"type": "integer", "description": "ID del producto tipo SERVICIO"},
                     "title": {"type": "string", "description": "Título de la cita (ej: Corte de Cabello)"},
                     "observations": {"type": "string", "description": "Notas adicionales"}
                 },
@@ -564,6 +570,7 @@ class AIService:
             elif function_name == "get_availability_slots":
                 resolved_company_id = company_id or 1
                 return await self._get_availability_slots(
+                    function_args.get("service_id"),
                     function_args.get("start_date"),
                     function_args.get("end_date"),
                     tenant_id, resolved_company_id
@@ -580,7 +587,8 @@ class AIService:
                     function_args.get("slot_id"),
                     function_args.get("title"),
                     function_args.get("observations", ""),
-                    tenant_id, resolved_company_id, contact_id
+                    tenant_id, resolved_company_id, contact_id,
+                    function_args.get("service_id")
                 )
             elif function_name == "manage_calendar_event":
                 return await self._manage_calendar_event(function_args, tenant_id, contact_id)
@@ -1098,25 +1106,30 @@ class AIService:
             logger.error("Quote conversion failed", extra={"error": str(exc)})
             return json.dumps({"error": str(exc)})
 
-    async def _get_availability_slots(self, start_date: str, end_date: str = None, tenant_id: int = 1, company_id: int = 1) -> str:
+    async def _get_availability_slots(self, service_id: int, start_date: str, end_date: str = None, tenant_id: int = 1, company_id: int = 1) -> str:
         if not end_date:
             end_date = start_date
         
         try:
-            url = f"http://scheduler-service:8080/api/availability/slots"
+            url = f"http://scheduler-service:8080/api/availability/slots/by-service"
             params = {
                 "tenantId": tenant_id,
                 "companyId": company_id,
+                "serviceId": service_id,
                 "start": f"{start_date}T00:00:00",
                 "end": f"{end_date}T23:59:59"
             }
             async with httpx.AsyncClient() as client:
                 resp = await client.get(url, params=params, timeout=10.0)
                 if resp.status_code == 200:
-                    slots = resp.json()
-                    # Solo devolver slots disponibles para ahorrar tokens
-                    available = [s for s in slots if s.get("status") == "AVAILABLE"]
-                    return json.dumps(available[:15]) # Limitar a 15 para no saturar contexto
+                    data = resp.json()
+                    if not data.get("providers") or data.get("noSchedule"):
+                        return json.dumps({"noSchedule": True, "message": "No hay programación para este servicio. Transfiere al asesor."})
+                    # Limitar a 3 proveedores, 5 slots cada uno para ahorrar tokens
+                    for p in data.get("providers", []):
+                        p["availableSlots"] = p["availableSlots"][:5]
+                    data["providers"] = data["providers"][:3]
+                    return json.dumps(data)
                 return json.dumps({"error": f"API Error: {resp.status_code}"})
         except Exception as e:
             return json.dumps({"error": str(e)})
@@ -1133,7 +1146,7 @@ class AIService:
         except Exception as e:
             return json.dumps({"error": str(e)})
 
-    async def _book_appointment(self, slot_id: int, title: str, observations: str = "", tenant_id: int = 1, company_id: int = 1, contact_id: int = 0) -> str:
+    async def _book_appointment(self, slot_id: int, title: str, observations: str = "", tenant_id: int = 1, company_id: int = 1, contact_id: int = 0, service_id: int = None) -> str:
         try:
             url = f"http://scheduler-service:8080/api/appointments"
             payload = {
@@ -1145,6 +1158,8 @@ class AIService:
                 "observations": observations,
                 "status": "RESERVED"
             }
+            if service_id:
+                payload["serviceId"] = service_id
             async with httpx.AsyncClient() as client:
                 resp = await client.post(url, json=payload, timeout=10.0)
                 if resp.status_code == 200:

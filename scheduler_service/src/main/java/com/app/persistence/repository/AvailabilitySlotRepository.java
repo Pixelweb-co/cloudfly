@@ -18,4 +18,7 @@ public interface AvailabilitySlotRepository extends ReactiveCrudRepository<Avail
     Flux<AvailabilitySlotEntity> findByTenantIdAndCompanyIdAndUserIdAndStartTimeBetween(Long tenantId, Long companyId, Long userId, LocalDateTime start, LocalDateTime end);
 
     Flux<AvailabilitySlotEntity> findByTenantIdAndCompanyIdAndStatus(Long tenantId, Long companyId, EventStatus status);
+
+    @Query("SELECT * FROM availability_slots WHERE tenant_id = :tenantId AND company_id = :companyId AND service_id = :serviceId AND status = 'AVAILABLE' AND start_time BETWEEN :start AND :end ORDER BY user_id, start_time ASC")
+    Flux<AvailabilitySlotEntity> findAvailableByService(Long tenantId, Long companyId, Long serviceId, LocalDateTime start, LocalDateTime end);
 }
