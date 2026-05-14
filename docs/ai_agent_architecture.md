@@ -39,7 +39,7 @@ Cada mensaje que llega por WhatsApp sigue este ciclo de vida atómico:
 sequenceDiagram
     participant K as Kafka (messages.in)
     participant O as Orchestrator (main.py)
-    participant R as Redis (Idempotency & History)
+    participant R as Redis (Idempotency)
     participant M as MySQL (Tenant & Pipeline)
     participant AI as AI Service (OpenAI)
     participant Q as Qdrant (Products)
