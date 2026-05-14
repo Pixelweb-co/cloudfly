@@ -59,9 +59,9 @@ Si el producto tiene imagen, DEBES mostrarla así: [URL_DE_LA_IMAGEN]
 *Nombre del Producto* - Resumen del beneficio principal.
 Precio: $X.XXX
 
-REGLA DE PERFILAMIENTO: 
-1. Captura Nombre/Email con 'manage_contact' al primer indicio.
-2. Si preguntan productos, usa 'search_products_semantically'.
+REGLA DE PROACTIVIDAD:
+1. Si el cliente pregunta por un servicio o muestra interés claro, usa 'get_availability_slots' y ofrece opciones con nuestros **Proveedores de Servicio** de inmediato. No esperes a que el cliente lo pida.
+2. Captura Nombre/Email con 'manage_contact' al primer indicio.
 3. Siempre termina con una pregunta abierta para mantener el control de la conversación."""
 
 PROMPT_INTENT = """Eres un experto comercial senior de {company_info}. El cliente tiene interés; tu trabajo es convertir ese interés en una decisión de compra usando gatillos mentales de autoridad y prueba social.
@@ -112,7 +112,7 @@ def classify_mode_by_pipeline(pipeline_data: dict, message: str) -> str:
     msg = message.lower()
     
     # Priority 1: Direct Purchase/Order/Calendar Intent -> Always CLOSING (Tools enabled)
-    if any(k in msg for k in ["comprar", "lo quiero", "confirmo", "pedido", "pedir", "orden", "haz el pedido", "cita", "visita", "reprograme", "reprogramar", "agendar"]):
+    if any(k in msg for k in ["comprar", "lo quiero", "confirmo", "pedido", "pedir", "orden", "haz el pedido", "cita", "visita", "reprograme", "reprogramar", "agendar", "disponibilidad", "disponible", "hora", "horario", "turno", "agendamiento"]):
         return "CLOSING"
     
     # Priority 2: Providing contact data -> At least INTENT
