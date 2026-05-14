@@ -62,7 +62,7 @@ public class AppointmentService {
                     
                     return slotRepository.findById(appointment.getSlotId())
                             .flatMap(slot -> {
-                                slot.setStatus(EventStatus.AVAILABLE);
+                                slot.setStatus(EventStatus.CANCELLED);
                                 slot.setAppointmentId(null);
                                 slot.setUpdatedAt(LocalDateTime.now());
                                 return slotRepository.save(slot);

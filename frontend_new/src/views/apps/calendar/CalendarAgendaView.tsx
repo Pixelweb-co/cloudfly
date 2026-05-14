@@ -27,6 +27,7 @@ import calendarService from '@/services/calendarService'
 import { productService } from '@/services/ventas/productService'
 import { useSession } from 'next-auth/react'
 import BookAppointmentDialog from './components/BookAppointmentDialog'
+import ManageAppointmentDialog from './components/ManageAppointmentDialog'
 
 const CalendarAgendaView = () => {
   const { data: session } = useSession()
@@ -35,7 +36,8 @@ const CalendarAgendaView = () => {
   const [services, setServices] = React.useState<any[]>([])
   const [loading, setLoading] = React.useState(false)
   const [serviceFilter, setServiceFilter] = React.useState<number | 'all'>('all')
-  const [isBookDialogOpen, setIsBookDialogOpen] = React.useState(false)
+  const [selectedSlot, setSelectedSlot] = React.useState<any>(null)
+  const [isManageDialogOpen, setIsManageDialogOpen] = React.useState(false)
 
   const fetchAgenda = React.useCallback(async () => {
     try {
@@ -55,6 +57,7 @@ const CalendarAgendaView = () => {
         return {
           id: slot.id,
           serviceId: slot.serviceId,
+          appointmentId: slot.appointmentId,
           time: `${format(dStart, 'HH:mm')} - ${format(dEnd, 'HH:mm')}`,
           contact: slot.contactName || (slot.status === 'RESERVED' ? 'Cita (Sin contacto)' : '-'),
           user: 'Admin',
@@ -93,12 +96,22 @@ const CalendarAgendaView = () => {
   const handlePrevDay = () => setCurrentDate(prev => subDays(prev, 1))
   const handleNextDay = () => setCurrentDate(prev => addDays(prev, 1))
 
+  const handleRowClick = (item: any) => {
+    setSelectedSlot(item)
+    if (item.status === 'AVAILABLE') {
+      setIsBookDialogOpen(true)
+    } else if (item.status === 'RESERVED') {
+      setIsManageDialogOpen(true)
+    }
+  }
+
   const getStatusChip = (status: string) => {
     switch (status) {
       case 'AVAILABLE': return <Chip label='Disponible' color='success' variant='tonal' size='small' />
       case 'RESERVED': return <Chip label='Reservado' color='primary' variant='tonal' size='small' />
       case 'BLOCKED': return <Chip label='Bloqueado' color='error' variant='tonal' size='small' />
       case 'COMPLETED': return <Chip label='Completado' color='secondary' variant='tonal' size='small' />
+      case 'CANCELLED': return <Chip label='Cancelada' color='error' variant='tonal' size='small' />
       default: return <Chip label={status} size='small' />
     }
   }
@@ -126,14 +139,6 @@ const CalendarAgendaView = () => {
             </Box>
           </Box>
           <Box className='flex items-center gap-2'>
-            <Button 
-              variant='contained' 
-              startIcon={<Icon icon='tabler:plus' />}
-              onClick={() => setIsBookDialogOpen(true)}
-              size='small'
-            >
-              Nueva Cita
-            </Button>
             <IconButton onClick={handlePrevDay}><Icon icon='tabler:chevron-left' /></IconButton>
             <Typography variant='h6' className='capitalize bg-primary/10 px-4 py-1 rounded-full text-primary'>{format(currentDate, "EEEE, d 'de' MMMM", { locale: es })}</Typography>
             <IconButton onClick={handleNextDay}><Icon icon='tabler:chevron-right' /></IconButton>
@@ -164,7 +169,12 @@ const CalendarAgendaView = () => {
                 </TableRow>
               ) : (
                 agendaItems.filter(item => serviceFilter === 'all' || Number(item.serviceId) === Number(serviceFilter)).map((item) => (
-                  <TableRow key={item.id} hover>
+                  <TableRow 
+                    key={item.id} 
+                    hover 
+                    onClick={() => handleRowClick(item)}
+                    sx={{ cursor: item.status === 'AVAILABLE' || item.status === 'RESERVED' ? 'pointer' : 'default' }}
+                  >
                     <TableCell className='font-medium'>{item.time}</TableCell>
                     <TableCell>{getStatusChip(item.status)}</TableCell>
                     <TableCell>{item.contact}</TableCell>
@@ -185,7 +195,7 @@ const CalendarAgendaView = () => {
                       </Tooltip>
                       {item.status === 'AVAILABLE' && (
                         <Tooltip title='Reservar'>
-                          <IconButton size='small' color='primary' onClick={() => setIsBookDialogOpen(true)}>
+                          <IconButton size='small' color='primary'>
                             <Icon icon='tabler:calendar-plus' />
                           </IconButton>
                         </Tooltip>
@@ -201,10 +211,24 @@ const CalendarAgendaView = () => {
 
       <BookAppointmentDialog
         open={isBookDialogOpen}
-        onClose={() => setIsBookDialogOpen(false)}
+        onClose={() => {
+          setIsBookDialogOpen(false)
+          setSelectedSlot(null)
+        }}
         onSuccess={() => fetchAgenda()}
         initialServiceId={serviceFilter !== 'all' ? Number(serviceFilter) : undefined}
         initialDate={currentDate}
+        initialSlotId={selectedSlot?.id}
+      />
+
+      <ManageAppointmentDialog
+        open={isManageDialogOpen}
+        onClose={() => {
+          setIsManageDialogOpen(false)
+          setSelectedSlot(null)
+        }}
+        onSuccess={() => fetchAgenda()}
+        slot={selectedSlot}
       />
     </Card>
   )
