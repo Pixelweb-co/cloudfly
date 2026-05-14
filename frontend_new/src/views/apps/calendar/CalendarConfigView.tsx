@@ -224,6 +224,7 @@ const AvailabilityTab = () => {
       const templateData = {
         tenantId,
         companyId,
+        userId: user?.id,
         serviceId,
         name: `Template Service ${serviceId}`,
         weeklySchedule: JSON.stringify({

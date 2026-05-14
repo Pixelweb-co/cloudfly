@@ -25,6 +25,7 @@ import es from 'date-fns/locale/es'
 import calendarService from '@/services/calendarService'
 import { productService } from '@/services/ventas/productService'
 import { useSession } from 'next-auth/react'
+import BookAppointmentDialog from './components/BookAppointmentDialog'
 
 const CalendarAgendaView = () => {
   const { data: session } = useSession()
@@ -33,6 +34,7 @@ const CalendarAgendaView = () => {
   const [services, setServices] = React.useState<any[]>([])
   const [loading, setLoading] = React.useState(false)
   const [serviceFilter, setServiceFilter] = React.useState<number | 'all'>('all')
+  const [isBookDialogOpen, setIsBookDialogOpen] = React.useState(false)
 
   const fetchAgenda = React.useCallback(async () => {
     try {
@@ -123,6 +125,14 @@ const CalendarAgendaView = () => {
             </Box>
           </Box>
           <Box className='flex items-center gap-2'>
+            <Button 
+              variant='contained' 
+              startIcon={<Icon icon='tabler:plus' />}
+              onClick={() => setIsBookDialogOpen(true)}
+              size='small'
+            >
+              Nueva Cita
+            </Button>
             <IconButton onClick={handlePrevDay}><Icon icon='tabler:chevron-left' /></IconButton>
             <Typography variant='h6' className='capitalize bg-primary/10 px-4 py-1 rounded-full text-primary'>{format(currentDate, "EEEE, d 'de' MMMM", { locale: es })}</Typography>
             <IconButton onClick={handleNextDay}><Icon icon='tabler:chevron-right' /></IconButton>
@@ -174,7 +184,9 @@ const CalendarAgendaView = () => {
                       </Tooltip>
                       {item.status === 'AVAILABLE' && (
                         <Tooltip title='Reservar'>
-                          <IconButton size='small' color='primary'><Icon icon='tabler:calendar-plus' /></IconButton>
+                          <IconButton size='small' color='primary' onClick={() => setIsBookDialogOpen(true)}>
+                            <Icon icon='tabler:calendar-plus' />
+                          </IconButton>
                         </Tooltip>
                       )}
                     </TableCell>
@@ -185,6 +197,14 @@ const CalendarAgendaView = () => {
           </Table>
         </TableContainer>
       </CardContent>
+
+      <BookAppointmentDialog
+        open={isBookDialogOpen}
+        onClose={() => setIsBookDialogOpen(false)}
+        onSuccess={() => fetchAgenda()}
+        initialServiceId={serviceFilter !== 'all' ? Number(serviceFilter) : undefined}
+        initialDate={currentDate}
+      />
     </Card>
   )
 }
