@@ -345,8 +345,9 @@ const AccountSetup = () => {
 
   return (
     <AuthIllustrationWrapperCustomer>
-      <Card className='flex flex-col sm:is-[1400px]'>
-        <CardContent className='sm:!p-12'>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100vh', py: 4 }}>
+        <Card className='flex flex-col sm:is-[1400px]' sx={{ height: 'auto', minHeight: 'fit-content', mt: 4 }}>
+          <CardContent className='sm:!p-12'>
           <Link href={'/'} className='flex justify-center mbe-6'>
             <Logo />
           </Link>
