@@ -96,7 +96,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
     if (loadingPlans) return <Box sx={{ p: 10, textAlign: 'center' }}>Cargando planes...</Box>
 
     return (
-        <Box sx={{ maxWidth: '1200px', mx: 'auto', p: 4 }}>
+        <Box sx={{ maxWidth: '100%', mx: 'auto', p: 4 }}>
             <Box sx={{ mb: 6 }}>
                 <Typography variant='h4' fontWeight='800' color='primary' sx={{ mb: 1 }}>
                     Prueba CloudFly Studio AI GRATIS

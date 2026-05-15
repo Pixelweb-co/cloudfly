@@ -48,6 +48,7 @@ public class CustomerController {
     private final ProductRepository productRepository;
     private final com.app.persistence.services.OnboardingDefaultsService onboardingDefaultsService;
     private final TenantService tenantService;
+    private final ContactRepository contactRepository;
 
 
     @GetMapping
@@ -162,7 +163,24 @@ public class CustomerController {
                                         .flatMap(savedCompany -> {
                                             user.setCustomerId(savedTenant.getId());
                                             log.info("👤 [ACCOUNT-SETUP] Linking User to Customer ID: {}", savedTenant.getId());
-                                            return userRepository.save(user)
+
+                                            // Crear el contacto principal inicial
+                                            ContactEntity mainContact = ContactEntity.builder()
+                                                    .tenantId(savedTenant.getId())
+                                                    .companyId(savedCompany.getId())
+                                                    .name(savedTenant.getContact())
+                                                    .email(savedTenant.getEmail())
+                                                    .phone(savedTenant.getPhone())
+                                                    .position(savedTenant.getPosition())
+                                                    .isEmployee(form.getIsEmployee() != null ? form.getIsEmployee() : true)
+                                                    .isActive(true)
+                                                    .createdAt(LocalDateTime.now())
+                                                    .updatedAt(LocalDateTime.now())
+                                                    .build();
+
+                                            return contactRepository.save(mainContact)
+                                                .doOnNext(smc -> log.info("✅ [ACCOUNT-SETUP] Main Contact created"))
+                                                .then(userRepository.save(user))
                                                 .doOnNext(su -> log.info("✅ [ACCOUNT-SETUP] User updated successfully"))
                                                 .flatMap(savedUser -> {
                                                     log.info("🏥 [ACCOUNT-SETUP] Verifying Evolution API Health...");
