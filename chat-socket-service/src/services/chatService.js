@@ -181,6 +181,23 @@ class ChatService {
 
             io.to(roomName).emit('new-message', eventPayload);
             logger.info(`✅ [WEBHOOK_STEP_6_OK] Socket event emitted.`);
+            
+            // 6.1 Emit to company room for Kanban/Dashboard live updates
+            const companyRoom = `tenant_${tenantId}_company_${companyId}`;
+            const [unreadRes] = await db.execute(
+                "SELECT COUNT(*) as cnt FROM omni_channel_messages WHERE tenant_id = ? AND company_id = ? AND contact_id = ? AND direction = 'INBOUND' AND (status IS NULL OR status != 'READ')",
+                [tenantId, companyId, contact.id]
+            );
+            const unreadCount = unreadRes[0].cnt;
+
+            io.to(companyRoom).emit('conversation-updated', {
+                contactId: contact.id,
+                conversationId: conversationId,
+                lastMessage: body,
+                unreadCount: unreadCount,
+                updatedAt: new Date()
+            });
+            logger.info(`📡 [WEBHOOK_STEP_6_GLOBAL] Emitted conversation-updated to room: ${companyRoom}`);
 
             // 7. CHATBOT GATE: Check if chatbot is enabled for this contact
             logger.info(`🛡️ [WEBHOOK_STEP_7] Checking Chatbot Gate for Contact: ${contact.id}`);
@@ -314,6 +331,23 @@ class ChatService {
 
             io.to(roomName).emit('new-message', eventPayload);
             logger.info(`✅ [FB_WEBHOOK] Socket event emitted to: ${roomName}`);
+
+            // 6.1 Emit to company room for Kanban/Dashboard live updates
+            const companyRoom = `tenant_${tenantId}_company_${companyId}`;
+            const [unreadRes] = await db.execute(
+                "SELECT COUNT(*) as cnt FROM omni_channel_messages WHERE tenant_id = ? AND company_id = ? AND contact_id = ? AND direction = 'INBOUND' AND (status IS NULL OR status != 'READ')",
+                [tenantId, companyId, contact.id]
+            );
+            const unreadCount = unreadRes[0].cnt;
+
+            io.to(companyRoom).emit('conversation-updated', {
+                contactId: contact.id,
+                conversationId: conversationId,
+                lastMessage: body,
+                unreadCount: unreadCount,
+                updatedAt: new Date()
+            });
+            logger.info(`📡 [FB_WEBHOOK_GLOBAL] Emitted conversation-updated to room: ${companyRoom}`);
 
             // 7. CHATBOT GATE
             try {
