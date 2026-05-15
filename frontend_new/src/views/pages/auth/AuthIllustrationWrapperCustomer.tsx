@@ -6,7 +6,7 @@ import { styled } from '@mui/material/styles'
 // Styled Component
 const AuthIllustrationWrapperCustomer = styled('div')(({ theme }) => ({
   width: '100%',
-  maxWidth: 850,
+  maxWidth: 1600,
   position: 'relative',
   [theme.breakpoints.up('md')]: {
     '&:before': {
