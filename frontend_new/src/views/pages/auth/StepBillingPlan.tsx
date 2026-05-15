@@ -16,6 +16,7 @@ interface StepBillingPlanProps {
 const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBillingPlanProps) => {
     const { plans, fetchActivePlans, loading: loadingPlans } = useSubscription()
     const [selectedPlan, setSelectedPlan] = useState<any>(null)
+    const [paymentMethod, setPaymentMethod] = useState('CARD')
     const [billingCycle, setBillingCycle] = useState('MONTHLY')
     const [loading, setLoading] = useState(false)
     
