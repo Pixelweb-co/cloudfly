@@ -250,40 +250,40 @@ public class PipelineService {
                     java.util.Map<Long, String> channelsMap = tuple.getT1();
                     java.util.Map<Long, Integer> unreadMap = tuple.getT2();
 
-                    return stateRepository.findByTenantIdAndPipelineIdAndIsActiveTrue(tenantId, pipelineId)
-                            .flatMap(state -> contactRepository.findById(state.getContactId())
-                                    .flatMap(contact -> {
-                                        return messageRepository.findLastByContactId(tenantId, companyId, contact.getId())
-                                                .map(lastMsg -> {
-                                                    String platform = lastMsg.getChannelId() != null ? channelsMap.get(lastMsg.getChannelId()) : "UNKNOWN";
-                                                    return PipelineKanbanCardDTO.builder()
-                                                            .contactId(contact.getId())
-                                                            .name(contact.getName())
-                                                            .avatarUrl(contact.getAvatarUrl())
-                                                            .conversationId(state.getConversationId())
-                                                            .stage(String.valueOf(state.getCurrentStageId()))
-                                                            .priority(state.getPriority())
-                                                            .chatbotEnabled(contact.getChatbotEnabled())
-                                                            .phone(contact.getPhone())
-                                                            .unreadCount(unreadMap.getOrDefault(contact.getId(), 0))
-                                                            .lastMessage(lastMsg.getBody())
-                                                            .lastMessageAt(lastMsg.getCreatedAt())
-                                                            .channel(platform)
-                                                            .build();
-                                                })
-                                                .defaultIfEmpty(PipelineKanbanCardDTO.builder()
-                                                        .contactId(contact.getId())
-                                                        .name(contact.getName())
-                                                        .avatarUrl(contact.getAvatarUrl())
-                                                        .conversationId(state.getConversationId())
-                                                        .stage(String.valueOf(state.getCurrentStageId()))
-                                                        .priority(state.getPriority())
-                                                        .chatbotEnabled(contact.getChatbotEnabled())
-                                                        .phone(contact.getPhone())
-                                                        .unreadCount(unreadMap.getOrDefault(contact.getId(), 0))
-                                                        .channel("UNKNOWN")
-                                                        .build());
-                                    }))
+                    // Query directly from contacts table for dynamic results
+                    return contactRepository.findByPipelineId(tenantId, companyId, pipelineId)
+                            .flatMap(contact -> {
+                                return messageRepository.findLastByContactId(tenantId, companyId, contact.getId())
+                                        .map(lastMsg -> {
+                                            String platform = lastMsg.getChannelId() != null ? channelsMap.get(lastMsg.getChannelId()) : "UNKNOWN";
+                                            return PipelineKanbanCardDTO.builder()
+                                                    .contactId(contact.getId())
+                                                    .name(contact.getName())
+                                                    .avatarUrl(contact.getAvatarUrl())
+                                                    .conversationId(contact.getUuid())
+                                                    .stage(String.valueOf(contact.getStageId()))
+                                                    .priority("MEDIUM")
+                                                    .chatbotEnabled(contact.getChatbotEnabled())
+                                                    .phone(contact.getPhone())
+                                                    .unreadCount(unreadMap.getOrDefault(contact.getId(), 0))
+                                                    .lastMessage(lastMsg.getBody())
+                                                    .lastMessageAt(lastMsg.getCreatedAt())
+                                                    .channel(platform)
+                                                    .build();
+                                        })
+                                        .defaultIfEmpty(PipelineKanbanCardDTO.builder()
+                                                .contactId(contact.getId())
+                                                .name(contact.getName())
+                                                .avatarUrl(contact.getAvatarUrl())
+                                                .conversationId(contact.getUuid())
+                                                .stage(String.valueOf(contact.getStageId()))
+                                                .priority("MEDIUM")
+                                                .chatbotEnabled(contact.getChatbotEnabled())
+                                                .phone(contact.getPhone())
+                                                .unreadCount(unreadMap.getOrDefault(contact.getId(), 0))
+                                                .channel("UNKNOWN")
+                                                .build());
+                            })
                             .collectList()
                             .map((java.util.List<PipelineKanbanCardDTO> cards) -> {
                                 // Sort: Unread first, then by lastMessageAt desc
@@ -313,7 +313,16 @@ public class PipelineService {
     @Transactional
     public Mono<Void> updateCardStage(Long tenantId, Long companyId, Long pipelineId, Long contactId, Long targetStageId) {
         log.info("🎯 Moving contact {} in pipeline {} to stage {}", contactId, pipelineId, targetStageId);
-        return stateRepository.findByTenantIdAndPipelineIdAndContactId(tenantId, pipelineId, contactId)
+        
+        Mono<Void> updateContactMono = contactRepository.findById(contactId)
+                .flatMap(contact -> {
+                    contact.setStageId(targetStageId);
+                    contact.setUpdatedAt(LocalDateTime.now());
+                    return contactRepository.save(contact);
+                })
+                .then();
+
+        Mono<Void> updateStateMono = stateRepository.findByTenantIdAndPipelineIdAndContactId(tenantId, pipelineId, contactId)
                 .flatMap(state -> {
                     state.setCurrentStageId(targetStageId);
                     state.setEnteredStageAt(LocalDateTime.now());
@@ -321,6 +330,8 @@ public class PipelineService {
                     return stateRepository.save(state);
                 })
                 .then();
+
+        return Mono.when(updateContactMono, updateStateMono);
     }
 
     @Transactional
@@ -330,35 +341,43 @@ public class PipelineService {
         return contactRepository.findByUuid(conversationId) // Assuming conversationId is contact UUID here based on previous patterns
                 .switchIfEmpty(contactRepository.findByTenantIdAndCompanyIdAndPhone(tenantId, companyId, conversationId))
                 .flatMap(contact -> {
-                    return stateRepository.findByTenantIdAndPipelineIdAndContactId(tenantId, pipelineId, contact.getId())
-                            .switchIfEmpty(Mono.defer(() -> {
-                                return pipelineStageRepository.findByPipelineIdOrderByPositionAsc(pipelineId)
-                                        .collectList()
-                                        .flatMap(stages -> {
-                                            Long targetStage = stageId != null ? stageId : (stages.isEmpty() ? null : stages.get(0).getId());
-                                            com.app.persistence.entity.ConversationPipelineStateEntity newState = com.app.persistence.entity.ConversationPipelineStateEntity.builder()
-                                                    .tenantId(tenantId)
-                                                    .companyId(companyId)
-                                                    .pipelineId(pipelineId)
-                                                    .contactId(contact.getId())
-                                                    .conversationId(conversationId)
-                                                    .currentStageId(targetStage)
-                                                    .isActive(true)
-                                                    .priority("MEDIUM")
-                                                    .enteredStageAt(LocalDateTime.now())
-                                                    .createdAt(LocalDateTime.now())
-                                                    .updatedAt(LocalDateTime.now())
-                                                    .build();
-                                            return stateRepository.save(newState);
+                    // Update contact's pipeline and stage
+                    contact.setPipelineId(pipelineId);
+                    contact.setStageId(stageId);
+                    contact.setUpdatedAt(LocalDateTime.now());
+                    
+                    return contactRepository.save(contact)
+                            .flatMap(savedContact -> {
+                                return stateRepository.findByTenantIdAndPipelineIdAndContactId(tenantId, pipelineId, savedContact.getId())
+                                        .switchIfEmpty(Mono.defer(() -> {
+                                            return pipelineStageRepository.findByPipelineIdOrderByPositionAsc(pipelineId)
+                                                    .collectList()
+                                                    .flatMap(stages -> {
+                                                        Long targetStage = stageId != null ? stageId : (stages.isEmpty() ? null : stages.get(0).getId());
+                                                        com.app.persistence.entity.ConversationPipelineStateEntity newState = com.app.persistence.entity.ConversationPipelineStateEntity.builder()
+                                                                .tenantId(tenantId)
+                                                                .companyId(companyId)
+                                                                .pipelineId(pipelineId)
+                                                                .contactId(savedContact.getId())
+                                                                .conversationId(conversationId)
+                                                                .currentStageId(targetStage)
+                                                                .isActive(true)
+                                                                .priority("MEDIUM")
+                                                                .enteredStageAt(LocalDateTime.now())
+                                                                .createdAt(LocalDateTime.now())
+                                                                .updatedAt(LocalDateTime.now())
+                                                                .build();
+                                                        return stateRepository.save(newState);
+                                                    });
+                                        }))
+                                        .flatMap(state -> {
+                                            if (stageId != null) {
+                                                state.setCurrentStageId(stageId);
+                                                state.setUpdatedAt(LocalDateTime.now());
+                                                return stateRepository.save(state);
+                                            }
+                                            return Mono.just(state);
                                         });
-                            }))
-                            .flatMap(state -> {
-                                if (stageId != null) {
-                                    state.setCurrentStageId(stageId);
-                                    state.setUpdatedAt(LocalDateTime.now());
-                                    return stateRepository.save(state);
-                                }
-                                return Mono.just(state);
                             });
                 })
                 .then();
