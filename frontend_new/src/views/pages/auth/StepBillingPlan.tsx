@@ -167,7 +167,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                                 bgcolor: paymentMethod === 'NEQUI' ? 'action.hover' : 'background.paper'
                             }}
                         >
-                            <Avatar src='https://static.wompi.co/assets/img/nequi_logo.png' sx={{ width: 24, height: 24, borderRadius: 1 }} />
+                            <Avatar src='https://static.wompi.co/assets/img/nequi_logo.png' sx={{ width: 32, height: 32, borderRadius: 1 }} />
                             <Typography sx={{ flexGrow: 1, fontWeight: 500 }}>Nequi</Typography>
                             <Radio checked={paymentMethod === 'NEQUI'} size='small' />
                         </Box>
@@ -187,9 +187,23 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                                 bgcolor: paymentMethod === 'BANCOLOMBIA' ? 'action.hover' : 'background.paper'
                             }}
                         >
-                            <Avatar src='https://static.wompi.co/assets/img/bancolombia_logo.png' sx={{ width: 24, height: 24, borderRadius: 1 }} />
+                            <Avatar src='https://static.wompi.co/assets/img/bancolombia_logo.png' sx={{ width: 32, height: 32, borderRadius: 1 }} />
                             <Typography sx={{ flexGrow: 1, fontWeight: 500 }}>Bancolombia (Transferencia)</Typography>
                             <Radio checked={paymentMethod === 'BANCOLOMBIA'} size='small' />
+                        </Box>
+
+                        {/* PSE OPTION */}
+                        <Box 
+                            onClick={() => setPaymentMethod('PSE')}
+                            sx={{ 
+                                p: 3, border: '1px solid', borderColor: paymentMethod === 'PSE' ? 'primary.main' : 'divider',
+                                borderRadius: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
+                                bgcolor: paymentMethod === 'PSE' ? 'action.hover' : 'background.paper'
+                            }}
+                        >
+                            <Avatar src='https://static.wompi.co/assets/img/pse_logo.png' sx={{ width: 32, height: 32, borderRadius: 1 }} />
+                            <Typography sx={{ flexGrow: 1, fontWeight: 500 }}>PSE (Cualquier Banco)</Typography>
+                            <Radio checked={paymentMethod === 'PSE'} size='small' />
                         </Box>
                     </Box>
                 </Grid>
