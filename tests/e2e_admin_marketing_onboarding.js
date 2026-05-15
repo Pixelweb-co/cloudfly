@@ -112,7 +112,7 @@ async function runTest() {
         const card = await driver.findElement(By.xpath("//*[contains(text(), 'Software / SaaS')]"));
         await card.click();
         
-        await driver.findElement(By.xpath("//button[contains(., 'Siguiente')]")).click();
+        await driver.findElement(By.xpath("//button[contains(., 'Continuar')]")).click();
         console.log('✅ Paso 1 guardado.');
 
         // [6] STEP 2: WHATSAPP (OMITIR)
@@ -134,8 +134,8 @@ async function runTest() {
              }
         }
 
-        // [7] STEP 3: PRODUCTO (REVIEW FIX)
-        console.log('\n🎁 [7/7] WIZARD: PRODUCTO Y CATEGORÍA (VALIDANDO FIX)');
+        // [7] STEP 3: PRODUCTO
+        console.log('\n🎁 [7/8] WIZARD: PRODUCTO Y CATEGORÍA');
         await sleep(5000);
         
         const nameInp = await driver.wait(until.elementLocated(By.xpath("//input[contains(@placeholder, 'Hamb') or @label='Nombre'] | //input[@type='text' and not(@value)]")), 20000);
@@ -153,11 +153,28 @@ async function runTest() {
         await priceInp.sendKeys('48000');
 
         await takeScreenshot(driver, 'onboarding_step3_product');
-        const finBtn = await driver.findElement(By.xpath("//button[contains(., 'Finalizar')]"));
-        await finBtn.click();
+        const finProdBtn = await driver.findElement(By.xpath("//button[contains(., 'Finalizar Configuración')]"));
+        await finProdBtn.click();
+
+        // [8] STEP 4: PLAN Y PAGO (WOMPI)
+        console.log('\n💳 [8/8] WIZARD: PLAN Y PAGO (WOMPI TEST)');
+        await sleep(3000);
+        
+        // Seleccionar tarjeta e ingresar datos
+        const cardNumInp = await driver.wait(until.elementLocated(By.xpath("//input[contains(@placeholder, '0000')]")), 15000);
+        await cardNumInp.sendKeys('4242 4242 4242 4242'); // Card for APPROVED status
+        
+        await driver.findElement(By.xpath("//input[contains(@placeholder, 'JUAN')]")).sendKeys('ADMIN MARKETING TEST');
+        await driver.findElement(By.xpath("//input[contains(@placeholder, 'MM/YY')]")).sendKeys('12/28');
+        await driver.findElement(By.xpath("//input[contains(@placeholder, '123')]")).sendKeys('123');
+
+        await takeScreenshot(driver, 'onboarding_step4_billing');
+        
+        const activateBtn = await driver.findElement(By.xpath("//button[contains(., 'Activar mi Cuenta')]"));
+        await activateBtn.click();
 
         console.log('⏳ Esperando redirección final a Dashboard...');
-        await driver.wait(until.urlMatches(/\/(home|dashboard)/), 20000);
+        await driver.wait(until.urlMatches(/\/(home|dashboard)/), 30000);
         console.log('✅ Redirección a Dashboard detectada.');
 
         // [8] VALIDAR LOGOUT Y RE-LOGIN (Para confirmar persistencia de onboarding)

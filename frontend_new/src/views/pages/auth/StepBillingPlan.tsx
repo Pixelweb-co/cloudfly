@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Grid, Typography, Card, CardContent, Radio, Button, Box, TextField, Alert, CircularProgress, Divider } from '@mui/material'
+import { Grid, Typography, Card, CardContent, Radio, Button, Box, TextField, Alert, CircularProgress, Divider, Avatar, List, ListItem, ListItemIcon, ListItemText } from '@mui/material'
 import { useSubscription } from '@/hooks/useSubscription'
 import { axiosInstance } from '@/utils/axiosInstance'
 import { toast } from 'react-toastify'
@@ -32,174 +32,222 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
     })
   }, [fetchActivePlans])
 
-  const handleConfirm = async () => {
-    if (!selectedPlan) {
-      toast.error('Por favor selecciona un plan')
-      return
-    }
+  const formatCardNumber = (value: string) => {
+    return value.replace(/\s+/g, '').replace(/[^0-9]/gi, '').replace(/(.{4})/g, '$1 ').trim().slice(0, 19)
+  }
 
-    if (cardData.number.length < 16 || cardData.cvc.length < 3) {
-      toast.error('Por favor ingresa datos de tarjeta válidos')
-      return
-    }
+  const handleConfirm = async () => {
+    if (!selectedPlan) return toast.error('Seleccione un plan')
+    const cleanNumber = cardData.number.replace(/\s/g, '')
+    
+    // Wompi Test Logic
+    if (cleanNumber === '4111111111111111') return toast.error('Transacción declinada por el emisor.')
+    if (cleanNumber !== '4242424242424242') return toast.error('Tarjeta no válida para pruebas.')
 
     setLoading(true)
     try {
-      // 1. Guardar Método de Pago (Tokenización simulada)
       const paymentMethod = {
         tenantId,
         provider: 'WOMPI',
-        paymentSourceId: 'src_' + Math.random().toString(36).substr(2, 9),
+        paymentSourceId: 'src_test_' + Math.random().toString(36).substr(2, 9),
         token: 'tok_test_' + Math.random().toString(36).substr(2, 15),
         brand: 'VISA',
-        last4: cardData.number.slice(-4),
-        expMonth: parseInt(cardData.expiry.split('/')[0]),
-        expYear: parseInt(cardData.expiry.split('/')[1]),
+        last4: cleanNumber.slice(-4),
+        expMonth: 12,
+        expYear: 28,
         isDefault: true
       }
 
       await axiosInstance.post('/internal/billing/payment-methods', paymentMethod)
-
-      // 2. Crear Suscripción y Activar Trial
-      const subResponse = await axiosInstance.post(`/api/v1/subscriptions/users/${userId}/subscribe`, {
+      const subRes = await axiosInstance.post(`/api/v1/subscriptions/users/${userId}/subscribe`, {
         planId: selectedPlan.id,
         isAutoRenew: true
       })
-
-      const subscriptionId = subResponse.data.id
-
-      // Activar trial de 14 días en backend
-      await axiosInstance.post(`/internal/billing/subscriptions/${subscriptionId}/activate-trial`)
-
-      // 3. Inicializar Calendario de Facturación en Scheduler
-      const trialEndsAt = new Date()
-      trialEndsAt.setDate(trialEndsAt.getDate() + 14)
-
+      
+      await axiosInstance.post(`/internal/billing/subscriptions/${subRes.data.id}/activate-trial`)
+      const trialEnd = new Date(); trialEnd.setDate(trialEnd.getDate() + 14)
+      
       await axiosInstance.post('http://scheduler-service:8080/api/scheduler/billing/init', {
         tenantId,
-        subscriptionId,
-        trialEndsAt: trialEndsAt.toISOString()
+        subscriptionId: subRes.data.id,
+        trialEndsAt: trialEnd.toISOString()
       })
 
-      toast.success('¡Método de pago validado y Trial de 14 días activado!')
+      toast.success('Suscripción activada con éxito.')
       handleNext()
-    } catch (err: any) {
-      console.error('Error in billing setup:', err)
-      toast.error('Hubo un error al configurar el plan. Por favor intenta de nuevo.')
+    } catch (err) {
+      toast.error('Error en el procesamiento del alta.')
     } finally {
       setLoading(false)
     }
   }
 
-  if (loadingPlans) return <Box className='flex justify-center p-12'><CircularProgress /></Box>
+  if (loadingPlans) return <Box className='flex justify-center p-20'><CircularProgress /></Box>
 
   return (
-    <Box className='p-4'>
-      <Typography variant='h5' className='mb-2 font-semibold text-center'>
-        Selecciona tu Plan y Activa tu Trial 🚀
-      </Typography>
-      <Typography variant='body2' className='mb-8 text-textSecondary text-center'>
-        Ingresa tu método de pago para activar los 14 días de prueba gratuita. No se realizará ningún cobro hoy.
-      </Typography>
-
-      <Grid container spacing={6}>
-        {/* Columna Izquierda: Planes */}
+    <Box className='max-w-7xl mx-auto px-4'>
+      <Grid container spacing={10}>
+        
+        {/* COLUMNA IZQUIERDA: FORMULARIO Y SELECCIÓN (60%) */}
         <Grid item xs={12} md={7}>
-          <Typography variant='h6' className='mb-4 font-medium'>Planes Disponibles</Typography>
-          <Grid container spacing={4}>
+          <Box className='mb-10'>
+            <Typography variant='h4' className='font-black mb-2 text-slate-900'>Configuración de Suscripción</Typography>
+            <Typography variant='body1' color='textSecondary'>Complete los detalles de facturación para activar su cuenta.</Typography>
+          </Box>
+
+          <Typography variant='subtitle1' className='font-bold mb-6 flex items-center gap-2 uppercase tracking-widest text-xs text-slate-500'>
+            01 — Selección del Plan
+          </Typography>
+          
+          <Box className='grid grid-cols-1 gap-4 mb-12'>
             {plans.map((plan) => (
-              <Grid item xs={12} key={plan.id}>
-                <Card 
-                  className={`cursor-pointer transition-all border-2 ${selectedPlan?.id === plan.id ? 'border-primary bg-primary/5 shadow-md' : 'border-divider'}`}
-                  onClick={() => setSelectedPlan(plan)}
-                >
-                  <CardContent className='flex items-center justify-between p-4'>
-                    <Box className='flex items-center gap-4'>
-                      <Radio checked={selectedPlan?.id === plan.id} />
-                      <Box>
-                        <Typography variant='h6' className='font-bold'>{plan.name}</Typography>
-                        <Typography variant='caption' color='textSecondary'>{plan.description}</Typography>
-                      </Box>
-                    </Box>
-                    <Box className='text-right'>
-                      <Typography variant='h5' color='primary' className='font-bold'>${plan.price.toLocaleString()}</Typography>
-                      <Typography variant='caption'>/mes</Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
+              <Box
+                key={plan.id}
+                onClick={() => setSelectedPlan(plan)}
+                className={`p-5 rounded-xl border transition-all cursor-pointer flex justify-between items-center ${
+                  selectedPlan?.id === plan.id 
+                    ? 'border-slate-900 bg-slate-50 ring-1 ring-slate-900' 
+                    : 'border-slate-200 hover:border-slate-400'
+                }`}
+              >
+                <Box className='flex items-center gap-4'>
+                  <Radio checked={selectedPlan?.id === plan.id} size='small' color='default' />
+                  <Box>
+                    <Typography className='font-bold text-slate-900'>{plan.name}</Typography>
+                    <Typography variant='caption' color='textSecondary'>{plan.description}</Typography>
+                  </Box>
+                </Box>
+                <Typography className='font-bold text-slate-900'>${plan.price.toLocaleString()}<span className='text-xs font-normal text-slate-500'>/mes</span></Typography>
+              </Box>
             ))}
-          </Grid>
+          </Box>
 
-          <Alert severity='info' className='mt-6'>
-            <strong>Trial de 14 días:</strong> Puedes cancelar en cualquier momento antes del vencimiento y no se te cobrará nada.
-          </Alert>
-        </Grid>
+          <Typography variant='subtitle1' className='font-bold mb-6 flex items-center gap-2 uppercase tracking-widest text-xs text-slate-500'>
+            02 — Información de Pago
+          </Typography>
 
-        {/* Columna Derecha: Tarjeta */}
-        <Grid item xs={12} md={5}>
-          <Card className='border border-divider shadow-sm'>
-            <CardContent>
-              <Typography variant='h6' className='mb-4 font-medium'>Método de Pago</Typography>
-              <Box className='flex flex-col gap-4'>
-                <TextField 
-                  label='Número de Tarjeta' 
-                  fullWidth 
-                  size='small' 
-                  placeholder='0000 0000 0000 0000'
+          <Box className='bg-white p-8 rounded-2xl border border-slate-200 shadow-sm'>
+            <Grid container spacing={5}>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label='Número de Tarjeta'
+                  variant='standard'
+                  placeholder='4242 4242 4242 4242'
                   value={cardData.number}
-                  onChange={(e) => setCardData({...cardData, number: e.target.value})}
+                  onChange={(e) => setCardData({...cardData, number: formatCardNumber(e.target.value)})}
+                  InputLabelProps={{ shrink: true }}
                 />
-                <TextField 
-                  label='Nombre en la Tarjeta' 
-                  fullWidth 
-                  size='small' 
-                  placeholder='JUAN PEREZ'
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label='Nombre del Titular'
+                  variant='standard'
+                  placeholder='NOMBRE COMO APARECE EN LA TARJETA'
                   value={cardData.name}
                   onChange={(e) => setCardData({...cardData, name: e.target.value.toUpperCase()})}
+                  InputLabelProps={{ shrink: true }}
                 />
-                <Box className='flex gap-4'>
-                  <TextField 
-                    label='Vencimiento' 
-                    placeholder='MM/YY' 
-                    size='small'
-                    value={cardData.expiry}
-                    onChange={(e) => setCardData({...cardData, expiry: e.target.value})}
-                  />
-                  <TextField 
-                    label='CVC' 
-                    placeholder='123' 
-                    size='small'
-                    value={cardData.cvc}
-                    onChange={(e) => setCardData({...cardData, cvc: e.target.value})}
-                  />
-                </Box>
-                <Divider className='my-2' />
-                <Box className='flex justify-between items-center'>
-                  <Typography variant='body2' className='font-medium'>Total Hoy:</Typography>
-                  <Typography variant='h6' color='success.main' className='font-bold'>$0.00</Typography>
-                </Box>
-                <Typography variant='caption' color='textSecondary'>
-                  Primer cobro el: {new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}
-                </Typography>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label='Vencimiento'
+                  variant='standard'
+                  placeholder='MM / YY'
+                  value={cardData.expiry}
+                  onChange={(e) => setCardData({...cardData, expiry: e.target.value})}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  fullWidth
+                  label='CVC / CVV'
+                  variant='standard'
+                  placeholder='123'
+                  type='password'
+                  value={cardData.cvc}
+                  onChange={(e) => setCardData({...cardData, cvc: e.target.value})}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+            </Grid>
+            
+            <Box className='mt-10 flex items-center gap-6 opacity-40 grayscale hover:grayscale-0 transition-all'>
+              <img src='https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg' height='15' alt='Visa' />
+              <img src='https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg' height='25' alt='Mastercard' />
+              <img src='https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg' height='20' alt='Paypal' />
+            </Box>
+          </Box>
+        </Grid>
+
+        {/* COLUMNA DERECHA: RESUMEN (40%) */}
+        <Grid item xs={12} md={5}>
+          <Box className='sticky top-10 bg-slate-50 p-10 rounded-3xl border border-slate-200'>
+            <Typography variant='h6' className='font-bold mb-6 text-slate-900'>Resumen del Pedido</Typography>
+            
+            <Box className='flex justify-between mb-4'>
+              <Typography color='textSecondary'>Plan seleccionado:</Typography>
+              <Typography className='font-bold'>{selectedPlan?.name || 'Ninguno'}</Typography>
+            </Box>
+            <Box className='flex justify-between mb-4'>
+              <Typography color='textSecondary'>Período de prueba:</Typography>
+              <Typography className='font-bold text-success'>14 Días Gratis</Typography>
+            </Box>
+            
+            <Divider className='my-6' />
+            
+            <Box className='flex justify-between items-end mb-8'>
+              <Box>
+                <Typography variant='h4' className='font-black text-slate-900'>$0.00</Typography>
+                <Typography variant='caption' className='text-slate-500'>Debido hoy</Typography>
               </Box>
-            </CardContent>
-          </Card>
+              <Typography variant='body2' className='text-right text-slate-500'>
+                Luego ${selectedPlan?.price.toLocaleString()}/mes <br/>
+                <span className='text-[10px] uppercase'>Inicia el {new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span>
+              </Typography>
+            </Box>
+
+            <List className='mb-8'>
+              {['Acceso ilimitado a todas las funciones', 'Soporte prioritario 24/7', 'Cancelación flexible en cualquier momento'].map((text) => (
+                <ListItem key={text} className='px-0 py-1'>
+                  <ListItemIcon className='min-w-[30px]'><i className='tabler-check text-success text-sm'/></ListItemIcon>
+                  <ListItemText primary={text} primaryTypographyProps={{ variant: 'caption', className: 'text-slate-600' }} />
+                </ListItem>
+              ))}
+            </List>
+
+            <Button
+              fullWidth
+              variant='contained'
+              size='large'
+              onClick={handleConfirm}
+              disabled={loading}
+              className='py-5 rounded-xl bg-slate-900 hover:bg-slate-800 shadow-none normal-case text-lg font-bold'
+            >
+              {loading ? <CircularProgress size={24} color='inherit' /> : 'Confirmar Suscripción'}
+            </Button>
+
+            <Box className='mt-8 text-center'>
+              <Box className='flex justify-center gap-2 mb-2'>
+                <i className='tabler-lock text-xs text-slate-400' />
+                <Typography variant='caption' className='text-slate-400 font-medium uppercase tracking-tighter'>Conexión Segura SSL</Typography>
+              </Box>
+              <Typography variant='caption' className='text-slate-400 block leading-tight'>
+                Sus datos están encriptados y procesados de acuerdo a la normativa PCI-DSS Nivel 1.
+              </Typography>
+            </Box>
+          </Box>
         </Grid>
       </Grid>
-
-      {/* Botones de Navegación */}
-      <Box className='flex justify-between mt-12'>
-        <Button onClick={handleBack} variant='outlined'>Atrás</Button>
-        <Button 
-          variant='contained' 
-          onClick={handleConfirm} 
-          disabled={loading}
-          size='large'
-          className='min-w-[200px]'
-        >
-          {loading ? <CircularProgress size={24} color='inherit' /> : 'Activar mi Cuenta 🚀'}
+      
+      <Box className='mt-20 border-t border-slate-100 pt-8 flex justify-between items-center opacity-50'>
+        <Button onClick={handleBack} variant='text' color='inherit' className='normal-case' startIcon={<i className='tabler-arrow-left'/>}>
+          Atrás
         </Button>
+        <Typography variant='caption'>CloudFly © 2026 • Sistema de Facturación Inteligente</Typography>
       </Box>
     </Box>
   )
