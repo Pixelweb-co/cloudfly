@@ -1,6 +1,7 @@
 package com.app.persistence.services;
 
 import com.app.dto.*;
+import com.app.dto.UnreadChatSummaryDto;
 import com.app.persistence.entity.PipelineEntity;
 import com.app.persistence.entity.PipelineStageEntity;
 import com.app.persistence.repository.PipelineRepository;
@@ -23,6 +24,9 @@ public class PipelineService {
     private final PipelineRepository pipelineRepository;
     private final PipelineStageRepository pipelineStageRepository;
     private final com.app.persistence.repository.ConversationPipelineStateRepository stateRepository;
+    private final com.app.persistence.repository.ContactRepository contactRepository;
+    private final com.app.persistence.repository.OmniChannelMessageRepository messageRepository;
+    private final com.app.persistence.repository.ChannelRepository channelRepository;
 
     public Mono<PipelineEntity> createDefaultPipeline(Long tenantId, Long companyId) {
         log.info("🛠️ Creating default pipeline for tenant: {} and company: {}", tenantId, companyId);
@@ -223,18 +227,93 @@ public class PipelineService {
     }
 
     public Mono<java.util.Map<String, java.util.List<PipelineKanbanCardDTO>>> getKanbanData(Long tenantId, Long companyId, Long pipelineId) {
-        // Here we could filter stateRepository by companyId too if the table has it
-        return stateRepository.findByTenantIdAndPipelineIdAndIsActiveTrue(tenantId, pipelineId)
-                .map(state -> {
-                    return PipelineKanbanCardDTO.builder()
-                            .contactId(state.getContactId())
-                            .name(state.getContactId() != null ? "Contact #" + state.getContactId() : "Desconocido")
-                            .conversationId(state.getConversationId())
-                            .stage(String.valueOf(state.getCurrentStageId()))
-                            .priority(state.getPriority())
-                            .build();
-                })
+        // Fetch all channels for this tenant to map channelId -> platform
+        Mono<java.util.Map<Long, String>> channelsMapMono = channelRepository.findByTenantId(tenantId)
                 .collectList()
-                .map(cards -> cards.stream().collect(java.util.stream.Collectors.groupingBy(PipelineKanbanCardDTO::getStage)));
+                .map(list -> list.stream().collect(java.util.stream.Collectors.toMap(
+                        com.app.persistence.entity.ChannelEntity::getId,
+                        com.app.persistence.entity.ChannelEntity::getPlatform,
+                        (v1, v2) -> v1
+                )));
+
+        // Fetch unread counts
+        Mono<java.util.Map<Long, Integer>> unreadMapMono = messageRepository.countUnreadGroupedByContactAndCompany(tenantId, companyId)
+                .collectList()
+                .map(list -> list.stream().collect(java.util.stream.Collectors.toMap(
+                        UnreadChatSummaryDto::getContactId,
+                        s -> s.getCnt().intValue(),
+                        (v1, v2) -> v1
+                )));
+
+        return Mono.zip(channelsMapMono, unreadMapMono)
+                .flatMap(tuple -> {
+                    java.util.Map<Long, String> channelsMap = tuple.getT1();
+                    java.util.Map<Long, Integer> unreadMap = tuple.getT2();
+
+                    return stateRepository.findByTenantIdAndPipelineIdAndIsActiveTrue(tenantId, pipelineId)
+                            .flatMap(state -> contactRepository.findById(state.getContactId())
+                                    .flatMap(contact -> {
+                                        return messageRepository.findLastByContactId(tenantId, companyId, contact.getId())
+                                                .map(lastMsg -> {
+                                                    String platform = lastMsg.getChannelId() != null ? channelsMap.get(lastMsg.getChannelId()) : "UNKNOWN";
+                                                    return PipelineKanbanCardDTO.builder()
+                                                            .contactId(contact.getId())
+                                                            .name(contact.getName())
+                                                            .avatarUrl(contact.getAvatarUrl())
+                                                            .conversationId(state.getConversationId())
+                                                            .stage(String.valueOf(state.getCurrentStageId()))
+                                                            .priority(state.getPriority())
+                                                            .chatbotEnabled(contact.getChatbotEnabled())
+                                                            .phone(contact.getPhone())
+                                                            .unreadCount(unreadMap.getOrDefault(contact.getId(), 0))
+                                                            .lastMessage(lastMsg.getBody())
+                                                            .lastMessageAt(lastMsg.getCreatedAt())
+                                                            .channel(platform)
+                                                            .build();
+                                                })
+                                                .defaultIfEmpty(PipelineKanbanCardDTO.builder()
+                                                        .contactId(contact.getId())
+                                                        .name(contact.getName())
+                                                        .avatarUrl(contact.getAvatarUrl())
+                                                        .conversationId(state.getConversationId())
+                                                        .stage(String.valueOf(state.getCurrentStageId()))
+                                                        .priority(state.getPriority())
+                                                        .chatbotEnabled(contact.getChatbotEnabled())
+                                                        .phone(contact.getPhone())
+                                                        .unreadCount(unreadMap.getOrDefault(contact.getId(), 0))
+                                                        .channel("UNKNOWN")
+                                                        .build());
+                                    }))
+                            .collectList()
+                            .map((java.util.List<PipelineKanbanCardDTO> cards) -> {
+                                // Sort: Unread first, then by lastMessageAt desc
+                                return cards.stream()
+                                        .sorted((PipelineKanbanCardDTO a, PipelineKanbanCardDTO b) -> {
+                                            // 1. Unread count priority
+                                            int unreadComp = b.getUnreadCount().compareTo(a.getUnreadCount());
+                                            if (unreadComp != 0) return unreadComp;
+                                            
+                                            // 2. Recency priority
+                                            if (a.getLastMessageAt() == null && b.getLastMessageAt() == null) return 0;
+                                            if (a.getLastMessageAt() == null) return 1;
+                                            if (b.getLastMessageAt() == null) return -1;
+                                            return b.getLastMessageAt().compareTo(a.getLastMessageAt());
+                                        })
+                                        .collect(java.util.stream.Collectors.groupingBy((PipelineKanbanCardDTO card) -> card.getStage()));
+                            });
+                });
+    }
+
+    @Transactional
+    public Mono<Void> updateCardStage(Long tenantId, Long companyId, Long pipelineId, Long contactId, Long targetStageId) {
+        log.info("🎯 Moving contact {} in pipeline {} to stage {}", contactId, pipelineId, targetStageId);
+        return stateRepository.findByTenantIdAndPipelineIdAndContactId(tenantId, pipelineId, contactId)
+                .flatMap(state -> {
+                    state.setCurrentStageId(targetStageId);
+                    state.setEnteredStageAt(LocalDateTime.now());
+                    state.setUpdatedAt(LocalDateTime.now());
+                    return stateRepository.save(state);
+                })
+                .then();
     }
 }

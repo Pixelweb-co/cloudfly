@@ -142,4 +142,19 @@ public class PipelineController {
                     return pipelineService.getKanbanData(user.getCustomerId(), effectiveCompanyId, id);
                 });
     }
+
+    @PutMapping("/{id}/kanban/cards/{contactId}/stage")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
+    public Mono<Void> updateCardStage(
+            @PathVariable Long id,
+            @PathVariable Long contactId,
+            @RequestParam Long targetStageId,
+            @RequestParam(required = false) Long companyId) {
+        return getCurrentUser()
+                .flatMap(user -> {
+                    Long effectiveCompanyId = (companyId != null) ? companyId : user.getCompanyId();
+                    return pipelineService.updateCardStage(user.getCustomerId(), effectiveCompanyId, id, contactId, targetStageId);
+                });
+    }
 }
