@@ -23,6 +23,7 @@ import AuthIllustrationWrapperCustomer from './AuthIllustrationWrapperCustomer'
 import FormCustomer from '@/views/apps/customers/form/page'
 import WhatsAppConfigForm from '@/views/apps/comunicaciones/canales/whatsapp/WhatsAppConfigForm'
 import ProductCreationStep from './ProductCreationStep'
+import StepBillingPlan from './StepBillingPlan'
 import { userMethods } from '@/utils/userMethods'
 import { axiosInstance } from '@/utils/axiosInstance'
 
@@ -71,6 +72,11 @@ const steps = [
     title: 'Productos',
     subtitle: 'Catálogo inicial',
     icon: '📦'
+  },
+  {
+    title: 'Plan y Pago',
+    subtitle: 'Activa tu trial',
+    icon: '💳'
   }
 ]
 
@@ -318,6 +324,19 @@ const AccountSetup = () => {
         return (
           <ProductCreationStep onProductCreated={handleNext} onBack={handleBack} />
         )
+
+      case 4:
+        {
+          const user = userMethods.getUserLogin()
+          return (
+            <StepBillingPlan 
+              handleNext={handleNext} 
+              handleBack={handleBack} 
+              tenantId={user?.customerId || 0}
+              userId={user?.id || 0}
+            />
+          )
+        }
 
       default:
         return null
