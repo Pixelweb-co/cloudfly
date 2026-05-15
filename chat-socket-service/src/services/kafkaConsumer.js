@@ -51,6 +51,13 @@ async function initKafkaConsumer(io) {
                             const roomName = `tenant_${tenantId}_contact_${contact.phone}`;
                             io.to(roomName).emit('new-message', eventPayload);
                             logger.info(`📡 [KAFKA-CONSUMER] Emitted AI message to socket room: ${roomName}`);
+
+                            // Global update for Kanban
+                            const companyRoom = `tenant_${tenantId}_company_${contact.company_id}`;
+                            io.to(companyRoom).emit('conversation-updated', { 
+                                contactId: contact.id,
+                                direction: 'OUTBOUND'
+                            });
                         }
                     } else if (topic === 'webnotifications') {
                         logger.info(`📥 [KAFKA-CONSUMER] Received web notification payload: ${JSON.stringify(payload)}`);
@@ -73,7 +80,7 @@ async function initKafkaConsumer(io) {
                             });
                             
                             // 2. Trigger dashboard refresh if it's an important update
-                            if (type === 'order' || type === 'contact' || type === 'appointment') {
+                            if (type === 'order' || type === 'contact' || type === 'appointment' || type === 'conversation') {
                                 io.to(roomName).emit('dashboard-update', { type });
                                 logger.info(`📡 [KAFKA-CONSUMER] Emitted dashboard-update to room: ${roomName}`);
                             }

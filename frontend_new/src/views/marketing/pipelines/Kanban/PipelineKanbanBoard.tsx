@@ -7,12 +7,14 @@ import AddProspectDialog from './AddProspectDialog'
 import { pipelineService } from '@/services/marketing/pipelineService'
 import { Pipeline, PipelineKanbanCard as PipelineKanbanCardType } from '@/types/marketing/pipelineTypes'
 import { Icon } from '@iconify/react'
+import { useSocket } from '@/contexts/SocketContext'
 
 interface Props {
   pipelineId: number
 }
 
 export default function PipelineKanbanBoard({ pipelineId }: Props) {
+  const { socket, isConnected } = useSocket()
   const [pipeline, setPipeline] = useState<Pipeline | null>(null)
   const [boardData, setBoardData] = useState<Record<string, PipelineKanbanCardType[]>>({})
   const [loading, setLoading] = useState(true)
@@ -30,6 +32,24 @@ export default function PipelineKanbanBoard({ pipelineId }: Props) {
     loadKanban()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pipelineId])
+
+  // Socket updates
+  useEffect(() => {
+    if (!socket || !isConnected) return
+
+    const handleUpdate = (data: any) => {
+      console.log('🔄 Kanban live update received:', data)
+      loadKanban()
+    }
+
+    socket.on('conversation-updated', handleUpdate)
+    socket.on('dashboard-update', handleUpdate)
+
+    return () => {
+      socket.off('conversation-updated', handleUpdate)
+      socket.off('dashboard-update', handleUpdate)
+    }
+  }, [socket, isConnected])
 
   const loadKanban = async () => {
     try {
