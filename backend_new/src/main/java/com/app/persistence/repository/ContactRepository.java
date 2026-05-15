@@ -12,17 +12,17 @@ public interface ContactRepository extends ReactiveCrudRepository<ContactEntity,
 
     Mono<ContactEntity> findByUuid(String uuid);
 
-    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId")
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId)")
     Flux<ContactEntity> findByTenantIdAndCompanyId(Long tenantId, Long companyId);
 
-    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND phone = :phone")
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND phone = :phone")
     Mono<ContactEntity> findByTenantIdAndCompanyIdAndPhone(Long tenantId, Long companyId, String phone);
 
-    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND LOWER(name) LIKE LOWER(CONCAT('%', :name, '%'))")
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND LOWER(name) LIKE LOWER(CONCAT('%', :name, '%'))")
     Flux<ContactEntity> findByTenantIdAndCompanyIdAndNameContainingIgnoreCase(Long tenantId, Long companyId,
             String name);
 
-    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND pipeline_id = :pipelineId")
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND pipeline_id = :pipelineId")
     Flux<ContactEntity> findByTenantIdAndCompanyIdAndPipelineId(Long tenantId, Long companyId, Long pipelineId);
 
     @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND pipeline_id = :pipelineId AND stage_id = :stageId")
