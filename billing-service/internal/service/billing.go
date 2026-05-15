@@ -81,3 +81,14 @@ func (s *BillingService) ProcessRenewal(sub models.Subscription) error {
 
 	return nil
 }
+
+func (s *BillingService) UpdateInvoiceStatus(reference string, status string) error {
+	log.Printf("Updating invoice %s to status %s", reference, status)
+	// reference is like INV-tenantId-subscriptionId, we need to find the invoice ID or use reference endpoint
+	// For now, assuming an endpoint in backend-api exists to update by reference
+	_, err := s.client.R().
+		SetQueryParam("status", status).
+		Put(fmt.Sprintf("%s/invoices/by-reference/%s", s.apiURL, reference))
+	
+	return err
+}

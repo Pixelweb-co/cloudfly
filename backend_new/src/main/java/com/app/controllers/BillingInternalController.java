@@ -53,4 +53,11 @@ public class BillingInternalController {
     public Mono<InvoiceEntity> getInvoice(@PathVariable Long id) {
         return billingInternalService.getInvoiceById(id);
     }
+
+    @PutMapping("/invoices/by-reference/{reference}")
+    public Mono<Void> updateInvoiceStatusByReference(@PathVariable String reference, @RequestParam String status) {
+        log.info("Updating invoice reference {} to status {}", reference, status);
+        // Implementation logic here (search by reference and update status)
+        return Mono.empty(); // Placeholder
+    }
 }
