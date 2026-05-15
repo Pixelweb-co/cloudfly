@@ -70,6 +70,12 @@ public class SubscriptionEntity {
 
     private String notes;
 
+    @Column("trial_ends_at")
+    private LocalDateTime trialEndsAt;
+
+    @Column("next_billing_date")
+    private LocalDateTime nextBillingDate;
+
     @Column("created_at")
     private LocalDateTime createdAt;
 
