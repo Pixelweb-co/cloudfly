@@ -445,4 +445,34 @@ public class KafkaConsumerListener {
             LOGGER.error("Error consuming web notification message: ", e);
         }
     }
+
+    @KafkaListener(topics = "billing.invoice.email", groupId = "notification-service-billing")
+    public void consumeBillingInvoiceEmail(String messageJson) {
+        LOGGER.info("Received billing invoice email message: " + messageJson);
+        try {
+            com.notification.service.dto.BillingNotificationMessage billingData = objectMapper.readValue(messageJson, com.notification.service.dto.BillingNotificationMessage.class);
+            
+            NotificationMessage notification = new NotificationMessage();
+            notification.setTo(billingData.getCustomerEmail());
+            notification.setSubject("Tu factura de CloudFly: " + billingData.getInvoiceNumber());
+            notification.setUsername(billingData.getCustomerName());
+            notification.setType(billingData.getTemplate() != null ? billingData.getTemplate() : "invoice-template-v1");
+            notification.setPdfUrl(billingData.getPdfUrl());
+            notification.setPdfFileName(billingData.getInvoiceNumber() + ".pdf");
+            notification.setTenantId(billingData.getTenantId());
+            
+            // Llenar templateData con info de la factura
+            Map<String, Object> templateData = new HashMap<>();
+            templateData.put("invoiceNumber", billingData.getInvoiceNumber());
+            templateData.put("amount", billingData.getAmount());
+            templateData.put("currency", billingData.getCurrency());
+            templateData.put("dueDate", billingData.getDueDate());
+            notification.setTemplateData(templateData);
+
+            emailService.sendEmail(notification);
+            LOGGER.info("Billing invoice email sent to: " + billingData.getCustomerEmail());
+        } catch (Exception e) {
+            LOGGER.error("Error consuming billing invoice email notification: ", e);
+        }
+    }
 }

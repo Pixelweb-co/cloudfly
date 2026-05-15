@@ -69,12 +69,16 @@ export default function PipelineKanbanBoard({ pipelineId }: Props) {
     try {
       setUpdatingCardId(conversationId)
 
-      await pipelineService.moveConversation(conversationId, {
-        contactId: contactIdStr ? parseInt(contactIdStr) : undefined,
-        conversationId,
-        toStageId: parseInt(newStageId),
-        reason: 'Drag and Drop en Kanban'
-      })
+      if (contactIdStr) {
+        await pipelineService.updateCardStage(pipelineId, parseInt(contactIdStr), parseInt(newStageId))
+      } else {
+        await pipelineService.moveConversation(conversationId, {
+          contactId: undefined,
+          conversationId,
+          toStageId: parseInt(newStageId),
+          reason: 'Drag and Drop en Kanban'
+        })
+      }
 
       await loadKanban()
     } catch (err) {
@@ -90,6 +94,19 @@ export default function PipelineKanbanBoard({ pipelineId }: Props) {
   const handleAddProspect = (stageId: number) => {
     setActiveStageId(stageId)
     setIsAddProspectOpen(true)
+  }
+
+  const handleToggleChatbot = async (card: PipelineKanbanCardType) => {
+    if (!card.contactId) return
+    try {
+      setUpdatingCardId(card.conversationId)
+      await pipelineService.toggleChatbot(card.contactId, !card.chatbotEnabled)
+      await loadKanban()
+    } catch (err) {
+      console.error('Error toggling chatbot:', err)
+    } finally {
+      setUpdatingCardId(null)
+    }
   }
 
   const [searchFilter, setSearchFilter] = useState('')
@@ -166,7 +183,9 @@ export default function PipelineKanbanBoard({ pipelineId }: Props) {
           if (priorityFilter !== 'ALL') {
             stageCards = stageCards.filter(c => c.priority === priorityFilter)
           }
-          // Note: Unread filter requires backend support for unreadCount, skipped for now or mocked.
+          if (unreadFilter) {
+            stageCards = stageCards.filter(c => c.unreadCount && c.unreadCount > 0)
+          }
 
           const columnKey = `stage-${stage.id}-${stageCards.length}`
 
@@ -216,6 +235,7 @@ export default function PipelineKanbanBoard({ pipelineId }: Props) {
                         isUpdating={isUpdating}
                         isError={isError}
                         borderColor={isUpdating ? stage.color : 'transparent'}
+                        onToggleChatbot={() => handleToggleChatbot(card)}
                       />
                     </Box>
                   )

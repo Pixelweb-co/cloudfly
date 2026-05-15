@@ -45,7 +45,12 @@ export interface PipelineKanbanCard {
     stage: string
     contactId?: number
     lastMessage?: string
+    lastMessageAt?: string
     updatedAt: string
+    unreadCount?: number
+    chatbotEnabled?: boolean
+    phone?: string
+    channel?: string
 }
 
 export interface MoveConversationDto {

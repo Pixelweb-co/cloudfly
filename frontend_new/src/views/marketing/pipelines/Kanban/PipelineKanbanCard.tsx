@@ -18,6 +18,7 @@ interface Props {
   isUpdating?: boolean
   isError?: boolean
   onClick?: () => void
+  onToggleChatbot?: () => void
 }
 
 export default function PipelineKanbanCard({
@@ -25,7 +26,8 @@ export default function PipelineKanbanCard({
   borderColor = 'transparent',
   isUpdating = false,
   isError = false,
-  onClick
+  onClick,
+  onToggleChatbot
 }: Props) {
 
   const conversationId = card.conversationId || ''
@@ -41,11 +43,15 @@ export default function PipelineKanbanCard({
         cursor: isUpdating ? 'wait' : 'grab',
         opacity: isUpdating ? 0.7 : 1,
         border: '2px solid',
-        borderColor: isError ? 'error.main' : borderColor !== 'transparent' ? borderColor : 'divider',
+        borderColor: (card.unreadCount && card.unreadCount > 0) 
+          ? '#cddc39' // Lime
+          : (isError ? 'error.main' : borderColor !== 'transparent' ? borderColor : 'divider'),
         transition: 'all 0.2s ease-in-out',
         '&:hover': {
           boxShadow: 3,
-          borderColor: isError ? 'error.main' : borderColor !== 'transparent' ? borderColor : 'primary.main'
+          borderColor: (card.unreadCount && card.unreadCount > 0) 
+            ? '#cddc39' 
+            : (isError ? 'error.main' : borderColor !== 'transparent' ? borderColor : 'primary.main')
         },
         '&:active': {
           cursor: isUpdating ? 'wait' : 'grabbing'
@@ -55,46 +61,105 @@ export default function PipelineKanbanCard({
       <CardContent sx={{ p: 4, '&:last-child': { pb: 4 } }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar 
-              src={card.avatarUrl} 
-              alt={card.name}
-              sx={{ width: 32, height: 32 }}
-            >
-              {getInitials(card.name)}
-            </Avatar>
+            <Box sx={{ position: 'relative' }}>
+              <Avatar 
+                src={card.avatarUrl} 
+                alt={card.name}
+                sx={{ width: 40, height: 40 }}
+              >
+                {getInitials(card.name)}
+              </Avatar>
+              {card.unreadCount && card.unreadCount > 0 && (
+                <Chip 
+                  label={card.unreadCount} 
+                  size="small" 
+                  sx={{ 
+                    position: 'absolute', 
+                    top: -5, 
+                    right: -5, 
+                    height: 18, 
+                    minWidth: 18, 
+                    fontSize: '0.65rem',
+                    backgroundColor: '#cddc39',
+                    color: 'black',
+                    fontWeight: 'bold',
+                    p: 0
+                  }} 
+                />
+              )}
+            </Box>
             <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }} noWrap>
-                ID: {displayId}
-              </Typography>
               <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                 {card.name}
               </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} noWrap>
+                {card.phone || displayId}
+              </Typography>
             </Box>
           </Box>
-          <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {card.channel && (
+              <Icon 
+                icon={
+                  card.channel.toUpperCase() === 'WHATSAPP' ? 'tabler:brand-whatsapp' :
+                  card.channel.toUpperCase() === 'FACEBOOK' ? 'tabler:brand-facebook' :
+                  card.channel.toUpperCase() === 'INSTAGRAM' ? 'tabler:brand-instagram' :
+                  'tabler:message'
+                } 
+                fontSize={18}
+                color={card.channel.toUpperCase() === 'WHATSAPP' ? '#25D366' : 'inherit'}
+              />
+            )}
             {isUpdating ? (
-              <CircularProgress size={20} />
-            ) : isError ? (
-              <Icon icon="tabler:alert-circle" color="error" />
+              <CircularProgress size={16} />
             ) : (
-              <Icon icon="tabler:dots-vertical" />
+              <Icon icon="tabler:dots-vertical" fontSize={18} />
             )}
           </Box>
         </Box>
 
+        {card.lastMessage && (
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              display: '-webkit-box', 
+              WebkitLineClamp: 2, 
+              WebkitBoxOrient: 'vertical', 
+              overflow: 'hidden',
+              mb: 2,
+              lineHeight: 1.2,
+              color: 'text.secondary'
+            }}
+          >
+            {card.lastMessage}
+          </Typography>
+        )}
+
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Chip 
-            label={card.priority} 
-            size="small" 
-            color={
-              card.priority === 'URGENT' ? 'error' : 
-              card.priority === 'HIGH' ? 'warning' : 
-              card.priority === 'MEDIUM' ? 'info' : 'default'
-            }
-            sx={{ height: 20, fontSize: '0.7rem' }}
-          />
-          <Typography variant="caption" color="text.disabled">
-            {card.updatedAt}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Icon 
+              icon={card.chatbotEnabled ? 'tabler:robot' : 'tabler:robot-off'} 
+              fontSize={18} 
+              color={card.chatbotEnabled ? '#cddc39' : 'text.disabled'}
+              style={{ cursor: 'pointer' }}
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleChatbot?.()
+              }}
+            />
+            <Chip 
+              label={card.priority} 
+              size="small" 
+              color={
+                card.priority === 'URGENT' ? 'error' : 
+                card.priority === 'HIGH' ? 'warning' : 
+                card.priority === 'MEDIUM' ? 'info' : 'default'
+              }
+              sx={{ height: 18, fontSize: '0.6rem' }}
+            />
+          </Box>
+          <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem' }}>
+            {card.lastMessageAt ? new Date(card.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
           </Typography>
         </Box>
       </CardContent>
