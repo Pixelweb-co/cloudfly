@@ -167,7 +167,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                                 bgcolor: paymentMethod === 'NEQUI' ? 'action.hover' : 'background.paper'
                             }}
                         >
-                            <Avatar src='/images/payments/nequi.png' sx={{ width: 32, height: 32, borderRadius: 1 }} />
+                            <Box component="img" src="/images/payments/nequi.png" sx={{ width: 32, height: 32, objectFit: 'contain' }} />
                             <Typography sx={{ flexGrow: 1, fontWeight: 500 }}>Nequi</Typography>
                             <Radio checked={paymentMethod === 'NEQUI'} size='small' />
                         </Box>
@@ -187,7 +187,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                                 bgcolor: paymentMethod === 'BANCOLOMBIA' ? 'action.hover' : 'background.paper'
                             }}
                         >
-                            <Avatar src='/images/payments/bancolombia.png' sx={{ width: 32, height: 32, borderRadius: 1 }} />
+                            <Box component="img" src="/images/payments/bancolombia.png" sx={{ width: 32, height: 32, objectFit: 'contain' }} />
                             <Typography sx={{ flexGrow: 1, fontWeight: 500 }}>Bancolombia (Transferencia)</Typography>
                             <Radio checked={paymentMethod === 'BANCOLOMBIA'} size='small' />
                         </Box>
@@ -201,7 +201,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                                 bgcolor: paymentMethod === 'PSE' ? 'action.hover' : 'background.paper'
                             }}
                         >
-                            <Avatar src='/images/payments/pse.png' sx={{ width: 32, height: 32, borderRadius: 1 }} />
+                            <Box component="img" src="/images/payments/pse.png" sx={{ width: 32, height: 32, objectFit: 'contain' }} />
                             <Typography sx={{ flexGrow: 1, fontWeight: 500 }}>PSE (Cualquier Banco)</Typography>
                             <Radio checked={paymentMethod === 'PSE'} size='small' />
                         </Box>
