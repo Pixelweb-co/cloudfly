@@ -193,7 +193,7 @@ public class CustomerController {
                                                                 log.warn("⚠️ [ACCOUNT-SETUP] Evolution API health check failed, creating defaults with fallback name.");
                                                                 return onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), "evolution_offline")
                                                                         .then(createDefaultCategory(savedTenant.getId()))
-                                                                        .then(handleAutomaticSubscription(savedTenant.getId()))
+                                                                        .then(handleAutomaticSubscription(savedTenant.getId(), form.getBillingCycle()))
                                                                         .then(baseFlow);
                                                             } else {
                                                                 log.info("📱 [ACCOUNT-SETUP] Validating WhatsApp number: {}", form.getPhone());
@@ -204,7 +204,7 @@ public class CustomerController {
                                                                             log.warn("❌ [ACCOUNT-SETUP] Number {} not on WhatsApp, continuing without WA instance.", form.getPhone());
                                                                             return onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), "evolution_no_wa")
                                                                                     .then(createDefaultCategory(savedTenant.getId()))
-                                                                                    .then(handleAutomaticSubscription(savedTenant.getId()))
+                                                                                    .then(handleAutomaticSubscription(savedTenant.getId(), form.getBillingCycle()))
                                                                                     .then(baseFlow);
                                                                         }
                                                                         
@@ -228,7 +228,7 @@ public class CustomerController {
                                                                                         .doOnNext(cc -> log.info("✅ [ACCOUNT-SETUP] ChannelConfig saved"))
                                                                                         .then(onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), instanceName))
                                                                                         .then(createDefaultCategory(savedTenant.getId()))
-                                                                                        .then(handleAutomaticSubscription(savedTenant.getId()))
+                                                                                        .then(handleAutomaticSubscription(savedTenant.getId(), form.getBillingCycle()))
                                                                                         .then(Mono.defer(() -> {
                                                                                             log.info("📧 [ACCOUNT-SETUP] Sending welcome notification to Kafka...");
                                                                                             Map<String, Object> welcomeMsg = new HashMap<>();
@@ -243,7 +243,7 @@ public class CustomerController {
                                                                         log.error("🛑 [ACCOUNT-SETUP] WhatsApp flow failed: {}. Falling back to basic setup.", e.getMessage());
                                                                         return onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), "evolution_error")
                                                                                 .then(createDefaultCategory(savedTenant.getId()))
-                                                                                .then(handleAutomaticSubscription(savedTenant.getId()))
+                                                                                .then(handleAutomaticSubscription(savedTenant.getId(), form.getBillingCycle()))
                                                                                 .then(baseFlow);
                                                                     });
                                                             }
@@ -295,23 +295,41 @@ public class CustomerController {
         return categoryRepository.save(defaultCategory).then();
     }
 
-    private Mono<Void> handleAutomaticSubscription(Long customerId) {
-        log.info("🔍 [ACCOUNT-SETUP] Searching for Free Plan...");
+    private Mono<Void> handleAutomaticSubscription(Long customerId, String cycle) {
+        log.info("🔍 [ACCOUNT-SETUP] Searching for Free Plan... Billing Cycle: {}", cycle);
+        String billingCycle = (cycle != null && !cycle.isEmpty()) ? cycle.toUpperCase() : "MONTHLY";
+        
         return planRepository.findByIsFreeTrue()
                 .next()
                 .switchIfEmpty(Mono.error(new RuntimeException("Error: No se encontró ningún Plan Gratuito configurado.")))
                 .flatMap(freePlan -> {
-                    log.info("✅ [ACCOUNT-SETUP] Found Free Plan: {}. Activating for Customer: {}", freePlan.getName(), customerId);
+                    log.info("✅ [ACCOUNT-SETUP] Found Free Plan: {}. Activating for Customer: {} with cycle: {}", freePlan.getName(), customerId, billingCycle);
+                    
+                    // Lógica de precios según ciclo (Precio base definido en el Plan)
+                    BigDecimal basePrice = freePlan.getPrice() != null ? freePlan.getPrice() : new BigDecimal("99000");
+                    BigDecimal finalMonthlyPrice = basePrice;
+                    
+                    BigDecimal semiannualDiscount = freePlan.getSemiannualDiscount() != null ? freePlan.getSemiannualDiscount() : new BigDecimal("0.03");
+                    BigDecimal annualDiscount = freePlan.getAnnualDiscount() != null ? freePlan.getAnnualDiscount() : new BigDecimal("0.05");
+                    
+                    if ("SEMIANNUAL".equals(billingCycle)) {
+                        BigDecimal multiplier = BigDecimal.ONE.subtract(semiannualDiscount);
+                        finalMonthlyPrice = basePrice.multiply(multiplier); 
+                    } else if ("ANNUAL".equals(billingCycle)) {
+                        BigDecimal multiplier = BigDecimal.ONE.subtract(annualDiscount);
+                        finalMonthlyPrice = basePrice.multiply(multiplier);
+                    }
+
                     SubscriptionEntity subscription = SubscriptionEntity.builder()
                             .planId(freePlan.getId())
                             .customerId(customerId)
                             .status("ACTIVE")
-                            .billingCycle("MONTHLY")
+                            .billingCycle(billingCycle)
                             .startDate(LocalDateTime.now())
                             .endDate(LocalDateTime.now().plusDays(freePlan.getDurationDays() != null ? freePlan.getDurationDays() : 14))
                             .usersLimit(freePlan.getUsersLimit())
                             .aiTokensLimit(freePlan.getAiTokensLimit())
-                            .monthlyPrice(BigDecimal.ZERO)
+                            .monthlyPrice(finalMonthlyPrice) // Guardamos el precio que tendrá después del trial
                             .createdAt(LocalDateTime.now())
                             .updatedAt(LocalDateTime.now())
                             .build();

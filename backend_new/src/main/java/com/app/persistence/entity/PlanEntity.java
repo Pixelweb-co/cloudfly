@@ -54,6 +54,12 @@ public class PlanEntity {
     @Column("doc_overage_price_unit")
     private BigDecimal docOveragePriceUnit;
 
+    @Column("semiannual_discount")
+    private BigDecimal semiannualDiscount;
+
+    @Column("annual_discount")
+    private BigDecimal annualDiscount;
+
     @Column("created_at")
     private LocalDateTime createdAt;
 
@@ -66,4 +72,7 @@ public class PlanEntity {
     public Integer getDurationDays() { return durationDays; }
     public Long getAiTokensLimit() { return aiTokensLimit; }
     public Integer getUsersLimit() { return usersLimit; }
+    public BigDecimal getSemiannualDiscount() { return semiannualDiscount; }
+    public BigDecimal getAnnualDiscount() { return annualDiscount; }
+    public BigDecimal getPrice() { return price; }
 }

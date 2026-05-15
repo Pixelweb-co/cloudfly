@@ -27,5 +27,6 @@ public class AccountSetupRequest {
         private String objetoSocial;
         private String status;
         private String type;
+        private String billingCycle;
     }
 }
