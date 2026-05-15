@@ -66,6 +66,30 @@ public class CustomerController {
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/validate/nit")
+    public Mono<ResponseEntity<Map<String, Object>>> validateNit(@RequestParam String nit) {
+        return tenantRepository.findByNit(nit)
+                .map(t -> ResponseEntity.ok(Map.of("exists", (Object)true, "message", "El NIT ya está registrado")))
+                .defaultIfEmpty(ResponseEntity.ok(Map.of("exists", false)));
+    }
+
+    @GetMapping("/validate/whatsapp")
+    public Mono<ResponseEntity<Map<String, Object>>> validateWhatsApp(@RequestParam String number) {
+        log.info("🔍 Validating WhatsApp for number: {}", number);
+        // Usamos una instancia maestra o por defecto para validar
+        return evolutionService.isOnWhatsApp("cloudfly_chatbot1", number)
+                .map(exists -> ResponseEntity.ok(Map.of("exists", (Object)exists, "message", exists ? "WhatsApp válido" : "El número no tiene WhatsApp activo")))
+                .onErrorResume(e -> Mono.just(ResponseEntity.ok(Map.of("exists", false, "error", e.getMessage()))));
+    }
+
+    @GetMapping("/validate/email")
+    public Mono<ResponseEntity<Map<String, Object>>> validateEmail(@RequestParam String email) {
+        boolean isPublic = email.contains("@gmail.com") || email.contains("@hotmail.com") || email.contains("@outlook.com") || email.contains("@yahoo.");
+        return tenantRepository.findByEmail(email)
+                .map(t -> ResponseEntity.ok(Map.of("exists", (Object)true, "isCorporate", !isPublic, "message", "El email ya está en uso")))
+                .defaultIfEmpty(ResponseEntity.ok(Map.of("exists", false, "isCorporate", !isPublic)));
+    }
+
     private CustomerDto toDto(TenantEntity t) {
         return CustomerDto.builder()
                 .id(t.getId())

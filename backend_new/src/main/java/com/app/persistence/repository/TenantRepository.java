@@ -9,7 +9,10 @@ public interface TenantRepository extends ReactiveCrudRepository<TenantEntity, L
     @Query("SELECT * FROM clientes WHERE nombre_cliente = :name")
     Mono<TenantEntity> findByName(String name);
 
-    @org.springframework.data.r2dbc.repository.Modifying
     @Query("UPDATE clientes SET onboarding_completed = :completed WHERE id = :tenantId")
     Mono<Void> updateOnboardingStatus(Long tenantId, boolean completed);
+
+    Mono<TenantEntity> findByNit(String nit);
+
+    Mono<TenantEntity> findByEmail(String email);
 }

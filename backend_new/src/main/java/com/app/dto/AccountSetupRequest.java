@@ -21,6 +21,8 @@ public class AccountSetupRequest {
         private String address;
         private String contact;
         private String position;
+        private Boolean isEmployee;
+        private String countryCode;
         private String businessType;
         private String objetoSocial;
         private String status;
