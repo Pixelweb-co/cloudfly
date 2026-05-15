@@ -299,7 +299,13 @@ public class PipelineService {
                                             if (b.getLastMessageAt() == null) return -1;
                                             return b.getLastMessageAt().compareTo(a.getLastMessageAt());
                                         })
-                                        .collect(java.util.stream.Collectors.groupingBy((PipelineKanbanCardDTO card) -> card.getStage()));
+                                        .collect(java.util.stream.Collectors.groupingBy(
+                                                (PipelineKanbanCardDTO card) -> card.getStage(),
+                                                java.util.stream.Collectors.collectingAndThen(
+                                                        java.util.stream.Collectors.toList(),
+                                                        list -> list.stream().limit(10).collect(java.util.stream.Collectors.toList())
+                                                )
+                                        ));
                             });
                 });
     }
@@ -313,6 +319,47 @@ public class PipelineService {
                     state.setEnteredStageAt(LocalDateTime.now());
                     state.setUpdatedAt(LocalDateTime.now());
                     return stateRepository.save(state);
+                })
+                .then();
+    }
+
+    @Transactional
+    public Mono<Void> assignConversationToPipeline(Long tenantId, Long companyId, Long pipelineId, String conversationId, Long stageId) {
+        log.info("🔗 Assigning conversation {} to pipeline {} (stage {})", conversationId, pipelineId, stageId);
+        
+        return contactRepository.findByUuid(conversationId) // Assuming conversationId is contact UUID here based on previous patterns
+                .switchIfEmpty(contactRepository.findByTenantIdAndCompanyIdAndPhone(tenantId, companyId, conversationId))
+                .flatMap(contact -> {
+                    return stateRepository.findByTenantIdAndPipelineIdAndContactId(tenantId, pipelineId, contact.getId())
+                            .switchIfEmpty(Mono.defer(() -> {
+                                return pipelineStageRepository.findByPipelineIdOrderByPositionAsc(pipelineId)
+                                        .collectList()
+                                        .flatMap(stages -> {
+                                            Long targetStage = stageId != null ? stageId : (stages.isEmpty() ? null : stages.get(0).getId());
+                                            com.app.persistence.entity.ConversationPipelineStateEntity newState = com.app.persistence.entity.ConversationPipelineStateEntity.builder()
+                                                    .tenantId(tenantId)
+                                                    .companyId(companyId)
+                                                    .pipelineId(pipelineId)
+                                                    .contactId(contact.getId())
+                                                    .conversationId(conversationId)
+                                                    .currentStageId(targetStage)
+                                                    .isActive(true)
+                                                    .priority("MEDIUM")
+                                                    .enteredStageAt(LocalDateTime.now())
+                                                    .createdAt(LocalDateTime.now())
+                                                    .updatedAt(LocalDateTime.now())
+                                                    .build();
+                                            return stateRepository.save(newState);
+                                        });
+                            }))
+                            .flatMap(state -> {
+                                if (stageId != null) {
+                                    state.setCurrentStageId(stageId);
+                                    state.setUpdatedAt(LocalDateTime.now());
+                                    return stateRepository.save(state);
+                                }
+                                return Mono.just(state);
+                            });
                 })
                 .then();
     }

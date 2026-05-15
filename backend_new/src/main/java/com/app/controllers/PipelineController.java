@@ -157,4 +157,17 @@ public class PipelineController {
                     return pipelineService.updateCardStage(user.getCustomerId(), effectiveCompanyId, id, contactId, targetStageId);
                 });
     }
+
+    @PostMapping("/{id}/assign-conversation")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
+    public Mono<Void> assignConversationToPipeline(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, Object> request) {
+        String conversationId = (String) request.get("conversationId");
+        Long stageId = request.get("stageId") != null ? Long.valueOf(request.get("stageId").toString()) : null;
+        
+        return getCurrentUser()
+                .flatMap(user -> pipelineService.assignConversationToPipeline(user.getCustomerId(), user.getCompanyId(), id, conversationId, stageId));
+    }
 }
