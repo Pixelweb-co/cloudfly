@@ -31,6 +31,12 @@ public class ContactEntity {
     private String type; 
     private String stage;
 
+    private String position;
+
+    @Column("is_employee")
+    @JsonProperty("isEmployee")
+    private Boolean isEmployee;
+
     @Column("avatar_url")
     private String avatarUrl;
 
@@ -93,6 +99,14 @@ public class ContactEntity {
 
     public String getStage() { return stage; }
     public void setStage(String stage) { this.stage = stage; }
+
+    public String getPosition() { return position; }
+    public void setPosition(String position) { this.position = position; }
+
+    public Boolean isEmployee() { return isEmployee; }
+    public Boolean getIsEmployee() { return isEmployee; }
+    public void setEmployee(Boolean isEmployee) { this.isEmployee = isEmployee; }
+    public void setIsEmployee(Boolean isEmployee) { this.isEmployee = isEmployee; }
 
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
