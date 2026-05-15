@@ -16,8 +16,17 @@ interface StepBillingPlanProps {
 const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBillingPlanProps) => {
     const { plans, fetchActivePlans, loading: loadingPlans } = useSubscription()
     const [selectedPlan, setSelectedPlan] = useState<any>(null)
-    const [paymentMethod, setPaymentMethod] = useState('CARD')
+    const [billingCycle, setBillingCycle] = useState('MONTHLY')
     const [loading, setLoading] = useState(false)
+    
+    // Pricing logic
+    const baseMonthlyPrice = 99000
+    const getFinalPrices = () => {
+        if (billingCycle === 'SEMIANNUAL') return { monthly: baseMonthlyPrice * 0.97, total: baseMonthlyPrice * 6 * 0.97, savings: baseMonthlyPrice * 6 * 0.03 }
+        if (billingCycle === 'ANNUAL') return { monthly: baseMonthlyPrice * 0.95, total: baseMonthlyPrice * 12 * 0.95, savings: baseMonthlyPrice * 12 * 0.05 }
+        return { monthly: baseMonthlyPrice, total: baseMonthlyPrice, savings: 0 }
+    }
+    const prices = getFinalPrices()
     
     // Billing Info State
     const [billingInfo, setBillingInfo] = useState({
@@ -72,7 +81,8 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
             await axiosInstance.post('/internal/billing/payment-methods', paymentMethodPayload)
             const subRes = await axiosInstance.post(`/api/v1/subscriptions/users/${userId}/subscribe`, {
                 planId: selectedPlan.id,
-                isAutoRenew: true
+                isAutoRenew: true,
+                billingCycle: billingCycle // Enviamos el ciclo seleccionado
             })
             
             await axiosInstance.post(`/internal/billing/subscriptions/${subRes.data.id}/activate-trial`)
@@ -84,7 +94,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                 trialEndsAt: trialEnd.toISOString()
             })
 
-            toast.success('¡Trial de 30 días activado correctamente!')
+            toast.success('¡Trial activado correctamente con ciclo ' + billingCycle + '!')
             handleNext()
         } catch (err) {
             toast.error('Error al activar el plan.')
@@ -107,10 +117,10 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
             </Box>
 
             <Grid container spacing={6}>
-                {/* COLUMN 1: BILLING INFO */}
+                {/* COLUMN 1: BILLING INFO & CYCLE */}
                 <Grid item xs={12} md={4}>
                     <Typography variant='subtitle1' fontWeight='700' sx={{ mb: 3 }}>Información de Facturación</Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, mb: 6 }}>
                         <TextField 
                             fullWidth label="Nombre (opcional)" variant="filled" 
                             value={billingInfo.firstName} onChange={e => setBillingInfo({...billingInfo, firstName: e.target.value})}
@@ -127,6 +137,54 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                             <MenuItem value="Mexico">México</MenuItem>
                             <MenuItem value="USA">USA</MenuItem>
                         </TextField>
+                    </Box>
+
+                    <Typography variant='subtitle1' fontWeight='700' sx={{ mb: 3 }}>Ciclo de Facturación</Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <Box 
+                            onClick={() => setBillingCycle('MONTHLY')}
+                            sx={{ 
+                                p: 3, border: '1px solid', borderColor: billingCycle === 'MONTHLY' ? 'primary.main' : 'divider',
+                                borderRadius: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
+                                bgcolor: billingCycle === 'MONTHLY' ? 'action.hover' : 'background.paper'
+                            }}
+                        >
+                            <Box sx={{ flexGrow: 1 }}>
+                                <Typography sx={{ fontWeight: 600 }}>Mensual</Typography>
+                                <Typography variant='caption' color='textSecondary'>$99.000 COP / mes</Typography>
+                            </Box>
+                            <Radio checked={billingCycle === 'MONTHLY'} size='small' />
+                        </Box>
+
+                        <Box 
+                            onClick={() => setBillingCycle('SEMIANNUAL')}
+                            sx={{ 
+                                p: 3, border: '1px solid', borderColor: billingCycle === 'SEMIANNUAL' ? 'primary.main' : 'divider',
+                                borderRadius: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
+                                bgcolor: billingCycle === 'SEMIANNUAL' ? 'action.hover' : 'background.paper'
+                            }}
+                        >
+                            <Box sx={{ flexGrow: 1 }}>
+                                <Typography sx={{ fontWeight: 600 }}>Semestral <span className='text-success text-xs ml-2'>(Ahorra 3%)</span></Typography>
+                                <Typography variant='caption' color='textSecondary'>${(prices.monthly).toLocaleString()} COP / mes</Typography>
+                            </Box>
+                            <Radio checked={billingCycle === 'SEMIANNUAL'} size='small' />
+                        </Box>
+
+                        <Box 
+                            onClick={() => setBillingCycle('ANNUAL')}
+                            sx={{ 
+                                p: 3, border: '1px solid', borderColor: billingCycle === 'ANNUAL' ? 'primary.main' : 'divider',
+                                borderRadius: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
+                                bgcolor: billingCycle === 'ANNUAL' ? 'action.hover' : 'background.paper'
+                            }}
+                        >
+                            <Box sx={{ flexGrow: 1 }}>
+                                <Typography sx={{ fontWeight: 600 }}>Anual <span className='text-success text-xs ml-2'>(Ahorra 5%)</span></Typography>
+                                <Typography variant='caption' color='textSecondary'>${(prices.monthly).toLocaleString()} COP / mes</Typography>
+                            </Box>
+                            <Radio checked={billingCycle === 'ANNUAL'} size='small' />
+                        </Box>
                     </Box>
                 </Grid>
 
@@ -214,15 +272,26 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                         <CardContent sx={{ p: 6 }}>
                             <Typography variant='h6' fontWeight='700' sx={{ mb: 4 }}>Detalles del Pedido</Typography>
                             
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-between', mb: 2 }}>
-                                <Typography sx={{ flexGrow: 1 }}>{selectedPlan?.name || 'Suscripción Mensual'}</Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                <Typography sx={{ flexGrow: 1 }}>{selectedPlan?.name || 'Suscripción CloudFly'}</Typography>
                                 <Typography fontWeight='700' color='success.main'>FREE TRIAL!</Typography>
                             </Box>
+                            
                             <Typography variant='caption' color='textSecondary' sx={{ display: 'block', mb: 2 }}>
-                                Costo posterior: $99.000 / mes
+                                Ciclo: {billingCycle === 'MONTHLY' ? 'Mensual' : billingCycle === 'SEMIANNUAL' ? 'Semestral' : 'Anual'}
+                            </Typography>
+
+                            <Typography variant='caption' color='textSecondary' sx={{ display: 'block', mb: 2 }}>
+                                Costo posterior: ${prices.monthly.toLocaleString()} / mes
                             </Typography>
                             
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-between', mb: 4 }}>
+                            {prices.savings > 0 && (
+                                <Typography variant='caption' color='success.main' sx={{ display: 'block', mb: 2, fontWeight: 600 }}>
+                                    Ahorro total: ${prices.savings.toLocaleString()} COP
+                                </Typography>
+                            )}
+
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4, mb: 4 }}>
                                 <Typography sx={{ flexGrow: 1 }} color='textSecondary'>Total hoy</Typography>
                                 <Typography fontWeight='900' variant='h6'>$0.00</Typography>
                             </Box>
@@ -247,7 +316,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
 
                             <Box sx={{ mt: 6 }}>
                                 <Typography variant='caption' color='textSecondary' sx={{ lineHeight: 1.5, display: 'block' }}>
-                                    <b>CloudFly Trial:</b> Tendrás acceso completo a todas las herramientas de IA. El trial se renovará automáticamente por <b>$99.000/mes</b> después de 14 días. Puedes cancelar antes de que termine el periodo de prueba para evitar cargos.
+                                    <b>CloudFly Trial:</b> Tendrás acceso completo a todas las herramientas de IA. El trial se renovará automáticamente por <b>${prices.total.toLocaleString()} {billingCycle === 'MONTHLY' ? '/ mes' : billingCycle === 'SEMIANNUAL' ? 'cada 6 meses' : 'cada 12 meses'}</b> después de 14 días.
                                 </Typography>
                             </Box>
                         </CardContent>

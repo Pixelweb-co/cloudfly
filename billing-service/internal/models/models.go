@@ -49,6 +49,16 @@ type Subscription struct {
 	PlanID           int64     `json:"planId"`
 	TenantID         int64     `json:"tenantId"`
 	Status           string    `json:"status"`
+	BillingCycle     string    `json:"billingCycle"`
+	MonthlyPrice     float64   `json:"monthlyPrice"`
 	TrialEndsAt      time.Time `json:"trialEndsAt"`
 	NextBillingDate  time.Time `json:"nextBillingDate"`
+}
+
+type Plan struct {
+	ID                 int64     `json:"id"`
+	Name               string    `json:"name"`
+	Price              float64   `json:"price"`
+	SemiannualDiscount float64   `json:"semiannualDiscount"`
+	AnnualDiscount     float64   `json:"annualDiscount"`
 }
