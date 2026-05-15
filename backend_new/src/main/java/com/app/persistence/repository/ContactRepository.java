@@ -10,6 +10,8 @@ public interface ContactRepository extends ReactiveCrudRepository<ContactEntity,
     @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId")
     Flux<ContactEntity> findByTenantId(Long tenantId);
 
+    Mono<ContactEntity> findByUuid(String uuid);
+
     @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId")
     Flux<ContactEntity> findByTenantIdAndCompanyId(Long tenantId, Long companyId);
 
