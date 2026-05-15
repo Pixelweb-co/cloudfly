@@ -144,4 +144,15 @@ public class ContactController {
         return getCurrentUserContext(headers)
                 .flatMapMany(ctx -> contactService.search(ctx.tenantId(), ctx.companyId(), q));
     }
+
+    @PatchMapping("/{id}/chatbot")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
+    public Mono<ContactEntity> toggleChatbot(
+            @PathVariable Long id,
+            @RequestBody Map<String, Boolean> payload,
+            @RequestHeader Map<String, String> headers) {
+        Boolean enabled = payload.get("enabled");
+        return getCurrentUserContext(headers)
+                .flatMap(ctx -> contactService.toggleChatbot(id, enabled, ctx.tenantId(), ctx.companyId()));
+    }
 }

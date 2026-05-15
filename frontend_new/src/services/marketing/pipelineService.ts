@@ -51,6 +51,14 @@ export const pipelineService = {
     await axiosInstance.post('/api/pipelines/move-conversation', data)
   },
 
+  updateCardStage: async (pipelineId: number, contactId: number, targetStageId: number): Promise<void> => {
+    await axiosInstance.put(`/api/pipelines/${pipelineId}/kanban/cards/${contactId}/stage?targetStageId=${targetStageId}`)
+  },
+
+  toggleChatbot: async (contactId: number, enabled: boolean): Promise<void> => {
+    await axiosInstance.patch(`/api/v1/contacts/${contactId}/chatbot`, { enabled })
+  },
+
   assignConversationToPipeline: async (conversationId: string, pipelineId: number, stageId: number): Promise<void> => {
     await axiosInstance.post(`/api/pipelines/${pipelineId}/assign-conversation`, { conversationId, stageId })
   }

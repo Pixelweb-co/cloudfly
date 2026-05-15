@@ -21,6 +21,7 @@ public class NotificationMessage {
     // Campos para adjuntos PDF
     private String pdfAttachment; // PDF en Base64
     private String pdfFileName; // Nombre del archivo PDF
+    private String pdfUrl; // Ruta del archivo PDF en disco
 
     // Datos para plantilla FreeMarker
     private Map<String, Object> templateData;
@@ -150,5 +151,13 @@ public class NotificationMessage {
     public boolean hasPdfAttachment() {
         return pdfAttachment != null && !pdfAttachment.isBlank()
                 && pdfFileName != null && !pdfFileName.isBlank();
+    }
+
+    public String getPdfUrl() {
+        return pdfUrl;
+    }
+
+    public void setPdfUrl(String pdfUrl) {
+        this.pdfUrl = pdfUrl;
     }
 }

@@ -219,4 +219,15 @@ public class ContactService {
         log.info("Searching contacts for tenant: {}, company: {} with query: {}", tenantId, companyId, query);
         return contactRepository.searchContacts(tenantId, companyId, query);
     }
+
+    public Mono<ContactEntity> toggleChatbot(Long id, Boolean enabled, Long tenantId, Long companyId) {
+        log.info("🤖 Toggling chatbot for contact {} to {}", id, enabled);
+        return contactRepository.findById(id)
+                .filter(contact -> contact.getTenantId().equals(tenantId) && (companyId == null || contact.getCompanyId().equals(companyId)))
+                .flatMap(contact -> {
+                    contact.setChatbotEnabled(enabled);
+                    contact.setUpdatedAt(LocalDateTime.now());
+                    return contactRepository.save(contact);
+                });
+    }
 }

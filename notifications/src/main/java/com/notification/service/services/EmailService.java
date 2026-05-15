@@ -62,14 +62,30 @@ public class EmailService {
             helper.setSubject(notification.getSubject());
             helper.setText(body, true); // El segundo parámetro true indica que el cuerpo es HTML
 
-            // Agregar adjunto PDF si existe
+            // Agregar adjunto PDF si existe (Base64 o Path)
             if (notification.hasPdfAttachment()) {
                 byte[] pdfBytes = Base64.getDecoder().decode(notification.getPdfAttachment());
                 helper.addAttachment(
                         notification.getPdfFileName(),
                         new ByteArrayResource(pdfBytes),
                         "application/pdf");
-                System.out.println("PDF adjunto agregado: " + notification.getPdfFileName());
+                System.out.println("PDF adjunto agregado desde Base64: " + notification.getPdfFileName());
+            } else if (notification.getPdfUrl() != null && !notification.getPdfUrl().isEmpty()) {
+                String path = notification.getPdfUrl();
+                // Si es una ruta relativa que empieza con uploads, asegurar que sea absoluta para el contenedor
+                if (path.startsWith("uploads/")) {
+                    path = "/" + path;
+                }
+                
+                java.io.File file = new java.io.File(path);
+                if (file.exists()) {
+                    helper.addAttachment(
+                            notification.getPdfFileName() != null ? notification.getPdfFileName() : file.getName(),
+                            file);
+                    System.out.println("PDF adjunto agregado desde disco: " + path);
+                } else {
+                    System.err.println("PDF file not found at: " + path);
+                }
             }
 
             mailSender.send(mimeMessage);
