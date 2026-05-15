@@ -393,7 +393,8 @@ const AccountSetup = () => {
           )}
         </CardContent>
       </Card>
-    </AuthIllustrationWrapperCustomer>
+    </Box>
+  </AuthIllustrationWrapperCustomer>
   )
 }
 
