@@ -55,6 +55,12 @@ public class InvoiceEntity {
     @Column("billing_period_end")
     private LocalDateTime billingPeriodEnd;
 
+    @Column("billing_type")
+    private String billingType; // PAGO_UNICO, RECURRENTE
+
+    @Column("billing_period")
+    private String billingPeriod; // MENSUAL, SEMESTRAL, ANUAL
+
     @Column("created_at")
     private LocalDateTime createdAt;
 

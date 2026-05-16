@@ -34,9 +34,14 @@ public class BillingInternalController {
         return billingInternalService.getSubscriptionsDue();
     }
 
-    @PostMapping("/invoices/generate")
+    @PostMapping("/invoices/generate-subscription")
     public Mono<InvoiceEntity> generateInvoice(@RequestBody InvoiceEntity invoice) {
         return billingInternalService.generateInvoice(invoice);
+    }
+
+    @PutMapping("/invoices/{id}/pdf")
+    public Mono<InvoiceEntity> updateInvoicePdf(@PathVariable Long id, @RequestParam String pdfUrl) {
+        return billingInternalService.updateInvoicePdf(id, pdfUrl);
     }
 
     @PutMapping("/subscriptions/{id}/status")
@@ -54,10 +59,8 @@ public class BillingInternalController {
         return billingInternalService.getInvoiceById(id);
     }
 
-    @PutMapping("/invoices/by-reference/{reference}")
-    public Mono<Void> updateInvoiceStatusByReference(@PathVariable String reference, @RequestParam String status) {
-        log.info("Updating invoice reference {} to status {}", reference, status);
-        // Implementation logic here (search by reference and update status)
-        return Mono.empty(); // Placeholder
+    @GetMapping("/tenants/{id}")
+    public Mono<com.app.persistence.entity.TenantEntity> getTenant(@PathVariable Long id) {
+        return billingInternalService.getTenantById(id);
     }
 }

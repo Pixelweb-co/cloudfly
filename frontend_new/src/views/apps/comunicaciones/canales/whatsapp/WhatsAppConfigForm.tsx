@@ -9,17 +9,27 @@ interface Props {
   onSuccess: () => void
   onBack?: () => void
   mode?: string
+  initialConfig?: any
 }
 
-const WhatsAppConfigForm = ({ onSuccess, onBack }: Props) => {
+const WhatsAppConfigForm = ({ onSuccess, onBack, initialConfig }: Props) => {
   const [loading, setLoading] = useState(false)
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'generating' | 'waiting' | 'connected' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (initialConfig) {
+        if (initialConfig.isConnected) {
+            setStatus('connected')
+            // Don't auto-onSuccess here, let the user see the success or the parent handle it
+        } else if (initialConfig.qrCode) {
+            setQrCode(initialConfig.qrCode)
+            setStatus('waiting')
+        }
+    }
     checkInitialStatus()
-  }, [])
+  }, [initialConfig])
 
   const checkInitialStatus = async () => {
     try {

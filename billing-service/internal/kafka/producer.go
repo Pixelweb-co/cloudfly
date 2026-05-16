@@ -12,6 +12,7 @@ type NotificationEvent struct {
 	TenantID      int64   `json:"tenantId"`
 	InvoiceID     int64   `json:"invoiceId"`
 	CustomerEmail string  `json:"customerEmail"`
+	CustomerPhone string  `json:"customerPhone"`
 	CustomerName  string  `json:"customerName"`
 	InvoiceNumber string  `json:"invoiceNumber"`
 	PDFUrl        string  `json:"pdfUrl"`

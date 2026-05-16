@@ -13,6 +13,7 @@ public class BillingNotificationMessage {
     private Long tenantId;
     private Long invoiceId;
     private String customerEmail;
+    private String customerPhone;
     private String customerName;
     private String invoiceNumber;
     private String pdfUrl;

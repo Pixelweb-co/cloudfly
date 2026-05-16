@@ -39,6 +39,10 @@ const schema = yup.object().shape({
     name: yup.string().required('El nombre es obligatorio'),
     nit: yup.string().required('El NIT es obligatorio').test('checkNit', 'Este NIT ya está registrado', async (value) => {
         if (!value || value.length < 5) return true
+        
+        // Si el NIT es el mismo que el que ya tenemos hidratado, es válido (estamos editando)
+        if (initialData && initialData.nit === value) return true
+
         try {
             const res = await axiosInstance.get(`/customers/validate/nit?nit=${value}`)
             return !res.data.exists
@@ -73,13 +77,14 @@ const schema = yup.object().shape({
 interface FormCustomerProps {
     onSuccess?: (customerData: any) => void
     onBack?: () => void
+    initialData?: any
 }
 
-const FormCustomer = ({ onSuccess, onBack }: FormCustomerProps) => {
+const FormCustomer = ({ onSuccess, onBack, initialData }: FormCustomerProps) => {
     const [loading, setLoading] = useState(false)
     const router = useRouter()
 
-    const { control, handleSubmit, formState: { errors } } = useForm({
+    const { control, handleSubmit, reset, formState: { errors } } = useForm({
         resolver: yupResolver(schema),
         mode: 'onBlur',
         defaultValues: {
@@ -96,6 +101,40 @@ const FormCustomer = ({ onSuccess, onBack }: FormCustomerProps) => {
             objetoSocial: ''
         }
     })
+
+    // Hydration logic
+    useEffect(() => {
+        if (initialData) {
+            console.log('🔄 [FORM-CUSTOMER] Hydrating with initial data:', initialData.name)
+            
+            // Extract phone and country code (e.g., "57300..." -> "57" and "300...")
+            let countryCode = '57'
+            let phone = initialData.phone || ''
+            
+            const commonCodes = ['57', '52', '1', '34', '54', '56', '51', '593']
+            for (const code of commonCodes) {
+                if (phone.startsWith(code)) {
+                    countryCode = code
+                    phone = phone.substring(code.length)
+                    break
+                }
+            }
+
+            reset({
+                name: initialData.name || '',
+                nit: initialData.nit || '',
+                countryCode: countryCode,
+                phone: phone,
+                email: initialData.email || '',
+                address: initialData.address || '',
+                contact: initialData.contact || '',
+                position: initialData.position || '',
+                isEmployee: initialData.isEmployee !== undefined ? initialData.isEmployee : true,
+                businessType: initialData.businessType || '',
+                objetoSocial: initialData.businessDescription || ''
+            })
+        }
+    }, [initialData, reset])
 
     useEffect(() => {
         const user = userMethods.getUserLogin()

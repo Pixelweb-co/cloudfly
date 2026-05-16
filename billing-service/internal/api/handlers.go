@@ -2,7 +2,9 @@ package api
 
 import (
 	"billing-service/internal/service"
+	"billing-service/internal/models"
 	"crypto/sha256"
+
 	"encoding/hex"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
@@ -29,6 +31,41 @@ type WompiWebhookPayload struct {
 
 func SetupRoutes(app *fiber.App, billingSvc *service.BillingService) {
 	api := app.Group("/api/billing")
+	
+	api.Post("/execute-event", func(c *fiber.Ctx) error {
+		type EventRequest struct {
+			EventID        int64  `json:"eventId"`
+			EventType      string `json:"eventType"`
+			TenantID       int64  `json:"tenantId"`
+			SubscriptionID int64  `json:"subscriptionId"`
+			Payload        string `json:"payload"`
+		}
+		var req EventRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+		}
+		
+		err := billingSvc.ExecuteEvent(req.EventID, req.EventType, req.TenantID, req.SubscriptionID, req.Payload)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+		
+		return c.SendStatus(200)
+	})
+
+	api.Post("/create-source", func(c *fiber.Ctx) error {
+		var req models.PaymentMethod
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+		}
+		
+		sourceID, err := billingSvc.CreatePaymentSource(req)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
+		
+		return c.JSON(fiber.Map{"paymentSourceId": sourceID})
+	})
 
 	api.Post("/webhooks/wompi", func(c *fiber.Ctx) error {
 		var payload WompiWebhookPayload

@@ -6,9 +6,10 @@ import { userMethods } from '@/utils/userMethods'
 interface ProductCreationStepProps {
     onProductCreated: () => void
     onBack?: () => void
+    initialProducts?: any[]
 }
 
-const ProductCreationStep = ({ onProductCreated, onBack }: ProductCreationStepProps) => {
+const ProductCreationStep = ({ onProductCreated, onBack, initialProducts = [] }: ProductCreationStepProps) => {
     const [loading, setLoading] = useState(false)
     const [categoryLoading, setCategoryLoading] = useState(true)
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -69,6 +70,12 @@ const ProductCreationStep = ({ onProductCreated, onBack }: ProductCreationStepPr
 
     const handleProductSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        // Si ya hay productos y el formulario está vacío, simplemente avanzamos
+        if (initialProducts.length > 0 && (!productName.trim() || !productPrice)) {
+            onProductCreated()
+            return
+        }
 
         if (!productName.trim() || !productPrice) {
             setMessage({ type: 'error', text: 'Por favor completa todos los campos obligatorios' })
@@ -148,6 +155,21 @@ const ProductCreationStep = ({ onProductCreated, onBack }: ProductCreationStepPr
                         <Alert severity={message.type} sx={{ mb: 4, borderRadius: 2 }}>
                             {message.text}
                         </Alert>
+                    )}
+
+                    {initialProducts && initialProducts.length > 0 && (
+                        <Box sx={{ mb: 6, p: 4, bgcolor: 'primary.lightOpacity', borderRadius: 3, border: '1px solid', borderColor: 'primary.main' }}>
+                            <Typography variant='subtitle2' color='primary' sx={{ mb: 2, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <i className='tabler-check text-xl' /> Productos ya creados:
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                                {initialProducts.map((p: any) => (
+                                    <Box key={p.id} sx={{ px: 3, py: 1, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider', fontSize: '0.85rem' }}>
+                                        <strong>{p.productName}</strong> - ${p.price}
+                                    </Box>
+                                ))}
+                            </Box>
+                        </Box>
                     )}
 
                     <form onSubmit={handleProductSubmit}>
@@ -244,7 +266,7 @@ const ProductCreationStep = ({ onProductCreated, onBack }: ProductCreationStepPr
                                         variant='contained'
                                         size='large'
                                         fullWidth
-                                        disabled={loading || !productName.trim() || !productPrice}
+                                        disabled={loading || (initialProducts.length === 0 && (!productName.trim() || !productPrice))}
                                         className='final-wizard-step'
                                         sx={{
                                             py: 1.5,
@@ -260,7 +282,7 @@ const ProductCreationStep = ({ onProductCreated, onBack }: ProductCreationStepPr
                                         }}
                                         startIcon={loading ? <CircularProgress size={20} color='inherit' /> : null}
                                     >
-                                        {loading ? 'Guardando...' : 'Finalizar Configuración ✨'}
+                                        {loading ? 'Guardando...' : initialProducts.length > 0 ? 'Continuar con el catálogo actual ✨' : 'Finalizar Configuración ✨'}
                                     </Button>
                                 </Box>
                                 <Typography variant='caption' display='block' textAlign='center' sx={{ mt: 2 }} color='text.secondary'>
