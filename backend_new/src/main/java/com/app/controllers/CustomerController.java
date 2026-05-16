@@ -132,10 +132,11 @@ public class CustomerController {
                             .status(form.getStatus() != null ? Boolean.parseBoolean(form.getStatus()) : true)
                             .businessType(form.getBusinessType())
                             .businessDescription(form.getObjetoSocial())
+                            .adminUserId(request.getUserId()) // <--- AQUÍ: Asociamos el usuario admin
                             .isMasterTenant(true)
                             .esEmisorFE(false)
                             .esEmisorPrincipal(true)
-                            .createdAt(user.getCustomerId() == null ? LocalDateTime.now() : null) // Solo si es nuevo
+                            .createdAt(user.getCustomerId() == null ? LocalDateTime.now() : null)
                             .updatedAt(LocalDateTime.now())
                             .build();
 
