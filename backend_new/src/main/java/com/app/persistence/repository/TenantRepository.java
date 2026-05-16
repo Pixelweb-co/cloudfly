@@ -14,5 +14,5 @@ public interface TenantRepository extends ReactiveCrudRepository<TenantEntity, L
 
     Mono<TenantEntity> findByNit(String nit);
 
-    Mono<TenantEntity> findByEmail(String email);
+    reactor.core.publisher.Flux<TenantEntity> findByEmail(String email);
 }
