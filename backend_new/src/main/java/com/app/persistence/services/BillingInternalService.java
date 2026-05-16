@@ -4,11 +4,13 @@ import com.app.persistence.entity.InvoiceEntity;
 import com.app.persistence.entity.PaymentMethodEntity;
 import com.app.persistence.entity.PaymentTransactionEntity;
 import com.app.persistence.entity.SubscriptionEntity;
+import com.app.persistence.repository.ContactRepository;
 import com.app.persistence.repository.InvoiceRepository;
 import com.app.persistence.repository.PaymentMethodRepository;
 import com.app.persistence.repository.PaymentTransactionRepository;
 import com.app.persistence.repository.SubscriptionRepository;
 import com.app.persistence.repository.TenantRepository;
+import com.app.persistence.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,8 @@ public class BillingInternalService {
     private final InvoiceRepository invoiceRepository;
     private final PaymentTransactionRepository transactionRepository;
     private final TenantRepository tenantRepository;
+    private final UserRepository userRepository;
+    private final ContactRepository contactRepository;
     private final WebClient.Builder webClientBuilder;
 
 
@@ -119,6 +123,24 @@ public class BillingInternalService {
     }
 
     public Mono<com.app.persistence.entity.TenantEntity> getTenantById(Long id) {
-        return tenantRepository.findById(id);
+        return tenantRepository.findById(id)
+                .flatMap(tenant -> {
+                    if (tenant.getAdminUserId() == null) return Mono.just(tenant);
+                    
+                    return userRepository.findById(tenant.getAdminUserId())
+                            .flatMap(user -> {
+                                if (user.getEmail() != null) tenant.setEmail(user.getEmail());
+                                if (user.getContactId() == null) return Mono.just(tenant);
+                                
+                                return contactRepository.findById(user.getContactId())
+                                        .map(contact -> {
+                                            if (contact.getEmail() != null) tenant.setEmail(contact.getEmail());
+                                            if (contact.getPhone() != null) tenant.setPhone(contact.getPhone());
+                                            return tenant;
+                                        })
+                                        .defaultIfEmpty(tenant);
+                            })
+                            .defaultIfEmpty(tenant);
+                });
     }
 }
