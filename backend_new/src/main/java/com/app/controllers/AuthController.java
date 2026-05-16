@@ -57,7 +57,7 @@ public class AuthController {
                 return authenticationManager.authenticate(
                                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
                                                 loginRequest.getPassword()))
-                                .flatMap(auth -> userService.findByUsername(loginRequest.getUsername())
+                                .flatMap(auth -> userService.updateLastLogin(loginRequest.getUsername())
                                                 .flatMap(user -> userService.convertToDto(user))
                                                 .map(userDto -> {
                                                         String token = jwtProvider.createToken(auth, userDto.getCustomerId(), userDto.getActiveCompanyId());

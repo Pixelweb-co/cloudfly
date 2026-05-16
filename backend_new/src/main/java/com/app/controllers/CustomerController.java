@@ -181,8 +181,21 @@ public class CustomerController {
 
                                             return contactRepository.save(mainContact)
                                                 .doOnNext(smc -> log.info("✅ [ACCOUNT-SETUP] Main Contact created"))
-                                                .then(userRepository.save(user))
-                                                .doOnNext(su -> log.info("✅ [ACCOUNT-SETUP] User updated successfully"))
+                                                .flatMap(smc -> {
+                                                    // Actualizar usuario con los IDs del Onboarding y timestamps
+                                                    user.setCustomerId(savedTenant.getId());
+                                                    user.setCompanyId(savedCompany.getId());
+                                                    user.setUpdatedAt(LocalDateTime.now());
+                                                    if (user.getCreatedAt() == null) {
+                                                        user.setCreatedAt(LocalDateTime.now());
+                                                    }
+                                                    
+                                                    log.info("👤 [ACCOUNT-SETUP] Linking User {} to Tenant {} and Company {}", 
+                                                            user.getId(), savedTenant.getId(), savedCompany.getId());
+                                                    
+                                                    return userRepository.save(user);
+                                                })
+                                                .doOnNext(su -> log.info("✅ [ACCOUNT-SETUP] User updated successfully with IDs and Timestamps"))
                                                 .flatMap(savedUser -> {
                                                     log.info("🏥 [ACCOUNT-SETUP] Verifying Evolution API Health...");
                                                     return evolutionService.checkHealth()

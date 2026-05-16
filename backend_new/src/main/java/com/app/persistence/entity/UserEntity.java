@@ -54,7 +54,23 @@ public class UserEntity {
     @Column("contact_id")
     private Long contactId;
 
+    @Column("created_at")
+    private java.time.LocalDateTime createdAt;
+
+    @Column("updated_at")
+    private java.time.LocalDateTime updatedAt;
+
+    @Column("last_login_at")
+    private java.time.LocalDateTime lastLoginAt;
+
     // Explicit getters/setters to bypass Lombok issues on VPS
+    public java.time.LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(java.time.LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public java.time.LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(java.time.LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public java.time.LocalDateTime getLastLoginAt() { return lastLoginAt; }
+    public void setLastLoginAt(java.time.LocalDateTime lastLoginAt) { this.lastLoginAt = lastLoginAt; }
+
     public Long getContactId() { return contactId; }
     public void setContactId(Long contactId) { this.contactId = contactId; }
     public Long getId() { return id; }
