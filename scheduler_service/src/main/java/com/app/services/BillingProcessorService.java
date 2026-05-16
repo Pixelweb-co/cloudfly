@@ -65,11 +65,32 @@ public class BillingProcessorService {
     }
 
     private Mono<Boolean> callBillingService(ScheduledEventEntity event) {
-        String billingUrl = "http://billing-service:8080/api/billing/process-task"; // Example endpoint
+        String billingUrl = "http://billing-service:8080/api/billing/execute-event";
         log.info("Calling billing-service for event {}", event.getEventType());
-        // In a real scenario, we would use WebClient to call the Go service
-        return Mono.just(true);
+        
+        return webClientBuilder.build()
+                .post()
+                .uri(billingUrl)
+                .bodyValue(new BillingEventRequest(
+                        event.getId(),
+                        event.getEventType(),
+                        event.getTenantId(),
+                        event.getSubscriptionId(),
+                        event.getPayload()
+                ))
+                .retrieve()
+                .toBodilessEntity()
+                .map(resp -> true)
+                .onErrorReturn(false);
     }
+
+    private static record BillingEventRequest(
+            Long eventId,
+            String eventType,
+            Long tenantId,
+            Long subscriptionId,
+            String payload
+    ) {}
 
     private Mono<Boolean> triggerNotification(ScheduledEventEntity event) {
         log.info("Triggering notification for event {}", event.getEventType());

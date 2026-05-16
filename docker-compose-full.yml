@@ -93,6 +93,54 @@ services:
     depends_on:
       - kafka
 
+  billing-service:
+    build:
+      context: ./billing-service
+      dockerfile: Dockerfile
+    container_name: billing-service
+    restart: always
+    environment:
+      - BACKEND_API_URL=http://backend-api:8080/internal/billing
+      - KAFKA_HOST=kafka:9092
+      - WOMPI_PUBLIC_KEY=${WOMPI_PUBLIC_KEY}
+      - WOMPI_PRIVATE_KEY=${WOMPI_PRIVATE_KEY}
+      - WOMPI_EVENTS_SECRET=${WOMPI_EVENTS_SECRET}
+      - WOMPI_ACCEPTANCE_TOKEN=${WOMPI_ACCEPTANCE_TOKEN}
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - app-net
+      - kafka-net
+    depends_on:
+      - kafka
+      - backend-api
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.billing.rule=Host(`billing.cloudfly.com.co`)"
+      - "traefik.http.routers.billing.entrypoints=websecure"
+      - "traefik.http.routers.billing.tls.certresolver=le"
+      - "traefik.http.services.billing.loadbalancer.server.port=8080"
+
+  scheduler-service:
+    build:
+      context: ./scheduler_service
+      dockerfile: Dockerfile
+    container_name: scheduler-service
+    restart: always
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=cloud_master
+      - DB_USERNAME=root
+      - DB_PASSWORD=widowmaker
+      - BILLING_SERVICE_URL=http://billing-service:8080
+    networks:
+      - app-net
+    depends_on:
+      - db
+      - billing-service
+
+
   frontend-react:
     build:
       context: ./frontend_new

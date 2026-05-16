@@ -471,6 +471,27 @@ public class KafkaConsumerListener {
 
             emailService.sendEmail(notification);
             LOGGER.info("Billing invoice email sent to: " + billingData.getCustomerEmail());
+
+            // Enviar WhatsApp si hay teléfono disponible
+            if (billingData.getCustomerPhone() != null && !billingData.getCustomerPhone().isEmpty()) {
+                String whatsappMsg = String.format(
+                    "📄 *Nueva Factura de CloudFly*\n\n" +
+                    "Hola %s,\n\n" +
+                    "Se ha generado la factura *%s* por un valor de *%s %,.2f*.\n" +
+                    "Fecha de vencimiento: %s\n\n" +
+                    "Puedes ver tu factura aquí: %s\n\n" +
+                    "¡Gracias por usar CloudFly!",
+                    billingData.getCustomerName(),
+                    billingData.getInvoiceNumber(),
+                    billingData.getCurrency(),
+                    billingData.getAmount(),
+                    billingData.getDueDate(),
+                    billingData.getPdfUrl()
+                );
+                
+                String formattedPhone = formatPhoneNumber(billingData.getCustomerPhone());
+                sendWhatsAppText(formattedPhone, whatsappMsg);
+            }
         } catch (Exception e) {
             LOGGER.error("Error consuming billing invoice email notification: ", e);
         }

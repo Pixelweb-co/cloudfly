@@ -8,9 +8,11 @@ import com.app.persistence.repository.InvoiceRepository;
 import com.app.persistence.repository.PaymentMethodRepository;
 import com.app.persistence.repository.PaymentTransactionRepository;
 import com.app.persistence.repository.SubscriptionRepository;
+import com.app.persistence.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -25,20 +27,37 @@ public class BillingInternalService {
     private final SubscriptionRepository subscriptionRepository;
     private final InvoiceRepository invoiceRepository;
     private final PaymentTransactionRepository transactionRepository;
+    private final TenantRepository tenantRepository;
+    private final WebClient.Builder webClientBuilder;
+
 
     public Mono<PaymentMethodEntity> savePaymentMethod(PaymentMethodEntity paymentMethod) {
         log.info("Saving payment method for tenant: {}", paymentMethod.getTenantId());
-        // If it's default, unmark others
-        if (Boolean.TRUE.equals(paymentMethod.getIsDefault())) {
-            return paymentMethodRepository.findByTenantIdAndIsDefaultTrue(paymentMethod.getTenantId())
-                    .flatMap(existing -> {
-                        existing.setIsDefault(false);
-                        return paymentMethodRepository.save(existing);
-                    })
-                    .then(paymentMethodRepository.save(paymentMethod));
-        }
-        return paymentMethodRepository.save(paymentMethod);
+        
+        // 1. Call billing-service (Go) to create Payment Source in Wompi
+        return webClientBuilder.build()
+                .post()
+                .uri("http://billing-service:8080/api/billing/create-source")
+                .bodyValue(paymentMethod)
+                .retrieve()
+                .bodyToMono(PaymentSourceResponse.class)
+                .flatMap(response -> {
+                    paymentMethod.setPaymentSourceId(response.paymentSourceId());
+                    
+                    // 2. Save in Database
+                    if (Boolean.TRUE.equals(paymentMethod.getIsDefault())) {
+                        return paymentMethodRepository.findByTenantIdAndIsDefaultTrue(paymentMethod.getTenantId())
+                                .flatMap(existing -> {
+                                    existing.setIsDefault(false);
+                                    return paymentMethodRepository.save(existing);
+                                })
+                                .then(paymentMethodRepository.save(paymentMethod));
+                    }
+                    return paymentMethodRepository.save(paymentMethod);
+                });
     }
+
+    private record PaymentSourceResponse(String paymentSourceId) {}
 
     public Mono<SubscriptionEntity> activateTrial(Long subscriptionId) {
         log.info("Activating 14-day trial for subscription: {}", subscriptionId);
@@ -86,5 +105,20 @@ public class BillingInternalService {
 
     public Mono<InvoiceEntity> getInvoiceById(Long id) {
         return invoiceRepository.findById(id);
+    }
+
+    public Mono<InvoiceEntity> updateInvoicePdf(Long id, String pdfUrl) {
+
+        log.info("Updating PDF URL for invoice {}: {}", id, pdfUrl);
+        return invoiceRepository.findById(id)
+                .flatMap(invoice -> {
+                    invoice.setPdfUrl(pdfUrl);
+                    invoice.setUpdatedAt(LocalDateTime.now());
+                    return invoiceRepository.save(invoice);
+                });
+    }
+
+    public Mono<com.app.persistence.entity.TenantEntity> getTenantById(Long id) {
+        return tenantRepository.findById(id);
     }
 }

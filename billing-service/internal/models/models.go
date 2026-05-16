@@ -30,6 +30,8 @@ type Invoice struct {
 	PDFUrl             string    `json:"pdfUrl"`
 	BillingPeriodStart time.Time `json:"billingPeriodStart"`
 	BillingPeriodEnd   time.Time `json:"billingPeriodEnd"`
+	BillingType        string    `json:"billingType"`
+	BillingPeriod      string    `json:"billingPeriod"`
 }
 
 type PaymentTransaction struct {

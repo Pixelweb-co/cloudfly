@@ -85,30 +85,74 @@ const AccountSetup = () => {
   const [activeStep, setActiveStep] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+  const [isLoadingData, setIsLoadingData] = useState(true)
+
+  // Hydration states
+  const [initialCustomerData, setInitialCustomerData] = useState<any>(null)
+  const [initialWhatsAppData, setInitialWhatsAppData] = useState<any>(null)
+  const [initialProducts, setInitialProducts] = useState<any[]>([])
+
   const router = useRouter()
 
   useEffect(() => {
     setIsMounted(true)
-
-    // Resume logic from localStorage
-    const savedStep = localStorage.getItem('account_setup_step')
     const user = userMethods.getUserLogin()
+    if (!user) return
 
-    if (savedStep) {
-      const stepInt = parseInt(savedStep, 10)
+    const loadData = async () => {
+      try {
+        console.log('🔍 [HYDRATION] Fetching existing onboarding data...')
+        
+        // 1. Fetch Business Data if customerId exists
+        if (user.customerId) {
+          const custRes = await axiosInstance.get(`/customers/${user.customerId}`)
+          if (custRes.data) {
+            console.log('🏢 [HYDRATION] Customer data found')
+            setInitialCustomerData(custRes.data)
+          }
+        }
 
-      // Smart skip: If we have customerId but are in step 0 or 1, go to step 2
-      if (user?.customerId && stepInt < 2) {
-        setActiveStep(2)
-        localStorage.setItem('account_setup_step', '2')
-      } else {
-        setActiveStep(stepInt)
+        // 2. Fetch WhatsApp Config
+        try {
+          const waRes = await axiosInstance.get('/api/channel-config/config')
+          if (waRes.data) {
+            console.log('🤖 [HYDRATION] WhatsApp config found')
+            setInitialWhatsAppData(waRes.data)
+          }
+        } catch (e) { /* No config yet */ }
+
+        // 3. Fetch Products
+        try {
+          const prodRes = await axiosInstance.get('/api/v1/products')
+          if (prodRes.data && prodRes.data.length > 0) {
+            console.log('📦 [HYDRATION] Products found:', prodRes.data.length)
+            setInitialProducts(prodRes.data)
+          }
+        } catch (e) { /* No products yet */ }
+
+        // Resume logic with smart skip
+        const savedStep = localStorage.getItem('account_setup_step')
+        let targetStep = savedStep ? parseInt(savedStep, 10) : 0
+
+        // If we have data, we can decide to skip
+        if (user.customerId && targetStep < 2) targetStep = 2
+        
+        // If we have WhatsApp and Products, go to Billing (Step 4)
+        // (Only if they haven't finished billing yet)
+        if (initialWhatsAppData && initialProducts.length > 0 && targetStep < 4) {
+          // targetStep = 4 // Descomentar para salto agresivo si ya hay todo
+        }
+
+        setActiveStep(targetStep)
+        localStorage.setItem('account_setup_step', targetStep.toString())
+      } catch (error) {
+        console.error('❌ [HYDRATION] Error loading onboarding data:', error)
+      } finally {
+        setIsLoadingData(false)
       }
-    } else if (user?.customerId) {
-      // Fallback if no step saved but has customer
-      setActiveStep(2)
-      localStorage.setItem('account_setup_step', '2')
     }
+
+    loadData()
   }, [])
 
   // Sync step to localStorage
@@ -168,10 +212,10 @@ const AccountSetup = () => {
 
       // Use hard redirect to ensure all layouts and guards (like OnboardingGuard) 
       // are re-initialized with the new localStorage/session state.
-      window.location.href = '/home'
+      // window.location.href = '/home'
     } catch (error) {
       console.error('❌ [ACCOUNT-SETUP] Error finishing onboarding:', error)
-      window.location.href = '/home' // Fallback redirect
+      // window.location.href = '/home' // Fallback redirect
     }
   }
 
@@ -205,6 +249,15 @@ const AccountSetup = () => {
   }
 
   const renderStepContent = (step: number) => {
+    if (isLoadingData) {
+      return (
+        <Box className='flex flex-col items-center justify-center py-20'>
+          <i className='tabler-loader animate-spin text-4xl text-primary mb-4' />
+          <Typography>Recuperando tu progreso...</Typography>
+        </Box>
+      )
+    }
+
     switch (step) {
       case 0:
         return (
@@ -287,7 +340,7 @@ const AccountSetup = () => {
                 size='large'
                 className='min-w-[120px] next-wizard-step'
               >
-                Continuar
+                {initialCustomerData ? 'Continuar Progreso' : 'Comenzar'}
               </Button>
             </Box>
           </Box>
@@ -302,7 +355,7 @@ const AccountSetup = () => {
             <Typography variant='body2' className='mb-6 text-textSecondary text-center'>
               Esta información nos ayudará a personalizar CloudFly específicamente para tu empresa
             </Typography>
-            <FormCustomer onSuccess={handleCustomerSuccess} onBack={handleBack} />
+            <FormCustomer onSuccess={handleCustomerSuccess} onBack={handleBack} initialData={initialCustomerData} />
           </Box>
         )
 
@@ -315,14 +368,14 @@ const AccountSetup = () => {
             <Typography variant='body2' className='mb-6 text-textSecondary text-center'>
               Conecta tu número de WhatsApp Business y personaliza tu asistente IA
             </Typography>
-            <WhatsAppConfigForm onSuccess={handleNext} onBack={handleBack} mode="onboarding" />
+            <WhatsAppConfigForm onSuccess={handleNext} onBack={handleBack} mode="onboarding" initialConfig={initialWhatsAppData} />
           </Box>
         )
 
 
       case 3:
         return (
-          <ProductCreationStep onProductCreated={handleNext} onBack={handleBack} />
+          <ProductCreationStep onProductCreated={handleNext} onBack={handleBack} initialProducts={initialProducts} />
         )
 
       case 4:

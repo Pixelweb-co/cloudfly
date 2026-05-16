@@ -19,6 +19,24 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
     const [paymentMethod, setPaymentMethod] = useState('CARD')
     const [billingCycle, setBillingCycle] = useState('MONTHLY')
     const [loading, setLoading] = useState(false)
+
+    // Wompi SDK Loading
+    useEffect(() => {
+        const script = document.createElement('script')
+        script.src = 'https://cdn.wompi.co/libs/js/v1.js'
+        script.async = true
+        script.onload = () => {
+            // @ts-ignore
+            window.wompiConfig = {
+                publicKey: process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || 'pub_test_24f58f00000000000000000000000000'
+            }
+        }
+        document.body.appendChild(script)
+        return () => {
+            document.body.removeChild(script)
+        }
+    }, [])
+
     
     // Pricing logic
     const baseMonthlyPrice = 99000
@@ -48,57 +66,88 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
 
     const handleConfirm = async () => {
         if (!selectedPlan) return toast.error('Selecciona un plan')
+        if (paymentMethod === 'CARD' && (!cardData.number || !cardData.expiry || !cardData.cvc)) {
+            return toast.error('Completa los datos de la tarjeta')
+        }
         
         setLoading(true)
         try {
-            // Simulación de validación Wompi para los números de prueba proporcionados
-            const cleanNumber = cardData.number.replace(/\s/g, '')
+            let wompiToken = ''
+            let brand = 'VISA'
+            let last4 = '0000'
+
             if (paymentMethod === 'CARD') {
-                if (cleanNumber === '4111111111111111') {
-                    toast.error('Transacción declinada.')
-                    setLoading(false)
-                    return
+                // 1. Tokenización Real con Wompi
+                const [expMonth, expYear] = cardData.expiry.split('/')
+                const tokenData = {
+                    number: cardData.number.replace(/\s/g, ''),
+                    cvc: cardData.cvc,
+                    exp_month: expMonth,
+                    exp_year: '20' + expYear,
+                    card_holder: cardData.name || (billingInfo.firstName + ' ' + billingInfo.lastName)
                 }
-                if (cleanNumber !== '4242424242424242' && cleanNumber !== '') {
-                    toast.error('Número de tarjeta no válido para pruebas.')
-                    setLoading(false)
-                    return
-                }
+
+                // @ts-ignore
+                const wompi = new window.Wompi({
+                    publicKey: process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || 'pub_test_24f58f00000000000000000000000000'
+                })
+
+                // @ts-ignore
+                const response = await new Promise((resolve, reject) => {
+                    wompi.tokenizeCard(tokenData, (err, tokens) => {
+                        if (err) reject(err)
+                        else resolve(tokens)
+                    })
+                })
+
+                // @ts-ignore
+                wompiToken = response.id
+                // @ts-ignore
+                brand = response.brand || 'VISA'
+                last4 = tokenData.number.slice(-4)
             }
 
-            // Flujo de activación de Trial (Lógica existente)
+            // 2. Guardar Método de Pago en Backend (Obtener paymentSourceId)
             const paymentMethodPayload = {
                 tenantId,
                 provider: 'WOMPI',
-                paymentSourceId: `src_${paymentMethod.toLowerCase()}_` + Math.random().toString(36).substr(2, 9),
-                token: 'tok_test_' + Math.random().toString(36).substr(2, 15),
-                brand: paymentMethod === 'CARD' ? 'VISA' : paymentMethod,
-                last4: paymentMethod === 'CARD' ? cleanNumber.slice(-4) : '0000',
-                expMonth: 12,
-                expYear: 28,
-                isDefault: true
+                token: wompiToken,
+                brand: brand,
+                last4: last4,
+                expMonth: parseInt(cardData.expiry.split('/')[0]),
+                expYear: parseInt('20' + cardData.expiry.split('/')[1]),
+                isDefault: true,
+                customerEmail: 'admin@cloudfly.com.co' // TODO: Get real user email
             }
 
-            await axiosInstance.post('/internal/billing/payment-methods', paymentMethodPayload)
+            // El backend llamará al billing-service para crear el payment_source real en Wompi
+            const pmRes = await axiosInstance.post('/internal/billing/payment-methods', paymentMethodPayload)
+            
+            // 3. Crear Suscripción
             const subRes = await axiosInstance.post(`/api/v1/subscriptions/users/${userId}/subscribe`, {
                 planId: selectedPlan.id,
                 isAutoRenew: true,
-                billingCycle: billingCycle // Enviamos el ciclo seleccionado
+                billingCycle: billingCycle
             })
             
+            // 4. Activar Trial y Sincronizar Calendario
             await axiosInstance.post(`/internal/billing/subscriptions/${subRes.data.id}/activate-trial`)
-            const trialEnd = new Date(); trialEnd.setDate(trialEnd.getDate() + 14)
             
-            await axiosInstance.post('http://scheduler-service:8080/api/scheduler/billing/init', {
+            const trialEnd = new Date()
+            trialEnd.setDate(trialEnd.getDate() + 14)
+            
+            // Inicializar el calendario de facturación en el scheduler
+            await axiosInstance.post('/internal/billing/scheduler/init', {
                 tenantId,
                 subscriptionId: subRes.data.id,
                 trialEndsAt: trialEnd.toISOString()
             })
 
-            toast.success('¡Trial activado correctamente con ciclo ' + billingCycle + '!')
+            toast.success('¡Trial activado correctamente!')
             handleNext()
-        } catch (err) {
-            toast.error('Error al activar el plan.')
+        } catch (err: any) {
+            console.error('Wompi Error:', err)
+            toast.error(err.error?.type === 'INVALID_ACCESS_TOKEN' ? 'Error de configuración de pagos' : 'Error al procesar el pago')
         } finally {
             setLoading(false)
         }
