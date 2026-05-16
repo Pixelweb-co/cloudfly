@@ -87,6 +87,7 @@ public class CustomerController {
     public Mono<ResponseEntity<Map<String, Object>>> validateEmail(@RequestParam String email) {
         boolean isPublic = email.contains("@gmail.com") || email.contains("@hotmail.com") || email.contains("@outlook.com") || email.contains("@yahoo.");
         return tenantRepository.findByEmail(email)
+                .next() // <--- Fix: Toma el primero para evitar errores si hay duplicados por pruebas
                 .map(t -> ResponseEntity.ok(Map.of("exists", (Object)true, "isCorporate", !isPublic, "message", "El email ya está en uso")))
                 .defaultIfEmpty(ResponseEntity.ok(Map.of("exists", false, "isCorporate", !isPublic)));
     }
