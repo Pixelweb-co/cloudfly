@@ -85,6 +85,8 @@ public class UserService {
                                         .credentialNoExpired(true)
                                         .verificationToken(UUID.randomUUID().toString())
                                         .customerId(finalCustId)
+                                        .createdAt(LocalDateTime.now())
+                                        .updatedAt(LocalDateTime.now())
                                         .build();
 
                         return userRepository.save(user)
@@ -253,8 +255,16 @@ public class UserService {
                                 .map(count -> count == 0);
         }
 
-        public Mono<UserEntity> findByUsername(String username) {
+    public Mono<UserEntity> findByUsername(String username) {
         return userRepository.findByUsername(username);
+    }
+
+    public Mono<UserEntity> updateLastLogin(String username) {
+        return userRepository.findByUsername(username)
+                .flatMap(user -> {
+                    user.setLastLoginAt(LocalDateTime.now());
+                    return userRepository.save(user);
+                });
     }
 
     public Mono<Void> forgotPassword(String email) {
