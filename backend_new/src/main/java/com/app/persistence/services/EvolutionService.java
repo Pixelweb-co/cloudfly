@@ -149,7 +149,7 @@ public class EvolutionService {
 
     public Mono<Boolean> isOnWhatsApp(String instanceName, String phoneNumber) {
         String cleanNumber = phoneNumber.replaceAll("[^0-9]", "");
-        String url = apiUrl + "/chat/whatsappNumbers/" + (instanceName != null ? instanceName : "cloudfly_chatbot1");
+        String url = apiUrl + "/chat/whatsappNumbers/" + (instanceName != null ? instanceName : "cloudfly_t1_c1");
         
         Map<String, Object> body = new HashMap<>();
         body.put("numbers", new String[]{cleanNumber});
@@ -178,7 +178,7 @@ public class EvolutionService {
 
     public Mono<Map<String, Object>> sendSimpleMessage(String instanceName, String phoneNumber, String body) {
         String cleanNumber = phoneNumber.replaceAll("[^0-9]", "");
-        String url = apiUrl + "/message/sendText/" + (instanceName != null ? instanceName : "cloudfly_chatbot1");
+        String url = apiUrl + "/message/sendText/" + (instanceName != null ? instanceName : "cloudfly_t1_c1");
         
         Map<String, Object> messageBody = new HashMap<>();
         messageBody.put("number", cleanNumber);
@@ -210,7 +210,7 @@ public class EvolutionService {
      */
     public Mono<Map<String, Object>> sendWhatsAppAudio(String instanceName, String phoneNumber, String audioContent) {
         String cleanNumber = phoneNumber.replaceAll("[^0-9]", "");
-        String url = apiUrl + "/message/sendWhatsAppAudio/" + (instanceName != null ? instanceName : "cloudfly_chatbot1");
+        String url = apiUrl + "/message/sendWhatsAppAudio/" + (instanceName != null ? instanceName : "cloudfly_t1_c1");
         
         // Limpiar prefijo data:audio/mp3;base64, si existe
         String finalAudio = audioContent;
@@ -243,7 +243,7 @@ public class EvolutionService {
      */
     public Mono<Map<String, Object>> sendMedia(String instanceName, String phoneNumber, String mediaUrl, String caption) {
         String cleanNumber = phoneNumber.replaceAll("[^0-9]", "");
-        String url = apiUrl + "/message/sendMedia/" + (instanceName != null ? instanceName : "cloudfly_chatbot1");
+        String url = apiUrl + "/message/sendMedia/" + (instanceName != null ? instanceName : "cloudfly_t1_c1");
         
         Map<String, Object> messageBody = new HashMap<>();
         messageBody.put("number", cleanNumber);
@@ -303,7 +303,7 @@ public class EvolutionService {
      * Mark messages as read in WhatsApp via Evolution API
      */
     public Mono<Map<String, Object>> markMessagesAsRead(String instanceName, java.util.List<Map<String, Object>> readMessages) {
-        String url = apiUrl + "/chat/markMessageAsRead/" + (instanceName != null ? instanceName : "cloudfly_chatbot1");
+        String url = apiUrl + "/chat/markMessageAsRead/" + (instanceName != null ? instanceName : "cloudfly_t1_c1");
         
         Map<String, Object> body = new HashMap<>();
         body.put("readMessages", readMessages);
