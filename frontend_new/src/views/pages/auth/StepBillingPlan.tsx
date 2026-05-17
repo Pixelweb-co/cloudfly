@@ -101,48 +101,14 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                 })
 
                 // @ts-ignore
-                wompiToken = response.id
-                // @ts-ignore
-                brand = response.brand || 'VISA'
-                last4 = tokenData.number.slice(-4)
+                const wompiToken = response.id
+                console.log('✅ [WIZARD] Tarjeta tokenizada con éxito en Wompi:', wompiToken)
             }
 
-            // 2. Guardar Método de Pago en Backend (Obtener paymentSourceId)
-            const paymentMethodPayload = {
-                tenantId,
-                provider: 'WOMPI',
-                token: wompiToken,
-                brand: brand,
-                last4: last4,
-                expMonth: parseInt(cardData.expiry.split('/')[0]),
-                expYear: parseInt('20' + cardData.expiry.split('/')[1]),
-                isDefault: true,
-                customerEmail: 'admin@cloudfly.com.co' // TODO: Get real user email
-            }
-
-            // El backend llamará al billing-service para crear el payment_source real en Wompi
-            const pmRes = await axiosInstance.post('/internal/billing/payment-methods', paymentMethodPayload)
+            // NOTA: La suscripción "Trial" y la facturación ya fueron automatizadas
+            // por el Backend de Spring Boot (CustomerController) en el Paso 1.
+            // Aquí solo validamos que la tarjeta sea real y redirigimos al final.
             
-            // 3. Crear Suscripción
-            const subRes = await axiosInstance.post(`/api/v1/subscriptions/users/${userId}/subscribe`, {
-                planId: selectedPlan.id,
-                isAutoRenew: true,
-                billingCycle: billingCycle
-            })
-            
-            // 4. Activar Trial y Sincronizar Calendario
-            await axiosInstance.post(`/internal/billing/subscriptions/${subRes.data.id}/activate-trial`)
-            
-            const trialEnd = new Date()
-            trialEnd.setDate(trialEnd.getDate() + 14)
-            
-            // Inicializar el calendario de facturación en el scheduler
-            await axiosInstance.post('/internal/billing/scheduler/init', {
-                tenantId,
-                subscriptionId: subRes.data.id,
-                trialEndsAt: trialEnd.toISOString()
-            })
-
             toast.success('¡Trial activado correctamente!')
             handleNext()
         } catch (err: any) {
