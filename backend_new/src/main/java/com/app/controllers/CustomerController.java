@@ -78,7 +78,7 @@ public class CustomerController {
     public Mono<ResponseEntity<Map<String, Object>>> validateWhatsApp(@RequestParam String number) {
         log.info("🔍 Validating WhatsApp for number: {}", number);
         // Usamos una instancia maestra o por defecto para validar
-        return evolutionService.isOnWhatsApp("cloudfly_chatbot1", number)
+        return evolutionService.isOnWhatsApp("cloudfly_t1_c1", number)
                 .map(exists -> ResponseEntity.ok(Map.of("exists", (Object)exists, "message", exists ? "WhatsApp válido" : "El número no tiene WhatsApp activo")))
                 .onErrorResume(e -> Mono.just(ResponseEntity.ok(Map.of("exists", false, "error", e.getMessage()))));
     }
@@ -212,7 +212,7 @@ public class CustomerController {
                                                                         .then(baseFlow);
                                                             } else {
                                                                 log.info("📱 [ACCOUNT-SETUP] Validating WhatsApp number: {}", form.getPhone());
-                                                                return evolutionService.isOnWhatsApp("cloudfly_chatbot1", form.getPhone())
+                                                                return evolutionService.isOnWhatsApp("cloudfly_t1_c1", form.getPhone())
                                                                     .timeout(java.time.Duration.ofSeconds(15))
                                                                     .flatMap(isOnWa -> {
                                                                         if (!isOnWa) {
