@@ -186,8 +186,8 @@ const FormCustomer = ({ onSuccess, onBack, initialData }: FormCustomerProps) => 
                         <CustomTextField 
                             {...field} 
                             onChange={(e) => {
-                                const sanitizedValue = e.target.value.replace(/[^0-9]/g, '')
-                                field.onChange(sanitizedValue)
+                                e.target.value = e.target.value.replace(/[^0-9]/g, '')
+                                field.onChange(e)
                             }}
                             fullWidth 
                             label='NIT / Identificación' 
@@ -207,7 +207,17 @@ const FormCustomer = ({ onSuccess, onBack, initialData }: FormCustomerProps) => 
                             </CustomTextField>
                         )} />
                         <Controller name='phone' control={control} render={({ field }) => (
-                            <CustomTextField {...field} fullWidth label='Número WhatsApp' placeholder='3001234567' error={!!errors.phone} helperText={errors.phone?.message} 
+                            <CustomTextField 
+                                {...field} 
+                                onChange={(e) => {
+                                    e.target.value = e.target.value.replace(/[^0-9]/g, '')
+                                    field.onChange(e)
+                                }}
+                                fullWidth 
+                                label='Número WhatsApp' 
+                                placeholder='3001234567' 
+                                error={!!errors.phone} 
+                                helperText={errors.phone?.message} 
                                 InputProps={{ startAdornment: <InputAdornment position="start"><i className='tabler-brand-whatsapp text-success'/></InputAdornment> }}
                             />
                         )} />
