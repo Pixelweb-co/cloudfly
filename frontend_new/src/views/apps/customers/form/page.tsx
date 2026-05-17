@@ -37,7 +37,9 @@ const COUNTRY_CODES = [
 
 const schema = yup.object().shape({
     name: yup.string().required('El nombre es obligatorio'),
-    nit: yup.string().required('El NIT es obligatorio').test('checkNit', 'Este NIT ya está registrado', async (value) => {
+    nit: yup.string().required('El NIT es obligatorio')
+    .matches(/^[0-9]+$/, 'Solo se permiten números')
+    .test('checkNit', 'Este NIT ya está registrado', async (value) => {
         if (!value || value.length < 5) return true
         
         // Si el NIT es el mismo que el que ya tenemos hidratado, es válido (estamos editando)
@@ -86,7 +88,7 @@ const FormCustomer = ({ onSuccess, onBack, initialData }: FormCustomerProps) => 
 
     const { control, handleSubmit, reset, formState: { errors } } = useForm({
         resolver: yupResolver(schema),
-        mode: 'onBlur',
+        mode: 'onChange',
         defaultValues: {
             name: '',
             nit: '',
@@ -181,7 +183,18 @@ const FormCustomer = ({ onSuccess, onBack, initialData }: FormCustomerProps) => 
                 </Grid>
                 <Grid item xs={12} sm={6}>
                     <Controller name='nit' control={control} render={({ field }) => (
-                        <CustomTextField {...field} fullWidth label='NIT / Identificación' placeholder='900123456-1' error={!!errors.nit} helperText={errors.nit?.message} />
+                        <CustomTextField 
+                            {...field} 
+                            onChange={(e) => {
+                                const sanitizedValue = e.target.value.replace(/[^0-9]/g, '')
+                                field.onChange(sanitizedValue)
+                            }}
+                            fullWidth 
+                            label='NIT / Identificación' 
+                            placeholder='9001234561' 
+                            error={!!errors.nit} 
+                            helperText={errors.nit?.message} 
+                        />
                     )} />
                 </Grid>
 

@@ -70,6 +70,7 @@ public class CustomerController {
     @GetMapping("/validate/nit")
     public Mono<ResponseEntity<Map<String, Object>>> validateNit(@RequestParam String nit) {
         return tenantRepository.findByNit(nit)
+                .next()
                 .map(t -> ResponseEntity.ok(Map.of("exists", (Object)true, "message", "El NIT ya está registrado")))
                 .defaultIfEmpty(ResponseEntity.ok(Map.of("exists", false)));
     }

@@ -12,7 +12,7 @@ public interface TenantRepository extends ReactiveCrudRepository<TenantEntity, L
     @Query("UPDATE clientes SET onboarding_completed = :completed WHERE id = :tenantId")
     Mono<Void> updateOnboardingStatus(Long tenantId, boolean completed);
 
-    Mono<TenantEntity> findByNit(String nit);
+    reactor.core.publisher.Flux<TenantEntity> findByNit(String nit);
 
     reactor.core.publisher.Flux<TenantEntity> findByEmail(String email);
 }
