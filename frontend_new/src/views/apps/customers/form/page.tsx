@@ -39,10 +39,10 @@ const schema = yup.object().shape({
     name: yup.string().required('El nombre es obligatorio'),
     nit: yup.string().required('El NIT es obligatorio')
     .matches(/^[0-9]+$/, 'Solo se permiten números')
-    .test('checkNit', 'Este NIT ya está registrado', async (value) => {
+    .test('checkNit', 'Este NIT ya está registrado', async (value, testContext) => {
         if (!value || value.length < 5) return true
         
-        // Si el NIT es el mismo que el que ya tenemos hidratado, es válido (estamos editando)
+        const initialData = testContext.options.context?.initialData;
         if (initialData && initialData.nit === value) return true
 
         try {
@@ -61,8 +61,12 @@ const schema = yup.object().shape({
         } catch { return true } // Si falla la API de Evolution, permitimos continuar por precaución
     }),
     email: yup.string().email('Email inválido').required('Email es obligatorio')
-    .test('checkEmail', 'Este email ya está en uso', async (value) => {
+    .test('checkEmail', 'Este email ya está en uso', async (value, testContext) => {
         if (!value) return true
+
+        const initialData = testContext.options.context?.initialData;
+        if (initialData && initialData.email === value) return true
+
         try {
             const res = await axiosInstance.get(`/customers/validate/email?email=${value}`)
             return !res.data.exists
@@ -89,6 +93,7 @@ const FormCustomer = ({ onSuccess, onBack, initialData }: FormCustomerProps) => 
     const { control, handleSubmit, reset, formState: { errors } } = useForm({
         resolver: yupResolver(schema),
         mode: 'onChange',
+        context: { initialData },
         defaultValues: {
             name: '',
             nit: '',
