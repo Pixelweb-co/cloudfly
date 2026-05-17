@@ -243,7 +243,18 @@ const AccountSetup = () => {
     setActiveStep(prevActiveStep => prevActiveStep - 1)
   }
 
-  const handleCustomerSuccess = (customerData: any) => {
+  const handleCustomerSuccess = async (customerData: any) => {
+    // Update NextAuth session so it knows about the new IDs immediately
+    if (updateSession && customerData.customerId) {
+      console.log('🔄 [WIZARD] Updating NextAuth session with new Customer/Company IDs after Step 1...')
+      await updateSession({
+        user: {
+          activeCompanyId: customerData.activeCompanyId,
+          customerId: customerData.customerId
+        }
+      })
+    }
+    
     // Una vez configurado el negocio, avanzar al siguiente paso (WhatsApp)
     setActiveStep(2)
   }

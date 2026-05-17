@@ -187,13 +187,14 @@ public class CustomerController {
                                                     // Actualizar usuario con los IDs del Onboarding y timestamps
                                                     user.setCustomerId(savedTenant.getId());
                                                     user.setCompanyId(savedCompany.getId());
+                                                    user.setContactId(smc.getId()); // Enlazar el contacto creado
                                                     user.setUpdatedAt(LocalDateTime.now());
                                                     if (user.getCreatedAt() == null) {
                                                         user.setCreatedAt(LocalDateTime.now());
                                                     }
                                                     
-                                                    log.info("👤 [ACCOUNT-SETUP] Linking User {} to Tenant {} and Company {}", 
-                                                            user.getId(), savedTenant.getId(), savedCompany.getId());
+                                                    log.info("👤 [ACCOUNT-SETUP] Linking User {} to Tenant {}, Company {} and Contact {}", 
+                                                            user.getId(), savedTenant.getId(), savedCompany.getId(), smc.getId());
                                                     
                                                     return userRepository.save(user);
                                                 })
