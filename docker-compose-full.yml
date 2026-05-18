@@ -148,6 +148,7 @@ services:
       args:
         - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co
         - NEXT_PUBLIC_BASE_URL=https://dashboard.cloudfly.com.co
+        - NEXT_PUBLIC_WOMPI_PUBLIC_KEY=${WOMPI_PUBLIC_KEY}
     container_name: frontend-react
     restart: always
     environment:
