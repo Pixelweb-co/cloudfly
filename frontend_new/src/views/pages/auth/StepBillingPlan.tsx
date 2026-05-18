@@ -77,7 +77,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
             let last4 = '0000'
 
             if (paymentMethod === 'CARD') {
-                // 1. Tokenización Real con Wompi
+                // 1. Tokenización con Wompi
                 const [expMonth, expYear] = cardData.expiry.split('/')
                 const tokenData = {
                     number: cardData.number.replace(/\s/g, ''),
@@ -94,25 +94,35 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
 
                 // @ts-ignore
                 const response = await new Promise((resolve, reject) => {
-                    wompi.tokenizeCard(tokenData, (err, tokens) => {
+                    wompi.tokenizeCard(tokenData, (err: any, tokens: any) => {
                         if (err) reject(err)
                         else resolve(tokens)
                     })
                 })
 
                 // @ts-ignore
-                const wompiToken = response.id
-                console.log('✅ [WIZARD] Tarjeta tokenizada con éxito en Wompi:', wompiToken)
+                wompiToken = response.id
+                // @ts-ignore
+                brand = response.brand || 'VISA'
+                last4 = tokenData.number.slice(-4)
             }
 
-            // NOTA: La suscripción "Trial" y la facturación ya fueron automatizadas
-            // por el Backend de Spring Boot (CustomerController) en el Paso 1.
-            // Aquí solo validamos que la tarjeta sea real y redirigimos al final.
-            
+            // 2. Guardar método de pago + crear suscripción Trial (Plan ID 2)
+            await axiosInstance.post('/customers/account-setup/payment', {
+                tenantId,
+                userId,
+                wompiToken,
+                brand,
+                last4,
+                expMonth: parseInt(cardData.expiry.split('/')[0]),
+                expYear: parseInt('20' + cardData.expiry.split('/')[1]),
+                billingCycle
+            })
+
             toast.success('¡Trial activado correctamente!')
             handleNext()
         } catch (err: any) {
-            console.error('Wompi Error:', err)
+            console.error('Wompi/Payment Error:', err)
             toast.error(err.error?.type === 'INVALID_ACCESS_TOKEN' ? 'Error de configuración de pagos' : 'Error al procesar el pago')
         } finally {
             setLoading(false)

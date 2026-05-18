@@ -210,12 +210,11 @@ const AccountSetup = () => {
         })
       }
 
-      // Use hard redirect to ensure all layouts and guards (like OnboardingGuard) 
-      // are re-initialized with the new localStorage/session state.
-      // window.location.href = '/home'
+      // Hard redirect to re-initialize all guards with new session state
+      window.location.href = '/home'
     } catch (error) {
       console.error('❌ [ACCOUNT-SETUP] Error finishing onboarding:', error)
-      // window.location.href = '/home' // Fallback redirect
+      window.location.href = '/home' // Fallback redirect
     }
   }
 
