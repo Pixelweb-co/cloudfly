@@ -40,7 +40,7 @@ public class SubscriptionController {
     @GetMapping("/tenant/{tenantId}/active")
     public Mono<ResponseEntity<SubscriptionResponse>> getActiveTenantSubscription(@PathVariable Long tenantId) {
         // En este sistema, tenantId se mapea a customerId en la base de datos
-        return subscriptionRepository.findFirstByCustomerIdAndStatusOrderByEndDateDesc(tenantId, "ACTIVE")
+        return subscriptionRepository.findActiveOrTrialSubscription(tenantId)
                 .flatMap(this::mapToResponse)
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build());
