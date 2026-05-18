@@ -12,4 +12,8 @@ public interface SubscriptionRepository extends ReactiveCrudRepository<Subscript
 
     @Query("SELECT * FROM subscriptions WHERE customer_id = :customerId AND status = :status ORDER BY end_date DESC LIMIT 1")
     Mono<SubscriptionEntity> findFirstByCustomerIdAndStatusOrderByEndDateDesc(Long customerId, String status);
+
+    @Query("SELECT * FROM subscriptions WHERE customer_id = :customerId AND status IN ('ACTIVE', 'TRIAL') ORDER BY end_date DESC LIMIT 1")
+    Mono<SubscriptionEntity> findActiveOrTrialSubscription(Long customerId);
 }
+
