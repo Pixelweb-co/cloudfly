@@ -13,22 +13,36 @@ import OpenDialogOnElementClick from '@components/dialogs/OpenDialogOnElementCli
 
 // Utils
 import { userMethods } from '@/utils/userMethods'
+import { useState, useEffect } from 'react'
+import axios from 'axios'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.cloudfly.com.co'
 
 const BillingAddress = () => {
   // Read session user safely on client
   const fullUser: any = userMethods.getUserLogin?.() || null
   const sessionUser = fullUser?.user || fullUser
 
+  const [tenantData, setTenantData] = useState<any>(null)
+
+  useEffect(() => {
+    if (sessionUser?.customerId) {
+      axios.get(`${API_URL}/customers/${sessionUser.customerId}`)
+        .then(res => setTenantData(res.data))
+        .catch(err => console.error("Error fetching tenant info", err))
+    }
+  }, [sessionUser?.customerId])
+
   const firstName = sessionUser?.nombres || sessionUser?.firstName || ''
   const lastName = sessionUser?.apellidos || sessionUser?.lastName || ''
-  const email = sessionUser?.email || ''
-  const country = sessionUser?.country || 'Colombia'
-  const address1 = sessionUser?.address || '-'
-  const city = sessionUser?.city || '-'
+  const email = tenantData?.email || sessionUser?.email || ''
+  const country = tenantData?.country || sessionUser?.country || 'Colombia'
+  const address1 = tenantData?.address || sessionUser?.address || '-'
+  const city = tenantData?.city || sessionUser?.city || '-'
   const state = sessionUser?.state || '-'
   const zipCode = sessionUser?.zipCode || '-'
-  const taxId = sessionUser?.taxId || sessionUser?.nit || '-'
-  const contact = sessionUser?.phone || sessionUser?.cellphone || sessionUser?.telefono || '-'
+  const taxId = tenantData?.nit || sessionUser?.taxId || sessionUser?.nit || '-'
+  const contact = tenantData?.phone || sessionUser?.phone || sessionUser?.cellphone || sessionUser?.telefono || '-'
 
   const buttonProps: ButtonProps = {
     variant: 'contained',
