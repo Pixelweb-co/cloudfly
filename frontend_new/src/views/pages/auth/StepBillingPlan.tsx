@@ -76,7 +76,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                     card_holder: cardHolderName
                 }
 
-                const publicKey = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || 'pub_test_24f58f00000000000000000000000000'
+                const publicKey = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || 'pub_test_fGQ5uisyUhqe79cakGHXNKbdsr4K4EVI'
                 const isProd = publicKey.startsWith('pub_prod_')
                 const wompiBaseUrl = isProd ? 'https://production.wompi.co/v1' : 'https://sandbox.wompi.co/v1'
 
