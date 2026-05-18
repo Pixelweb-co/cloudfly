@@ -12,10 +12,7 @@ const InvoicesPage = () => {
     const fetchInvoices = async () => {
         try {
             setLoading(true)
-            // Endpoint interno o público para facturas
-            const res = await axiosInstance.get('/internal/billing/subscriptions/due') // O un endpoint específico de facturas si existe
-            // Nota: El backend-api debería tener un endpoint GET /invoices
-            // Por ahora usamos uno que devuelva algo relacionado o ajustamos el backend
+            const res = await axiosInstance.get('/invoices')
             setInvoices(res.data)
         } catch (error) {
             console.error('Error fetching invoices:', error)
