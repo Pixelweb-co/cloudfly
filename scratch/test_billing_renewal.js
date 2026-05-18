@@ -62,17 +62,20 @@ conn.on('ready', () => {
       const setupResult = await runCommand(`docker exec -i mysql mysql -uroot -pwidowmaker -e "${setupSql}"`);
       console.log('✅ Mock data set up.');
 
-      // 3. Invoke internal billing API in backend-api container to mark invoice as PAGADA
-      console.log('\n📡 [STEP 3] Calling backend-api internal endpoint to mark invoice as PAGADA...');
+      // 4. Verify subscription has transitioned to ACTIVE and upgraded to Basic Plan
+      console.log('\n📡 [STEP 3] Calling backend-api internal endpoint...');
       const callApiCmd = `docker exec -i backend-api curl -s -X PUT "http://localhost:8080/internal/billing/invoices/by-reference/INV-TEST-9999?status=PAGADA"`;
       const apiResult = await runCommand(callApiCmd);
-      console.log('Response payload:', apiResult.stdout);
+      console.log('Response payload:', apiResult.stdout || apiResult.stderr);
 
-      // 4. Verify subscription has transitioned to ACTIVE and upgraded to Basic Plan
+      console.log('⏳ Waiting 2 seconds for reactive save...');
+      await new Promise(r => setTimeout(r, 2000));
+
       console.log('\n🔍 [STEP 4] Verifying Subscription status after transition...');
       const checkSubSql = `docker exec -i mysql mysql -uroot -pwidowmaker cloud_master -e "SELECT id, plan_id, status, trial_ends_at, next_billing_date, ai_tokens_limit, users_limit FROM subscriptions WHERE id = 9999;"`;
       const subResult = await runCommand(checkSubSql);
       console.log(subResult.stdout);
+
 
       // 5. Clean up mock data
       console.log('🧹 [STEP 5] Cleaning up mock data from MySQL...');
