@@ -8,6 +8,7 @@ import com.app.persistence.repository.ContactRepository;
 import com.app.persistence.repository.InvoiceRepository;
 import com.app.persistence.repository.PaymentMethodRepository;
 import com.app.persistence.repository.PaymentTransactionRepository;
+import com.app.persistence.repository.PlanRepository;
 import com.app.persistence.repository.SubscriptionRepository;
 import com.app.persistence.repository.TenantRepository;
 import com.app.persistence.repository.UserRepository;
@@ -32,6 +33,7 @@ public class BillingInternalService {
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
     private final ContactRepository contactRepository;
+    private final PlanRepository planRepository;
     private final WebClient.Builder webClientBuilder;
 
 
@@ -141,6 +143,50 @@ public class BillingInternalService {
                                         .defaultIfEmpty(tenant);
                             })
                             .defaultIfEmpty(tenant);
+                });
+    }
+
+    public Mono<InvoiceEntity> updateInvoiceStatusByReference(String invoiceNumber, String status) {
+        log.info("Updating status for invoice reference {} to {}", invoiceNumber, status);
+        return invoiceRepository.findByInvoiceNumber(invoiceNumber)
+                .flatMap(invoice -> {
+                    invoice.setStatus(status);
+                    invoice.setUpdatedAt(LocalDateTime.now());
+                    return invoiceRepository.save(invoice)
+                            .flatMap(savedInvoice -> {
+                                if (("PAGADA".equalsIgnoreCase(status) || "APPROVED".equalsIgnoreCase(status) || "PAID".equalsIgnoreCase(status)) && savedInvoice.getSubscriptionId() != null) {
+                                    return subscriptionRepository.findById(savedInvoice.getSubscriptionId())
+                                            .flatMap(sub -> planRepository.findBasicActivePlan()
+                                                    .flatMap(basicPlan -> {
+                                                        log.info("🔄 [RENEWAL] Auto-Charge approved. Upgrading Subscription {} to Basic Plan: {} (ID: {})", sub.getId(), basicPlan.getName(), basicPlan.getId());
+                                                        sub.setPlanId(basicPlan.getId());
+                                                        sub.setStatus("ACTIVE");
+                                                        sub.setStartDate(LocalDateTime.now());
+                                                        int duration = basicPlan.getDurationDays() != null ? basicPlan.getDurationDays() : 30;
+                                                        sub.setEndDate(LocalDateTime.now().plusDays(duration));
+                                                        sub.setNextBillingDate(sub.getEndDate());
+                                                        sub.setTrialEndsAt(null);
+                                                        
+                                                        // Update limits
+                                                        if (basicPlan.getAiTokensLimit() != null) {
+                                                            sub.setAiTokensLimit(basicPlan.getAiTokensLimit());
+                                                        }
+                                                        if (basicPlan.getUsersLimit() != null) {
+                                                            sub.setUsersLimit(basicPlan.getUsersLimit());
+                                                        }
+                                                        if (basicPlan.getElectronicDocsLimit() != null) {
+                                                            sub.setElectronicDocsLimit(basicPlan.getElectronicDocsLimit());
+                                                        }
+                                                        
+                                                        sub.setUpdatedAt(LocalDateTime.now());
+                                                        return subscriptionRepository.save(sub);
+                                                    })
+                                                    .defaultIfEmpty(sub)
+                                            )
+                                            .then(Mono.just(savedInvoice));
+                                }
+                                return Mono.just(savedInvoice);
+                            });
                 });
     }
 }
