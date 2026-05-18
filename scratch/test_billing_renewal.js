@@ -64,7 +64,7 @@ conn.on('ready', () => {
 
       // 4. Verify subscription has transitioned to ACTIVE and upgraded to Basic Plan
       console.log('\n📡 [STEP 3] Calling backend-api internal endpoint...');
-      const callApiCmd = `docker exec -i backend-api curl -s -X PUT "http://localhost:8080/internal/billing/invoices/by-reference/INV-TEST-9999?status=PAGADA"`;
+      const callApiCmd = `curl -s -w "\\nHTTP_STATUS: %{http_code}\\n" -X PUT "http://localhost:8080/internal/billing/invoices/by-reference/INV-TEST-9999?status=PAGADA"`;
       const apiResult = await runCommand(callApiCmd);
       console.log('Response payload:', apiResult.stdout || apiResult.stderr);
 
