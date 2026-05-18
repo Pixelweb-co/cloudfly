@@ -48,8 +48,10 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
 
     const handleConfirm = async () => {
         if (!selectedPlan) return toast.error('Selecciona un plan')
-        if (paymentMethod === 'CARD' && (!cardData.number || !cardData.expiry || !cardData.cvc)) {
-            return toast.error('Completa los datos de la tarjeta')
+        if (paymentMethod === 'CARD') {
+            if (!cardData.number || !cardData.expiry || !cardData.cvc || !cardData.name.trim()) {
+                return toast.error('Completa los datos de la tarjeta (incluyendo el nombre en la tarjeta)')
+            }
         }
         
         setLoading(true)
@@ -64,12 +66,14 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                 const expMonth = expMonthRaw.padStart(2, '0')
                 const expYear = expYearRaw.slice(-2) // Wompi REST API exige exactamente 2 dígitos
 
+                const cardHolderName = cardData.name.trim() || (billingInfo.firstName.trim() + ' ' + billingInfo.lastName.trim()).trim() || 'Cliente CloudFly'
+
                 const tokenPayload = {
                     number: cardData.number.replace(/\s/g, ''),
                     cvc: cardData.cvc,
                     exp_month: expMonth,
                     exp_year: expYear,
-                    card_holder: cardData.name || (billingInfo.firstName + ' ' + billingInfo.lastName)
+                    card_holder: cardHolderName
                 }
 
                 const publicKey = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || 'pub_test_24f58f00000000000000000000000000'
@@ -231,6 +235,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
 
                         {paymentMethod === 'CARD' && (
                             <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, bgcolor: 'background.default', borderRadius: 2 }}>
+                                <TextField size='small' fullWidth label="Nombre en la Tarjeta" placeholder="Juan Perez" value={cardData.name} onChange={e => setCardData({...cardData, name: e.target.value})} />
                                 <TextField size='small' fullWidth label="Número de Tarjeta" placeholder="4242 4242 4242 4242" value={cardData.number} onChange={e => setCardData({...cardData, number: e.target.value})} />
                                 <Box sx={{ display: 'flex', gap: 2 }}>
                                     <TextField size='small' label="MM/YY" placeholder="12/28" value={cardData.expiry} onChange={e => setCardData({...cardData, expiry: e.target.value})} />
