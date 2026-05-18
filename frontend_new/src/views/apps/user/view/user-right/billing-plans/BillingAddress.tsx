@@ -27,7 +27,9 @@ const BillingAddress = () => {
 
   useEffect(() => {
     if (sessionUser?.customerId) {
-      axios.get(`${API_URL}/customers/${sessionUser.customerId}`)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('jwt') : null
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      axios.get(`${API_URL}/customers/${sessionUser.customerId}`, { headers })
         .then(res => setTenantData(res.data))
         .catch(err => console.error("Error fetching tenant info", err))
     }

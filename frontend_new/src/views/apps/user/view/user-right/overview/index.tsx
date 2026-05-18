@@ -32,7 +32,9 @@ const OverViewTab = () => {
 
   useEffect(() => {
     if (tenantId) {
-      axios.get(`${API_URL}/api/v1/subscriptions/tenant/${tenantId}/active`)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('jwt') : null
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      axios.get(`${API_URL}/api/v1/subscriptions/tenant/${tenantId}/active`, { headers })
         .then(res => setSubscription(res.data))
         .catch(err => console.log("Error fetching active subscription for overview", err))
     }
