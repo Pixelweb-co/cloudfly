@@ -13,10 +13,18 @@ type Client struct {
 }
 
 func NewClient() *Client {
+	privateKey := os.Getenv("WOMPI_PRIVATE_KEY")
+	baseURL := "https://sandbox.wompi.co/v1"
+	
+	// Si la llave privada empieza con prv_prod_, usamos producción
+	if len(privateKey) >= 9 && privateKey[:9] == "prv_prod_" {
+		baseURL = "https://production.wompi.co/v1"
+	}
+
 	return &Client{
-		restClient: resty.New().SetBaseURL("https://production.wompi.co/v1"), // O sandbox.wompi.co
+		restClient: resty.New().SetBaseURL(baseURL),
 		publicKey:  os.Getenv("WOMPI_PUBLIC_KEY"),
-		privateKey: os.Getenv("WOMPI_PRIVATE_KEY"),
+		privateKey: privateKey,
 	}
 }
 
