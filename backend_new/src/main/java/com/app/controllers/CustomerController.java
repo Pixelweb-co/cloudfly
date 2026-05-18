@@ -49,6 +49,7 @@ public class CustomerController {
     private final com.app.persistence.services.OnboardingDefaultsService onboardingDefaultsService;
     private final TenantService tenantService;
     private final ContactRepository contactRepository;
+    private final PaymentMethodRepository paymentMethodRepository;
 
 
     @GetMapping
@@ -199,78 +200,100 @@ public class CustomerController {
                                                     return userRepository.save(user);
                                                 })
                                                 .doOnNext(su -> log.info("✅ [ACCOUNT-SETUP] User updated successfully with IDs and Timestamps"))
-                                                .flatMap(savedUser -> {
-                                                    log.info("🏥 [ACCOUNT-SETUP] Verifying Evolution API Health...");
-                                                    return evolutionService.checkHealth()
-                                                        .timeout(java.time.Duration.ofSeconds(10))
-                                                        .flatMap(health -> {
-                                                            Mono<UserDto> baseFlow = userService.convertToDto(savedUser);
-                                                            
-                                                            if (!health) {
-                                                                log.warn("⚠️ [ACCOUNT-SETUP] Evolution API health check failed, creating defaults with fallback name.");
-                                                                return onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), "evolution_offline")
-                                                                        .then(createDefaultCategory(savedTenant.getId()))
-                                                                        .then(handleAutomaticSubscription(savedTenant.getId(), form.getBillingCycle()))
-                                                                        .then(baseFlow);
-                                                            } else {
-                                                                log.info("📱 [ACCOUNT-SETUP] Validating WhatsApp number: {}", form.getPhone());
-                                                                return evolutionService.isOnWhatsApp("cloudfly_t1_c1", form.getPhone())
-                                                                    .timeout(java.time.Duration.ofSeconds(15))
-                                                                    .flatMap(isOnWa -> {
-                                                                        if (!isOnWa) {
-                                                                            log.warn("❌ [ACCOUNT-SETUP] Number {} not on WhatsApp, continuing without WA instance.", form.getPhone());
-                                                                            return onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), "evolution_no_wa")
-                                                                                    .then(createDefaultCategory(savedTenant.getId()))
-                                                                                    .then(handleAutomaticSubscription(savedTenant.getId(), form.getBillingCycle()))
-                                                                                    .then(baseFlow);
-                                                                        }
-                                                                        
-                                                                        String instanceName = "cloudfly_t" + savedTenant.getId() + "_c" + savedCompany.getId();
-                                                                        log.info("🚀 [ACCOUNT-SETUP] Creating/Fetching QR for instance: {}", instanceName);
-                                                                        return evolutionService.createInstance(instanceName)
-                                                                            .timeout(java.time.Duration.ofSeconds(30))
-                                                                            .flatMap(instanceData -> {
-                                                                                log.info("📝 [ACCOUNT-SETUP] Persisting ChannelConfig for company: {}", savedCompany.getId());
-                                                                                ChannelConfig channelConfig = ChannelConfig.builder()
-                                                                                        .tenantId(savedTenant.getId())
-                                                                                        .companyId(savedCompany.getId())
-                                                                                        .instanceName(instanceName)
-                                                                                        .channelType(ChannelType.AI)
-                                                                                        .isActive(false)
-                                                                                        .createdAt(LocalDateTime.now())
-                                                                                        .updatedAt(LocalDateTime.now())
-                                                                                        .build();
-
-                                                                                return channelConfigRepository.save(channelConfig)
-                                                                                        .doOnNext(cc -> log.info("✅ [ACCOUNT-SETUP] ChannelConfig saved"))
-                                                                                        .then(onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), instanceName))
-                                                                                        .then(createDefaultCategory(savedTenant.getId()))
-                                                                                        .then(handleAutomaticSubscription(savedTenant.getId(), form.getBillingCycle()))
-                                                                                        .then(Mono.defer(() -> {
-                                                                                            log.info("📧 [ACCOUNT-SETUP] Sending welcome notification to Kafka...");
-                                                                                            Map<String, Object> welcomeMsg = new HashMap<>();
-                                                                                            welcomeMsg.put("phoneNumber", form.getPhone());
-                                                                                            welcomeMsg.put("instanceName", instanceName);
-                                                                                            return kafkaTemplate.send("welcome-notifications", welcomeMsg).then();
-                                                                                        }))
-                                                                                        .then(baseFlow);
-                                                                            });
-                                                                    })
-                                                                    .onErrorResume(e -> {
-                                                                        log.error("🛑 [ACCOUNT-SETUP] WhatsApp flow failed: {}. Falling back to basic setup.", e.getMessage());
-                                                                        return onboardingDefaultsService.performDefaultSetup(savedTenant.getId(), savedCompany.getId(), "evolution_error")
-                                                                                .then(createDefaultCategory(savedTenant.getId()))
-                                                                                .then(handleAutomaticSubscription(savedTenant.getId(), form.getBillingCycle()))
-                                                                                .then(baseFlow);
-                                                                    });
-                                                            }
-                                                        });
-                                                });
+                                                .flatMap(savedUser -> userService.convertToDto(savedUser));
                                         });
                             });
                 })
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * PASO 4: Guardar método de pago + Crear suscripción Trial (Plan ID 2)
+     */
+    @PostMapping("/account-setup/payment")
+    public Mono<ResponseEntity<Map<String, Object>>> accountSetupPayment(@RequestBody Map<String, Object> request) {
+        Long tenantId = Long.valueOf(request.get("tenantId").toString());
+        Long userId = Long.valueOf(request.get("userId").toString());
+        String wompiToken = (String) request.getOrDefault("wompiToken", "");
+        String brand = (String) request.getOrDefault("brand", "VISA");
+        String last4 = (String) request.getOrDefault("last4", "0000");
+        Integer expMonth = request.get("expMonth") != null ? Integer.valueOf(request.get("expMonth").toString()) : 12;
+        Integer expYear = request.get("expYear") != null ? Integer.valueOf(request.get("expYear").toString()) : 2028;
+        String billingCycle = (String) request.getOrDefault("billingCycle", "MONTHLY");
+
+        log.info("💳 [PASO-4] Payment setup for Tenant: {}, User: {}, Cycle: {}", tenantId, userId, billingCycle);
+
+        // 1. Guardar método de pago
+        PaymentMethodEntity pm = PaymentMethodEntity.builder()
+                .tenantId(tenantId)
+                .provider("WOMPI")
+                .token(wompiToken)
+                .brand(brand)
+                .last4(last4)
+                .expMonth(expMonth)
+                .expYear(expYear)
+                .isDefault(true)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+
+        return paymentMethodRepository.save(pm)
+                .doOnNext(saved -> log.info("✅ [PASO-4] PaymentMethod saved ID: {}", saved.getId()))
+                .flatMap(savedPm -> {
+                    // 2. Crear suscripción Trial con Plan ID 2
+                    return planRepository.findById(2L)
+                            .switchIfEmpty(Mono.error(new RuntimeException("Plan ID 2 no encontrado")))
+                            .flatMap(plan -> {
+                                BigDecimal basePrice = plan.getPrice() != null ? plan.getPrice() : new BigDecimal("99000");
+                                BigDecimal finalPrice = basePrice;
+
+                                if ("SEMIANNUAL".equals(billingCycle)) {
+                                    BigDecimal discount = plan.getSemiannualDiscount() != null ? plan.getSemiannualDiscount() : new BigDecimal("0.03");
+                                    finalPrice = basePrice.multiply(BigDecimal.ONE.subtract(discount));
+                                } else if ("ANNUAL".equals(billingCycle)) {
+                                    BigDecimal discount = plan.getAnnualDiscount() != null ? plan.getAnnualDiscount() : new BigDecimal("0.05");
+                                    finalPrice = basePrice.multiply(BigDecimal.ONE.subtract(discount));
+                                }
+
+                                int trialDays = plan.getDurationDays() != null ? plan.getDurationDays() : 14;
+
+                                SubscriptionEntity sub = SubscriptionEntity.builder()
+                                        .planId(plan.getId())
+                                        .customerId(tenantId)
+                                        .userId(userId)
+                                        .status("TRIAL")
+                                        .billingCycle(billingCycle.toUpperCase())
+                                        .startDate(LocalDateTime.now())
+                                        .endDate(LocalDateTime.now().plusDays(trialDays))
+                                        .trialEndsAt(LocalDateTime.now().plusDays(trialDays))
+                                        .nextBillingDate(LocalDateTime.now().plusDays(trialDays))
+                                        .isAutoRenew(true)
+                                        .usersLimit(plan.getUsersLimit())
+                                        .aiTokensLimit(plan.getAiTokensLimit())
+                                        .monthlyPrice(finalPrice)
+                                        .createdAt(LocalDateTime.now())
+                                        .updatedAt(LocalDateTime.now())
+                                        .build();
+
+                                return subscriptionRepository.save(sub)
+                                        .doOnNext(s -> log.info("✅ [PASO-4] Subscription Trial created ID: {}", s.getId()))
+                                        .flatMap(savedSub ->
+                                                planModuleRepository.findByPlanId(plan.getId())
+                                                        .flatMap(mod -> subscriptionModuleRepository.insertModule(savedSub.getId(), mod.getModuleId()))
+                                                        .then(Mono.just(savedSub))
+                                        );
+                            });
+                })
+                .map(savedSub -> ResponseEntity.ok(Map.<String, Object>of(
+                        "status", true,
+                        "subscriptionId", savedSub.getId(),
+                        "message", "Trial activado correctamente"
+                )))
+                .onErrorResume(e -> {
+                    log.error("🛑 [PASO-4] Payment setup failed: {}", e.getMessage());
+                    return Mono.just(ResponseEntity.status(500).body(Map.of("status", (Object)false, "message", (Object)e.getMessage())));
+                });
     }
 
     @DeleteMapping("/{id}/full")
