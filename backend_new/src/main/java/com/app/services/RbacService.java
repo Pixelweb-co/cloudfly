@@ -55,7 +55,7 @@ public class RbacService {
                         accessibleModules = Flux.empty();
                     } else {
                         log.info("Generating menu for Admin/User. Filtering by subscription for customerId: {}", resolvedCustomerId);
-                        accessibleModules = subscriptionRepository.findFirstByCustomerIdAndStatusOrderByEndDateDesc(resolvedCustomerId, "active")
+                        accessibleModules = subscriptionRepository.findActiveOrTrialSubscription(resolvedCustomerId)
                                 .flatMapMany(subscription -> subscriptionModuleRepository.findBySubscriptionId(subscription.getId()))
                                 .map(com.app.persistence.entity.SubscriptionModuleEntity::getModuleId)
                                 .collectList()
