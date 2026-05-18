@@ -20,24 +20,6 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
     const [billingCycle, setBillingCycle] = useState('MONTHLY')
     const [loading, setLoading] = useState(false)
 
-    // Wompi SDK Loading
-    useEffect(() => {
-        const script = document.createElement('script')
-        script.src = 'https://cdn.wompi.co/libs/js/v1.js'
-        script.async = true
-        script.onload = () => {
-            // @ts-ignore
-            window.wompiConfig = {
-                publicKey: process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || 'pub_test_24f58f00000000000000000000000000'
-            }
-        }
-        document.body.appendChild(script)
-        return () => {
-            document.body.removeChild(script)
-        }
-    }, [])
-
-    
     // Pricing logic
     const baseMonthlyPrice = 99000
     const getFinalPrices = () => {
@@ -77,34 +59,46 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
             let last4 = '0000'
 
             if (paymentMethod === 'CARD') {
-                // 1. Tokenización con Wompi
+                // 1. Tokenización directa con Wompi vía API REST
                 const [expMonth, expYear] = cardData.expiry.split('/')
-                const tokenData = {
+                const tokenPayload = {
                     number: cardData.number.replace(/\s/g, ''),
                     cvc: cardData.cvc,
                     exp_month: expMonth,
-                    exp_year: '20' + expYear,
+                    exp_year: expYear.length === 2 ? '20' + expYear : expYear,
                     card_holder: cardData.name || (billingInfo.firstName + ' ' + billingInfo.lastName)
                 }
 
-                // @ts-ignore
-                const wompi = new window.Wompi({
-                    publicKey: process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || 'pub_test_24f58f00000000000000000000000000'
+                const publicKey = process.env.NEXT_PUBLIC_WOMPI_PUBLIC_KEY || 'pub_test_24f58f00000000000000000000000000'
+                const isProd = publicKey.startsWith('pub_prod_')
+                const wompiBaseUrl = isProd ? 'https://production.wompi.co/v1' : 'https://sandbox.wompi.co/v1'
+
+                console.log('💳 [WOMPI-TOKENIZE] Tokenizing card directly via REST API:', wompiBaseUrl)
+
+                const tokenRes = await fetch(`${wompiBaseUrl}/tokens/cards`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${publicKey}`
+                    },
+                    body: JSON.stringify(tokenPayload)
                 })
 
-                // @ts-ignore
-                const response = await new Promise((resolve, reject) => {
-                    wompi.tokenizeCard(tokenData, (err: any, tokens: any) => {
-                        if (err) reject(err)
-                        else resolve(tokens)
-                    })
-                })
+                if (!tokenRes.ok) {
+                    const errorJson = await tokenRes.json()
+                    console.error('❌ [WOMPI-TOKENIZE] Wompi tokenization failed:', errorJson)
+                    const reason = errorJson.error?.reason || 'Error al procesar los datos de la tarjeta.'
+                    throw new Error(reason)
+                }
 
-                // @ts-ignore
-                wompiToken = response.id
-                // @ts-ignore
-                brand = response.brand || 'VISA'
-                last4 = tokenData.number.slice(-4)
+                const responseData = await tokenRes.json()
+                const cardTokenObj = responseData.data
+
+                console.log('✅ [WOMPI-TOKENIZE] Card tokenized successfully:', cardTokenObj.id)
+
+                wompiToken = cardTokenObj.id
+                brand = cardTokenObj.brand || 'VISA'
+                last4 = tokenPayload.number.slice(-4)
             }
 
             // 2. Guardar método de pago + crear suscripción Trial (Plan ID 2)
