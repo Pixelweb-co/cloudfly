@@ -241,9 +241,9 @@ public class CustomerController {
         return paymentMethodRepository.save(pm)
                 .doOnNext(saved -> log.info("✅ [PASO-4] PaymentMethod saved ID: {}", saved.getId()))
                 .flatMap(savedPm -> {
-                    // 2. Crear suscripción Trial con Plan ID 2
-                    return planRepository.findById(2L)
-                            .switchIfEmpty(Mono.error(new RuntimeException("Plan ID 2 no encontrado")))
+                    // 2. Crear suscripción Trial buscando el plan gratuito y activo
+                    return planRepository.findFreeActivePlan()
+                            .switchIfEmpty(Mono.error(new RuntimeException("No se encontró ningún Plan Gratuito y Activo configurado")))
                             .flatMap(plan -> {
                                 BigDecimal basePrice = plan.getPrice() != null ? plan.getPrice() : new BigDecimal("99000");
                                 BigDecimal finalPrice = basePrice;

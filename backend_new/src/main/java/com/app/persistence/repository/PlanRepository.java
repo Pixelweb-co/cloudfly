@@ -15,4 +15,7 @@ public interface PlanRepository extends ReactiveCrudRepository<PlanEntity, Long>
 
     @Query("SELECT * FROM plans WHERE is_free = true")
     Flux<PlanEntity> findByIsFreeTrue();
+
+    @Query("SELECT * FROM plans WHERE is_free = true AND is_active = true LIMIT 1")
+    Mono<PlanEntity> findFreeActivePlan();
 }
