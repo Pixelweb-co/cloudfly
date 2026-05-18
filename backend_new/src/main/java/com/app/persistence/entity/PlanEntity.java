@@ -36,6 +36,9 @@ public class PlanEntity {
     @Column("is_free")
     private Boolean isFree;
 
+    @Column("is_basic")
+    private Boolean isBasic;
+
     @Column("ai_tokens_limit")
     private Long aiTokensLimit;
 
@@ -75,4 +78,5 @@ public class PlanEntity {
     public BigDecimal getSemiannualDiscount() { return semiannualDiscount; }
     public BigDecimal getAnnualDiscount() { return annualDiscount; }
     public BigDecimal getPrice() { return price; }
+    public Boolean getIsBasic() { return isBasic; }
 }

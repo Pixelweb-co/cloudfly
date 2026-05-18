@@ -49,6 +49,13 @@ public class BillingInternalController {
         return billingInternalService.updateSubscriptionStatus(id, status);
     }
 
+    @PutMapping("/invoices/by-reference/{invoiceNumber}")
+    public Mono<InvoiceEntity> updateInvoiceStatusByReference(@PathVariable String invoiceNumber, @RequestParam String status) {
+        log.info("Request to update invoice status by reference {} to {}", invoiceNumber, status);
+        return billingInternalService.updateInvoiceStatusByReference(invoiceNumber, status);
+    }
+
+
     @PostMapping("/payment-transactions")
     public Mono<PaymentTransactionEntity> saveTransaction(@RequestBody PaymentTransactionEntity transaction) {
         return billingInternalService.saveTransaction(transaction);
