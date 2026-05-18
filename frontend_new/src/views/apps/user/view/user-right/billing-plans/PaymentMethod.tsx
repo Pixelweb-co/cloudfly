@@ -50,7 +50,9 @@ const PaymentMethod = () => {
   useEffect(() => {
     // Attempt to fetch from backend, if no endpoint or empty, it will fall back to empty array
     if (tenantId) {
-      axios.get(`${API_URL}/api/v1/payment-methods/tenant/${tenantId}`)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('jwt') : null
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      axios.get(`${API_URL}/api/v1/payment-methods/tenant/${tenantId}`, { headers })
         .then(res => {
           if (res.data && Array.isArray(res.data)) {
              setData(res.data.map((pm: any) => ({
