@@ -6,13 +6,13 @@ import { userMethods } from '@/utils/userMethods'
 interface ProductCreationStepProps {
     onProductCreated: () => void
     onBack?: () => void
-    initialProducts?: any[]
 }
 
-const ProductCreationStep = ({ onProductCreated, onBack, initialProducts = [] }: ProductCreationStepProps) => {
+const ProductCreationStep = ({ onProductCreated, onBack }: ProductCreationStepProps) => {
     const [loading, setLoading] = useState(false)
     const [categoryLoading, setCategoryLoading] = useState(true)
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+    const [existingProducts, setExistingProducts] = useState<any[]>([])
 
     // Category state
     const [categoryId, setCategoryId] = useState<number | null>(null)
@@ -27,7 +27,7 @@ const ProductCreationStep = ({ onProductCreated, onBack, initialProducts = [] }:
         const fetchDefaultCategory = async () => {
             try {
                 setCategoryLoading(true)
-                
+
                 // Refrescar datos del usuario desde localStorage (importante si viene del paso anterior)
                 const user = userMethods.getUserLogin()
                 console.log('📦 [PRODUCT-STEP] Refreshing user data:', user)
@@ -40,9 +40,9 @@ const ProductCreationStep = ({ onProductCreated, onBack, initialProducts = [] }:
 
                 const response = await axiosInstance.get(`/categorias/customer/${user.customerId}`)
                 const categories = response.data
-                
+
                 // Buscar por nombre "General"
-                const generalCategory = Array.isArray(categories) 
+                const generalCategory = Array.isArray(categories)
                     ? categories.find((c: any) => c.nombreCategoria === 'General')
                     : null
 
@@ -58,6 +58,17 @@ const ProductCreationStep = ({ onProductCreated, onBack, initialProducts = [] }:
                     })
                     setCategoryId(createResponse.data.id)
                 }
+
+                // 🔥 Buscar productos existentes para ESTE tenant
+                try {
+                    const prodRes = await axiosInstance.get(`/api/v1/products/tenant/${user.customerId}`)
+                    if (prodRes.data && Array.isArray(prodRes.data) && prodRes.data.length > 0) {
+                        console.log('📦 [PRODUCT-STEP] Existing products found for tenant:', prodRes.data.length)
+                        setExistingProducts(prodRes.data)
+                    }
+                } catch (e) {
+                    console.error('❌ [PRODUCT-STEP] Error fetching existing products:', e)
+                }
             } catch (error) {
                 console.error('❌ [PRODUCT-STEP] Error fetching/creating default category:', error)
             } finally {
@@ -72,7 +83,7 @@ const ProductCreationStep = ({ onProductCreated, onBack, initialProducts = [] }:
         e.preventDefault()
 
         // Si ya hay productos y el formulario está vacío, simplemente avanzamos
-        if (initialProducts.length > 0 && (!productName.trim() || !productPrice)) {
+        if (existingProducts.length > 0 && (!productName.trim() || !productPrice)) {
             onProductCreated()
             return
         }
@@ -93,7 +104,7 @@ const ProductCreationStep = ({ onProductCreated, onBack, initialProducts = [] }:
                 return
             }
 
-            await axiosInstance.post('/productos', {
+            await axiosInstance.post('/api/v1/products', {
                 productName: productName,
                 description: productDescription,
                 price: parseFloat(productPrice),
@@ -157,13 +168,13 @@ const ProductCreationStep = ({ onProductCreated, onBack, initialProducts = [] }:
                         </Alert>
                     )}
 
-                    {initialProducts && initialProducts.length > 0 && (
+                    {existingProducts && existingProducts.length > 0 && (
                         <Box sx={{ mb: 6, p: 4, bgcolor: 'primary.lightOpacity', borderRadius: 3, border: '1px solid', borderColor: 'primary.main' }}>
                             <Typography variant='subtitle2' color='primary' sx={{ mb: 2, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <i className='tabler-check text-xl' /> Productos ya creados:
                             </Typography>
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                                {initialProducts.map((p: any) => (
+                                {existingProducts.map((p: any) => (
                                     <Box key={p.id} sx={{ px: 3, py: 1, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider', fontSize: '0.85rem' }}>
                                         <strong>{p.productName}</strong> - ${p.price}
                                     </Box>
@@ -266,7 +277,7 @@ const ProductCreationStep = ({ onProductCreated, onBack, initialProducts = [] }:
                                         variant='contained'
                                         size='large'
                                         fullWidth
-                                        disabled={loading || (initialProducts.length === 0 && (!productName.trim() || !productPrice))}
+                                        disabled={loading || (existingProducts.length === 0 && (!productName.trim() || !productPrice))}
                                         className='final-wizard-step'
                                         sx={{
                                             py: 1.5,
@@ -282,7 +293,7 @@ const ProductCreationStep = ({ onProductCreated, onBack, initialProducts = [] }:
                                         }}
                                         startIcon={loading ? <CircularProgress size={20} color='inherit' /> : null}
                                     >
-                                        {loading ? 'Guardando...' : initialProducts.length > 0 ? 'Continuar con el catálogo actual ✨' : 'Finalizar Configuración ✨'}
+                                        {loading ? 'Guardando...' : existingProducts.length > 0 ? 'Continuar con el catálogo actual ✨' : 'Finalizar Configuración ✨'}
                                     </Button>
                                 </Box>
                                 <Typography variant='caption' display='block' textAlign='center' sx={{ mt: 2 }} color='text.secondary'>
