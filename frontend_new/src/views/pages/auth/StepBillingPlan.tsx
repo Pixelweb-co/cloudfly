@@ -60,12 +60,15 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
 
             if (paymentMethod === 'CARD') {
                 // 1. Tokenización directa con Wompi vía API REST
-                const [expMonth, expYear] = cardData.expiry.split('/')
+                const [expMonthRaw, expYearRaw] = cardData.expiry.split('/')
+                const expMonth = expMonthRaw.padStart(2, '0')
+                const expYear = expYearRaw.slice(-2) // Wompi REST API exige exactamente 2 dígitos
+
                 const tokenPayload = {
                     number: cardData.number.replace(/\s/g, ''),
                     cvc: cardData.cvc,
                     exp_month: expMonth,
-                    exp_year: expYear.length === 2 ? '20' + expYear : expYear,
+                    exp_year: expYear,
                     card_holder: cardData.name || (billingInfo.firstName + ' ' + billingInfo.lastName)
                 }
 
