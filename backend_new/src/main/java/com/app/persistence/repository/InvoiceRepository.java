@@ -9,4 +9,5 @@ public interface InvoiceRepository extends ReactiveCrudRepository<InvoiceEntity,
     Flux<InvoiceEntity> findAllByTenantId(Long tenantId);
     Mono<InvoiceEntity> findByInvoiceNumber(String invoiceNumber);
     Flux<InvoiceEntity> findAllBySubscriptionId(Long subscriptionId);
+    Mono<InvoiceEntity> findByPublicUrlToken(String publicUrlToken);
 }
