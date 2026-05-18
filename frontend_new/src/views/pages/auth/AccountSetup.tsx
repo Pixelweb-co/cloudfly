@@ -90,7 +90,6 @@ const AccountSetup = () => {
   // Hydration states
   const [initialCustomerData, setInitialCustomerData] = useState<any>(null)
   const [initialWhatsAppData, setInitialWhatsAppData] = useState<any>(null)
-  const [initialProducts, setInitialProducts] = useState<any[]>([])
 
   const router = useRouter()
 
@@ -121,15 +120,6 @@ const AccountSetup = () => {
           }
         } catch (e) { /* No config yet */ }
 
-        // 3. Fetch Products
-        try {
-          const prodRes = await axiosInstance.get('/api/v1/products')
-          if (prodRes.data && prodRes.data.length > 0) {
-            console.log('📦 [HYDRATION] Products found:', prodRes.data.length)
-            setInitialProducts(prodRes.data)
-          }
-        } catch (e) { /* No products yet */ }
-
         // Resume logic with smart skip
         const savedStep = localStorage.getItem('account_setup_step')
         let targetStep = savedStep ? parseInt(savedStep, 10) : 0
@@ -137,10 +127,9 @@ const AccountSetup = () => {
         // If we have data, we can decide to skip
         if (user.customerId && targetStep < 2) targetStep = 2
         
-        // If we have WhatsApp and Products, go to Billing (Step 4)
-        // (Only if they haven't finished billing yet)
-        if (initialWhatsAppData && initialProducts.length > 0 && targetStep < 4) {
-          // targetStep = 4 // Descomentar para salto agresivo si ya hay todo
+        // If we have WhatsApp config, ensure we are at least on step 3
+        if (initialWhatsAppData && targetStep < 3) {
+           targetStep = 3
         }
 
         setActiveStep(targetStep)
@@ -254,6 +243,27 @@ const AccountSetup = () => {
       })
     }
     
+    // 🔥 ACTUALIZACIÓN INMEDIATA DEL CONTEXTO (LocalStorage)
+    // Para que los endpoints subsecuentes (ej: products, categories) funcionen correctamente
+    if (customerData.customerId) {
+      localStorage.setItem('activeTenantId', customerData.customerId.toString())
+    }
+    if (customerData.activeCompanyId) {
+      localStorage.setItem('activeCompanyId', customerData.activeCompanyId.toString())
+    }
+
+    const currentUserStr = localStorage.getItem('userData');
+    if (currentUserStr) {
+      try {
+        const userObj = JSON.parse(currentUserStr);
+        userObj.customerId = customerData.customerId;
+        userObj.activeCompanyId = customerData.activeCompanyId;
+        localStorage.setItem('userData', JSON.stringify(userObj));
+      } catch (e) {
+        console.error('Error updating userData in localStorage', e);
+      }
+    }
+
     // Una vez configurado el negocio, avanzar al siguiente paso (WhatsApp)
     setActiveStep(2)
   }
@@ -385,7 +395,7 @@ const AccountSetup = () => {
 
       case 3:
         return (
-          <ProductCreationStep onProductCreated={handleNext} onBack={handleBack} initialProducts={initialProducts} />
+          <ProductCreationStep onProductCreated={handleNext} onBack={handleBack} />
         )
 
       case 4:

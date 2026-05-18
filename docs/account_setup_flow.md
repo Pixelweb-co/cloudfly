@@ -22,9 +22,10 @@ sequenceDiagram
     Usuario->>FE: Envía Datos de Negocio
     FE->>CTL: Orquestación e Infraestructura
     Note right of CTL: Ver business_setup_flow.md
-    CTL-->>FE: Setup OK (Suscripción + WA creada)
+    CTL-->>FE: Setup OK (Tenant & Company creados)
+    FE->>LS: UPDATE activeTenantId & activeCompanyId
+    FE->>LS: UPDATE userData (add customerId & activeCompanyId)
     FE->>LS: SET account_setup_step = 2
-    FE->>LS: UPDATE userData (add customerId)
     
     Note over Usuario, SVC: Paso 2: Chatbot IA (Vinculación QR)
     FE->>CTL: GET /api/evolution/status/{instance} (F5 Resilience)
@@ -37,16 +38,19 @@ sequenceDiagram
     end
     FE->>LS: SET account_setup_step = 3
     
-    Note over Usuario, SVC: Paso 3: Catálogo (Categorías)
-    Usuario->>FE: Crea Categoría
-    FE->>CTL: Persistencia Categoría
-    Note right of CTL: Ver category_setup_flow.md
+    Note over Usuario, SVC: Paso 3 & 4: Productos (Catálogo Inicial)
+    Note over FE: 🚨 Aislamiento Multi-Tenant
+    FE->>CTL: GET /api/v1/products/tenant/{activeTenantId}
+    CTL-->>FE: Retorna SÓLO productos del Tenant
+    Usuario->>FE: Crea Producto
+    FE->>CTL: POST /api/v1/products (headers: X-Tenant-Id)
+    Note right of CTL: Ver product_setup_flow.md
     FE->>LS: SET account_setup_step = 4
     
-    Note over Usuario, SVC: Paso 4: Inventario (Productos)
-    Usuario->>FE: Crea Producto
-    FE->>CTL: Persistencia Producto
-    Note right of CTL: Ver product_setup_flow.md
+    Note over Usuario, SVC: Paso 5: Plan y Pago
+    Usuario->>FE: Introduce Datos de Tarjeta
+    FE->>CTL: POST /auth/complete-onboarding
+    CTL-->>FE: Nuevo JWT Token
     FE->>LS: REMOVE account_setup_step (Completo)
     
     Note over Usuario, RBAC: Finalización y Activación de Menú
