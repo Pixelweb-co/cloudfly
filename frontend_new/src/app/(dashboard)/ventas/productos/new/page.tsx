@@ -16,7 +16,8 @@ import {
   InputLabel,
   Select,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  IconButton
 } from '@mui/material'
 import { Icon } from '@iconify/react'
 import { productService } from '@/services/ventas/productService'
@@ -42,7 +43,8 @@ export default function CreateProductPage() {
     status: 'PUBLISHED',
     productType: 'PRODUCT',
     categoryIds: [] as number[],
-    imageUrls: [] as string[]
+    imageUrls: [] as string[],
+    imageIds: [] as number[]
   })
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false)
 
@@ -209,42 +211,98 @@ export default function CreateProductPage() {
           <Grid item xs={12} md={4}>
             <Card sx={{ borderRadius: 2, boxShadow: 3, mb: 6 }}>
               <CardContent>
-                <Typography variant="h6" sx={{ mb: 4 }}>Imagen del Producto</Typography>
-                <Box 
-                  sx={{ 
-                    border: '1px dashed', 
-                    borderColor: 'divider', 
-                    borderRadius: 2, 
-                    p: 4, 
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    '&:hover': { bgcolor: 'action.hover' }
-                  }}
-                  onClick={() => setMediaDialogOpen(true)}
-                >
-                  {formData.imageUrls.length > 0 ? (
-                    <Box sx={{ position: 'relative' }}>
-                      <img 
-                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${formData.imageUrls[0]}`} 
-                        alt="Preview" 
-                        style={{ width: '100%', borderRadius: 8, maxHeight: 200, objectFit: 'cover' }} 
-                      />
-                      <Button 
-                        size="small" 
-                        variant="contained" 
-                        sx={{ mt: 2 }}
-                        startIcon={<Icon icon="tabler:photo" />}
+                <Typography variant="h6" sx={{ mb: 4 }}>Imágenes del Producto</Typography>
+                
+                <Grid container spacing={2}>
+                  {formData.imageUrls.map((url, idx) => (
+                    <Grid item xs={6} sm={4} key={idx}>
+                      <Box 
+                        sx={{ 
+                          position: 'relative',
+                          borderRadius: 2,
+                          overflow: 'hidden',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          height: 120,
+                          '&:hover .delete-btn': { opacity: 1 }
+                        }}
                       >
-                        Cambiar Imagen
-                      </Button>
+                        <img 
+                          src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${url}`} 
+                          alt={`Preview ${idx + 1}`} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
+                        <IconButton
+                          className="delete-btn"
+                          size="small"
+                          color="error"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setFormData(prev => ({
+                              ...prev,
+                              imageUrls: prev.imageUrls.filter((_, i) => i !== idx),
+                              imageIds: prev.imageIds.filter((_, i) => i !== idx)
+                            }))
+                          }}
+                          sx={{ 
+                            position: 'absolute', 
+                            top: 5, 
+                            right: 5, 
+                            bgcolor: 'background.paper', 
+                            opacity: { xs: 1, md: 0 },
+                            transition: 'opacity 0.2s',
+                            '&:hover': { bgcolor: 'error.light', color: 'white' } 
+                          }}
+                        >
+                          <Icon icon="tabler:trash" fontSize={16} />
+                        </IconButton>
+                        {idx === 0 && (
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              bgcolor: 'rgba(0, 0, 0, 0.6)',
+                              color: 'white',
+                              py: 0.5,
+                              textAlign: 'center'
+                            }}
+                          >
+                            <Typography variant="caption" sx={{ fontWeight: 500 }}>Principal</Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Grid>
+                  ))}
+                  
+                  <Grid item xs={6} sm={4}>
+                    <Box 
+                      sx={{ 
+                        border: '2px dashed', 
+                        borderColor: 'divider', 
+                        borderRadius: 2, 
+                        height: 120,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        bgcolor: 'background.paper',
+                        '&:hover': { 
+                          bgcolor: 'action.hover',
+                          borderColor: 'primary.main',
+                          color: 'primary.main'
+                        }
+                      }}
+                      onClick={() => setMediaDialogOpen(true)}
+                    >
+                      <Icon icon="tabler:plus" fontSize={24} />
+                      <Typography variant="caption" sx={{ mt: 1, fontWeight: 500 }}>Añadir</Typography>
                     </Box>
-                  ) : (
-                    <Box sx={{ py: 4 }}>
-                      <Icon icon="tabler:plus" fontSize={32} />
-                      <Typography sx={{ mt: 2 }}>Click para seleccionar imagen</Typography>
-                    </Box>
-                  )}
-                </Box>
+                  </Grid>
+                </Grid>
               </CardContent>
             </Card>
             <Card sx={{ borderRadius: 2, boxShadow: 3, mb: 6 }}>
@@ -328,10 +386,14 @@ export default function CreateProductPage() {
       <MediaLibraryDialog 
         open={mediaDialogOpen}
         onClose={() => setMediaDialogOpen(false)}
-        onSelect={(media: Media) => {
+        multiple={true}
+        initialSelectedIds={formData.imageIds}
+        onSelect={() => {}}
+        onSelectMultiple={(mediaList: Media[]) => {
           setFormData(prev => ({
             ...prev,
-            imageUrls: [media.url]
+            imageUrls: mediaList.map(m => m.url),
+            imageIds: mediaList.map(m => m.id)
           }))
         }}
       />
