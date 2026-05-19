@@ -210,7 +210,10 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                             }}
                         >
                             <Box sx={{ flexGrow: 1 }}>
-                                <Typography sx={{ fontWeight: 600 }}>Semestral <span className='text-success text-xs ml-2'>(Ahorra 3%)</span></Typography>
+                                <Typography sx={{ fontWeight: 600 }}>
+                                    <span>Semestral </span>
+                                    <span className='text-success text-xs ml-2'>(Ahorra 3%)</span>
+                                </Typography>
                                 <Typography variant='caption' color='textSecondary'>${(prices.monthly).toLocaleString()} COP / mes</Typography>
                             </Box>
                             <Radio checked={billingCycle === 'SEMIANNUAL'} size='small' />
@@ -225,7 +228,10 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                             }}
                         >
                             <Box sx={{ flexGrow: 1 }}>
-                                <Typography sx={{ fontWeight: 600 }}>Anual <span className='text-success text-xs ml-2'>(Ahorra 5%)</span></Typography>
+                                <Typography sx={{ fontWeight: 600 }}>
+                                    <span>Anual </span>
+                                    <span className='text-success text-xs ml-2'>(Ahorra 5%)</span>
+                                </Typography>
                                 <Typography variant='caption' color='textSecondary'>${(prices.monthly).toLocaleString()} COP / mes</Typography>
                             </Box>
                             <Radio checked={billingCycle === 'ANNUAL'} size='small' />
@@ -353,7 +359,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                                 onClick={handleConfirm} disabled={loading}
                                 sx={{ py: 4, borderRadius: 3, fontSize: '1.1rem', fontWeight: '800', textTransform: 'none' }}
                             >
-                                {loading ? 'Activando...' : 'Activar Trial Gratuito ($0.00)'}
+                                <span>{loading ? 'Activando...' : 'Activar Trial Gratuito ($0.00)'}</span>
                             </Button>
                             
                             <Typography variant='caption' display='block' textAlign='center' sx={{ mt: 2, color: 'text.secondary' }}>
@@ -362,7 +368,9 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
 
                             <Box sx={{ mt: 6 }}>
                                 <Typography variant='caption' color='textSecondary' sx={{ lineHeight: 1.5, display: 'block' }}>
-                                    <b>CloudFly Trial:</b> Tendrás acceso completo a todas las herramientas de IA. El trial se renovará automáticamente por <b>${prices.total.toLocaleString()} {billingCycle === 'MONTHLY' ? '/ mes' : billingCycle === 'SEMIANNUAL' ? 'cada 6 meses' : 'cada 12 meses'}</b> después de 14 días.
+                                    <span><b>CloudFly Trial:</b> Tendrás acceso completo a todas las herramientas de IA. El trial se renovará automáticamente por </span>
+                                    <b>{`$${prices.total.toLocaleString()} ${billingCycle === 'MONTHLY' ? '/ mes' : billingCycle === 'SEMIANNUAL' ? 'cada 6 meses' : 'cada 12 meses'}`}</b>
+                                    <span> después de 14 días.</span>
                                 </Typography>
                             </Box>
                         </CardContent>

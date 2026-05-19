@@ -47,7 +47,7 @@ const CustomStepIcon = (props: { active: boolean; completed: boolean; icon: stri
         transition: 'all 0.3s'
       }}
     >
-      {completed ? '✓' : icon}
+      <span>{completed ? '✓' : icon}</span>
     </Box>
   )
 }
@@ -341,7 +341,9 @@ const AccountSetup = () => {
 
             <Box className='mt-8 p-4 bg-primary/10 rounded-xl max-w-2xl mx-auto'>
               <Typography variant='body1' className='font-medium'>
-                💡 <strong>Tiempo estimado:</strong> 10-15 minutos para completar toda la configuración
+                <span>💡 </span>
+                <strong>Tiempo estimado:</strong>
+                <span> 10-15 minutos para completar toda la configuración</span>
               </Typography>
             </Box>
 
@@ -360,7 +362,7 @@ const AccountSetup = () => {
                 size='large'
                 className='min-w-[120px] next-wizard-step'
               >
-                {initialCustomerData ? 'Continuar Progreso' : 'Comenzar'}
+                <span>{initialCustomerData ? 'Continuar Progreso' : 'Comenzar'}</span>
               </Button>
             </Box>
           </Box>
@@ -473,9 +475,10 @@ const AccountSetup = () => {
               ))}
             </Stepper>
 
-            {/* Step Content */}
-            <Box className='min-h-[400px]'>
-              <Box className='wizard-step-container'>
+            {/* Step Content — key forces full remount on step change to avoid
+               insertBefore crashes when Chrome translate has mutated the DOM */}
+            <Box className='min-h-[400px]' translate="no">
+              <Box key={activeStep} className='wizard-step-container'>
                 {renderStepContent(activeStep)}
               </Box>
             </Box>
