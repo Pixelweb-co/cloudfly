@@ -32,6 +32,7 @@ import type { RankingInfo } from '@tanstack/match-sorter-utils'
 import TablePaginationComponent from '@components/TablePaginationComponent'
 import type { OrderResponse } from '@/views/apps/pos/types'
 import ColumnSelector from '@/components/ColumnSelector'
+import OrderTableFilters from './OrderTableFilters'
 import CustomTextField from '@core/components/mui/TextField'
 import tableStyles from '@core/styles/table.module.css'
 import { userMethods } from '@/utils/userMethods'
@@ -252,7 +253,16 @@ const OrdersListTable = ({ reload, tableData }: any) => {
     return (
         <>
             <Card>
-                <CardHeader title='Pedidos' className='pbe-4' />
+                <CardHeader
+                    title='Pedidos'
+                    className='pbe-4'
+                    subheader={
+                        <Typography variant='body2' color='text.secondary'>
+                            {`Total: ${filteredData?.length || 0} pedidos`}
+                        </Typography>
+                    }
+                />
+                <OrderTableFilters setData={setFilteredData} tableData={data} />
                 <div className='flex justify-between flex-col items-start md:flex-row md:items-center p-6 border-bs gap-4'>
                     <CustomTextField
                         select
