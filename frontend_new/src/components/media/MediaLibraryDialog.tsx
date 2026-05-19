@@ -29,18 +29,43 @@ interface MediaLibraryDialogProps {
   open: boolean
   onClose: () => void
   onSelect: (media: Media) => void
+  onSelectMultiple?: (mediaList: Media[]) => void
   multiple?: boolean
+  initialSelectedIds?: number[]
 }
 
-const MediaLibraryDialog = ({ open, onClose, onSelect, multiple = false }: MediaLibraryDialogProps) => {
+const MediaLibraryDialog = ({ 
+  open, 
+  onClose, 
+  onSelect, 
+  onSelectMultiple,
+  multiple = false, 
+  initialSelectedIds = [] 
+}: MediaLibraryDialogProps) => {
   const [tab, setTab] = useState(0)
   const [mediaList, setMediaList] = useState<Media[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedMedia, setSelectedMedia] = useState<Media | null>(null)
+  const [selectedMediaList, setSelectedMediaList] = useState<Media[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [uploading, setUploading] = useState(false)
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+
+  useEffect(() => {
+    if (open) {
+      if (multiple) {
+        if (initialSelectedIds.length > 0 && mediaList.length > 0) {
+          const preselected = mediaList.filter(m => initialSelectedIds.includes(m.id))
+          setSelectedMediaList(preselected)
+        } else {
+          setSelectedMediaList([])
+        }
+      } else {
+        setSelectedMedia(null)
+      }
+    }
+  }, [open, mediaList, initialSelectedIds, multiple])
 
   useEffect(() => {
     if (open && tab === 1) {
@@ -100,11 +125,24 @@ const MediaLibraryDialog = ({ open, onClose, onSelect, multiple = false }: Media
   })
 
   const handleSelect = (media: Media) => {
-    setSelectedMedia(media)
+    if (multiple) {
+      if (selectedMediaList.some(m => m.id === media.id)) {
+        setSelectedMediaList(prev => prev.filter(m => m.id !== media.id))
+      } else {
+        setSelectedMediaList(prev => [...prev, media])
+      }
+    } else {
+      setSelectedMedia(media)
+    }
   }
 
   const handleConfirmAction = () => {
-    if (selectedMedia) {
+    if (multiple) {
+      if (onSelectMultiple) {
+        onSelectMultiple(selectedMediaList)
+      }
+      onClose()
+    } else if (selectedMedia) {
       onSelect(selectedMedia)
       onClose()
     }
@@ -202,9 +240,9 @@ const MediaLibraryDialog = ({ open, onClose, onSelect, multiple = false }: Media
                     <Card 
                       sx={{ 
                         position: 'relative',
-                        border: selectedMedia?.id === media.id ? '2px solid' : '1px solid',
-                        borderColor: selectedMedia?.id === media.id ? 'primary.main' : 'divider',
-                        boxShadow: selectedMedia?.id === media.id ? 4 : 1
+                        border: (multiple ? selectedMediaList.some(m => m.id === media.id) : selectedMedia?.id === media.id) ? '2px solid' : '1px solid',
+                        borderColor: (multiple ? selectedMediaList.some(m => m.id === media.id) : selectedMedia?.id === media.id) ? 'primary.main' : 'divider',
+                        boxShadow: (multiple ? selectedMediaList.some(m => m.id === media.id) : selectedMedia?.id === media.id) ? 4 : 1
                       }}
                     >
                       <CardActionArea onClick={() => handleSelect(media)}>
@@ -216,7 +254,7 @@ const MediaLibraryDialog = ({ open, onClose, onSelect, multiple = false }: Media
                           sx={{ objectFit: 'cover' }}
                         />
                       </CardActionArea>
-                      {selectedMedia?.id === media.id && (
+                      {(multiple ? selectedMediaList.some(m => m.id === media.id) : selectedMedia?.id === media.id) && (
                         <Box sx={{ 
                           position: 'absolute', 
                           top: 5, 
@@ -253,7 +291,7 @@ const MediaLibraryDialog = ({ open, onClose, onSelect, multiple = false }: Media
         <Button onClick={onClose} color="inherit">Cancelar</Button>
         <Button 
           variant="contained" 
-          disabled={!selectedMedia} 
+          disabled={multiple ? selectedMediaList.length === 0 : !selectedMedia} 
           onClick={handleConfirmAction}
           startIcon={<Icon icon="tabler:check" />}
         >
