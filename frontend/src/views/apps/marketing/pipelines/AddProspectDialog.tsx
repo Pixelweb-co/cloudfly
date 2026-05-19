@@ -16,7 +16,7 @@ import {
   ListItemText
 } from '@mui/material'
 import { pipelineApi } from '@/api/marketing/pipelineApi'
-import { getInitials } from '@/@core/utils/get-initials'
+import { getInitials } from '@/utils/getInitials'
 import QuickContactForm from './QuickContactForm'
 
 interface Props {
