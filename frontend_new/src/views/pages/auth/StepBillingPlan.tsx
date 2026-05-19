@@ -1,10 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Grid, Typography, Card, CardContent, Button, Box, TextField, MenuItem, Divider, Radio, Avatar } from '@mui/material'
+import { Grid, Typography, Card, CardContent, Button, Box, TextField, MenuItem, Divider, Radio } from '@mui/material'
 import { useSubscription } from '@/hooks/useSubscription'
 import { axiosInstance } from '@/utils/axiosInstance'
 import { toast } from 'react-toastify'
+import { useForm, Controller } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
+import * as yup from 'yup'
 
 interface StepBillingPlanProps {
     handleNext: () => void
@@ -13,12 +16,69 @@ interface StepBillingPlanProps {
     userId: number
 }
 
+const schema = yup.object().shape({
+    firstName: yup.string(),
+    lastName: yup.string(),
+    country: yup.string().default('Colombia'),
+    paymentMethod: yup.string().required(),
+    billingCycle: yup.string().required(),
+
+    cardName: yup.string().when('paymentMethod', {
+        is: 'CARD',
+        then: (s) => s.required('El nombre en la tarjeta es obligatorio')
+    }),
+    cardNumber: yup.string().when('paymentMethod', {
+        is: 'CARD',
+        then: (s) => s.required('El número de tarjeta es obligatorio')
+            .matches(/^\d{13,19}$/, 'Debe tener entre 13 y 19 dígitos numéricos')
+    }),
+    cardExpiry: yup.string().when('paymentMethod', {
+        is: 'CARD',
+        then: (s) => s.required('Fecha de expiración obligatoria')
+            .matches(/^(0[1-9]|1[0-2])\/?([0-9]{2})$/, 'Formato inválido (MM/YY)')
+    }),
+    cardCvc: yup.string().when('paymentMethod', {
+        is: 'CARD',
+        then: (s) => s.required('CVC obligatorio')
+            .matches(/^\d{3,4}$/, 'CVC debe ser de 3 o 4 dígitos')
+    }),
+
+    nequiPhone: yup.string().when('paymentMethod', {
+        is: 'NEQUI',
+        then: (s) => s.required('Número de celular obligatorio')
+            .matches(/^3\d{9}$/, 'Debe ser un celular válido (10 dígitos empezando por 3)')
+    })
+})
+
 const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBillingPlanProps) => {
     const { plans, fetchActivePlans, loading: loadingPlans } = useSubscription()
     const [selectedPlan, setSelectedPlan] = useState<any>(null)
-    const [paymentMethod, setPaymentMethod] = useState('CARD')
-    const [billingCycle, setBillingCycle] = useState('MONTHLY')
     const [loading, setLoading] = useState(false)
+
+    const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
+        resolver: yupResolver(schema),
+        defaultValues: {
+            country: 'Colombia',
+            paymentMethod: 'CARD',
+            billingCycle: 'MONTHLY',
+            firstName: '',
+            lastName: '',
+            cardName: '',
+            cardNumber: '',
+            cardExpiry: '',
+            cardCvc: '',
+            nequiPhone: ''
+        }
+    })
+
+    const paymentMethod = watch('paymentMethod')
+    const billingCycle = watch('billingCycle')
+
+    useEffect(() => {
+        fetchActivePlans().then(data => {
+            if (data && data.length > 0) setSelectedPlan(data[0])
+        })
+    }, [fetchActivePlans])
 
     // Pricing logic
     const baseMonthlyPrice = 99000
@@ -28,31 +88,9 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
         return { monthly: baseMonthlyPrice, total: baseMonthlyPrice, savings: 0 }
     }
     const prices = getFinalPrices()
-    
-    // Billing Info State
-    const [billingInfo, setBillingInfo] = useState({
-        firstName: '',
-        lastName: '',
-        country: 'Colombia'
-    })
 
-    // Payment Data State
-    const [cardData, setCardData] = useState({ number: '', expiry: '', cvc: '', name: '' })
-    const [nequiPhone, setNequiPhone] = useState('')
-
-    useEffect(() => {
-        fetchActivePlans().then(data => {
-            if (data && data.length > 0) setSelectedPlan(data[0])
-        })
-    }, [fetchActivePlans])
-
-    const handleConfirm = async () => {
+    const onSubmit = async (data: any) => {
         if (!selectedPlan) return toast.error('Selecciona un plan')
-        if (paymentMethod === 'CARD') {
-            if (!cardData.number || !cardData.expiry || !cardData.cvc || !cardData.name.trim()) {
-                return toast.error('Completa los datos de la tarjeta (incluyendo el nombre en la tarjeta)')
-            }
-        }
         
         setLoading(true)
         try {
@@ -60,11 +98,11 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
             let brand = 'VISA'
             let last4 = '0000'
 
-            if (paymentMethod === 'CARD') {
+            if (data.paymentMethod === 'CARD') {
                 // 1. Tokenización directa con Wompi vía API REST
                 let expMonth = ''
                 let expYear = ''
-                const cleanExpiry = cardData.expiry.replace(/[^0-9/]/g, '') // remove non-numeric except /
+                const cleanExpiry = data.cardExpiry.replace(/[^0-9/]/g, '')
                 if (cleanExpiry.includes('/')) {
                     const parts = cleanExpiry.split('/')
                     expMonth = (parts[0] || '').padStart(2, '0')
@@ -74,11 +112,11 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                     expYear = cleanExpiry.substring(2, 4)
                 }
 
-                const cardHolderName = cardData.name.trim() || (billingInfo.firstName.trim() + ' ' + billingInfo.lastName.trim()).trim() || 'Cliente CloudFly'
+                const cardHolderName = data.cardName.trim() || ((data.firstName || '') + ' ' + (data.lastName || '')).trim() || 'Cliente CloudFly'
 
                 const tokenPayload = {
-                    number: cardData.number.replace(/[^0-9]/g, ''),
-                    cvc: cardData.cvc.replace(/[^0-9]/g, ''),
+                    number: data.cardNumber.replace(/[^0-9]/g, ''),
+                    cvc: data.cardCvc.replace(/[^0-9]/g, ''),
                     exp_month: expMonth,
                     exp_year: expYear,
                     card_holder: cardHolderName
@@ -124,8 +162,8 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
             }
 
             // 2. Guardar método de pago + crear suscripción Trial (Plan ID 2)
-            const expiryClean = cardData.expiry.replace(/[^0-9/]/g, '')
-            const [expMonthClean, expYearClean] = expiryClean.includes('/') ? expiryClean.split('/') : ['12', '28']
+            const expiryClean = data.cardExpiry ? data.cardExpiry.replace(/[^0-9/]/g, '') : '1228'
+            const [expMonthClean, expYearClean] = expiryClean.length > 2 ? [expiryClean.substring(0, 2), expiryClean.substring(2, 4)] : ['12', '28']
 
             await axiosInstance.post('/customers/account-setup/payment', {
                 tenantId,
@@ -133,9 +171,9 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                 wompiToken,
                 brand,
                 last4,
-                expMonth: parseInt(expMonthClean, 10),
-                expYear: parseInt('20' + expYearClean.slice(-2), 10),
-                billingCycle
+                expMonth: parseInt(expMonthClean, 10) || 12,
+                expYear: parseInt('20' + (expYearClean?.slice(-2) || '28'), 10),
+                billingCycle: data.billingCycle
             })
 
             toast.success('¡Trial activado correctamente!')
@@ -151,13 +189,13 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
     if (loadingPlans) return <Box sx={{ p: 10, textAlign: 'center' }}>Cargando planes...</Box>
 
     return (
-        <Box sx={{ maxWidth: '100%', mx: 'auto', p: 4 }}>
+        <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ maxWidth: '100%', mx: 'auto', p: 4 }}>
             <Box sx={{ mb: 6 }}>
                 <Typography variant='h4' fontWeight='800' color='primary' sx={{ mb: 1 }}>
                     Prueba CloudFly Studio AI GRATIS
                 </Typography>
                 <Typography variant='body1' color='textSecondary' display='flex' alignItems='center' gap={1}>
-                    <i className='tabler-gift text-primary' /> Trial de 14 días incluido, cancela cuando quieras.
+                    <span><i className='tabler-gift text-primary' /> Trial de 14 días incluido, cancela cuando quieras.</span>
                 </Typography>
             </Box>
 
@@ -166,28 +204,25 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                 <Grid item xs={12} md={4}>
                     <Typography variant='subtitle1' fontWeight='700' sx={{ mb: 3 }}>Información de Facturación</Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, mb: 6 }}>
-                        <TextField 
-                            fullWidth label="Nombre (opcional)" variant="filled" 
-                            value={billingInfo.firstName} onChange={e => setBillingInfo({...billingInfo, firstName: e.target.value})}
-                        />
-                        <TextField 
-                            fullWidth label="Apellidos (opcional)" variant="filled" 
-                            value={billingInfo.lastName} onChange={e => setBillingInfo({...billingInfo, lastName: e.target.value})}
-                        />
-                        <TextField 
-                            fullWidth select label="País" variant="filled" 
-                            value={billingInfo.country} onChange={e => setBillingInfo({...billingInfo, country: e.target.value})}
-                        >
-                            <MenuItem value="Colombia">Colombia</MenuItem>
-                            <MenuItem value="Mexico">México</MenuItem>
-                            <MenuItem value="USA">USA</MenuItem>
-                        </TextField>
+                        <Controller name="firstName" control={control} render={({ field }) => (
+                            <TextField {...field} fullWidth label="Nombre (opcional)" variant="filled" error={!!errors.firstName} helperText={errors.firstName?.message as string} />
+                        )} />
+                        <Controller name="lastName" control={control} render={({ field }) => (
+                            <TextField {...field} fullWidth label="Apellidos (opcional)" variant="filled" error={!!errors.lastName} helperText={errors.lastName?.message as string} />
+                        )} />
+                        <Controller name="country" control={control} render={({ field }) => (
+                            <TextField {...field} fullWidth select label="País" variant="filled" error={!!errors.country} helperText={errors.country?.message as string}>
+                                <MenuItem value="Colombia">Colombia</MenuItem>
+                                <MenuItem value="Mexico">México</MenuItem>
+                                <MenuItem value="USA">USA</MenuItem>
+                            </TextField>
+                        )} />
                     </Box>
 
                     <Typography variant='subtitle1' fontWeight='700' sx={{ mb: 3 }}>Ciclo de Facturación</Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         <Box 
-                            onClick={() => setBillingCycle('MONTHLY')}
+                            onClick={() => setValue('billingCycle', 'MONTHLY')}
                             sx={{ 
                                 p: 3, border: '1px solid', borderColor: billingCycle === 'MONTHLY' ? 'primary.main' : 'divider',
                                 borderRadius: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
@@ -202,7 +237,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                         </Box>
 
                         <Box 
-                            onClick={() => setBillingCycle('SEMIANNUAL')}
+                            onClick={() => setValue('billingCycle', 'SEMIANNUAL')}
                             sx={{ 
                                 p: 3, border: '1px solid', borderColor: billingCycle === 'SEMIANNUAL' ? 'primary.main' : 'divider',
                                 borderRadius: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
@@ -220,7 +255,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                         </Box>
 
                         <Box 
-                            onClick={() => setBillingCycle('ANNUAL')}
+                            onClick={() => setValue('billingCycle', 'ANNUAL')}
                             sx={{ 
                                 p: 3, border: '1px solid', borderColor: billingCycle === 'ANNUAL' ? 'primary.main' : 'divider',
                                 borderRadius: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
@@ -245,7 +280,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {/* CARD OPTION */}
                         <Box 
-                            onClick={() => setPaymentMethod('CARD')}
+                            onClick={() => setValue('paymentMethod', 'CARD')}
                             sx={{ 
                                 p: 3, border: '1px solid', borderColor: paymentMethod === 'CARD' ? 'primary.main' : 'divider',
                                 borderRadius: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
@@ -259,18 +294,26 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
 
                         {paymentMethod === 'CARD' && (
                             <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, bgcolor: 'background.default', borderRadius: 2 }}>
-                                <TextField size='small' fullWidth label="Nombre en la Tarjeta" placeholder="Juan Perez" value={cardData.name} onChange={e => setCardData({...cardData, name: e.target.value})} />
-                                <TextField size='small' fullWidth label="Número de Tarjeta" placeholder="4242 4242 4242 4242" value={cardData.number} onChange={e => setCardData({...cardData, number: e.target.value})} />
+                                <Controller name="cardName" control={control} render={({ field }) => (
+                                    <TextField {...field} size='small' fullWidth label="Nombre en la Tarjeta" placeholder="Juan Perez" error={!!errors.cardName} helperText={errors.cardName?.message as string} />
+                                )} />
+                                <Controller name="cardNumber" control={control} render={({ field }) => (
+                                    <TextField {...field} size='small' fullWidth label="Número de Tarjeta" placeholder="4242 4242 4242 4242" error={!!errors.cardNumber} helperText={errors.cardNumber?.message as string} />
+                                )} />
                                 <Box sx={{ display: 'flex', gap: 2 }}>
-                                    <TextField size='small' label="MM/YY" placeholder="12/28" value={cardData.expiry} onChange={e => setCardData({...cardData, expiry: e.target.value})} />
-                                    <TextField size='small' label="CVC" placeholder="123" value={cardData.cvc} onChange={e => setCardData({...cardData, cvc: e.target.value})} />
+                                    <Controller name="cardExpiry" control={control} render={({ field }) => (
+                                        <TextField {...field} size='small' label="MM/YY" placeholder="12/28" error={!!errors.cardExpiry} helperText={errors.cardExpiry?.message as string} />
+                                    )} />
+                                    <Controller name="cardCvc" control={control} render={({ field }) => (
+                                        <TextField {...field} size='small' label="CVC" placeholder="123" error={!!errors.cardCvc} helperText={errors.cardCvc?.message as string} />
+                                    )} />
                                 </Box>
                             </Box>
                         )}
 
                         {/* NEQUI OPTION */}
                         <Box 
-                            onClick={() => setPaymentMethod('NEQUI')}
+                            onClick={() => setValue('paymentMethod', 'NEQUI')}
                             sx={{ 
                                 p: 3, border: '1px solid', borderColor: paymentMethod === 'NEQUI' ? 'primary.main' : 'divider',
                                 borderRadius: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
@@ -284,13 +327,15 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
 
                         {paymentMethod === 'NEQUI' && (
                             <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
-                                <TextField fullWidth size='small' label="Número de Celular Nequi" placeholder="3001234567" value={nequiPhone} onChange={e => setNequiPhone(e.target.value)} />
+                                <Controller name="nequiPhone" control={control} render={({ field }) => (
+                                    <TextField {...field} fullWidth size='small' label="Número de Celular Nequi" placeholder="3001234567" error={!!errors.nequiPhone} helperText={errors.nequiPhone?.message as string} />
+                                )} />
                             </Box>
                         )}
 
                         {/* BANCOLOMBIA OPTION */}
                         <Box 
-                            onClick={() => setPaymentMethod('BANCOLOMBIA')}
+                            onClick={() => setValue('paymentMethod', 'BANCOLOMBIA')}
                             sx={{ 
                                 p: 3, border: '1px solid', borderColor: paymentMethod === 'BANCOLOMBIA' ? 'primary.main' : 'divider',
                                 borderRadius: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
@@ -304,7 +349,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
 
                         {/* PSE OPTION */}
                         <Box 
-                            onClick={() => setPaymentMethod('PSE')}
+                            onClick={() => setValue('paymentMethod', 'PSE')}
                             sx={{ 
                                 p: 3, border: '1px solid', borderColor: paymentMethod === 'PSE' ? 'primary.main' : 'divider',
                                 borderRadius: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3,
@@ -355,8 +400,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                             </Button>
 
                             <Button 
-                                fullWidth variant='contained' size='large' color='success'
-                                onClick={handleConfirm} disabled={loading}
+                                type="submit" fullWidth variant='contained' size='large' color='success' disabled={loading}
                                 sx={{ py: 4, borderRadius: 3, fontSize: '1.1rem', fontWeight: '800', textTransform: 'none' }}
                             >
                                 <span>{loading ? 'Activando...' : 'Activar Trial Gratuito ($0.00)'}</span>
@@ -380,7 +424,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
 
             <Box sx={{ mt: 8, display: 'flex', justifyContent: 'space-between', opacity: 0.6 }}>
                 <Button onClick={handleBack} startIcon={<i className='tabler-chevron-left' />}>Volver</Button>
-                <Typography variant='caption'>Pagos procesados de forma segura por Wompi</Typography>
+                <Typography variant='caption'><span>Pagos procesados de forma segura por Wompi</span></Typography>
             </Box>
         </Box>
     )
