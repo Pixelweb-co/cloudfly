@@ -124,6 +124,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
   // States
   // const [addProductOpen, setAddProductOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
+  const [selectedRow, setSelectedRow] = useState<any>(null)
   const [data, setData] = useState(tableData.sort((a: any, b: any) => b.id - a.id))
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
@@ -291,7 +292,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
               <Tooltip title='Lista de checkeo'>
                 <IconButton
                   onClick={() => {
-                    setRowSelection(row.original)
+                    setSelectedRow(row.original)
                     setLoadFormCheck(true)
                   }}
                 >
@@ -322,7 +323,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
                 <IconButton
                   onClick={() => {
                     console.log('row', row.original)
-                    setRowSelection(row.original)
+                    setSelectedRow(row.original)
                     setLoadForm(true)
                   }}
                 >
@@ -346,7 +347,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
                 <Tooltip title='Programación de mantenimiento'>
                   <IconButton
                     onClick={() => {
-                      setRowSelection(row.original)
+                      setSelectedRow(row.original)
                       setProgramacionModal(true)
                     }}
                   >
@@ -574,40 +575,10 @@ const ProductsListTable = ({ reload, tableData }: any) => {
           onClose={() => {
             setLoadForm(false)
             reload(true)
-
-            setRowSelection({
-              id: undefined,
-              productType: '',
-              productCode: '',
-              productName: '',
-              brand: '',
-              model: '',
-              licensePlate: '',
-              productClass: '',
-              classification: '',
-              clientId: null,
-              status: '1',
-              dateAdded: null,
-              inventoryRegister: '',
-              origin: '',
-              voltage: '',
-              power: '',
-              frequency: '',
-              amperage: '',
-              purchaseDate: '',
-              bookValue: 0,
-              supplier: '',
-              warranty: '',
-              warrantyStartDate: '',
-              warrantyEndDate: '',
-              manual: '',
-              periodicity: '',
-              location: '',
-              placement: ''
-            })
+            setSelectedRow(null)
           }}
           setOpen={() => setLoadForm(true)}
-          rowSelect={rowSelection}
+          rowSelect={selectedRow}
         />
       )}
 
@@ -616,7 +587,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
           open={programacionModal}
           onClose={() => setProgramacionModal(false)}
           onSuccess={() => reload(true)}
-          rowSelect={rowSelection}
+          rowSelect={selectedRow}
         />
       )}
 
@@ -634,7 +605,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
           open={loadFormCheck}
           onClose={() => setLoadFormCheck(false)}
           setOpen={() => setLoadFormCheck(true)}
-          rowSelect={rowSelection}
+          rowSelect={selectedRow}
         />
       )}
     </>
