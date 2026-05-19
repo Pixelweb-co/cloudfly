@@ -30,6 +30,13 @@ import ConfirmationDialog from '@/components/dialogs/ConfirmationDialog'
 import toast from 'react-hot-toast'
 import ProductTableFilters from './ProductTableFilters'
 
+const getImageUrl = (url?: string) => {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+  return `${baseUrl}${url}`
+}
+
 export default function ProductsListTable() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -255,7 +262,7 @@ export default function ProductsListTable() {
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                       <Avatar 
-                        src={product.imageUrls?.[0] || ''} 
+                        src={getImageUrl(product.imageUrls?.[0])} 
                         variant="rounded"
                         sx={{ width: 48, height: 48, bgcolor: 'divider', boxShadow: 1 }}
                       >
