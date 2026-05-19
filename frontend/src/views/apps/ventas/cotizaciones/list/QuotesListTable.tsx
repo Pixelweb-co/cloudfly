@@ -32,6 +32,7 @@ import type { RankingInfo } from '@tanstack/match-sorter-utils'
 import TablePaginationComponent from '@components/TablePaginationComponent'
 import type { QuoteType } from '@/types/apps/quoteType'
 import ColumnSelector from '@/components/ColumnSelector'
+import QuoteTableFilters from './QuoteTableFilters'
 import CustomTextField from '@core/components/mui/TextField'
 import tableStyles from '@core/styles/table.module.css'
 import { userMethods } from '@/utils/userMethods'
@@ -256,7 +257,16 @@ const QuotesListTable = ({ reload, tableData }: any) => {
     return (
         <>
             <Card>
-                <CardHeader title='Cotizaciones' className='pbe-4' />
+                <CardHeader
+                    title='Cotizaciones'
+                    className='pbe-4'
+                    subheader={
+                        <Typography variant='body2' color='text.secondary'>
+                            {`Total: ${filteredData?.length || 0} cotizaciones`}
+                        </Typography>
+                    }
+                />
+                <QuoteTableFilters setData={setFilteredData} tableData={data} />
                 <div className='flex justify-between flex-col items-start md:flex-row md:items-center p-6 border-bs gap-4'>
                     <CustomTextField
                         select

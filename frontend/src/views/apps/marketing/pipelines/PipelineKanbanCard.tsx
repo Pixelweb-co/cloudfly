@@ -9,7 +9,7 @@ import {
   Chip
 } from '@mui/material'
 import { PipelineKanbanCard as PipelineKanbanCardType } from '@/types/marketing/pipelineTypes'
-import { getInitials } from '@/@core/utils/get-initials'
+import { getInitials } from '@/utils/getInitials'
 
 // Icon placeholders - assuming tabler icons are used generally in this project
 import { Icon } from '@iconify/react'
