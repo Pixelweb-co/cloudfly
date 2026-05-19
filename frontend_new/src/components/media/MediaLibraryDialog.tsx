@@ -68,7 +68,7 @@ const MediaLibraryDialog = ({
   }, [open, mediaList, initialSelectedIds, multiple])
 
   useEffect(() => {
-    if (open && tab === 1) {
+    if (open && tab === 0) {
       fetchMedia()
     }
   }, [open, tab])
@@ -107,7 +107,7 @@ const MediaLibraryDialog = ({
           setUploading(true)
           const newMedia = await mediaService.uploadMedia(acceptedFiles[0])
           toast.success('Imagen subida correctamente')
-          setTab(1) // Cambiar a la pestaña de biblioteca
+          setTab(0) // Cambiar a la pestaña de biblioteca
           fetchMedia()
           setSelectedMedia(newMedia)
         } catch (error) {
@@ -172,13 +172,13 @@ const MediaLibraryDialog = ({
       
       <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 4 }}>
         <Tabs value={tab} onChange={(_, v) => setTab(v)}>
-          <Tab label="Subir Archivo" sx={{ py: 3 }} />
           <Tab label="Biblioteca" sx={{ py: 3 }} />
+          <Tab label="Subir Archivo" sx={{ py: 3 }} />
         </Tabs>
       </Box>
 
       <DialogContent sx={{ p: 4, minHeight: 400 }}>
-        {tab === 0 ? (
+        {tab === 1 ? (
           <Box
             {...getRootProps()}
             sx={{
