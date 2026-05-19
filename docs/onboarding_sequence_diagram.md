@@ -40,6 +40,7 @@ sequenceDiagram
     FE->>BE: POST /auth/login
     BE->>DB: Validar credenciales
     BE-->>FE: HTTP 200 OK (JWT + UserDto)
+    BE->>DB: Crear Pipeline por Defecto (Estados: Nuevos, Calificados, En Proceso, Ganado, Perdido)
     FE->>FE: Guardar JWT en LocalStorage
 
     alt Si el Usuario es MANAGER / SUPERADMIN
