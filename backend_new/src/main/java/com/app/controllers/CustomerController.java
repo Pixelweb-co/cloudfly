@@ -47,6 +47,7 @@ public class CustomerController {
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final com.app.persistence.services.OnboardingDefaultsService onboardingDefaultsService;
+    private final com.app.persistence.services.PipelineService pipelineService;
     private final TenantService tenantService;
     private final ContactRepository contactRepository;
     private final PaymentMethodRepository paymentMethodRepository;
@@ -197,7 +198,13 @@ public class CustomerController {
                                                     log.info("👤 [ACCOUNT-SETUP] Linking User {} to Tenant {}, Company {} and Contact {}", 
                                                             user.getId(), savedTenant.getId(), savedCompany.getId(), smc.getId());
                                                     
-                                                    return userRepository.save(user);
+                                                    return userRepository.save(user)
+                                                            .flatMap(savedUser -> {
+                                                                log.info("📂 [ACCOUNT-SETUP] Backend: Automatic creation of default Category ('General') and Sales Pipeline");
+                                                                return createDefaultCategory(savedTenant.getId())
+                                                                        .then(pipelineService.createDefaultPipeline(savedTenant.getId(), savedCompany.getId()))
+                                                                        .thenReturn(savedUser);
+                                                            });
                                                 })
                                                 .doOnNext(su -> log.info("✅ [ACCOUNT-SETUP] User updated successfully with IDs and Timestamps"))
                                                 .flatMap(savedUser -> userService.convertToDto(savedUser));
