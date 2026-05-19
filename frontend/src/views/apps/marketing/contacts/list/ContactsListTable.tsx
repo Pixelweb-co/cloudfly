@@ -196,6 +196,26 @@ const ContactsListTable = ({ reload, tableData }: any) => {
                     </Typography>
                 )
             }),
+            {
+                id: 'isActive',
+                header: 'Estado',
+                accessorFn: (row: any) => row.isActive,
+                cell: ({ row }: any) => {
+                    const active = row.original.isActive !== false
+                    return (
+                        <span style={{
+                            padding: '4px 10px',
+                            borderRadius: '16px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            backgroundColor: active ? '#e8f5e9' : '#ffebee',
+                            color: active ? '#2e7d32' : '#c62828'
+                        }}>
+                            {active ? 'Activo' : 'Inactivo'}
+                        </span>
+                    )
+                }
+            },
             columnHelper.accessor('action', {
                 header: 'Acciones',
                 cell: ({ row }) => (
@@ -262,7 +282,15 @@ const ContactsListTable = ({ reload, tableData }: any) => {
     return (
         <>
             <Card>
-                <CardHeader title='Contactos' className='pbe-4' />
+                <CardHeader
+                    title='Contactos'
+                    className='pbe-4'
+                    subheader={
+                        <Typography variant='body2' color='text.secondary'>
+                            {`Total: ${filteredData?.length || 0} contactos`}
+                        </Typography>
+                    }
+                />
                 <TableFilters setData={setFilteredData} tableData={data} />
                 <div className='flex justify-between flex-col items-start md:flex-row md:items-center p-6 border-bs gap-4'>
                     <CustomTextField
