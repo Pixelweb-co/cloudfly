@@ -47,7 +47,7 @@ import ProductoForm from '@/components/dialogs/form-product'
 import ColumnSelector from '@/components/ColumnSelector'
 
 // Component Imports
-// import TableFilters from './TableFilters'
+import TableFilters from './TableFilters'
 
 //import AddProductDrawer from './AddProductDrawer'
 
@@ -127,7 +127,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
   // States
   // const [addProductOpen, setAddProductOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
-  const [selectedRow, setSelectedRow] = useState<any>(null)
+  const [selectedRow, setSelectedRow] = useState<any>({})
   const [data, setData] = useState(tableData.sort((a: any, b: any) => b.id - a.id))
   const [filteredData, setFilteredData] = useState(data)
   const [globalFilter, setGlobalFilter] = useState('')
@@ -412,7 +412,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
     <>
       <Card>
         <CardHeader title='Equipos' className='pbe-4' />
-        {/* <TableFilters setData={setFilteredData} tableData={data} /> */}
+        <TableFilters setData={setFilteredData} tableData={data} />
         <div className='flex justify-between flex-col items-start md:flex-row md:items-center p-6 border-bs gap-4'>
           <CustomTextField
             select
@@ -575,7 +575,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
         onClose={() => {
           setLoadForm(false)
           reload(true)
-          setSelectedRow(null)
+          setSelectedRow({})
         }}
         setOpen={() => setLoadForm(true)}
         rowSelect={selectedRow}
