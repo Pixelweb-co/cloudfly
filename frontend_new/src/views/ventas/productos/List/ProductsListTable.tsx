@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Box,
@@ -72,10 +72,10 @@ export default function ProductsListTable() {
     }
   }
 
-  const handleFiltersChange = (newFilters: typeof filters) => {
+  const handleFiltersChange = useCallback((newFilters: typeof filters) => {
     setFilters(newFilters)
     setPage(0) // Reiniciar a la primera página al cambiar filtros
-  }
+  }, [])
 
   const handleSort = (field: string) => {
     if (sortBy === field) {
@@ -306,7 +306,7 @@ export default function ProductsListTable() {
                   </TableCell>
                   <TableCell align="right">
                     <Tooltip title="Editar">
-                      <IconButton onClick={() => handleEdit(product)} color="info" sx={{ mr: 1, backgroundColor: 'action.hover' }}>
+                      <IconButton onClick={(e) => { e.stopPropagation(); handleEdit(product); }} color="info" sx={{ mr: 1, backgroundColor: 'action.hover' }}>
                         <Icon icon="tabler:edit" />
                       </IconButton>
                     </Tooltip>
