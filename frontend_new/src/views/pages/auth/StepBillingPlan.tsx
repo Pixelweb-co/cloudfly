@@ -62,15 +62,23 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
 
             if (paymentMethod === 'CARD') {
                 // 1. Tokenización directa con Wompi vía API REST
-                const [expMonthRaw, expYearRaw] = cardData.expiry.split('/')
-                const expMonth = expMonthRaw.padStart(2, '0')
-                const expYear = expYearRaw.slice(-2) // Wompi REST API exige exactamente 2 dígitos
+                let expMonth = ''
+                let expYear = ''
+                const cleanExpiry = cardData.expiry.replace(/[^0-9/]/g, '') // remove non-numeric except /
+                if (cleanExpiry.includes('/')) {
+                    const parts = cleanExpiry.split('/')
+                    expMonth = (parts[0] || '').padStart(2, '0')
+                    expYear = (parts[1] || '').slice(-2)
+                } else if (cleanExpiry.length === 4) {
+                    expMonth = cleanExpiry.substring(0, 2)
+                    expYear = cleanExpiry.substring(2, 4)
+                }
 
                 const cardHolderName = cardData.name.trim() || (billingInfo.firstName.trim() + ' ' + billingInfo.lastName.trim()).trim() || 'Cliente CloudFly'
 
                 const tokenPayload = {
-                    number: cardData.number.replace(/\s/g, ''),
-                    cvc: cardData.cvc,
+                    number: cardData.number.replace(/[^0-9]/g, ''),
+                    cvc: cardData.cvc.replace(/[^0-9]/g, ''),
                     exp_month: expMonth,
                     exp_year: expYear,
                     card_holder: cardHolderName
@@ -94,7 +102,14 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                 if (!tokenRes.ok) {
                     const errorJson = await tokenRes.json()
                     console.error('❌ [WOMPI-TOKENIZE] Wompi tokenization failed:', errorJson)
-                    const reason = errorJson.error?.reason || 'Error al procesar los datos de la tarjeta.'
+                    let reason = 'Error al procesar los datos de la tarjeta.'
+                    if (errorJson.error?.messages) {
+                        const msgs = errorJson.error.messages
+                        const fieldErrors = Object.keys(msgs).map(field => {
+                            return `${field}: ${msgs[field].join(', ')}`
+                        })
+                        reason = `Campos inválidos en la tarjeta: ${fieldErrors.join(' | ')}`
+                    }
                     throw new Error(reason)
                 }
 
@@ -109,14 +124,17 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
             }
 
             // 2. Guardar método de pago + crear suscripción Trial (Plan ID 2)
+            const expiryClean = cardData.expiry.replace(/[^0-9/]/g, '')
+            const [expMonthClean, expYearClean] = expiryClean.includes('/') ? expiryClean.split('/') : ['12', '28']
+
             await axiosInstance.post('/customers/account-setup/payment', {
                 tenantId,
                 userId,
                 wompiToken,
                 brand,
                 last4,
-                expMonth: parseInt(cardData.expiry.split('/')[0]),
-                expYear: parseInt('20' + cardData.expiry.split('/')[1]),
+                expMonth: parseInt(expMonthClean, 10),
+                expYear: parseInt('20' + expYearClean.slice(-2), 10),
                 billingCycle
             })
 
@@ -124,7 +142,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
             handleNext()
         } catch (err: any) {
             console.error('Wompi/Payment Error:', err)
-            toast.error(err.error?.type === 'INVALID_ACCESS_TOKEN' ? 'Error de configuración de pagos' : 'Error al procesar el pago')
+            toast.error(err.message || 'Error al procesar el pago')
         } finally {
             setLoading(false)
         }

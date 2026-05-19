@@ -101,7 +101,7 @@ const AccountSetup = () => {
     const loadData = async () => {
       try {
         console.log('🔍 [HYDRATION] Fetching existing onboarding data...')
-        
+
         // 1. Fetch Business Data if customerId exists
         if (user.customerId) {
           const custRes = await axiosInstance.get(`/customers/${user.customerId}`)
@@ -126,10 +126,10 @@ const AccountSetup = () => {
 
         // If we have data, we can decide to skip
         if (user.customerId && targetStep < 2) targetStep = 2
-        
+
         // If we have WhatsApp config, ensure we are at least on step 3
         if (initialWhatsAppData && targetStep < 3) {
-           targetStep = 3
+          targetStep = 3
         }
 
         setActiveStep(targetStep)
@@ -161,21 +161,21 @@ const AccountSetup = () => {
 
       console.log('🏁 [WIZARD] Finalizing onboarding. User:', user.id);
       const response = await axiosInstance.post('/auth/complete-onboarding', { userId: user.id })
-      
+
       console.log('📦 [WIZARD] Backend response received:', response.data.status, response.data.message);
-      
+
       if (response.data.status) {
         console.log('✅ [WIZARD] Onboarding backend sync success.');
-        
+
         // ACTUALIZAR TOKEN Y USERDATA (Trae el nuevo customerId y onboardingCompleted: true)
         if (response.data.jwt) {
           localStorage.setItem('jwt', response.data.jwt)
           console.log('🔑 [WIZARD] JWT Token refreshed. New token iat:', JSON.parse(atob(response.data.jwt.split('.')[1])).iat);
         }
-        
+
         if (response.data.user) {
           localStorage.setItem('userData', JSON.stringify(response.data.user))
-          
+
           if (response.data.user.activeCompanyId) {
             localStorage.setItem('activeCompanyId', response.data.user.activeCompanyId.toString())
           }
@@ -184,9 +184,9 @@ const AccountSetup = () => {
           }
         }
       }
-      
+
       localStorage.removeItem('account_setup_step')
-      
+
       // Update NextAuth session to reflect new user data (important for AuthSync)
       if (updateSession) {
         console.log('🔄 [WIZARD] Updating NextAuth session...')
@@ -242,7 +242,7 @@ const AccountSetup = () => {
         }
       })
     }
-    
+
     // 🔥 ACTUALIZACIÓN INMEDIATA DEL CONTEXTO (LocalStorage)
     // Para que los endpoints subsecuentes (ej: products, categories) funcionen correctamente
     if (customerData.customerId) {
@@ -402,9 +402,9 @@ const AccountSetup = () => {
         {
           const user = userMethods.getUserLogin()
           return (
-            <StepBillingPlan 
-              handleNext={handleNext} 
-              handleBack={handleBack} 
+            <StepBillingPlan
+              handleNext={handleNext}
+              handleBack={handleBack}
               tenantId={user?.customerId || 0}
               userId={user?.id || 0}
             />
@@ -447,8 +447,8 @@ const AccountSetup = () => {
 
             <Stepper activeStep={activeStep} alternativeLabel className='mb-8'>
               {steps.map((step, index) => (
-                <Step 
-                  key={step.title} 
+                <Step
+                  key={step.title}
                   onClick={() => setActiveStep(index)}
                   sx={{ cursor: 'pointer' }}
                 >
