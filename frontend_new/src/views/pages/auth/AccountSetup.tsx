@@ -416,58 +416,73 @@ const AccountSetup = () => {
     }
   }
 
+  if (!isMounted) {
+    return (
+      <AuthIllustrationWrapperCustomer>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100vh', py: 4 }}>
+          <Card className='flex flex-col sm:is-[1400px]' sx={{ height: 'auto', minHeight: 'fit-content', mt: 4 }}>
+            <CardContent className='sm:!p-12'>
+              <Link href={'/'} className='flex justify-center mbe-6'>
+                <Logo />
+              </Link>
+              <Box className='flex flex-col items-center justify-center py-20'>
+                <i className='tabler-loader animate-spin text-4xl text-primary mb-4' />
+                <Typography>Cargando configuración...</Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
+      </AuthIllustrationWrapperCustomer>
+    )
+  }
+
   return (
     <AuthIllustrationWrapperCustomer>
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100vh', py: 4 }}>
         <Card className='flex flex-col sm:is-[1400px]' sx={{ height: 'auto', minHeight: 'fit-content', mt: 4 }}>
           <CardContent className='sm:!p-12'>
-          <Link href={'/'} className='flex justify-center mbe-6'>
-            <Logo />
-          </Link>
+            <Link href={'/'} className='flex justify-center mbe-6'>
+              <Logo />
+            </Link>
 
-          {/* Stepper & Content - Only render after mount to avoid hydration mismatch with localStorage step */}
-          {isMounted && (
-            <>
-              <Stepper activeStep={activeStep} alternativeLabel className='mb-8'>
-                {steps.map((step, index) => (
-                  <Step 
-                    key={step.title} 
-                    onClick={() => setActiveStep(index)}
-                    sx={{ cursor: 'pointer' }}
+            <Stepper activeStep={activeStep} alternativeLabel className='mb-8'>
+              {steps.map((step, index) => (
+                <Step 
+                  key={step.title} 
+                  onClick={() => setActiveStep(index)}
+                  sx={{ cursor: 'pointer' }}
+                >
+                  <StepLabel
+                    icon={
+                      <CustomStepIcon
+                        active={activeStep === index}
+                        completed={activeStep > index}
+                        icon={step.icon}
+                        index={index}
+                      />
+                    }
                   >
-                    <StepLabel
-                      icon={
-                        <CustomStepIcon
-                          active={activeStep === index}
-                          completed={activeStep > index}
-                          icon={step.icon}
-                          index={index}
-                        />
-                      }
-                    >
-                      <Typography variant='body2' className='font-semibold'>
-                        {step.title}
-                      </Typography>
-                      <Typography variant='caption' className='text-textSecondary'>
-                        {step.subtitle}
-                      </Typography>
-                    </StepLabel>
-                  </Step>
-                ))}
-              </Stepper>
+                    <Typography variant='body2' className='font-semibold'>
+                      {step.title}
+                    </Typography>
+                    <Typography variant='caption' className='text-textSecondary'>
+                      {step.subtitle}
+                    </Typography>
+                  </StepLabel>
+                </Step>
+              ))}
+            </Stepper>
 
-              {/* Step Content */}
-              <Box className='min-h-[400px]'>
-                <Box className='wizard-step-container' key={activeStep}>
-                  {renderStepContent(activeStep)}
-                </Box>
+            {/* Step Content */}
+            <Box className='min-h-[400px]'>
+              <Box className='wizard-step-container'>
+                {renderStepContent(activeStep)}
               </Box>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </Box>
-  </AuthIllustrationWrapperCustomer>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+    </AuthIllustrationWrapperCustomer>
   )
 }
 
