@@ -47,7 +47,7 @@ import ProductoForm from '@/components/dialogs/form-product'
 import ColumnSelector from '@/components/ColumnSelector'
 
 // Component Imports
-import TableFilters from './TableFilters'
+// import TableFilters from './TableFilters'
 
 //import AddProductDrawer from './AddProductDrawer'
 
@@ -412,7 +412,7 @@ const ProductsListTable = ({ reload, tableData }: any) => {
     <>
       <Card>
         <CardHeader title='Equipos' className='pbe-4' />
-        <TableFilters setData={setFilteredData} tableData={data} />
+        {/* <TableFilters setData={setFilteredData} tableData={data} /> */}
         <div className='flex justify-between flex-col items-start md:flex-row md:items-center p-6 border-bs gap-4'>
           <CustomTextField
             select
