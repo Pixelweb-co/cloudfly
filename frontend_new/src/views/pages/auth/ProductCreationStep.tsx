@@ -171,12 +171,13 @@ const ProductCreationStep = ({ onProductCreated, onBack }: ProductCreationStepPr
                     {existingProducts && existingProducts.length > 0 && (
                         <Box sx={{ mb: 6, p: 4, bgcolor: 'primary.lightOpacity', borderRadius: 3, border: '1px solid', borderColor: 'primary.main' }}>
                             <Typography variant='subtitle2' color='primary' sx={{ mb: 2, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <i className='tabler-check text-xl' /> Productos ya creados:
+                                <i className='tabler-check text-xl' />
+                                <span> Productos ya creados:</span>
                             </Typography>
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                                 {existingProducts.map((p: any) => (
                                     <Box key={p.id} sx={{ px: 3, py: 1, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider', fontSize: '0.85rem' }}>
-                                        <strong>{p.productName}</strong> - ${p.price}
+                                        <span><strong>{p.productName}</strong>{` - $${p.price}`}</span>
                                     </Box>
                                 ))}
                             </Box>
@@ -293,7 +294,7 @@ const ProductCreationStep = ({ onProductCreated, onBack }: ProductCreationStepPr
                                         }}
                                         startIcon={loading ? <CircularProgress size={20} color='inherit' /> : null}
                                     >
-                                        {loading ? 'Guardando...' : existingProducts.length > 0 ? 'Continuar con el catálogo actual ✨' : 'Finalizar Configuración ✨'}
+                                        <span>{loading ? 'Guardando...' : existingProducts.length > 0 ? 'Continuar con el catálogo actual ✨' : 'Finalizar Configuración ✨'}</span>
                                     </Button>
                                 </Box>
                                 <Typography variant='caption' display='block' textAlign='center' sx={{ mt: 2 }} color='text.secondary'>
