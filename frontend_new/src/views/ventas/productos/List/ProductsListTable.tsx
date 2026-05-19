@@ -37,7 +37,7 @@ export default function ProductsListTable() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [productToDelete, setProductToDelete] = useState<number | null>(null)
 
-  // Estados para filtros y paginación
+  // Estados para filtros, ordenamiento y paginación
   const [filters, setFilters] = useState({
     status: '',
     categoryId: '',
@@ -46,6 +46,8 @@ export default function ProductsListTable() {
   })
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [sortBy, setSortBy] = useState<string>('productName')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
 
   useEffect(() => {
     loadData()
@@ -75,6 +77,15 @@ export default function ProductsListTable() {
     setPage(0) // Reiniciar a la primera página al cambiar filtros
   }
 
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(field)
+      setSortOrder('asc')
+    }
+  }
+
   // Filtrado reactivo en memoria
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
@@ -101,11 +112,36 @@ export default function ProductsListTable() {
     })
   }, [products, filters])
 
+  // Ordenamiento reactivo en memoria
+  const sortedProducts = useMemo(() => {
+    const sorted = [...filteredProducts]
+    sorted.sort((a, b) => {
+      let valA: any = a[sortBy as keyof Product]
+      let valB: any = b[sortBy as keyof Product]
+
+      if (sortBy === 'price') {
+        valA = Number(a.price || 0)
+        valB = Number(b.price || 0)
+      } else if (sortBy === 'inventoryQty') {
+        valA = a.manageStock ? (a.inventoryQty || 0) : -1
+        valB = b.manageStock ? (b.inventoryQty || 0) : -1
+      } else {
+        valA = String(valA || '').toLowerCase()
+        valB = String(valB || '').toLowerCase()
+      }
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1
+      return 0
+    })
+    return sorted
+  }, [filteredProducts, sortBy, sortOrder])
+
   // Paginación reactiva en memoria
   const paginatedProducts = useMemo(() => {
     const startIndex = page * rowsPerPage
-    return filteredProducts.slice(startIndex, startIndex + rowsPerPage)
-  }, [filteredProducts, page, rowsPerPage])
+    return sortedProducts.slice(startIndex, startIndex + rowsPerPage)
+  }, [sortedProducts, page, rowsPerPage])
 
   const handleEdit = (product: Product) => {
     router.push(`/ventas/productos/${product.id}`)
@@ -160,13 +196,48 @@ export default function ProductsListTable() {
       <TableContainer>
         <Table sx={{ minWidth: 800 }}>
           <TableHead>
-            <TableRow sx={{ '& th': { borderBottom: '2px solid rgba(0, 0, 0, 0.12)' } }}>
-              <TableCell>Producto</TableCell>
-              <TableCell>Tipo</TableCell>
-              <TableCell>Precio</TableCell>
-              <TableCell>Stock</TableCell>
-              <TableCell>Estado</TableCell>
-              <TableCell align="right">Acciones</TableCell>
+            <TableRow sx={{ '& th': { borderBottom: '2px solid rgba(0, 0, 0, 0.12)', cursor: 'pointer', userSelect: 'none' } }}>
+              <TableCell onClick={() => handleSort('productName')}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Producto
+                  {sortBy === 'productName' && (
+                    <Icon icon={sortOrder === 'asc' ? 'tabler:chevron-up' : 'tabler:chevron-down'} />
+                  )}
+                </Box>
+              </TableCell>
+              <TableCell onClick={() => handleSort('productType')}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Tipo
+                  {sortBy === 'productType' && (
+                    <Icon icon={sortOrder === 'asc' ? 'tabler:chevron-up' : 'tabler:chevron-down'} />
+                  )}
+                </Box>
+              </TableCell>
+              <TableCell onClick={() => handleSort('price')}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Precio
+                  {sortBy === 'price' && (
+                    <Icon icon={sortOrder === 'asc' ? 'tabler:chevron-up' : 'tabler:chevron-down'} />
+                  )}
+                </Box>
+              </TableCell>
+              <TableCell onClick={() => handleSort('inventoryQty')}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Stock
+                  {sortBy === 'inventoryQty' && (
+                    <Icon icon={sortOrder === 'asc' ? 'tabler:chevron-up' : 'tabler:chevron-down'} />
+                  )}
+                </Box>
+              </TableCell>
+              <TableCell onClick={() => handleSort('status')}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  Estado
+                  {sortBy === 'status' && (
+                    <Icon icon={sortOrder === 'asc' ? 'tabler:chevron-up' : 'tabler:chevron-down'} />
+                  )}
+                </Box>
+              </TableCell>
+              <TableCell align="right" sx={{ cursor: 'default' }}>Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
