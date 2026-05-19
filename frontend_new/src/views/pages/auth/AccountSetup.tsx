@@ -103,10 +103,13 @@ const AccountSetup = () => {
         console.log('🔍 [HYDRATION] Fetching existing onboarding data...')
 
         // 1. Fetch Business Data if customerId exists
-        let hasCustomerId = !!user.customerId
-        if (user.customerId) {
+        const localActiveTenantId = typeof window !== 'undefined' ? localStorage.getItem('activeTenantId') : null
+        const resolvedCustomerId = user.customerId || (localActiveTenantId && localActiveTenantId !== '0' ? parseInt(localActiveTenantId, 10) : null)
+        
+        let hasCustomerId = !!resolvedCustomerId
+        if (resolvedCustomerId) {
           try {
-            const custRes = await axiosInstance.get(`/customers/${user.customerId}`)
+            const custRes = await axiosInstance.get(`/customers/${resolvedCustomerId}`)
             if (custRes.data) {
               console.log('🏢 [HYDRATION] Customer data found')
               setInitialCustomerData(custRes.data)
@@ -425,11 +428,14 @@ const AccountSetup = () => {
       case 4:
         {
           const user = userMethods.getUserLogin()
+          const localActiveTenantId = typeof window !== 'undefined' ? localStorage.getItem('activeTenantId') : null
+          const resolvedTenantId = user?.customerId || (localActiveTenantId && localActiveTenantId !== '0' ? parseInt(localActiveTenantId, 10) : 0)
+          
           return (
             <StepBillingPlan
               handleNext={handleNext}
               handleBack={handleBack}
-              tenantId={user?.customerId || 0}
+              tenantId={resolvedTenantId}
               userId={user?.id || 0}
             />
           )
