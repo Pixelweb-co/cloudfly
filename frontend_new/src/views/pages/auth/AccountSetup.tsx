@@ -103,35 +103,57 @@ const AccountSetup = () => {
         console.log('🔍 [HYDRATION] Fetching existing onboarding data...')
 
         // 1. Fetch Business Data if customerId exists
+        let hasCustomerId = !!user.customerId
         if (user.customerId) {
-          const custRes = await axiosInstance.get(`/customers/${user.customerId}`)
-          if (custRes.data) {
-            console.log('🏢 [HYDRATION] Customer data found')
-            setInitialCustomerData(custRes.data)
-          }
+          try {
+            const custRes = await axiosInstance.get(`/customers/${user.customerId}`)
+            if (custRes.data) {
+              console.log('🏢 [HYDRATION] Customer data found')
+              setInitialCustomerData(custRes.data)
+              hasCustomerId = true
+            }
+          } catch (e) { /* No customer data found */ }
         }
 
         // 2. Fetch WhatsApp Config
+        let waData = null
         try {
           const waRes = await axiosInstance.get('/api/channel-config/config')
           if (waRes.data) {
             console.log('🤖 [HYDRATION] WhatsApp config found')
             setInitialWhatsAppData(waRes.data)
+            waData = waRes.data
           }
         } catch (e) { /* No config yet */ }
+
+        // 3. Fetch Products (Catálogo Inicial)
+        let hasProducts = false
+        try {
+          const prodRes = await axiosInstance.get('/api/v1/products')
+          if (prodRes.data && prodRes.data.length > 0) {
+            console.log('📦 [HYDRATION] Products found')
+            hasProducts = true
+          }
+        } catch (e) { /* No products yet */ }
 
         // Resume logic with smart skip
         const savedStep = localStorage.getItem('account_setup_step')
         let targetStep = savedStep ? parseInt(savedStep, 10) : 0
 
-        // If we have data, we can decide to skip
-        if (user.customerId && targetStep < 2) targetStep = 2
+        // Smart skip based on real database state:
+        if (hasCustomerId && targetStep < 2) {
+          targetStep = 2
+        }
 
-        // If we have WhatsApp config, ensure we are at least on step 3
-        if (initialWhatsAppData && targetStep < 3) {
+        if (waData && targetStep < 3) {
           targetStep = 3
         }
 
+        if (hasProducts && targetStep < 4) {
+          targetStep = 4
+        }
+
+        console.log(`🚀 [HYDRATION] Initializing active step at: ${targetStep}`)
         setActiveStep(targetStep)
         localStorage.setItem('account_setup_step', targetStep.toString())
       } catch (error) {
