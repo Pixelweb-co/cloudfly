@@ -372,7 +372,7 @@ export default function EditProductPage() {
                             }}
                           />
                         }
-                        label={cat.categoryName}
+                        label={cat.nombreCategoria}
                       />
                     </Box>
                   ))}

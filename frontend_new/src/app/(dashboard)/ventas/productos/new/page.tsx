@@ -320,7 +320,7 @@ export default function CreateProductPage() {
                         label="Categoría"
                       >
                         {categories.map(cat => (
-                          <MenuItem key={cat.id} value={cat.id}>{cat.categoryName}</MenuItem>
+                          <MenuItem key={cat.id} value={cat.id}>{cat.nombreCategoria}</MenuItem>
                         ))}
                       </Select>
                     </FormControl>
