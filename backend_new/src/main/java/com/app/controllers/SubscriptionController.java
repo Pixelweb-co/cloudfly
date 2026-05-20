@@ -7,6 +7,7 @@ import com.app.persistence.entity.PlanEntity;
 import com.app.persistence.entity.TenantEntity;
 import com.app.persistence.entity.ModuleEntity;
 import com.app.persistence.repository.*;
+import com.app.persistence.services.SchedulerClient;
 import lombok.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ public class SubscriptionController {
     private final PlanRepository planRepository;
     private final ModuleRepository moduleRepository;
     private final TenantRepository tenantRepository;
+    private final SchedulerClient schedulerClient;
 
     @GetMapping
     public Flux<SubscriptionResponse> getAllSubscriptions() {
@@ -103,15 +105,30 @@ public class SubscriptionController {
     @PutMapping("/{id}")
     public Mono<ResponseEntity<SubscriptionResponse>> updateSubscription(@PathVariable Long id,
             @RequestBody SubscriptionResponse request) {
-        log.info("PUT /api/v1/subscriptions/{} - Updating subscription", id);
+        log.info("PUT /api/v1/subscriptions/{} - Updating subscription and rescheduling billing", id);
         return subscriptionRepository.findById(id)
                 .flatMap(existing -> {
                     existing.setStatus(request.getStatus());
+                    existing.setStartDate(request.getStartDate());
                     existing.setEndDate(request.getEndDate());
+                    if ("TRIAL".equalsIgnoreCase(request.getStatus())) {
+                        existing.setTrialEndsAt(request.getEndDate());
+                        existing.setNextBillingDate(request.getEndDate());
+                    } else {
+                        existing.setNextBillingDate(request.getEndDate());
+                    }
                     existing.setAiTokensLimit(request.getEffectiveAiTokensLimit());
                     existing.setUsersLimit(request.getEffectiveUsersLimit());
                     existing.setUpdatedAt(LocalDateTime.now());
                     return subscriptionRepository.save(existing);
+                })
+                .flatMap(savedSub -> {
+                    LocalDateTime targetDate = savedSub.getEndDate() != null ? savedSub.getEndDate() : savedSub.getTrialEndsAt();
+                    if (targetDate != null) {
+                        return schedulerClient.rescheduleBilling(savedSub.getCustomerId(), savedSub.getId(), targetDate)
+                                .thenReturn(savedSub);
+                    }
+                    return Mono.just(savedSub);
                 })
                 .flatMap(savedSub -> {
                     if (request.getModuleIds() != null) {
