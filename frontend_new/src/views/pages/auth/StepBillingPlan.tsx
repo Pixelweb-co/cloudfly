@@ -24,29 +24,34 @@ const schema = yup.object().shape({
     billingCycle: yup.string().required(),
 
     cardName: yup.string().when('paymentMethod', {
-        is: 'CARD',
-        then: (s) => s.required('El nombre en la tarjeta es obligatorio')
+        is: (val: string) => val === 'CARD',
+        then: (s) => s.required('El nombre en la tarjeta es obligatorio'),
+        otherwise: (s) => s.notRequired().nullable()
     }),
     cardNumber: yup.string().when('paymentMethod', {
-        is: 'CARD',
+        is: (val: string) => val === 'CARD',
         then: (s) => s.required('El número de tarjeta es obligatorio')
-            .matches(/^\d{13,19}$/, 'Debe tener entre 13 y 19 dígitos numéricos')
+            .matches(/^\d{13,19}$/, 'Debe tener entre 13 y 19 dígitos numéricos'),
+        otherwise: (s) => s.notRequired().nullable()
     }),
     cardExpiry: yup.string().when('paymentMethod', {
-        is: 'CARD',
+        is: (val: string) => val === 'CARD',
         then: (s) => s.required('Fecha de expiración obligatoria')
-            .matches(/^(0[1-9]|1[0-2])\/?([0-9]{2})$/, 'Formato inválido (MM/YY)')
+            .matches(/^(0[1-9]|1[0-2])\/?([0-9]{2})$/, 'Formato inválido (MM/YY)'),
+        otherwise: (s) => s.notRequired().nullable()
     }),
     cardCvc: yup.string().when('paymentMethod', {
-        is: 'CARD',
+        is: (val: string) => val === 'CARD',
         then: (s) => s.required('CVC obligatorio')
-            .matches(/^\d{3,4}$/, 'CVC debe ser de 3 o 4 dígitos')
+            .matches(/^\d{3,4}$/, 'CVC debe ser de 3 o 4 dígitos'),
+        otherwise: (s) => s.notRequired().nullable()
     }),
 
     nequiPhone: yup.string().when('paymentMethod', {
-        is: 'NEQUI',
+        is: (val: string) => val === 'NEQUI',
         then: (s) => s.required('Número de celular obligatorio')
-            .matches(/^3\d{9}$/, 'Debe ser un celular válido (10 dígitos empezando por 3)')
+            .matches(/^3\d{9}$/, 'Debe ser un celular válido (10 dígitos empezando por 3)'),
+        otherwise: (s) => s.notRequired().nullable()
     })
 })
 
@@ -89,14 +94,19 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
     }
     const prices = getFinalPrices()
 
+    const onError = (errors: any) => {
+        console.error('Validation Errors:', errors)
+        toast.error('Por favor, completa correctamente todos los campos obligatorios.')
+    }
+
     const onSubmit = async (data: any) => {
         if (!selectedPlan) return toast.error('Selecciona un plan')
         
         setLoading(true)
         try {
             let wompiToken = ''
-            let brand = 'VISA'
-            let last4 = '0000'
+            let brand = data.paymentMethod
+            let last4 = ''
 
             if (data.paymentMethod === 'CARD') {
                 // 1. Tokenización directa con Wompi vía API REST
@@ -159,6 +169,13 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                 wompiToken = cardTokenObj.id
                 brand = cardTokenObj.brand || 'VISA'
                 last4 = tokenPayload.number.slice(-4)
+            } else if (data.paymentMethod === 'NEQUI') {
+                brand = 'NEQUI'
+                last4 = data.nequiPhone.slice(-4)
+            } else if (data.paymentMethod === 'PSE') {
+                brand = 'PSE'
+            } else if (data.paymentMethod === 'BANCOLOMBIA') {
+                brand = 'BANCOLOMBIA'
             }
 
             // 2. Guardar método de pago + crear suscripción Trial (Plan ID 2)
@@ -189,7 +206,7 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
     if (loadingPlans) return <Box sx={{ p: 10, textAlign: 'center' }}>Cargando planes...</Box>
 
     return (
-        <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ maxWidth: '100%', mx: 'auto', p: 4 }}>
+        <Box component="form" onSubmit={handleSubmit(onSubmit, onError)} sx={{ maxWidth: '100%', mx: 'auto', p: 4 }}>
             <Box sx={{ mb: 6 }}>
                 <Typography variant='h4' fontWeight='800' color='primary' sx={{ mb: 1 }}>
                     Prueba CloudFly Studio AI GRATIS
@@ -360,6 +377,15 @@ const StepBillingPlan = ({ handleNext, handleBack, tenantId, userId }: StepBilli
                             <Typography sx={{ flexGrow: 1, fontWeight: 500 }}>PSE (Cualquier Banco)</Typography>
                             <Radio checked={paymentMethod === 'PSE'} size='small' />
                         </Box>
+
+                        {(paymentMethod === 'PSE' || paymentMethod === 'BANCOLOMBIA') && (
+                            <Box sx={{ p: 3, bgcolor: 'info.light', borderRadius: 2, mt: 2, color: 'info.main' }}>
+                                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <i className='tabler-info-circle' />
+                                    Como es un Trial Gratuito, no haremos ningún cobro ahora. Te enviaremos un link de pago por {paymentMethod === 'PSE' ? 'PSE' : 'Bancolombia'} cuando finalicen tus 14 días.
+                                </Typography>
+                            </Box>
+                        )}
                     </Box>
                 </Grid>
 
