@@ -6,7 +6,7 @@ import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import reactor.core.publisher.Mono;
 
 public interface UserRepository extends ReactiveCrudRepository<UserEntity, Long> {
-    @Query("SELECT * FROM users WHERE username = :username")
+    @Query("SELECT * FROM users WHERE username = :username OR email = :username")
     Mono<UserEntity> findByUsername(String username);
 
     @Query("SELECT * FROM users WHERE email = :email")
