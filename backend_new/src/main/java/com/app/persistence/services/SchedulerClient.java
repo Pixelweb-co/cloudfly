@@ -72,4 +72,26 @@ public class SchedulerClient {
                 .doOnSuccess(res -> log.info("✅ Campaign {} scheduled successfully in scheduler", campaignId))
                 .doOnError(err -> log.error("❌ Failed to schedule campaign {}: {}", campaignId, err.getMessage()));
     }
+
+    public Mono<Void> rescheduleBilling(Long tenantId, Long subscriptionId, LocalDateTime newEndDate) {
+        WebClient webClient = webClientBuilder.build();
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("tenantId", tenantId);
+        body.put("subscriptionId", subscriptionId);
+        body.put("newEndDate", newEndDate);
+
+        log.info("🔄 Sending reschedule request to scheduler for Subscription {} to {}", subscriptionId, newEndDate);
+
+        return webClient.post()
+                .uri(schedulerUrl + "/api/scheduler/billing/reschedule")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .retrieve()
+                .toBodilessEntity()
+                .then()
+                .doOnSuccess(res -> log.info("✅ Reschedule request sent successfully for Sub {}", subscriptionId))
+                .doOnError(err -> log.error("❌ Failed to notify scheduler of reschedule for Sub {}: {}", subscriptionId, err.getMessage()))
+                .onErrorResume(err -> Mono.empty()); // Don't block DB save if scheduler client fails
+    }
 }

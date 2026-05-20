@@ -22,6 +22,7 @@ public class BillingProcessorService {
     // Run every minute
     @Scheduled(fixedRate = 60000)
     public void processScheduledEvents() {
+        log.info("suscription billin monitoring");
         log.debug("⏰ [SCHEDULER] Checking for pending billing events...");
         
         scheduledEventRepository.findAllByStatusAndScheduledAtBefore("PENDING", LocalDateTime.now())
