@@ -30,3 +30,13 @@ export interface Product {
 export interface ProductCreateRequest extends Omit<Product, 'id'> {
   id?: number;
 }
+
+export interface Category {
+  id: number;
+  nombreCategoria: string;
+  tenantId?: number;
+  companyId?: number;
+  description?: string;
+  status?: string;
+}
+
