@@ -47,6 +47,15 @@ public class SubscriptionController {
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/{id}")
+    public Mono<ResponseEntity<SubscriptionResponse>> getSubscriptionById(@PathVariable Long id) {
+        log.info("GET /api/v1/subscriptions/{} - Fetching subscription", id);
+        return subscriptionRepository.findById(id)
+                .flatMap(this::mapToResponse)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
     @PostMapping
     public Mono<ResponseEntity<SubscriptionResponse>> createSubscription(@RequestBody SubscriptionResponse request) {
         log.info("POST /api/v1/subscriptions - Creating subscription for tenant: {}", request.getTenantId());
