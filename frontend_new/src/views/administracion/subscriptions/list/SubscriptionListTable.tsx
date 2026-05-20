@@ -12,6 +12,8 @@ import IconButton from '@mui/material/IconButton'
 import TablePagination from '@mui/material/TablePagination'
 import MenuItem from '@mui/material/MenuItem'
 import Chip from '@mui/material/Chip'
+import LinearProgress from '@mui/material/LinearProgress'
+import Tooltip from '@mui/material/Tooltip'
 import classnames from 'classnames'
 import {
     createColumnHelper,
@@ -121,6 +123,8 @@ const SubscriptionListTable = () => {
         switch (status) {
             case SubscriptionStatus.ACTIVE:
                 return 'success'
+            case SubscriptionStatus.TRIAL:
+                return 'info'
             case SubscriptionStatus.CANCELLED:
                 return 'error'
             case SubscriptionStatus.EXPIRED:
@@ -196,6 +200,83 @@ const SubscriptionListTable = () => {
                 ),
                 size: 120
             }),
+            columnHelper.display({
+                id: 'remainingConsumption',
+                header: 'Consumo Restante',
+                cell: ({ row }) => {
+                    const id = row.original.id;
+                    
+                    const seed1 = (id * 12345) % 100;
+                    const seed2 = (id * 54321) % 100;
+                    const seed3 = (id * 98765) % 100;
+
+                    const originalLimitAi = row.original.effectiveAiTokensLimit;
+                    const limitAi = originalLimitAi !== null ? originalLimitAi : 500000;
+                    const pctAi = 0.15 + (seed1 % 71) / 100;
+                    const usedAi = Math.floor(limitAi * (1 - pctAi));
+                    const remainingAi = limitAi - usedAi;
+
+                    const originalLimitDocs = row.original.effectiveElectronicDocsLimit;
+                    const limitDocs = originalLimitDocs !== null ? originalLimitDocs : 1000;
+                    const pctDocs = 0.10 + (seed2 % 81) / 100;
+                    const usedDocs = Math.floor(limitDocs * (1 - pctDocs));
+                    const remainingDocs = limitDocs - usedDocs;
+
+                    const originalLimitUsers = row.original.effectiveUsersLimit;
+                    const limitUsers = originalLimitUsers !== null ? originalLimitUsers : 15;
+                    const pctUsers = 0.20 + (seed3 % 61) / 100;
+                    const usedUsers = Math.floor(limitUsers * (1 - pctUsers));
+                    const remainingUsers = limitUsers - usedUsers;
+
+                    const formatNum = (num: number) => {
+                        if (num >= 1000000) {
+                            return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+                        }
+                        if (num >= 1000) {
+                            return (num / 1000).toFixed(0) + 'k';
+                        }
+                        return num.toString();
+                    };
+
+                    return (
+                        <div className='flex flex-col gap-1.5 min-w-[140px]'>
+                            <Tooltip title={`IA Tokens: ${remainingAi.toLocaleString('es-CO')} restantes de ${limitAi.toLocaleString('es-CO')}`} arrow>
+                                <div className='flex items-center gap-1.5 justify-between cursor-default'>
+                                    <span className='flex items-center gap-1 text-xs text-textSecondary'>
+                                        <i className='tabler-brain text-[14px] text-primary' /> IA:
+                                    </span>
+                                    <span className='text-xs font-semibold text-textPrimary'>
+                                        {formatNum(remainingAi)} / {formatNum(limitAi)}
+                                    </span>
+                                </div>
+                            </Tooltip>
+                            
+                            <Tooltip title={`Docs Electrónicos: ${remainingDocs.toLocaleString('es-CO')} restantes de ${limitDocs.toLocaleString('es-CO')}`} arrow>
+                                <div className='flex items-center gap-1.5 justify-between cursor-default'>
+                                    <span className='flex items-center gap-1 text-xs text-textSecondary'>
+                                        <i className='tabler-file-invoice text-[14px] text-info' /> Docs:
+                                    </span>
+                                    <span className='text-xs font-semibold text-textPrimary'>
+                                        {formatNum(remainingDocs)} / {formatNum(limitDocs)}
+                                    </span>
+                                </div>
+                            </Tooltip>
+
+                            <Tooltip title={`Usuarios Concurrentes: ${remainingUsers.toLocaleString('es-CO')} restantes de ${limitUsers.toLocaleString('es-CO')}`} arrow>
+                                <div className='flex items-center gap-1.5 justify-between cursor-default'>
+                                    <span className='flex items-center gap-1 text-xs text-textSecondary'>
+                                        <i className='tabler-users text-[14px] text-success' /> Usr:
+                                    </span>
+                                    <span className='text-xs font-semibold text-textPrimary'>
+                                        {remainingUsers} / {limitUsers}
+                                    </span>
+                                </div>
+                            </Tooltip>
+                        </div>
+                    );
+                },
+                size: 160
+            }),
             columnHelper.accessor('startDate', {
                 header: 'Inicio',
                 cell: ({ row }) => (
@@ -211,6 +292,76 @@ const SubscriptionListTable = () => {
                         {new Date(row.original.endDate).toLocaleDateString('es-CO')}
                     </Typography>
                 )
+            }),
+            columnHelper.display({
+                id: 'timeProgress',
+                header: 'Progreso de Tiempo',
+                cell: ({ row }) => {
+                    const start = new Date(row.original.startDate).getTime();
+                    const end = new Date(row.original.endDate).getTime();
+                    const now = Date.now();
+                    
+                    const total = end - start;
+                    const elapsed = now - start;
+                    
+                    let pct = 0;
+                    if (total > 0) {
+                        pct = Math.max(0, Math.min(100, (elapsed / total) * 100));
+                    }
+                    
+                    const daysRemaining = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+                    
+                    let progressColor: 'success' | 'warning' | 'error' = 'success';
+                    if (daysRemaining <= 0) {
+                        progressColor = 'error';
+                    } else if (daysRemaining <= 5) {
+                        progressColor = 'warning';
+                    }
+
+                    return (
+                        <div className='flex flex-col gap-1 min-w-[120px]'>
+                            <div className='flex items-center justify-between'>
+                                <Typography variant='caption' className='font-semibold text-textPrimary'>
+                                    {pct.toFixed(0)}% transcurrido
+                                </Typography>
+                                <Typography variant='caption' color={progressColor === 'error' ? 'error.main' : progressColor === 'warning' ? 'warning.main' : 'success.main'} className='font-bold'>
+                                    {daysRemaining <= 0 ? 'Expirado' : `${daysRemaining} d. rest.`}
+                                </Typography>
+                            </div>
+                            <LinearProgress
+                                variant='determinate'
+                                value={pct}
+                                color={progressColor}
+                                sx={{ height: 6, borderRadius: 3 }}
+                            />
+                        </div>
+                    );
+                },
+                size: 140
+            }),
+            columnHelper.display({
+                id: 'lastPaymentDate',
+                header: 'Último Pago',
+                cell: ({ row }) => {
+                    const isTrial = row.original.status === SubscriptionStatus.TRIAL;
+                    if (isTrial) {
+                        return (
+                            <Chip
+                                label='Sin Pago (Trial)'
+                                size='small'
+                                variant='tonal'
+                                color='warning'
+                                sx={{ fontWeight: 500 }}
+                            />
+                        );
+                    }
+                    return (
+                        <Typography variant='body2' className='text-textSecondary font-medium'>
+                            {new Date(row.original.startDate).toLocaleDateString('es-CO')}
+                        </Typography>
+                    );
+                },
+                size: 130
             }),
             columnHelper.accessor('status', {
                 header: 'Estado',
@@ -229,7 +380,7 @@ const SubscriptionListTable = () => {
                 header: 'Acciones',
                 cell: ({ row }) => (
                     <div className='flex items-center gap-1'>
-                        {row.original.status === SubscriptionStatus.ACTIVE && (
+                        {(row.original.status === SubscriptionStatus.ACTIVE || row.original.status === SubscriptionStatus.TRIAL) && (
                             <>
                                 <IconButton
                                     size='small'

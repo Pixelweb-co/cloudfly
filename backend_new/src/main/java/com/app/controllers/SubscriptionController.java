@@ -7,6 +7,7 @@ import com.app.persistence.entity.PlanEntity;
 import com.app.persistence.entity.TenantEntity;
 import com.app.persistence.entity.ModuleEntity;
 import com.app.persistence.repository.*;
+import lombok.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -125,6 +126,112 @@ public class SubscriptionController {
                 .thenReturn(ResponseEntity.noContent().<Void>build());
     }
 
+    @PatchMapping("/{id}/modules")
+    public Mono<ResponseEntity<SubscriptionResponse>> updateModules(@PathVariable Long id, @RequestBody ModulesUpdateRequest request) {
+        log.info("PATCH /api/v1/subscriptions/{}/modules - Updating modules", id);
+        return subscriptionRepository.findById(id)
+                .flatMap(existing -> {
+                    existing.setUpdatedAt(LocalDateTime.now());
+                    return subscriptionRepository.save(existing);
+                })
+                .flatMap(savedSub -> {
+                    if (request.getModuleIds() != null) {
+                        return subscriptionModuleRepository.deleteBySubscriptionId(id)
+                                .thenMany(Flux.fromIterable(request.getModuleIds()))
+                                .flatMap(mid -> subscriptionModuleRepository.insertModule(id, mid))
+                                .then(Mono.just(savedSub));
+                    }
+                    return Mono.just(savedSub);
+                })
+                .flatMap(this::mapToResponse)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/{id}/limits")
+    public Mono<ResponseEntity<SubscriptionResponse>> updateLimits(@PathVariable Long id, @RequestBody LimitsUpdateRequest request) {
+        log.info("PATCH /api/v1/subscriptions/{}/limits - Updating limits", id);
+        return subscriptionRepository.findById(id)
+                .flatMap(existing -> {
+                    existing.setAiTokensLimit(request.getAiTokensLimit());
+                    existing.setElectronicDocsLimit(request.getElectronicDocsLimit());
+                    existing.setUsersLimit(request.getUsersLimit());
+                    existing.setUpdatedAt(LocalDateTime.now());
+                    return subscriptionRepository.save(existing);
+                })
+                .flatMap(this::mapToResponse)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/{id}/cancel")
+    public Mono<ResponseEntity<SubscriptionResponse>> cancelSubscription(@PathVariable Long id) {
+        log.info("PATCH /api/v1/subscriptions/{}/cancel - Canceling subscription", id);
+        return subscriptionRepository.findById(id)
+                .flatMap(existing -> {
+                    existing.setStatus("CANCELLED");
+                    existing.setIsAutoRenew(false);
+                    existing.setUpdatedAt(LocalDateTime.now());
+                    return subscriptionRepository.save(existing);
+                })
+                .flatMap(this::mapToResponse)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/{id}/toggle-auto-renew")
+    public Mono<ResponseEntity<SubscriptionResponse>> toggleAutoRenew(@PathVariable Long id) {
+        log.info("PATCH /api/v1/subscriptions/{}/toggle-auto-renew - Toggling auto-renew", id);
+        return subscriptionRepository.findById(id)
+                .flatMap(existing -> {
+                    existing.setIsAutoRenew(existing.getIsAutoRenew() == null ? true : !existing.getIsAutoRenew());
+                    existing.setUpdatedAt(LocalDateTime.now());
+                    return subscriptionRepository.save(existing);
+                })
+                .flatMap(this::mapToResponse)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{id}/renew")
+    public Mono<ResponseEntity<SubscriptionResponse>> renewSubscription(@PathVariable Long id) {
+        log.info("POST /api/v1/subscriptions/{}/renew - Renewing subscription", id);
+        return subscriptionRepository.findById(id)
+                .flatMap(oldSub -> {
+                    SubscriptionEntity entity = SubscriptionEntity.builder()
+                            .planId(oldSub.getPlanId())
+                            .customerId(oldSub.getCustomerId())
+                            .userId(oldSub.getUserId())
+                            .status("ACTIVE")
+                            .billingCycle(oldSub.getBillingCycle() != null ? oldSub.getBillingCycle() : "MONTHLY")
+                            .startDate(LocalDateTime.now())
+                            .endDate(LocalDateTime.now().plusDays(30))
+                            .isAutoRenew(oldSub.getIsAutoRenew())
+                            .aiTokensLimit(oldSub.getAiTokensLimit())
+                            .electronicDocsLimit(oldSub.getElectronicDocsLimit())
+                            .usersLimit(oldSub.getUsersLimit())
+                            .allowOverage(oldSub.getAllowOverage())
+                            .aiOveragePricePer1k(oldSub.getAiOveragePricePer1k())
+                            .docOveragePriceUnit(oldSub.getDocOveragePriceUnit())
+                            .monthlyPrice(oldSub.getMonthlyPrice())
+                            .discountPercent(oldSub.getDiscountPercent())
+                            .notes("Renovación de suscripción " + id)
+                            .createdAt(LocalDateTime.now())
+                            .updatedAt(LocalDateTime.now())
+                            .build();
+
+                    return subscriptionRepository.save(entity)
+                            .flatMap(savedSub -> {
+                                return subscriptionModuleRepository.findBySubscriptionId(oldSub.getId())
+                                        .flatMap(sm -> subscriptionModuleRepository.insertModule(savedSub.getId(), sm.getModuleId()))
+                                        .then(Mono.just(savedSub));
+                            });
+                })
+                .flatMap(this::mapToResponse)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
     private Mono<SubscriptionResponse> mapToResponse(SubscriptionEntity entity) {
         return Mono.zip(
                 planRepository.findById(entity.getPlanId()).defaultIfEmpty(new PlanEntity()),
@@ -159,6 +266,22 @@ public class SubscriptionController {
                     .updatedAt(entity.getUpdatedAt())
                     .build();
         });
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ModulesUpdateRequest {
+        private List<Long> moduleIds;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LimitsUpdateRequest {
+        private Long aiTokensLimit;
+        private Integer electronicDocsLimit;
+        private Integer usersLimit;
     }
 }
 
