@@ -272,11 +272,11 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
           <form noValidate autoComplete='off' onSubmit={handleSubmit(onSubmit)} className='flex flex-col gap-5'>
             <CustomTextField
               fullWidth
-              label='Nombre de usuario'
-              placeholder='juanperez123'
+              label='Usuario o Correo electrónico'
+              placeholder='juanperez123 o admin@ejemplo.com'
               error={!!errors.username}
               helperText={errors.username?.message}
-              {...register('username', { required: 'El nombre de usuario es requerido' })}
+              {...register('username', { required: 'El usuario o correo es requerido' })}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position='start'>
