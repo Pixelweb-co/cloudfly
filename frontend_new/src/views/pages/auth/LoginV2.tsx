@@ -4,8 +4,9 @@
 import { useEffect, useState } from 'react'
 
 // Next Imports
-import { useRouter } from 'next/navigation'
-import { signIn } from 'next-auth/react'
+import { useRouter, useSearchParams } from 'next/navigation'
+
+import { signIn, getSession } from 'next-auth/react'
 
 // React Hook Form
 import { useForm } from 'react-hook-form'
@@ -27,8 +28,6 @@ import DangerousIcon from '@mui/icons-material/Dangerous'
 import classnames from 'classnames'
 
 import { Alert } from '@mui/material'
-
-import { AuthManager } from '@/utils/authManager'
 
 // Component Imports
 import Link from '@components/Link'
@@ -75,6 +74,8 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
   useEffect(() => { setDisabled(false) }, [])
 
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get('callbackUrl')
   const { settings } = useSettings()
   const theme = useTheme()
   const hidden = useMediaQuery(theme.breakpoints.down('md'))
@@ -82,10 +83,11 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
   const authBackground = useImageVariant(mode, '/images/pages/auth-mask-light.png', '/images/pages/auth-mask-dark.png')
 
   const handleClickShowPassword = () => setIsPasswordShown(show => !show)
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
 
   const onSubmit = async (data: FormInputs) => {
     try {
+      setDisabled(true)
+
       const result = await signIn('credentials', {
         redirect: false,
         username: data.username,
@@ -95,59 +97,96 @@ const LoginV2 = ({ mode }: { mode: SystemMode }) => {
       if (result?.error) {
         setError('Error de autenticación: credenciales inválidas')
         setSuccess(false)
+        setDisabled(false)
+
         return
       }
 
-      // Obtener datos del usuario tras login exitoso para redirección
-      const response = await AuthManager.authorize(data)
-      const user = response?.user
+      // Obtener datos del usuario desde la sesión de NextAuth (evita doble petición)
+      const session = await getSession()
+      const user = session?.user as any
+      const jwt = (session as any)?.accessToken
 
-      if (response.status) {
-        // ESTANDARIZADO: usar 'jwt'
-        localStorage.setItem('jwt', response.jwt)
-        localStorage.setItem('userData', JSON.stringify(response.user))
+      if (jwt && user) {
+        // ESTANDARIZADO: usar 'jwt' y 'userData' en localStorage
+        localStorage.setItem('jwt', jwt)
+        localStorage.setItem('userData', JSON.stringify(user))
 
-        if (!user?.enabled && user?.verificationToken != null && user?.verificationToken != '') {
+        if (user.activeCompanyId) {
+          localStorage.setItem('activeCompanyId', user.activeCompanyId.toString())
+        }
+
+        if (!user?.enabled && user?.verificationToken != null && user?.verificationToken !== '') {
           router.push('/verify-email')
-          return false
+          
+return false
         } else {
           setSuccess(true)
           setError(null)
 
-          // Redirección por roles
+          // Redirección inteligente por roles y callbackUrl
           const roles = user?.roles || []
           const hasRole = (role: string) => roles.some((r: any) => (r.name || r.role) === role)
 
-          if (hasRole('MANAGER') || hasRole('SUPERADMIN') || hasRole('USER')) {
-            router.push('/home')
-            return true
-          }
-
-          if (!user?.customer) {
-            router.push('/account-setup')
-            return false
-          }
-
-          if (hasRole('ADMIN')) {
-            if (!user.onboardingCompleted) {
-              console.log('🚧 [LOGIN] ADMIN onboarding incomplete. Redirecting to /account-setup')
-              router.push('/account-setup')
+          // Regla 1: Administradores de la Plataforma (Bypass de cliente)
+          if (hasRole('MANAGER') || hasRole('SUPERADMIN')) {
+            if (callbackUrl) {
+              router.push(callbackUrl)
             } else {
               router.push('/home')
             }
-          } else if (hasRole('USER') || hasRole('BIOMEDICAL') || hasRole('BIOEDICAL')) {
-            router.push('/accounts/user/view')
+
+            
+return true
+          }
+
+          // Regla 2: Dueños de Negocio (ADMIN) - Deben completar onboarding
+          if (hasRole('ADMIN')) {
+            if (!user?.customer || !user.onboardingCompleted) {
+              console.log('🚧 [LOGIN] ADMIN onboarding incomplete. Redirecting to /account-setup')
+              router.push('/account-setup')
+            } else if (callbackUrl) {
+              router.push(callbackUrl)
+            } else {
+              router.push('/home')
+            }
+
+            
+return true
+          }
+
+          // Regla 3: Colaboradores / Usuarios (USER, BIOMEDICAL, BIOEDICAL)
+          if (hasRole('USER') || hasRole('BIOMEDICAL') || hasRole('BIOEDICAL')) {
+            if (callbackUrl) {
+              router.push(callbackUrl)
+            } else {
+              router.push('/accounts/user/view')
+            }
+
+            
+return true
+          }
+
+          // Regla 4: Fallback
+          if (callbackUrl) {
+            router.push(callbackUrl)
           } else {
             router.push('/home')
           }
 
-          return true
+          
+return true
         }
+      } else {
+        setError('Error al obtener la sesión de usuario')
+        setSuccess(false)
+        setDisabled(false)
       }
     } catch (error: any) {
       console.error('Error during login:', error.response?.data?.message || error.message)
       setError(error.response?.data?.message || 'Error de autenticación')
       setSuccess(false)
+      setDisabled(false)
     }
   }
 
