@@ -12,4 +12,8 @@ public interface UserRoleRepository extends ReactiveCrudRepository<UserRole, Lon
     @Modifying
     @Query("INSERT INTO user_roles (user_id, role_id) VALUES (:userId, :roleId)")
     Mono<Void> insertRole(Long userId, Long roleId);
+
+    @Modifying
+    @Query("DELETE FROM user_roles WHERE user_id = :userId")
+    Mono<Void> deleteRolesByUserId(Long userId);
 }
