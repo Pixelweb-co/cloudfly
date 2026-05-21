@@ -38,8 +38,8 @@ public class BillingSchedulerController {
         return billingSchedulerService.runScheduler()
                 .map(result -> {
                     Map<String, Object> response = new java.util.HashMap<>();
-                    response.put("notified", result.notified);
-                    response.put("suspended", result.suspended);
+                    response.put("processed", result.processed);  // tarjetas cobradas / links enviados
+                    response.put("suspended", result.suspended);   // cuentas suspendidas
                     response.put("message", "Ciclo de facturación completado exitosamente");
                     response.put("hoursAheadAlert", 24);
                     return response;
