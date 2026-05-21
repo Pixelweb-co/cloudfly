@@ -87,6 +87,32 @@ services:
       - "traefik.http.services.api.loadbalancer.server.port=8080"
       - "traefik.docker.network=cloudfly_app-net"
 
+  billing-service:
+    image: cloudfly-billing-service:latest
+    container_name: billing-service
+    build:
+      context: ./billing-service
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8086:8080"
+    env_file:
+      - .env
+    environment:
+      - TZ=America/Bogota
+      - BACKEND_API_URL=http://backend-api:8080/internal/billing
+      - WOMPI_PRIVATE_KEY=${WOMPI_PRIVATE_KEY}
+      - WOMPI_PUBLIC_KEY=${WOMPI_PUBLIC_KEY}
+      - WOMPI_EVENTS_SECRET=${WOMPI_EVENTS_SECRET}
+      - WOMPI_BASE_URL=https://sandbox.wompi.co/v1
+      - KAFKA_BROKER=kafka:9092
+    networks:
+      - app-net
+      - kafka-net
+    depends_on:
+      - backend-api
+      - kafka
+
   scheduler-service:
     image: cloudfly-scheduler-service:latest
     container_name: scheduler-service
