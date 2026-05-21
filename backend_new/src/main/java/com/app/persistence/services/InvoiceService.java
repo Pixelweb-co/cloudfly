@@ -34,7 +34,7 @@ public class InvoiceService {
     public Flux<InvoiceResponseDTO> listByTenant(Long tenantId, Long companyId) {
         log.info("Listing invoices for tenant: {}, company: {}", tenantId, companyId);
         Flux<InvoiceEntity> invoices = (companyId != null)
-                ? invoiceRepository.findAllByTenantId(tenantId).filter(inv -> companyId.equals(inv.getCompanyId()))
+                ? invoiceRepository.findAllByTenantId(tenantId).filter(inv -> inv.getCompanyId() == null || companyId.equals(inv.getCompanyId()))
                 : invoiceRepository.findAllByTenantId(tenantId);
 
         return invoices.flatMap(this::enrichWithItemsAndCustomer);

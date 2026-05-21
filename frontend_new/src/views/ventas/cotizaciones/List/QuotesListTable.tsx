@@ -270,7 +270,7 @@ const QuotesListTable = ({ tableData, onReload }: { tableData: QuoteType[], onRe
                 <div className='flex flex-col sm:flex-row max-sm:is-full items-start sm:items-center gap-4'>
                     <DebouncedInput
                         value={globalFilter ?? ''}
-                        onChange={value => setGlobalFilter(String(value))}
+                        onChange={(value: string | number) => setGlobalFilter(String(value))}
                         placeholder='Buscar Cotización'
                         className='max-sm:is-full'
                     />

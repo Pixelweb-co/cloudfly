@@ -251,7 +251,7 @@ const OrdersListTable = ({ tableData, onReload }: { tableData: OrderType[], onRe
                 <div className='flex flex-col sm:flex-row max-sm:is-full items-start sm:items-center gap-4'>
                     <DebouncedInput
                         value={globalFilter ?? ''}
-                        onChange={value => setGlobalFilter(String(value))}
+                        onChange={(value: string | number) => setGlobalFilter(String(value))}
                         placeholder='Buscar Pedido'
                         className='max-sm:is-full'
                     />
