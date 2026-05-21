@@ -107,6 +107,8 @@ services:
       - WOMPI_BASE_URL=https://sandbox.wompi.co/v1
       - KAFKA_BROKER=kafka:9092
       - PORT=8080
+    volumes:
+      - ./uploads:/uploads
     networks:
       - app-net
       - kafka-net
