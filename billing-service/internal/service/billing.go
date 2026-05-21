@@ -5,6 +5,7 @@ import (
 	"billing-service/internal/models"
 	"billing-service/pkg/pdf"
 	"billing-service/pkg/wompi"
+	"encoding/json"
 	"fmt"
 
 	"github.com/go-resty/resty/v2"
