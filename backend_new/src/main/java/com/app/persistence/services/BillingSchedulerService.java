@@ -148,27 +148,44 @@ public class BillingSchedulerService {
      * Si falla → envía link de pago como fallback.
      */
     private Mono<Void> autoChargeCard(SubscriptionEntity sub, PaymentMethodEntity pm) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("eventType", "AUTO_CHARGE");
-        body.put("tenantId", sub.getCustomerId());
-        body.put("subscriptionId", sub.getId());
+        Map<String, Object> generateBody = new HashMap<>();
+        generateBody.put("eventType", "GENERATE_INVOICE");
+        generateBody.put("tenantId", sub.getCustomerId());
+        generateBody.put("subscriptionId", sub.getId());
 
-        return webClientBuilder.build()
-                .post()
+        Map<String, Object> chargeBody = new HashMap<>();
+        chargeBody.put("eventType", "AUTO_CHARGE");
+        chargeBody.put("tenantId", sub.getCustomerId());
+        chargeBody.put("subscriptionId", sub.getId());
+
+        org.springframework.web.reactive.function.client.WebClient client = webClientBuilder.build();
+
+        // 1. Generar la factura
+        return client.post()
                 .uri("http://billing-service:8080/api/billing/execute-event")
-                .bodyValue(body)
+                .bodyValue(generateBody)
                 .retrieve()
-                .bodyToMono(Map.class)
+                .toBodilessEntity()
+                .doOnSuccess(r -> log.info("📄 [BILLING-SCHEDULER] Factura generada para sub {}", sub.getId()))
+                .then(Mono.defer(() -> {
+                    // 2. Ejecutar el cobro automático
+                    return client.post()
+                            .uri("http://billing-service:8080/api/billing/execute-event")
+                            .bodyValue(chargeBody)
+                            .retrieve()
+                            .toBodilessEntity();
+                }))
                 .flatMap(response -> {
                     log.info("✅ [BILLING-SCHEDULER] Auto-cobro exitoso para sub {}", sub.getId());
                     return extendSubscription(sub)
                             .flatMap(updatedSub -> sendRenewalSuccessNotification(updatedSub, pm));
                 })
                 .onErrorResume(err -> {
-                    log.error("❌ [BILLING-SCHEDULER] Auto-cobro fallido para sub {}: {}. Enviando link.",
+                    log.error("❌ [BILLING-SCHEDULER] Auto-cobro/generación fallida para sub {}: {}. Enviando link.",
                             sub.getId(), err.getMessage());
                     return sendPaymentLinkNotification(sub, pm);
-                });
+                })
+                .then();
     }
 
     /**
