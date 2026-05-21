@@ -51,7 +51,7 @@ func (ct CustomTime) MarshalJSON() ([]byte, error) {
 }
 
 type PaymentMethod struct {
-	ID              int64     `json:"id"`
+	ID              int64     `json:"id,omitempty"`
 	TenantID        int64     `json:"tenantId"`
 	Provider        string    `json:"provider"`
 	PaymentSourceID string    `json:"paymentSourceId"`
@@ -64,7 +64,7 @@ type PaymentMethod struct {
 }
 
 type Invoice struct {
-	ID                 int64      `json:"id"`
+	ID                 int64      `json:"id,omitempty"`
 	TenantID           int64      `json:"tenantId"`
 	SubscriptionID     int64      `json:"subscriptionId"`
 	InvoiceNumber      string     `json:"invoiceNumber"`
@@ -83,7 +83,7 @@ type Invoice struct {
 }
 
 type PaymentTransaction struct {
-	ID              int64     `json:"id"`
+	ID              int64     `json:"id,omitempty"`
 	TenantID        int64     `json:"tenantId"`
 	InvoiceID       int64     `json:"invoiceId"`
 	TransactionID   string    `json:"transactionId"`
@@ -95,7 +95,7 @@ type PaymentTransaction struct {
 }
 
 type Subscription struct {
-	ID              int64      `json:"id"`
+	ID              int64      `json:"id,omitempty"`
 	PlanID          int64      `json:"planId"`
 	TenantID        int64      `json:"customerId"`
 	Status          string     `json:"status"`
