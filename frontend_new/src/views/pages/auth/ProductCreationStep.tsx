@@ -32,13 +32,15 @@ const ProductCreationStep = ({ onProductCreated, onBack }: ProductCreationStepPr
                 const user = userMethods.getUserLogin()
                 console.log('📦 [PRODUCT-STEP] Refreshing user data:', user)
 
-                if (!user || !user.customerId) {
+                const customerId = user?.customerId || user?.customer?.id || user?.tenant_id || (typeof window !== 'undefined' ? localStorage.getItem('activeTenantId') : null)
+
+                if (!user || !customerId) {
                     console.warn('⚠️ [PRODUCT-STEP] No customerId found yet. User might be stale.')
                     setCategoryLoading(false)
                     return
                 }
 
-                const response = await axiosInstance.get(`/categorias/customer/${user.customerId}`)
+                const response = await axiosInstance.get(`/categorias/customer/${customerId}`)
                 const categories = response.data
 
                 // Buscar por nombre "General"
@@ -61,7 +63,7 @@ const ProductCreationStep = ({ onProductCreated, onBack }: ProductCreationStepPr
 
                 // 🔥 Buscar productos existentes para ESTE tenant
                 try {
-                    const prodRes = await axiosInstance.get(`/api/v1/products/tenant/${user.customerId}`)
+                    const prodRes = await axiosInstance.get(`/api/v1/products/tenant/${customerId}`)
                     if (prodRes.data && Array.isArray(prodRes.data) && prodRes.data.length > 0) {
                         console.log('📦 [PRODUCT-STEP] Existing products found for tenant:', prodRes.data.length)
                         setExistingProducts(prodRes.data)
@@ -98,9 +100,10 @@ const ProductCreationStep = ({ onProductCreated, onBack }: ProductCreationStepPr
             setMessage(null)
 
             const user = userMethods.getUserLogin()
+            const customerId = user?.customerId || user?.customer?.id || user?.tenant_id || (typeof window !== 'undefined' ? localStorage.getItem('activeTenantId') : null)
 
-            if (!user || !user.customerId) {
-                setMessage({ type: 'error', text: 'Error de sesión: No se encontró ID de cliente. Por favor refresca la página.' })
+            if (!user || !customerId) {
+                setMessage({ type: 'error', text: 'Error de sesión: No se encontró ID de cliente. Por favor refresca la página o vuelve a iniciar sesión.' })
                 return
             }
 
@@ -110,7 +113,7 @@ const ProductCreationStep = ({ onProductCreated, onBack }: ProductCreationStepPr
                 price: parseFloat(productPrice),
                 salePrice: parseFloat(productPrice),
                 categoryIds: categoryId ? [categoryId] : [],
-                tenantId: user.customerId,
+                tenantId: customerId,
                 productType: '0', // Producto simple
                 status: 'ACTIVE',
                 manageStock: false,
