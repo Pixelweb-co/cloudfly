@@ -34,6 +34,21 @@ public class BillingInternalController {
         return billingInternalService.getSubscriptionsDue();
     }
 
+    @GetMapping("/subscriptions/{id}")
+    public Mono<SubscriptionEntity> getSubscription(@PathVariable Long id) {
+        return billingInternalService.getSubscriptionById(id);
+    }
+
+    @GetMapping("/payment-methods/default")
+    public Mono<PaymentMethodEntity> getDefaultPaymentMethod(@RequestParam Long tenantId) {
+        return billingInternalService.getDefaultPaymentMethod(tenantId);
+    }
+
+    @GetMapping("/invoices")
+    public Flux<InvoiceEntity> getInvoices(@RequestParam Long tenantId, @RequestParam(required = false) String status) {
+        return billingInternalService.getInvoices(tenantId, status);
+    }
+
     @PostMapping("/invoices/generate-subscription")
     public Mono<InvoiceEntity> generateInvoice(@RequestBody InvoiceEntity invoice) {
         return billingInternalService.generateInvoice(invoice);

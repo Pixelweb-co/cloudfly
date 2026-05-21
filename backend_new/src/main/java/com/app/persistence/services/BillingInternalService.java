@@ -37,6 +37,22 @@ public class BillingInternalService {
     private final WebClient.Builder webClientBuilder;
 
 
+    public Mono<SubscriptionEntity> getSubscriptionById(Long id) {
+        log.info("Fetching subscription by id: {}", id);
+        return subscriptionRepository.findById(id);
+    }
+
+    public Mono<PaymentMethodEntity> getDefaultPaymentMethod(Long tenantId) {
+        log.info("Fetching default payment method for tenant: {}", tenantId);
+        return paymentMethodRepository.findByTenantIdAndIsDefaultTrue(tenantId);
+    }
+
+    public Flux<InvoiceEntity> getInvoices(Long tenantId, String status) {
+        log.info("Fetching invoices for tenant {} with status {}", tenantId, status);
+        return invoiceRepository.findAllByTenantId(tenantId)
+                .filter(invoice -> status == null || status.isBlank() || status.equalsIgnoreCase(invoice.getStatus()));
+    }
+
     public Mono<PaymentMethodEntity> savePaymentMethod(PaymentMethodEntity paymentMethod) {
         log.info("Saving payment method for tenant: {}", paymentMethod.getTenantId());
         
