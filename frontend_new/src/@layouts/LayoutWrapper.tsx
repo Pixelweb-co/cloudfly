@@ -52,7 +52,9 @@ const LayoutWrapper = (props: LayoutWrapperProps) => {
           setIsLogin(false)
 
           if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/login'
+            const currentPath = window.location.pathname + window.location.search
+
+            window.location.href = `/login?callbackUrl=${encodeURIComponent(currentPath)}`
             
 return
           }
@@ -76,7 +78,9 @@ return
         setIsLogin(false)
 
         if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login'
+          const currentPath = window.location.pathname + window.location.search
+
+          window.location.href = `/login?callbackUrl=${encodeURIComponent(currentPath)}`
         }
       }
     }, 60000)
@@ -84,8 +88,8 @@ return
     return () => clearInterval(interval)
   }, [])
 
-  // Loader mientras valida
-  if (isLoading) {
+  // Loader mientras valida o si no está autenticado
+  if (isLoading || !isLogin) {
     return (
       <div className='flex flex-col flex-auto items-center justify-center min-h-screen bg-backgroundPaper'>
         <div className='flex flex-col items-center gap-4'>

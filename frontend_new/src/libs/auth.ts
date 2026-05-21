@@ -1,5 +1,3 @@
-import dotenv from 'dotenv';
-
 // Third-party Imports
 import CredentialProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
@@ -114,6 +112,7 @@ export const authOptions: NextAuthOptions = {
           token.activeCompanyId = u.user.activeCompanyId
           token.roles = u.user.roles || []
           token.onboardingCompleted = u.user.onboardingCompleted // NEW
+          token.customer = u.user.customer // MAP DE CUSTOMER
         } else {
           token.id = u.id
           token.role = u.role
@@ -125,6 +124,7 @@ export const authOptions: NextAuthOptions = {
           token.activeCompanyId = u.activeCompanyId
           token.roles = u.roles || []
           token.onboardingCompleted = u.onboardingCompleted // NEW
+          token.customer = u.customer // MAP DE CUSTOMER
         }
       }
 
@@ -134,6 +134,7 @@ export const authOptions: NextAuthOptions = {
           token.onboardingCompleted = session.user.onboardingCompleted
           token.activeCompanyId = session.user.activeCompanyId
           token.customerId = session.user.customerId
+          token.customer = session.user.customer // MAP DE CUSTOMER EN UPDATE
         }
       }
 
@@ -154,6 +155,7 @@ export const authOptions: NextAuthOptions = {
           ; (session as any).user.activeCompanyId = token.activeCompanyId
           ; (session as any).user.roles = token.roles
           ; (session as any).user.onboardingCompleted = token.onboardingCompleted // NEW
+          ; (session as any).user.customer = token.customer // MAP DE CUSTOMER A LA SESION
       }
 
 
