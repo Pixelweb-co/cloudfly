@@ -40,12 +40,12 @@ func (s *BillingService) ProcessRenewal(sub models.Subscription) error {
 		SubscriptionID:     sub.ID,
 		InvoiceNumber:      fmt.Sprintf("INV-%d-%d", sub.TenantID, sub.ID),
 		IssueDate:          sub.NextBillingDate,
-		DueDate:            sub.NextBillingDate.AddDate(0, 0, 5),
+		DueDate:            models.CustomTime{Time: sub.NextBillingDate.AddDate(0, 0, 5)},
 		Status:             "PENDIENTE",
 		Total:              89000, // Placeholder, should get from Plan
 		Currency:           "COP",
 		BillingPeriodStart: sub.NextBillingDate,
-		BillingPeriodEnd:   sub.NextBillingDate.AddDate(0, 1, 0),
+		BillingPeriodEnd:   models.CustomTime{Time: sub.NextBillingDate.AddDate(0, 1, 0)},
 	}
 
 	var savedInvoice models.Invoice
