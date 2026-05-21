@@ -54,8 +54,11 @@ func (s *BillingService) ProcessRenewal(sub models.Subscription) error {
 		SetResult(&savedInvoice).
 		Post(fmt.Sprintf("%s/invoices/generate-subscription", s.apiURL))
 
-	if err != nil || resp.IsError() {
+	if err != nil {
 		return fmt.Errorf("failed to generate invoice: %v", err)
+	}
+	if resp.IsError() {
+		return fmt.Errorf("failed to generate invoice: status %s, body: %s", resp.Status(), resp.String())
 	}
 
 	// 2. Generate PDF
