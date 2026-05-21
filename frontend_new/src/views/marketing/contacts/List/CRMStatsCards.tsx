@@ -1,7 +1,6 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
-import dynamic from 'next/dynamic'
+import { useMemo } from 'react'
 import Grid from '@mui/material/Grid'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
@@ -9,11 +8,11 @@ import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
 import Avatar from '@mui/material/Avatar'
 import { useTheme } from '@mui/material/styles'
+import CircularProgress from '@mui/material/CircularProgress'
+import LinearProgress from '@mui/material/LinearProgress'
+import Tooltip from '@mui/material/Tooltip'
 
 import type { Contact } from '@/types/marketing/contactTypes'
-
-// Dynamic import of ApexCharts to prevent SSR errors
-const AppReactApexCharts = dynamic(() => import('@/libs/styles/AppReactApexCharts'))
 
 interface CRMStatsCardsProps {
   contactsData: Contact[]
@@ -21,11 +20,6 @@ interface CRMStatsCardsProps {
 
 const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
   const theme = useTheme()
-  const [isMounted, setIsMounted] = useState(false)
-
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
 
   // CRM Calculations
   const stats = useMemo(() => {
@@ -69,172 +63,6 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
     }
   }, [contactsData])
 
-  // Card 1: Donut for Active vs Inactive
-  const cardActiveOptions = {
-    chart: {
-      sparkline: { enabled: true },
-      animations: { enabled: true }
-    },
-    grid: {
-      padding: { top: 10, bottom: 10 }
-    },
-    colors: [theme.palette?.success?.main || '#28c76f', theme.palette?.error?.light || '#ff8585'],
-    labels: ['Activos', 'Inactivos'],
-    stroke: { width: 0 },
-    plotOptions: {
-      pie: {
-        donut: {
-          size: '70%',
-          labels: {
-            show: true,
-            total: {
-              show: true,
-              label: 'Activos',
-              formatter: () => `${stats.activePercent}%`,
-              style: {
-                fontSize: '15px',
-                color: theme.palette?.text?.primary || '#2f2b3d',
-                fontWeight: 600
-              }
-            },
-            value: {
-              show: true,
-              formatter: (val: string) => val,
-              style: {
-                fontSize: '14px',
-                color: theme.palette?.text?.secondary || '#6f6b7d'
-              }
-            }
-          }
-        }
-      }
-    },
-    legend: { show: false },
-    tooltip: { enabled: true }
-  }
-
-  const cardActiveSeries = [stats.active, stats.inactive]
-
-  // Card 2: Radial bar for Data Completeness
-  const cardCompletenessOptions = {
-    chart: {
-      sparkline: { enabled: true }
-    },
-    grid: {
-      padding: { top: 10, bottom: 10 }
-    },
-    colors: [theme.palette?.primary?.main || '#7367f0'],
-    plotOptions: {
-      radialBar: {
-        startAngle: -135,
-        endAngle: 135,
-        hollow: { size: '65%' },
-        track: {
-          background: theme.palette?.background?.default || '#f8f7fa',
-          strokeWidth: '97%'
-        },
-        dataLabels: {
-          name: { show: false },
-          value: {
-            offsetY: 5,
-            fontSize: '18px',
-            fontWeight: 600,
-            color: theme.palette?.text?.primary || '#2f2b3d',
-            formatter: (val: number) => `${Math.round(val)}%`
-          }
-        }
-      }
-    },
-    stroke: { lineCap: 'round' }
-  }
-
-  const cardCompletenessSeries = [stats.completenessPercent]
-
-  // Card 3: Horizontal Bar Chart for Segments Distribution
-  const cardSegmentsOptions = {
-    chart: {
-      sparkline: { enabled: true },
-      toolbar: { show: false }
-    },
-    grid: {
-      padding: { top: 5, right: 10, bottom: 5, left: 10 }
-    },
-    colors: [theme.palette?.info?.main || '#00bad1'],
-    plotOptions: {
-      bar: {
-        borderRadius: 4,
-        horizontal: true,
-        barHeight: '60%',
-        distributed: false
-      }
-    },
-    dataLabels: { enabled: false },
-    xaxis: {
-      categories: ['Leads', 'Cl. Potenciales', 'Clientes', 'Proveedores', 'Otros'],
-      labels: { show: false },
-      axisBorder: { show: false },
-      axisTicks: { show: false }
-    },
-    yaxis: {
-      labels: { show: false }
-    },
-    tooltip: {
-      y: {
-        formatter: (val: number) => `${val} contactos`
-      }
-    }
-  }
-
-  const cardSegmentsSeries = [
-    {
-      name: 'Segmentos',
-      data: [
-        stats.segments.lead,
-        stats.segments.potential,
-        stats.segments.customer,
-        stats.segments.supplier,
-        stats.segments.other
-      ]
-    }
-  ]
-
-  // Card 4: Channel Completeness Columns
-  const cardChannelsOptions = {
-    chart: {
-      sparkline: { enabled: true },
-      toolbar: { show: false }
-    },
-    grid: {
-      padding: { top: 5, right: 10, bottom: 5, left: 10 }
-    },
-    colors: [theme.palette?.warning?.main || '#ff9f43'],
-    plotOptions: {
-      bar: {
-        borderRadius: 4,
-        columnWidth: '50%'
-      }
-    },
-    dataLabels: { enabled: false },
-    xaxis: {
-      categories: ['Email', 'Teléfono', 'Documento'],
-      labels: { show: false },
-      axisBorder: { show: false },
-      axisTicks: { show: false }
-    },
-    tooltip: {
-      y: {
-        formatter: (val: number) => `${val} con datos`
-      }
-    }
-  }
-
-  const cardChannelsSeries = [
-    {
-      name: 'Canales',
-      data: [stats.channels.hasEmail, stats.channels.hasPhone, stats.channels.hasDoc]
-    }
-  ]
-
   return (
     <Grid container spacing={6} sx={{ mb: 6 }}>
       {/* Card 1: Total & Active Status */}
@@ -259,16 +87,39 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
                 </Typography>
               </Box>
             </Box>
-            <Box sx={{ width: 90, height: 90 }}>
-              {isMounted && (
-                <AppReactApexCharts
-                  type='donut'
-                  width={95}
-                  height={95}
-                  options={cardActiveOptions as any}
-                  series={cardActiveSeries}
-                />
-              )}
+            
+            {/* Elegant Circular Progress */}
+            <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', mr: 2 }}>
+              <CircularProgress
+                variant='determinate'
+                value={100}
+                size={64}
+                thickness={4.5}
+                sx={{ color: theme.palette?.action?.hover || '#f1f1f2', position: 'absolute' }}
+              />
+              <CircularProgress
+                variant='determinate'
+                value={stats.activePercent}
+                size={64}
+                thickness={4.5}
+                sx={{ color: 'success.main' }}
+              />
+              <Box
+                sx={{
+                  top: 0,
+                  left: 0,
+                  bottom: 0,
+                  right: 0,
+                  position: 'absolute',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Typography variant='caption' component='div' color='text.primary' sx={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                  {`${stats.activePercent}%`}
+                </Typography>
+              </Box>
             </Box>
           </CardContent>
         </Card>
@@ -296,16 +147,39 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
                 </Typography>
               </Box>
             </Box>
-            <Box sx={{ width: 90, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {isMounted && (
-                <AppReactApexCharts
-                  type='radialBar'
-                  width={100}
-                  height={100}
-                  options={cardCompletenessOptions as any}
-                  series={cardCompletenessSeries}
-                />
-              )}
+            
+            {/* Elegant Circular Progress */}
+            <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', mr: 2 }}>
+              <CircularProgress
+                variant='determinate'
+                value={100}
+                size={64}
+                thickness={4.5}
+                sx={{ color: theme.palette?.action?.hover || '#f1f1f2', position: 'absolute' }}
+              />
+              <CircularProgress
+                variant='determinate'
+                value={stats.completenessPercent}
+                size={64}
+                thickness={4.5}
+                sx={{ color: 'primary.main' }}
+              />
+              <Box
+                sx={{
+                  top: 0,
+                  left: 0,
+                  bottom: 0,
+                  right: 0,
+                  position: 'absolute',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Typography variant='caption' component='div' color='text.primary' sx={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                  {`${stats.completenessPercent}%`}
+                </Typography>
+              </Box>
             </Box>
           </CardContent>
         </Card>
@@ -333,16 +207,37 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
                 </Typography>
               </Box>
             </Box>
-            <Box sx={{ width: 80, height: 80 }}>
-              {isMounted && (
-                <AppReactApexCharts
-                  type='bar'
-                  width={80}
-                  height={80}
-                  options={cardSegmentsOptions as any}
-                  series={cardSegmentsSeries}
-                />
-              )}
+            
+            {/* Elegant Segment Bar */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: 110, mr: 1 }}>
+              <Box sx={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden', bgcolor: theme.palette?.action?.hover || '#f1f1f2', width: '100%' }}>
+                <Tooltip title={`Leads: ${stats.segments.lead}`}>
+                  <Box sx={{ bgcolor: 'warning.main', width: `${stats.total > 0 ? (stats.segments.lead / stats.total) * 100 : 0}%` }} />
+                </Tooltip>
+                <Tooltip title={`Clientes Potenciales: ${stats.segments.potential}`}>
+                  <Box sx={{ bgcolor: 'primary.main', width: `${stats.total > 0 ? (stats.segments.potential / stats.total) * 100 : 0}%` }} />
+                </Tooltip>
+                <Tooltip title={`Clientes: ${stats.segments.customer}`}>
+                  <Box sx={{ bgcolor: 'success.main', width: `${stats.total > 0 ? (stats.segments.customer / stats.total) * 100 : 0}%` }} />
+                </Tooltip>
+                <Tooltip title={`Proveedores: ${stats.segments.supplier}`}>
+                  <Box sx={{ bgcolor: 'info.main', width: `${stats.total > 0 ? (stats.segments.supplier / stats.total) * 100 : 0}%` }} />
+                </Tooltip>
+              </Box>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'warning.main' }} />
+                  <Typography variant='caption' color='text.secondary' sx={{ fontSize: '0.65rem', whiteSpace: 'nowrap' }}>
+                    Leads: {Math.round(stats.total > 0 ? (stats.segments.lead / stats.total) * 100 : 0)}%
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'success.main' }} />
+                  <Typography variant='caption' color='text.secondary' sx={{ fontSize: '0.65rem', whiteSpace: 'nowrap' }}>
+                    Clie: {Math.round(stats.total > 0 ? (stats.segments.customer / stats.total) * 100 : 0)}%
+                  </Typography>
+                </Box>
+              </Box>
             </Box>
           </CardContent>
         </Card>
@@ -370,16 +265,54 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
                 </Typography>
               </Box>
             </Box>
-            <Box sx={{ width: 80, height: 80 }}>
-              {isMounted && (
-                <AppReactApexCharts
-                  type='bar'
-                  width={80}
-                  height={80}
-                  options={cardChannelsOptions as any}
-                  series={cardChannelsSeries}
+            
+            {/* Elegant Channels Micro Progress Rows */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, width: 110, mr: 1 }}>
+              {/* Celular Progress */}
+              <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                  <Typography variant='caption' sx={{ fontSize: '0.65rem', fontWeight: 500 }} color='text.secondary'>Móvil</Typography>
+                  <Typography variant='caption' sx={{ fontSize: '0.65rem', fontWeight: 600 }} color='text.primary'>
+                    {Math.round(stats.total > 0 ? (stats.channels.hasPhone / stats.total) * 100 : 0)}%
+                  </Typography>
+                </Box>
+                <LinearProgress 
+                  variant='determinate' 
+                  value={stats.total > 0 ? (stats.channels.hasPhone / stats.total) * 100 : 0} 
+                  color='warning'
+                  sx={{ height: 4, borderRadius: 2 }}
                 />
-              )}
+              </Box>
+              {/* Email Progress */}
+              <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                  <Typography variant='caption' sx={{ fontSize: '0.65rem', fontWeight: 500 }} color='text.secondary'>Email</Typography>
+                  <Typography variant='caption' sx={{ fontSize: '0.65rem', fontWeight: 600 }} color='text.primary'>
+                    {Math.round(stats.total > 0 ? (stats.channels.hasEmail / stats.total) * 100 : 0)}%
+                  </Typography>
+                </Box>
+                <LinearProgress 
+                  variant='determinate' 
+                  value={stats.total > 0 ? (stats.channels.hasEmail / stats.total) * 100 : 0} 
+                  color='warning'
+                  sx={{ height: 4, borderRadius: 2, opacity: 0.7 }}
+                />
+              </Box>
+              {/* Documento Progress */}
+              <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                  <Typography variant='caption' sx={{ fontSize: '0.65rem', fontWeight: 500 }} color='text.secondary'>Doc</Typography>
+                  <Typography variant='caption' sx={{ fontSize: '0.65rem', fontWeight: 600 }} color='text.primary'>
+                    {Math.round(stats.total > 0 ? (stats.channels.hasDoc / stats.total) * 100 : 0)}%
+                  </Typography>
+                </Box>
+                <LinearProgress 
+                  variant='determinate' 
+                  value={stats.total > 0 ? (stats.channels.hasDoc / stats.total) * 100 : 0} 
+                  color='warning'
+                  sx={{ height: 4, borderRadius: 2, opacity: 0.4 }}
+                />
+              </Box>
             </Box>
           </CardContent>
         </Card>

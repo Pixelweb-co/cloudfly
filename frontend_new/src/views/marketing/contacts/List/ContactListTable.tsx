@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Box,
@@ -128,10 +128,10 @@ export default function ContactListTable() {
     return s ? s.name : 'Desconocido'
   }
 
-  const handleSetFilteredContacts = (newFiltered: Contact[]) => {
+  const handleSetFilteredContacts = useCallback((newFiltered: Contact[]) => {
     setFilteredContacts(newFiltered)
     setPage(0) // Reset to first page on filter change
-  }
+  }, [])
 
   // Paginated and sliced contacts for performance
   const paginatedContacts = useMemo(() => {
