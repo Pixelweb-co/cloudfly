@@ -20,7 +20,33 @@ export const AuthSync = () => {
             if (token) {
                 const currentToken = localStorage.getItem('jwt')
                 const prevUserData = localStorage.getItem('userData')
-                const newUserData = JSON.stringify(session.user)
+                let mergedUser = { ...session.user } as any
+
+                // 🔥 Prevent race conditions during Onboarding/Wizard setup:
+                // If local storage has already been updated with customerId / activeCompanyId
+                // but the NextAuth session is still updating asynchronously in the background,
+                // do not let the stale session wipe out the local storage values.
+                if (prevUserData) {
+                    try {
+                        const prev = JSON.parse(prevUserData)
+                        if (prev && typeof prev === 'object') {
+                            if (prev.customerId && !mergedUser.customerId) {
+                                console.log('🔄 [AUTH-SYNC] Merging customerId from local storage into session user to avoid race condition.')
+                                mergedUser.customerId = prev.customerId
+                            }
+                            if (prev.activeCompanyId && !mergedUser.activeCompanyId) {
+                                mergedUser.activeCompanyId = prev.activeCompanyId
+                            }
+                            if (prev.customer && !mergedUser.customer) {
+                                mergedUser.customer = prev.customer
+                            }
+                        }
+                    } catch (e) {
+                        console.error('[AUTH-SYNC] Error parsing prevUserData:', e)
+                    }
+                }
+
+                const newUserData = JSON.stringify(mergedUser)
 
                 if (currentToken !== token || prevUserData !== newUserData) {
                     localStorage.setItem('jwt', token)
