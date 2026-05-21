@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import Grid from '@mui/material/Grid'
 import Card from '@mui/material/Card'
@@ -21,6 +21,11 @@ interface CRMStatsCardsProps {
 
 const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
   const theme = useTheme()
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // CRM Calculations
   const stats = useMemo(() => {
@@ -73,7 +78,7 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
     grid: {
       padding: { top: 10, bottom: 10 }
     },
-    colors: [theme.palette.success.main, theme.palette.error.light],
+    colors: [theme.palette?.success?.main || '#28c76f', theme.palette?.error?.light || '#ff8585'],
     labels: ['Activos', 'Inactivos'],
     stroke: { width: 0 },
     plotOptions: {
@@ -88,7 +93,7 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
               formatter: () => `${stats.activePercent}%`,
               style: {
                 fontSize: '15px',
-                color: theme.palette.text.primary,
+                color: theme.palette?.text?.primary || '#2f2b3d',
                 fontWeight: 600
               }
             },
@@ -97,7 +102,7 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
               formatter: (val: string) => val,
               style: {
                 fontSize: '14px',
-                color: theme.palette.text.secondary
+                color: theme.palette?.text?.secondary || '#6f6b7d'
               }
             }
           }
@@ -118,14 +123,14 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
     grid: {
       padding: { top: 10, bottom: 10 }
     },
-    colors: [theme.palette.primary.main],
+    colors: [theme.palette?.primary?.main || '#7367f0'],
     plotOptions: {
       radialBar: {
         startAngle: -135,
         endAngle: 135,
         hollow: { size: '65%' },
         track: {
-          background: theme.palette.background.default,
+          background: theme.palette?.background?.default || '#f8f7fa',
           strokeWidth: '97%'
         },
         dataLabels: {
@@ -134,7 +139,7 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
             offsetY: 5,
             fontSize: '18px',
             fontWeight: 600,
-            color: theme.palette.text.primary,
+            color: theme.palette?.text?.primary || '#2f2b3d',
             formatter: (val: number) => `${Math.round(val)}%`
           }
         }
@@ -154,7 +159,7 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
     grid: {
       padding: { top: 5, right: 10, bottom: 5, left: 10 }
     },
-    colors: [theme.palette.info.main],
+    colors: [theme.palette?.info?.main || '#00bad1'],
     plotOptions: {
       bar: {
         borderRadius: 4,
@@ -202,7 +207,7 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
     grid: {
       padding: { top: 5, right: 10, bottom: 5, left: 10 }
     },
-    colors: [theme.palette.warning.main],
+    colors: [theme.palette?.warning?.main || '#ff9f43'],
     plotOptions: {
       bar: {
         borderRadius: 4,
@@ -255,13 +260,15 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
               </Box>
             </Box>
             <Box sx={{ width: 90, height: 90 }}>
-              <AppReactApexCharts
-                type='donut'
-                width={95}
-                height={95}
-                options={cardActiveOptions as any}
-                series={cardActiveSeries}
-              />
+              {isMounted && (
+                <AppReactApexCharts
+                  type='donut'
+                  width={95}
+                  height={95}
+                  options={cardActiveOptions as any}
+                  series={cardActiveSeries}
+                />
+              )}
             </Box>
           </CardContent>
         </Card>
@@ -290,13 +297,15 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
               </Box>
             </Box>
             <Box sx={{ width: 90, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <AppReactApexCharts
-                type='radialBar'
-                width={100}
-                height={100}
-                options={cardCompletenessOptions as any}
-                series={cardCompletenessSeries}
-              />
+              {isMounted && (
+                <AppReactApexCharts
+                  type='radialBar'
+                  width={100}
+                  height={100}
+                  options={cardCompletenessOptions as any}
+                  series={cardCompletenessSeries}
+                />
+              )}
             </Box>
           </CardContent>
         </Card>
@@ -325,13 +334,15 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
               </Box>
             </Box>
             <Box sx={{ width: 80, height: 80 }}>
-              <AppReactApexCharts
-                type='bar'
-                width={80}
-                height={80}
-                options={cardSegmentsOptions as any}
-                series={cardSegmentsSeries}
-              />
+              {isMounted && (
+                <AppReactApexCharts
+                  type='bar'
+                  width={80}
+                  height={80}
+                  options={cardSegmentsOptions as any}
+                  series={cardSegmentsSeries}
+                />
+              )}
             </Box>
           </CardContent>
         </Card>
@@ -360,13 +371,15 @@ const CRMStatsCards = ({ contactsData = [] }: CRMStatsCardsProps) => {
               </Box>
             </Box>
             <Box sx={{ width: 80, height: 80 }}>
-              <AppReactApexCharts
-                type='bar'
-                width={80}
-                height={80}
-                options={cardChannelsOptions as any}
-                series={cardChannelsSeries}
-              />
+              {isMounted && (
+                <AppReactApexCharts
+                  type='bar'
+                  width={80}
+                  height={80}
+                  options={cardChannelsOptions as any}
+                  series={cardChannelsSeries}
+                />
+              )}
             </Box>
           </CardContent>
         </Card>

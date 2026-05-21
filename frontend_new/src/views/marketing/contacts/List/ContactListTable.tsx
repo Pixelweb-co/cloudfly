@@ -45,6 +45,22 @@ export default function ContactListTable() {
 
   useEffect(() => {
     loadData()
+
+    // Listen to storage events (e.g. from other tabs or if changed in this window)
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'activeCompanyId' || e.key === 'activeTenantId' || e.key === 'userData') {
+        loadData()
+      }
+    }
+    
+    // Listen to custom window storage/context updates
+    window.addEventListener('storage', handleStorage)
+    window.addEventListener('companyChanged', loadData)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      window.removeEventListener('companyChanged', loadData)
+    }
   }, [])
 
   const loadData = async () => {
@@ -55,8 +71,11 @@ export default function ContactListTable() {
       const isManager = user?.roles?.some((r: any) => (r.name || r.role || '').includes('MANAGER'))
       const isAdmin = user?.roles?.some((r: any) => (r.name || r.role || '').includes('ADMIN'))
       
-      const tenantId = (isManager || isAdmin) ? (user?.customerId || user?.tenant_id) : undefined
-      const companyId = (isManager || isAdmin) ? (user?.activeCompanyId || user?.company_id) : undefined
+      const localTenantId = typeof window !== 'undefined' ? localStorage.getItem('activeTenantId') : null
+      const localCompanyId = typeof window !== 'undefined' ? localStorage.getItem('activeCompanyId') : null
+      
+      const tenantId = localTenantId ? parseInt(localTenantId, 10) : ((isManager || isAdmin) ? (user?.customerId || user?.tenant_id) : undefined)
+      const companyId = localCompanyId ? parseInt(localCompanyId, 10) : ((isManager || isAdmin) ? (user?.activeCompanyId || user?.company_id) : undefined)
       
       // Load contacts and pipelines in parallel
       const [contactsData, pipelinesData] = await Promise.all([
