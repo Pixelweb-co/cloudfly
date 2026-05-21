@@ -106,6 +106,7 @@ services:
       - WOMPI_EVENTS_SECRET=${WOMPI_EVENTS_SECRET}
       - WOMPI_BASE_URL=https://sandbox.wompi.co/v1
       - KAFKA_BROKER=kafka:9092
+      - PORT=8080
     networks:
       - app-net
       - kafka-net
