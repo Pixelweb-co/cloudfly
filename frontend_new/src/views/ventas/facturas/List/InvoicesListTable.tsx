@@ -91,11 +91,16 @@ const InvoicesListTable = ({ tableData, onReload }: { tableData: InvoiceType[], 
     const getStatusColor = (status: string) => {
         const colors: Record<string, any> = {
             PENDIENTE: 'warning',
+            PENDING: 'warning',
             PAGADA: 'success',
+            PAID: 'success',
             ANULADA: 'error',
-            VENCIDA: 'error'
+            CANCELED: 'error',
+            CANCELLED: 'error',
+            VENCIDA: 'error',
+            OVERDUE: 'error'
         }
-        return colors[status] || 'secondary'
+        return colors[status?.toUpperCase()] || 'secondary'
     }
 
     const columns = useMemo<ColumnDef<InvoiceTypeWithAction, any>[]>(
@@ -225,7 +230,7 @@ const InvoicesListTable = ({ tableData, onReload }: { tableData: InvoiceType[], 
                 <div className='flex flex-col sm:flex-row max-sm:is-full items-start sm:items-center gap-4'>
                     <DebouncedInput
                         value={globalFilter ?? ''}
-                        onChange={value => setGlobalFilter(String(value))}
+                        onChange={(value: string | number) => setGlobalFilter(String(value))}
                         placeholder='Buscar Factura'
                         className='max-sm:is-full'
                     />

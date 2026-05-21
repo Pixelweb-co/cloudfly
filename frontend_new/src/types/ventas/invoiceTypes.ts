@@ -1,4 +1,4 @@
-export type InvoiceStatus = 'PENDIENTE' | 'PAGADA' | 'ANULADA' | 'VENCIDA'
+export type InvoiceStatus = 'PENDIENTE' | 'PAGADA' | 'ANULADA' | 'VENCIDA' | 'PENDING' | 'PAID' | 'CANCELED' | 'CANCELLED' | 'OVERDUE'
 export type BillingType = 'PAGO_UNICO' | 'RECURRENTE'
 export type BillingPeriod = 'MENSUAL' | 'SEMESTRAL' | 'ANUAL'
 
