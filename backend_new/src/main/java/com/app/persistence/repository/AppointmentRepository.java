@@ -14,4 +14,7 @@ public interface AppointmentRepository extends ReactiveCrudRepository<Appointmen
 
     @Query("SELECT COUNT(*) FROM appointments WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND status = 'PENDING' AND start_time >= NOW()")
     reactor.core.publisher.Mono<Integer> countPendingAppointments(Long tenantId, Long companyId);
+
+    @Query("SELECT * FROM appointments WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId)")
+    Flux<AppointmentEntity> findByTenantIdAndCompanyId(Long tenantId, Long companyId);
 }

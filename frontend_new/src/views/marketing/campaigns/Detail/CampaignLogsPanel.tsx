@@ -43,7 +43,7 @@ export default function CampaignLogsPanel({ campaignId }: Props) {
       FAILED: 'error',
       SKIPPED: 'warning'
     }
-    return <Chip label={status} size='tiny' color={colors[status] || 'default'} variant='tonal' />
+    return <Chip label={status} size='small' color={colors[status] || 'default'} variant='tonal' />
   }
 
   return (

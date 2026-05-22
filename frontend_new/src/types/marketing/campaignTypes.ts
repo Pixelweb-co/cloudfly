@@ -23,6 +23,7 @@ export interface Campaign {
   startedAt?: string;
   completedAt?: string;
   createdBy?: number;
+  recurrence?: string;
   createdAt: string;
   updatedAt: string;
 }

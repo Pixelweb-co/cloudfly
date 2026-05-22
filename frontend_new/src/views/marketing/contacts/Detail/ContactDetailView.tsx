@@ -6,6 +6,7 @@ import { Grid, Typography, Box, CircularProgress, IconButton, Avatar, Card, Divi
 import ContactFormPanel from './ContactFormPanel'
 import ChatInterface from './ChatInterface'
 import { contactService } from '@/services/marketing/contactService'
+import { tagService } from '@/services/marketing/tagService'
 import { pipelineService } from '@/services/marketing/pipelineService'
 import { channelService } from '@/services/marketing/channelService'
 import { Contact } from '@/types/marketing/contactTypes'
@@ -45,7 +46,7 @@ export default function ContactDetailView() {
         }
 
         if (!isNew && idStr) {
-          const fetchedContact = await contactService.getContactById(Number(idStr), companyId)
+          const fetchedContact = await contactService.getContactById(Number(idStr))
           if (fetchedContact) {
             setContact(fetchedContact)
           } else {
@@ -89,12 +90,23 @@ export default function ContactDetailView() {
       const user = userMethods.getUserLogin()
       const companyId = user?.activeCompanyId || user?.company_id
 
+      const { tagIds, ...contactData } = formData
+
       if (isNew) {
-        const newContact = await contactService.createContact(formData, companyId)
+        const newContact = await contactService.createContact(contactData)
+        if (tagIds && tagIds.length > 0) {
+          await tagService.associateTags(newContact.id, tagIds)
+        }
         toast.success('Contacto creado exitosamente')
         router.replace(`/marketing/contacts/${newContact.id}`)
       } else if (contact) {
-        const updated = await contactService.updateContact(contact.id, formData, companyId)
+        const updated = await contactService.updateContact(contact.id, contactData)
+        await tagService.associateTags(contact.id, tagIds || [])
+        
+        // Fetch updated tags and assign to state
+        const updatedTags = await tagService.getContactTags(contact.id)
+        updated.tags = updatedTags
+        
         setContact(updated)
         toast.success('Contacto actualizado correctamente')
       }

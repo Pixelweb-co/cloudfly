@@ -104,8 +104,11 @@ const OrdersListTable = ({ tableData, onReload }: { tableData: OrderType[], onRe
             PROCESANDO: 'secondary',
             DESPACHADO: 'info',
             FACTURADO: 'success',
-            PROCESANDO: 'error',
-            PROCESANDO: 'warning'
+            RECHAZADA: 'error',
+            VENCIDA: 'warning',
+            BORRADOR: 'secondary',
+            ENVIADA: 'info',
+            ACEPTADA: 'success'
         }
         return colors[status] || 'secondary'
     }
@@ -115,8 +118,11 @@ const OrdersListTable = ({ tableData, onReload }: { tableData: OrderType[], onRe
             PROCESANDO: 'Borrador',
             DESPACHADO: 'Enviada',
             FACTURADO: 'Aceptada',
-            PROCESANDO: 'Rechazada',
-            PROCESANDO: 'Vencida'
+            RECHAZADA: 'Rechazada',
+            VENCIDA: 'Vencida',
+            BORRADOR: 'Borrador',
+            ENVIADA: 'Enviada',
+            ACEPTADA: 'Aceptada'
         }
         return labels[status] || status
     }
@@ -152,11 +158,11 @@ const OrdersListTable = ({ tableData, onReload }: { tableData: OrderType[], onRe
                 cell: ({ row }) => (
                     <div className={classnames('flex items-center gap-2')}>
                          <i className={classnames('tabler-circle-filled text-[10px]', {
-                            'text-secondary': row.original.status === 'PROCESANDO',
-                            'text-info': row.original.status === 'DESPACHADO',
-                            'text-success': row.original.status === 'FACTURADO',
-                            'text-error': row.original.status === 'PROCESANDO',
-                            'text-warning': row.original.status === 'PROCESANDO',
+                            'text-secondary': (row.original.status as string) === 'PROCESANDO' || (row.original.status as string) === 'BORRADOR',
+                            'text-info': (row.original.status as string) === 'DESPACHADO' || (row.original.status as string) === 'ENVIADA',
+                            'text-success': (row.original.status as string) === 'FACTURADO' || (row.original.status as string) === 'ACEPTADA',
+                            'text-error': (row.original.status as string) === 'RECHAZADA',
+                            'text-warning': (row.original.status as string) === 'VENCIDA',
                          })} />
                         <Typography color='text.primary'>
                             {getStatusLabel(row.original.status)}

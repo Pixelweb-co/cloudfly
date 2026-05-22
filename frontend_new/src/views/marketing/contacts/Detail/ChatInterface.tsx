@@ -106,7 +106,7 @@ export default function ChatInterface({ contact, isNew, isPopup = false }: Props
         const base64Audio = reader.result as string
         
         const sentMsg = await chatService.sendMessage({
-          conversationId: contact.phone,
+          conversationId: contact.phone as string,
           contactId: Number(contact.id),
           body: '[Nota de Voz]',
           mediaType: 'AUDIO',
@@ -467,7 +467,7 @@ export default function ChatInterface({ contact, isNew, isPopup = false }: Props
                       <Icon
                         icon={msg.status === 'READ' ? 'tabler:checks' : 'tabler:check'}
                         fontSize="1rem"
-                        sx={{ color: msg.status === 'READ' ? 'primary.main' : 'text.disabled' }}
+                        style={{ color: msg.status === 'READ' ? '#7367F0' : '#a0a3b5' }}
                       />
                     )}
                   </Box>

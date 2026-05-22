@@ -34,7 +34,7 @@ const WhatsAppSetupForm = ({ accessToken, onComplete, onCancel }: Props) => {
     useEffect(() => {
         const fetchTemplates = async () => {
             try {
-                const data = await agentService.getTemplates(accessToken)
+                const data = await agentService.getTemplates()
                 setTemplates(data)
                 // Default selection if available
                 if (data.length > 0) setSelectedTemplateId(data[0].id)
@@ -51,7 +51,7 @@ const WhatsAppSetupForm = ({ accessToken, onComplete, onCancel }: Props) => {
         if (activeStep === 0 && qrCode && !isConnected) {
             interval = setInterval(async () => {
                 try {
-                    const status = await channelService.getChannelConfigStatus(accessToken)
+                    const status = await channelService.getChannelConfigStatus()
                     if (status.isConnected) {
                         setIsConnected(true)
                         setQrCode(null)
@@ -72,7 +72,7 @@ const WhatsAppSetupForm = ({ accessToken, onComplete, onCancel }: Props) => {
         setLoading(true)
         setStatusMessage(null)
         try {
-            const res = await channelService.activateWhatsAppChannel(accessToken)
+            const res = await channelService.activateWhatsAppChannel()
             if (res.qrCode) {
                 setQrCode(res.qrCode)
                 setStatusMessage({ type: 'info', text: '📱 Escanea el código QR con tu WhatsApp.' })
@@ -100,7 +100,7 @@ const WhatsAppSetupForm = ({ accessToken, onComplete, onCancel }: Props) => {
                 globalAgentId: selectedTemplateId,
                 displayName: displayName || 'Asistente IA',
                 companySpecificContext: businessContext,
-            }, accessToken)
+            })
             
             // 2. Create the generic channel record linked to this Agent
             await channelService.createChannel({
@@ -109,7 +109,7 @@ const WhatsAppSetupForm = ({ accessToken, onComplete, onCancel }: Props) => {
                 provider: 'EVOLUTION_API',
                 status: true,
                 botIntegrationId: agentConfig.id // Link to personalized agent
-            } as any, accessToken)
+            } as any)
 
             onComplete()
         } catch (error) {

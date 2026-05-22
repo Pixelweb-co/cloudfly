@@ -37,6 +37,6 @@ export interface Category {
   tenantId?: number;
   companyId?: number;
   description?: string;
-  status?: string;
+  status?: boolean | string;
 }
 
