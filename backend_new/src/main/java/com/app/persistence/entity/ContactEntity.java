@@ -66,6 +66,10 @@ public class ContactEntity {
     @JsonProperty("chatbotEnabled")
     private Boolean chatbotEnabled;
 
+    @Column("assigned_user_ids")
+    @JsonProperty("assignedUserIds")
+    private String assignedUserIds;
+
     @Column("created_at")
     private LocalDateTime createdAt;
 
@@ -138,6 +142,9 @@ public class ContactEntity {
     public Boolean getChatbotEnabled() { return chatbotEnabled; }
     public void setChatbotEnabled(Boolean chatbotEnabled) { this.chatbotEnabled = chatbotEnabled; }
     public void setIsChatbotEnabled(Boolean chatbotEnabled) { this.chatbotEnabled = chatbotEnabled; }
+
+    public String getAssignedUserIds() { return assignedUserIds; }
+    public void setAssignedUserIds(String assignedUserIds) { this.assignedUserIds = assignedUserIds; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

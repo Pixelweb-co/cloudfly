@@ -43,6 +43,12 @@ export const contactService = {
     const response = await axiosInstance.get(url);
     return response.data;
   },
+
+  checkDocumentAvailability: async (documentNumber: string, excludeId?: number): Promise<boolean> => {
+    const url = `/api/v1/contacts/check-document?documentNumber=${documentNumber}${excludeId ? `&excludeId=${excludeId}` : ''}`;
+    const response = await axiosInstance.get(url);
+    return response.data;
+  },
   
   searchContacts: async (query: string): Promise<Contact[]> => {
     const url = `/api/v1/contacts/search?q=${query}`;
