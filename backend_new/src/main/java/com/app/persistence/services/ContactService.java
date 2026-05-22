@@ -134,6 +134,7 @@ public class ContactService {
         existing.setDocumentType(contact.getDocumentType());
         existing.setDocumentNumber(contact.getDocumentNumber());
         existing.setIsActive(contact.getIsActive());
+        existing.setAssignedUserIds(contact.getAssignedUserIds());
         existing.setUpdatedAt(LocalDateTime.now());
 
         return contactRepository.save(existing)
@@ -229,5 +230,20 @@ public class ContactService {
                     contact.setUpdatedAt(LocalDateTime.now());
                     return contactRepository.save(contact);
                 });
+    }
+
+    public Mono<Boolean> existsByDocument(Long tenantId, Long companyId, String documentNumber) {
+        if (documentNumber == null || documentNumber.isEmpty())
+            return Mono.just(false);
+        return contactRepository.findByTenantIdAndCompanyIdAndDocumentNumber(tenantId, companyId, documentNumber)
+                .map(contact -> true)
+                .defaultIfEmpty(false);
+    }
+
+    public Mono<Boolean> existsByDocumentAndIdNot(Long tenantId, Long companyId, String documentNumber, Long id) {
+        if (documentNumber == null || documentNumber.isEmpty())
+            return Mono.just(false);
+        return contactRepository.existsByDocumentAndCompanyIdAndIdNot(documentNumber, companyId, id, tenantId)
+                .map(count -> count > 0);
     }
 }

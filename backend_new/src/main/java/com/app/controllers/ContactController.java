@@ -138,6 +138,22 @@ public class ContactController {
                 .flatMap(ctx -> contactService.existsByEmail(ctx.tenantId(), ctx.companyId(), email));
     }
 
+    @GetMapping("/check-document")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
+    public Mono<Boolean> checkDocumentAvailability(
+            @RequestParam String documentNumber,
+            @RequestParam(required = false) Long excludeId,
+            @RequestHeader Map<String, String> headers) {
+        return getCurrentUserContext(headers)
+                .flatMap(ctx -> {
+                    if (excludeId != null) {
+                        return contactService.existsByDocumentAndIdNot(ctx.tenantId(), ctx.companyId(), documentNumber, excludeId);
+                    } else {
+                        return contactService.existsByDocument(ctx.tenantId(), ctx.companyId(), documentNumber);
+                    }
+                });
+    }
+
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
     public Flux<ContactEntity> searchContacts(@RequestParam String q, @RequestHeader Map<String, String> headers) {

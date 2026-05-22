@@ -16,6 +16,7 @@ export interface Contact {
   documentNumber?: string;
   isActive: boolean;
   chatbotEnabled: boolean;
+  assignedUserIds?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -33,6 +34,7 @@ export interface ContactCreateRequest {
   documentType?: string;
   documentNumber?: string;
   isActive?: boolean;
+  assignedUserIds?: string;
   tenantId?: number;
   companyId?: number;
 }

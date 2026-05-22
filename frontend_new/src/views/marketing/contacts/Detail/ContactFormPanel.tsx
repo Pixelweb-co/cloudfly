@@ -21,7 +21,9 @@ import {
   InputAdornment,
   FormHelperText,
   CircularProgress,
-  Avatar
+  Avatar,
+  Autocomplete,
+  Chip
 } from '@mui/material'
 import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
@@ -31,6 +33,7 @@ import { Pipeline, PipelineStage } from '@/types/marketing/pipelineTypes'
 import { Icon } from '@iconify/react'
 import { contactService } from '@/services/marketing/contactService'
 import { userMethods } from '@/utils/userMethods'
+import userService, { User } from '@/services/userService'
 import toast from 'react-hot-toast'
 
 interface Props {
@@ -56,6 +59,7 @@ const COUNTRY_CODES = [
 export default function ContactFormPanel({ contact, pipelines, onSave, saving }: Props) {
   const [availableStages, setAvailableStages] = useState<PipelineStage[]>([])
   const [isValidating, setIsValidating] = useState(false)
+  const [activeUsers, setActiveUsers] = useState<User[]>([])
 
   const user = userMethods.getUserLogin()
   const companyId = user?.activeCompanyId || user?.company_id
@@ -111,11 +115,32 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
       countryPrefix: yup.string().default('+57'),
       address: yup.string().nullable(),
       documentType: yup.string().default('CC'),
-      documentNumber: yup.string().nullable(),
+      documentNumber: yup.string().nullable().test(
+        'checkDocument',
+        'Este número de documento ya está registrado en esta compañía',
+        async (value) => {
+          if (!value) return true
+          const currentDoc = (contact?.documentNumber || '').trim()
+          const newDoc = (value || '').trim()
+          
+          if (contact && currentDoc === newDoc) return true
+          
+          setIsValidating(true)
+          try {
+            const isDuplicate = await contactService.checkDocumentAvailability(newDoc, contact?.id)
+            return !isDuplicate
+          } catch (e) {
+            return true
+          } finally {
+            setIsValidating(false)
+          }
+        }
+      ),
       type: yup.string().default('LEAD'),
       pipelineId: yup.number().nullable(),
       stageId: yup.number().nullable(),
-      isActive: yup.boolean().default(true)
+      isActive: yup.boolean().default(true),
+      assignedUserIds: yup.string().nullable()
     })
   }, [contact, companyId])
 
@@ -139,11 +164,26 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
       type: 'LEAD',
       pipelineId: undefined,
       stageId: undefined,
-      isActive: true
+      isActive: true,
+      assignedUserIds: ''
     }
   })
 
   const watchedPipelineId = watch('pipelineId')
+
+  // Fetch active database users
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const users = await userService.getAllUsers()
+        const active = users.filter(u => u.isEnabled)
+        setActiveUsers(active)
+      } catch (err) {
+        console.error('Error fetching users:', err)
+      }
+    }
+    fetchUsers()
+  }, [])
 
   // Load initial data
   useEffect(() => {
@@ -170,7 +210,8 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
         type: contact.type || 'LEAD',
         pipelineId: contact.pipelineId,
         stageId: contact.stageId,
-        isActive: contact.isActive !== undefined ? contact.isActive : true
+        isActive: contact.isActive !== undefined ? contact.isActive : true,
+        assignedUserIds: contact.assignedUserIds || ''
       })
     } else {
       // Default pipeline for new contact
@@ -346,6 +387,15 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
                     fullWidth
                     label="Número de Documento"
                     placeholder="123456789"
+                    error={!!errors.documentNumber}
+                    helperText={errors.documentNumber?.message}
+                    InputProps={{
+                      endAdornment: isValidating ? (
+                        <InputAdornment position="end">
+                          <CircularProgress size={20} color="inherit" />
+                        </InputAdornment>
+                      ) : null
+                    }}
                   />
                 )}
               />
@@ -443,6 +493,49 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
                     label={field.value ? "Contacto Habilitado" : "Contacto Deshabilitado"}
                   />
                 )}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Controller
+                name="assignedUserIds"
+                control={control}
+                render={({ field: { value, onChange } }) => {
+                  const selectedIds = value ? String(value).split(',') : [];
+                  const selectedOptions = activeUsers.filter(u => selectedIds.includes(String(u.id)));
+
+                  return (
+                    <Autocomplete
+                      multiple
+                      options={activeUsers}
+                      value={selectedOptions}
+                      getOptionLabel={(option) => `${option.nombres} ${option.apellidos} (${option.username})`}
+                      isOptionEqualToValue={(option, val) => option.id === val.id}
+                      onChange={(_, newValue) => {
+                        onChange(newValue.map(u => u.id).join(','));
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Asignar Usuarios"
+                          placeholder="Buscar y seleccionar usuarios..."
+                        />
+                      )}
+                      renderTags={(tagValue, getTagProps) =>
+                        tagValue.map((option, index) => (
+                          <Chip
+                            label={`${option.nombres} ${option.apellidos}`}
+                            {...getTagProps({ index })}
+                            key={option.id}
+                            variant="outlined"
+                            color="primary"
+                            size="small"
+                          />
+                        ))
+                      }
+                    />
+                  );
+                }}
               />
             </Grid>
           </Grid>
