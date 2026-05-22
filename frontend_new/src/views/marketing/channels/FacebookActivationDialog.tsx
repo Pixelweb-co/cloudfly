@@ -32,7 +32,6 @@ const FacebookActivationDialog = ({ open, onClose, accessToken, onComplete }: Pr
                         onComplete()
                         onClose()
                     }}
-                    onCancel={onClose}
                 />
             </DialogContent>
         </Dialog>

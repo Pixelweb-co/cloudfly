@@ -7,6 +7,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
+import { AuthManager } from '@/utils/authManager'
+
 // MUI Imports
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { styled, useTheme } from '@mui/material/styles'
@@ -82,7 +84,7 @@ const ResetPasswordV2 = ({ mode }: { mode: SystemMode }) => {
   const { token } = useParams()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [error, setError] = useState(null)
+  const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
 

@@ -107,7 +107,7 @@ const ChannelListTable = ({ tableData, reload }: { tableData: Channel[], reload?
         getSortedRowModel: getSortedRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
         initialState: { pagination: { pageSize: 10 } }
-    })
+    } as any)
 
     return (
         <Card>
@@ -168,7 +168,7 @@ const ChannelListTable = ({ tableData, reload }: { tableData: Channel[], reload?
             </div>
 
             <TablePagination
-                component={() => <TablePaginationComponent table={table} />}
+                component={() => <TablePaginationComponent table={table as any} />}
                 count={table.getFilteredRowModel().rows.length}
                 rowsPerPage={table.getState().pagination.pageSize}
                 page={table.getState().pagination.pageIndex}

@@ -60,7 +60,7 @@ export default function AddProspectDialog({ open, onClose, pipelineId, targetSta
     try {
       const customers = await customerService.getActiveCustomers()
       const mapped = customers.map(c => ({
-        id: c.id,
+        id: c.id || 0,
         name: c.name || 'Sin nombre',
         email: c.email || '',
         phone: c.phone || '',

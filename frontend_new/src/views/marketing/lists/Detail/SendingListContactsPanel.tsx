@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { 
   Card, CardHeader, CardContent, Table, TableBody, TableCell, 
   TableContainer, TableHead, TableRow, IconButton, Typography, 
-  Button, TextField, InputAdornment, Box, LinearProgress, Avatar, Tooltip,
+  Button, TextField, InputAdornment, Box, LinearProgress, CircularProgress, Avatar, Tooltip,
   Dialog, DialogTitle, DialogContent, DialogActions, Autocomplete
 } from '@mui/material'
 import { Icon } from '@iconify/react'
@@ -162,7 +162,7 @@ export default function SendingListContactsPanel({ listId, onMemberChange }: Pro
           <Autocomplete
             fullWidth
             options={allContacts}
-            getOptionLabel={(option) => `${option.name} (${option.identification || 'N/A'}) - ${option.phone || option.email}`}
+            getOptionLabel={(option) => `${option.name} (${option.documentNumber || 'N/A'}) - ${option.phone || option.email}`}
             value={selectedContact}
             onChange={(_, newValue) => setSelectedContact(newValue)}
             renderInput={(params) => (
@@ -181,8 +181,8 @@ export default function SendingListContactsPanel({ listId, onMemberChange }: Pro
                   </Avatar>
                   <Box>
                     <Typography variant='body2' sx={{ fontWeight: 500 }}>{option.name}</Typography>
-                    <Typography variant='caption' color='text.secondary'>
-                      ID: {option.identification || 'Sin ID'} | {option.phone || option.email}
+                    <Typography variant="caption" color="text.secondary">
+                      ID: {option.documentNumber || 'Sin ID'} | {option.phone || option.email}
                     </Typography>
                   </Box>
                 </Box>
@@ -196,7 +196,7 @@ export default function SendingListContactsPanel({ listId, onMemberChange }: Pro
             onClick={handleConfirmAdd} 
             variant='contained' 
             disabled={!selectedContact || adding}
-            startIcon={adding ? <LinearProgress size={16} /> : <Icon icon='tabler:plus' />}
+            startIcon={adding ? <CircularProgress size={16} color="inherit" /> : <Icon icon='tabler:plus' />}
           >
             Agregar a la Lista
           </Button>

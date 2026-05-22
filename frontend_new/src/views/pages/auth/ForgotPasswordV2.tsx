@@ -1,8 +1,12 @@
 'use client'
 
+import { useState } from 'react'
+
 // Next Imports
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+
+import { AuthManager } from '@/utils/authManager'
 
 // MUI Imports
 import useMediaQuery from '@mui/material/useMediaQuery'

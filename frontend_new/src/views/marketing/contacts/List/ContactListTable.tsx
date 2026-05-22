@@ -24,6 +24,7 @@ import {
 import { Icon } from '@iconify/react'
 import { format } from 'date-fns'
 import { contactService } from '@/services/marketing/contactService'
+import { tagService } from '@/services/marketing/tagService'
 import { pipelineService } from '@/services/marketing/pipelineService'
 import { Contact } from '@/types/marketing/contactTypes'
 import { Pipeline } from '@/types/marketing/pipelineTypes'
@@ -85,9 +86,22 @@ export default function ContactListTable() {
       
       // Sort contacts by id descending initially (newest first)
       const sortedContacts = (contactsData || []).sort((a: any, b: any) => b.id - a.id)
+
+      // Fetch tags for each contact concurrently
+      const enrichedContacts = await Promise.all(
+        sortedContacts.map(async (c: Contact) => {
+          try {
+            const tags = await tagService.getContactTags(c.id)
+            return { ...c, tags }
+          } catch (err) {
+            console.error(`Error loading tags for contact ${c.id}:`, err)
+            return { ...c, tags: [] }
+          }
+        })
+      )
       
-      setContacts(sortedContacts)
-      setFilteredContacts(sortedContacts)
+      setContacts(enrichedContacts)
+      setFilteredContacts(enrichedContacts)
       setPipelines(pipelinesData || [])
     } catch (e) {
       console.error('Error al cargar datos:', e)
@@ -200,6 +214,7 @@ export default function ContactListTable() {
                 <TableCell>Contacto</TableCell>
                 <TableCell>Identificación</TableCell>
                 <TableCell>Embudo / Etapa</TableCell>
+                <TableCell>Etiquetas</TableCell>
                 <TableCell>Tipo</TableCell>
                 <TableCell>Estado</TableCell>
                 <TableCell>Última Actividad</TableCell>
@@ -209,7 +224,7 @@ export default function ContactListTable() {
             <TableBody>
               {!loading && filteredContacts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 10 }}>
+                  <TableCell colSpan={8} align="center" sx={{ py: 10 }}>
                     <Typography variant="body1" color="text.secondary">
                       No hay contactos que coincidan con la búsqueda
                     </Typography>
@@ -254,6 +269,31 @@ export default function ContactListTable() {
                         <Typography variant="caption" color="text.disabled">
                           {getStageName(contact.pipelineId, contact.stageId)}
                         </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, maxWidth: 200 }} onClick={(e) => e.stopPropagation()}>
+                        {contact.tags && contact.tags.length > 0 ? (
+                          contact.tags.map((tag) => (
+                            <Chip
+                              key={tag.id}
+                              label={tag.name}
+                              size="small"
+                              sx={{
+                                backgroundColor: `${tag.color || '#7367F0'}1e`,
+                                color: tag.color || '#7367F0',
+                                borderColor: `${tag.color || '#7367F0'}3f`,
+                                borderWidth: '1px',
+                                borderStyle: 'solid',
+                                fontWeight: 500
+                              }}
+                            />
+                          ))
+                        ) : (
+                          <Typography variant="caption" color="text.disabled">
+                            Sin etiquetas
+                          </Typography>
+                        )}
                       </Box>
                     </TableCell>
                     <TableCell>

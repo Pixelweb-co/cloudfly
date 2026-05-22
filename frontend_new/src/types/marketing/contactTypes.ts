@@ -1,5 +1,16 @@
+export interface Tag {
+  id: number;
+  tenantId: number;
+  companyId: number;
+  name: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Contact {
   id: number;
+  uuid?: string;
   name: string;
   email?: string;
   phone?: string;
@@ -17,6 +28,7 @@ export interface Contact {
   isActive: boolean;
   chatbotEnabled: boolean;
   assignedUserIds?: string;
+  tags?: Tag[];
   createdAt: string;
   updatedAt: string;
 }
@@ -37,4 +49,5 @@ export interface ContactCreateRequest {
   assignedUserIds?: string;
   tenantId?: number;
   companyId?: number;
+  tagIds?: number[];
 }

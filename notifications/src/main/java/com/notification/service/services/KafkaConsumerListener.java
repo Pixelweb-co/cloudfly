@@ -496,4 +496,34 @@ public class KafkaConsumerListener {
             LOGGER.error("Error consuming billing invoice email notification: ", e);
         }
     }
+
+    @KafkaListener(topics = "billing.subscription.updated", groupId = "notification-service-subscription")
+    public void consumeSubscriptionUpdated(String messageJson) {
+        LOGGER.info("Received subscription updated message: " + messageJson);
+        try {
+            // Handle double-serialization
+            String json = messageJson.trim();
+            if (json.startsWith("\"") && json.endsWith("\"")) {
+                json = objectMapper.readValue(json, String.class);
+            }
+
+            Map<String, Object> data = objectMapper.readValue(json, Map.class);
+            Long tenantId = data.get("tenantId") != null ? Long.valueOf(data.get("tenantId").toString()) : null;
+            String planName = (String) data.get("planName");
+            
+            String title = "Suscripción Actualizada";
+            String description = "Tu suscripción al plan '" + planName + "' ha sido actualizada.";
+            
+            String uuid = java.util.UUID.randomUUID().toString();
+            String sql = "INSERT INTO web_notifications (uuid, tenant_id, title, description, status, created_at) VALUES (?, ?, ?, ?, 'UNREAD', NOW())";
+            jdbcTemplate.update(sql, uuid, tenantId, title, description);
+            LOGGER.info("Web notification saved to DB for subscription update, UUID: " + uuid);
+
+            pushToSocketService(uuid, tenantId, null, title, description, "subscription-update");
+
+        } catch (Exception e) {
+            LOGGER.error("Error consuming subscription updated message: ", e);
+        }
+    }
 }
+

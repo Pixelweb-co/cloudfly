@@ -63,6 +63,7 @@ const SubscriptionEditView: React.FC<SubscriptionEditViewProps> = ({ subscriptio
     const [subscription, setSubscription] = useState<Subscription | null>(null)
     const [availableModules, setAvailableModules] = useState<any[]>([])
     const [selectedModules, setSelectedModules] = useState<number[]>([])
+    const [notifyCustomer, setNotifyCustomer] = useState(true)
 
     // Cargar datos de la suscripción
     useEffect(() => {
@@ -102,7 +103,8 @@ const SubscriptionEditView: React.FC<SubscriptionEditViewProps> = ({ subscriptio
             await axiosInstance.patch(`/api/v1/subscriptions/${subscriptionId}/limits`, {
                 aiTokensLimit: subscription.effectiveAiTokensLimit,
                 electronicDocsLimit: subscription.effectiveElectronicDocsLimit,
-                usersLimit: subscription.effectiveUsersLimit
+                usersLimit: subscription.effectiveUsersLimit,
+                notifyCustomer
             })
 
             alert('Límites actualizados correctamente')
@@ -120,7 +122,8 @@ const SubscriptionEditView: React.FC<SubscriptionEditViewProps> = ({ subscriptio
             setError(null)
 
             await axiosInstance.patch(`/api/v1/subscriptions/${subscriptionId}/modules`, {
-                moduleIds: selectedModules
+                moduleIds: selectedModules,
+                notifyCustomer
             })
 
             alert('Módulos actualizados correctamente')
@@ -365,6 +368,17 @@ const SubscriptionEditView: React.FC<SubscriptionEditViewProps> = ({ subscriptio
                                         />
                                     }
                                     label='Permitir Sobrecostos'
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={notifyCustomer}
+                                            onChange={e => setNotifyCustomer(e.target.checked)}
+                                        />
+                                    }
+                                    label='Notificar al cliente sobre estos cambios (Email/WhatsApp)'
                                 />
                             </Grid>
                             <Grid item xs={12}>

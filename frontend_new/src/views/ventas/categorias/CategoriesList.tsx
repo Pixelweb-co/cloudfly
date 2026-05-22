@@ -86,9 +86,13 @@ export default function CategoriesList() {
     }
   }
 
-  const handleToggleStatus = async (id: number) => {
+  const handleToggleStatus = async (category: Category) => {
+    if (!category.id) return
     try {
-      await categoryService.toggleCategoryStatus(id)
+      await categoryService.updateCategory(category.id, {
+        ...category,
+        status: !category.status
+      })
       toast.success('Estado actualizado')
       await loadData()
     } catch (e) {
@@ -166,7 +170,7 @@ export default function CategoriesList() {
                     color={category.status ? 'success' : 'secondary'} 
                     size="small" 
                     variant="tonal"
-                    onClick={() => category.id && handleToggleStatus(category.id)}
+                    onClick={() => handleToggleStatus(category)}
                     sx={{ cursor: 'pointer' }}
                   />
                 </TableCell>

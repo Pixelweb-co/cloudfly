@@ -15,8 +15,7 @@ import { Channel } from '@/types/marketing'
 import { Pipeline, Stage } from '@/types/marketing/pipelineTypes'
 import { productService } from '@/services/ventas/productService'
 import { categoryService } from '@/services/ventas/categoryService'
-import { Product } from '@/types/ventas/productTypes'
-import { Category } from '@/types/apps/Types'
+import { Product, Category } from '@/types/ventas/productTypes'
 
 interface Props {
   campaign: Campaign | null
@@ -89,8 +88,8 @@ const schema = yup.object().shape({
 
 export default function CampaignFormPanel({ campaign, channels, sendingLists, pipelines, onSave, saving }: Props) {
   const [availableStages, setAvailableStages] = useState<Stage[]>([])
-  const [products, setProducts] = useState<Product[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const [products, setProducts] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
   const [loadingCatalog, setLoadingCatalog] = useState(false)
 
   const { control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
@@ -163,7 +162,7 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
 
   useEffect(() => {
     if (watchPipelineId) {
-      const selectedPipeline = pipelines.find(p => p.id === watchPipelineId)
+      const selectedPipeline = pipelines.find(p => String(p.id) === String(watchPipelineId))
       setAvailableStages(selectedPipeline?.stages || [])
     } else {
       setAvailableStages([])
@@ -205,8 +204,8 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
     onSave(submission)
   }
 
-  const selectedProduct = products.find(p => p.id === watchProductId)
-  const selectedCategory = categories.find(c => c.id === watchCategoryId)
+  const selectedProduct = products.find(p => String(p.id) === String(watchProductId))
+  const selectedCategory = categories.find(c => String(c.id) === String(watchCategoryId))
 
   return (
     <Card>
@@ -423,8 +422,8 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
                     fullWidth
                     options={products}
                     getOptionLabel={(option) => `${option.productName || option.name} (${option.sku || option.code || ''})`}
-                    value={products.find(p => p.id === watchProductId) || null}
-                    onChange={(_, newValue) => setValue('productId', newValue?.id || '')}
+                    value={products.find(p => String(p.id) === String(watchProductId)) || null}
+                    onChange={(_, newValue) => setValue('productId', newValue?.id ? String(newValue.id) : '')}
                     renderInput={(params) => (
                       <CustomTextField 
                         {...params} 
@@ -477,8 +476,8 @@ export default function CampaignFormPanel({ campaign, channels, sendingLists, pi
                     fullWidth
                     options={categories}
                     getOptionLabel={(option) => option.nombreCategoria || option.name || ''}
-                    value={categories.find(c => c.id === watchCategoryId) || null}
-                    onChange={(_, newValue) => setValue('categoryId', newValue?.id || '')}
+                    value={categories.find(c => String(c.id) === String(watchCategoryId)) || null}
+                    onChange={(_, newValue) => setValue('categoryId', newValue?.id ? String(newValue.id) : '')}
                     renderInput={(params) => (
                       <CustomTextField 
                         {...params} 

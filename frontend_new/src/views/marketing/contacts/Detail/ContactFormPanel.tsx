@@ -28,10 +28,12 @@ import {
 import { useForm, Controller } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import * as yup from 'yup'
-import { Contact, ContactCreateRequest } from '@/types/marketing/contactTypes'
-import { Pipeline, PipelineStage } from '@/types/marketing/pipelineTypes'
+import { Contact, ContactCreateRequest, Tag } from '@/types/marketing/contactTypes'
+import { Pipeline, Stage } from '@/types/marketing/pipelineTypes'
 import { Icon } from '@iconify/react'
 import { contactService } from '@/services/marketing/contactService'
+import { tagService } from '@/services/marketing/tagService'
+import TagManagementModal from './TagManagementModal'
 import { userMethods } from '@/utils/userMethods'
 import userService, { User } from '@/services/userService'
 import toast from 'react-hot-toast'
@@ -57,9 +59,47 @@ const COUNTRY_CODES = [
 ]
 
 export default function ContactFormPanel({ contact, pipelines, onSave, saving }: Props) {
-  const [availableStages, setAvailableStages] = useState<PipelineStage[]>([])
+  const [availableStages, setAvailableStages] = useState<Stage[]>([])
   const [isValidating, setIsValidating] = useState(false)
   const [activeUsers, setActiveUsers] = useState<User[]>([])
+  
+  // Tag-related states
+  const [availableTags, setAvailableTags] = useState<Tag[]>([])
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([])
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false)
+
+  const loadAvailableTags = async () => {
+    try {
+      const allTags = await tagService.getAllTags()
+      setAvailableTags(allTags || [])
+    } catch (err) {
+      console.error('Error fetching available tags:', err)
+    }
+  }
+
+  useEffect(() => {
+    loadAvailableTags()
+  }, [])
+
+  useEffect(() => {
+    if (contact) {
+      if (contact.tags) {
+        setSelectedTags(contact.tags)
+      } else {
+        const fetchContactTags = async () => {
+          try {
+            const cTags = await tagService.getContactTags(contact.id)
+            setSelectedTags(cTags || [])
+          } catch (err) {
+            console.error('Error fetching contact tags:', err)
+          }
+        }
+        fetchContactTags()
+      }
+    } else {
+      setSelectedTags([])
+    }
+  }, [contact])
 
   const user = userMethods.getUserLogin()
   const companyId = user?.activeCompanyId || user?.company_id
@@ -80,7 +120,7 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
           
           setIsValidating(true)
           try {
-            const isDuplicate = await contactService.checkEmailAvailability(newEmail, companyId)
+            const isDuplicate = await contactService.checkEmailAvailability(newEmail)
             return !isDuplicate
           } catch (e) {
             return true // Allow if service fails
@@ -97,13 +137,13 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
           const prefix = context.parent.countryPrefix || '+57'
           const finalPhone = value.startsWith(prefix.replace('+', '')) ? `+${value}` : `${prefix}${value}`
           
-          const normalize = (p: string) => (p || '').replace(/\D/g, '')
+          const normalize = (p?: string | null) => (p || '').replace(/\D/g, '')
           
           if (contact && normalize(contact.phone) === normalize(finalPhone)) return true
           
           setIsValidating(true)
           try {
-            const isDuplicate = await contactService.checkPhoneAvailability(finalPhone, companyId)
+            const isDuplicate = await contactService.checkPhoneAvailability(finalPhone)
             return !isDuplicate
           } catch (e) {
             return true
@@ -246,7 +286,8 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
         ...data,
         phone: finalPhone,
         stage: stageName,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
+        tagIds: selectedTags.map(t => t.id)
       })
     } catch (err: any) {
         // Validation errors are already handled by Hook Form, but 409 Conflict can come here
@@ -538,6 +579,56 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
                 }}
               />
             </Grid>
+
+            {/* Tag Selection Field */}
+            <Grid item xs={12}>
+              <Box display="flex" alignItems="center" gap={2}>
+                <Box flexGrow={1}>
+                  <Autocomplete
+                    multiple
+                    options={availableTags}
+                    value={selectedTags}
+                    getOptionLabel={(option) => option.name}
+                    isOptionEqualToValue={(option, val) => option.id === val.id}
+                    onChange={(_, newValue) => {
+                      setSelectedTags(newValue)
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Etiquetas (Tags)"
+                        placeholder="Buscar y seleccionar etiquetas..."
+                      />
+                    )}
+                    renderTags={(tagValue, getTagProps) =>
+                      tagValue.map((option, index) => (
+                        <Chip
+                          label={option.name}
+                          {...getTagProps({ index })}
+                          key={option.id}
+                          size="small"
+                          sx={{
+                            backgroundColor: `${option.color || '#7367F0'}1e`,
+                            color: option.color || '#7367F0',
+                            borderColor: `${option.color || '#7367F0'}3f`,
+                            borderWidth: '1px',
+                            borderStyle: 'solid',
+                            fontWeight: 500
+                          }}
+                        />
+                      ))
+                    }
+                  />
+                </Box>
+                <Button
+                  variant="outlined"
+                  onClick={() => setIsTagModalOpen(true)}
+                  sx={{ minWidth: '48px', height: '48px', p: 0 }}
+                >
+                  <Icon icon="tabler:settings" fontSize="20px" />
+                </Button>
+              </Box>
+            </Grid>
           </Grid>
         </CardContent>
 
@@ -556,6 +647,12 @@ export default function ContactFormPanel({ contact, pipelines, onSave, saving }:
             {contact ? 'Guardar Cambios' : 'Crear Contacto Nuevo'}
           </Button>
         </CardActions>
+
+        <TagManagementModal
+          open={isTagModalOpen}
+          onClose={() => setIsTagModalOpen(false)}
+          onTagsUpdated={loadAvailableTags}
+        />
       </form>
     </Card>
   )
