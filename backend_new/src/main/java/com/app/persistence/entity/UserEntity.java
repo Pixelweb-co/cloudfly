@@ -54,6 +54,9 @@ public class UserEntity {
     @Column("contact_id")
     private Long contactId;
 
+    @Column("avatar_id")
+    private Long avatarId;
+
     @Column("created_at")
     private java.time.LocalDateTime createdAt;
 
@@ -73,6 +76,8 @@ public class UserEntity {
 
     public Long getContactId() { return contactId; }
     public void setContactId(Long contactId) { this.contactId = contactId; }
+    public Long getAvatarId() { return avatarId; }
+    public void setAvatarId(Long avatarId) { this.avatarId = avatarId; }
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getNombres() { return nombres; }

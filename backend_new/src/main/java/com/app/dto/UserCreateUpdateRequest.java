@@ -21,6 +21,8 @@ public class UserCreateUpdateRequest {
     
     private String role;
 
+    private Long avatarId;
+
     public UserCreateUpdateRequest() {}
 
     public UserCreateUpdateRequest(String nombres, String apellidos, String username, String email, String password, String role) {
@@ -49,4 +51,7 @@ public class UserCreateUpdateRequest {
     
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+    
+    public Long getAvatarId() { return avatarId; }
+    public void setAvatarId(Long avatarId) { this.avatarId = avatarId; }
 }

@@ -18,6 +18,7 @@ public class UserDto {
     private String verificationToken;
     private String recoveryToken;
     private Long customerId;
+    private Long avatarId;
 
     // Enriquecido
     private Long activeCompanyId;
@@ -83,6 +84,8 @@ public class UserDto {
     public void setRecoveryToken(String recoveryToken) { this.recoveryToken = recoveryToken; }
     public Long getCustomerId() { return customerId; }
     public void setCustomerId(Long customerId) { this.customerId = customerId; }
+    public Long getAvatarId() { return avatarId; }
+    public void setAvatarId(Long avatarId) { this.avatarId = avatarId; }
     public Long getActiveCompanyId() { return activeCompanyId; }
     public void setActiveCompanyId(Long activeCompanyId) { this.activeCompanyId = activeCompanyId; }
     public List<RoleEntity> getRoles() { return roles; }
@@ -119,6 +122,7 @@ public class UserDto {
         private String verificationToken;
         private String recoveryToken;
         private Long customerId;
+        private Long avatarId;
         private Long activeCompanyId;
         private String activeCompanyName;
         private Long tenant_id;
@@ -143,6 +147,7 @@ public class UserDto {
         public UserDtoBuilder verificationToken(String verificationToken) { this.verificationToken = verificationToken; return this; }
         public UserDtoBuilder recoveryToken(String recoveryToken) { this.recoveryToken = recoveryToken; return this; }
         public UserDtoBuilder customerId(Long customerId) { this.customerId = customerId; return this; }
+        public UserDtoBuilder avatarId(Long avatarId) { this.avatarId = avatarId; return this; }
         public UserDtoBuilder activeCompanyId(Long activeCompanyId) { this.activeCompanyId = activeCompanyId; return this; }
         public UserDtoBuilder activeCompanyName(String activeCompanyName) { this.activeCompanyName = activeCompanyName; this.company_name = activeCompanyName; return this; }
         public UserDtoBuilder tenant_id(Long tenant_id) { this.tenant_id = tenant_id; return this; }
@@ -169,6 +174,7 @@ public class UserDto {
             dto.setVerificationToken(verificationToken);
             dto.setRecoveryToken(recoveryToken);
             dto.setCustomerId(customerId);
+            dto.setAvatarId(avatarId);
             dto.setActiveCompanyId(activeCompanyId);
             dto.setActiveCompanyName(activeCompanyName);
             dto.setTenant_id(tenant_id);

@@ -6,6 +6,8 @@ import com.app.persistence.entity.UserEntity;
 import com.app.persistence.repository.RoleRepository;
 import com.app.persistence.repository.UserRepository;
 import com.app.persistence.repository.UserRoleRepository;
+import com.app.persistence.repository.ContactRepository;
+import com.app.persistence.entity.ContactEntity;
 import com.app.persistence.services.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +37,7 @@ public class UserController {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
+    private final ContactRepository contactRepository;
     private final PasswordEncoder passwordEncoder;
 
     private record UserContext(Long tenantId, Long companyId, Set<String> roles) {
@@ -122,6 +125,7 @@ public class UserController {
                             .username(request.getUsername())
                             .password(encryptedPassword)
                             .email(request.getEmail())
+                            .avatarId(request.getAvatarId())
                             .isEnabled(true)
                             .accountNoExpired(true)
                             .accountNoLocked(true)
@@ -132,7 +136,22 @@ public class UserController {
                             .updatedAt(LocalDateTime.now())
                             .build();
 
-                    return userRepository.save(user)
+                    ContactEntity newContact = ContactEntity.builder()
+                            .name((request.getNombres() != null ? request.getNombres() : "") + " " + (request.getApellidos() != null ? request.getApellidos() : ""))
+                            .email(request.getEmail())
+                            .tenantId(ctx.tenantId())
+                            .companyId(ctx.companyId())
+                            .isEmployee(true)
+                            .isActive(true)
+                            .createdAt(LocalDateTime.now())
+                            .updatedAt(LocalDateTime.now())
+                            .build();
+
+                    return contactRepository.save(newContact)
+                            .flatMap(savedContact -> {
+                                user.setContactId(savedContact.getId());
+                                return userRepository.save(user);
+                            })
                             .flatMap(savedUser -> {
                                 String roleName = request.getRole() != null ? request.getRole() : "USER";
                                 return roleRepository.findByName(roleName)
@@ -153,19 +172,48 @@ public class UserController {
                             existing.setApellidos(request.getApellidos());
                             existing.setUsername(request.getUsername());
                             existing.setEmail(request.getEmail());
+                            existing.setAvatarId(request.getAvatarId());
                             if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
                                 existing.setPassword(passwordEncoder.encode(request.getPassword()));
                             }
                             existing.setUpdatedAt(LocalDateTime.now());
 
-                            Mono<UserEntity> saveMono = userRepository.save(existing);
+                            Mono<UserEntity> saveMono = Mono.just(existing);
+                            if (existing.getContactId() != null) {
+                                saveMono = contactRepository.findById(existing.getContactId())
+                                        .flatMap(contact -> {
+                                            contact.setName((request.getNombres() != null ? request.getNombres() : "") + " " + (request.getApellidos() != null ? request.getApellidos() : ""));
+                                            contact.setEmail(request.getEmail());
+                                            contact.setUpdatedAt(LocalDateTime.now());
+                                            return contactRepository.save(contact);
+                                        })
+                                        .thenReturn(existing)
+                                        .flatMap(userRepository::save);
+                            } else {
+                                ContactEntity newContact = ContactEntity.builder()
+                                        .name((request.getNombres() != null ? request.getNombres() : "") + " " + (request.getApellidos() != null ? request.getApellidos() : ""))
+                                        .email(request.getEmail())
+                                        .tenantId(ctx.tenantId())
+                                        .companyId(ctx.companyId())
+                                        .isEmployee(true)
+                                        .isActive(true)
+                                        .createdAt(LocalDateTime.now())
+                                        .updatedAt(LocalDateTime.now())
+                                        .build();
+                                saveMono = contactRepository.save(newContact)
+                                        .flatMap(savedContact -> {
+                                            existing.setContactId(savedContact.getId());
+                                            return userRepository.save(existing);
+                                        });
+                            }
 
                             if (request.getRole() != null) {
-                                return userRoleRepository.deleteRolesByUserId(existing.getId())
+                                saveMono = saveMono.flatMap(savedUser -> 
+                                        userRoleRepository.deleteRolesByUserId(savedUser.getId())
                                         .then(roleRepository.findByName(request.getRole()))
-                                        .flatMap(role -> userRoleRepository.insertRole(existing.getId(), role.getId()))
-                                        .then(saveMono)
-                                        .flatMap(userService::convertToDto);
+                                        .flatMap(role -> userRoleRepository.insertRole(savedUser.getId(), role.getId()))
+                                        .thenReturn(savedUser)
+                                );
                             }
 
                             return saveMono.flatMap(userService::convertToDto);
