@@ -10,7 +10,7 @@ const config = {
 };
 
 conn.on('ready', () => {
-  const sql = "SELECT id, title, start_time, end_time, status FROM events ORDER BY start_time DESC LIMIT 5; SELECT * FROM scheduler_jobs ORDER BY execute_at DESC LIMIT 5;";
+  const sql = "SELECT * FROM availability_slots;";
   const cmd = `docker exec -i mysql mysql -uroot -pwidowmaker cloud_master -e "${sql}"`;
   
   conn.exec(cmd, (err, stream) => {

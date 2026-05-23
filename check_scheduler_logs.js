@@ -14,12 +14,16 @@ conn.on('ready', () => {
   
   conn.exec(cmd, (err, stream) => {
     if (err) throw err;
+    const logFile = 'c:/apps/cloudfly/vps_scheduler_logs.txt';
+    const writeStream = fs.createWriteStream(logFile);
     stream.on('close', () => {
+      writeStream.end();
+      console.log(`✅ Logs successfully written to ${logFile}`);
       conn.end();
     }).on('data', (data) => {
-      process.stdout.write(data);
+      writeStream.write(data);
     }).stderr.on('data', (data) => {
-      process.stderr.write(data);
+      writeStream.write(data);
     });
   });
 }).connect(config);

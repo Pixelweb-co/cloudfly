@@ -10,8 +10,8 @@ const config = {
 };
 
 conn.on('ready', () => {
-  const sql = "SHOW TABLES;";
-  const cmd = `docker exec -i mysql mysql -uroot -pwidowmaker cloud_master -e "${sql}"`;
+  const sql = "SHOW DATABASES;";
+  const cmd = `docker exec -i mysql mysql -uroot -pwidowmaker -e "${sql}"`;
   
   conn.exec(cmd, (err, stream) => {
     if (err) throw err;
