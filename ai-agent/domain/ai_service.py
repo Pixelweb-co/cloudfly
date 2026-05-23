@@ -988,6 +988,45 @@ class AIService:
                 comp = await self._db.get_company_info(tenant_id)
                 company_id = comp.get("id")
 
+            # --- Stock validation: for each item, check if the product manages stock.
+            # If manageStock == false -> allow sale. If true -> ensure requested qty <= inventoryQty.
+            insufficient = []
+            products_api_failures = []
+            for item in items:
+                pid = item.get("productId")
+                req_qty = int(item.get("quantity", 0) or 0)
+                try:
+                    prod_url = f"{config.java_api_url}/productos/{pid}?tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
+                    headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
+                    p_res = requests.get(prod_url, headers=headers, timeout=5)
+                    if p_res.status_code != 200:
+                        products_api_failures.append({"productId": pid, "status": p_res.status_code, "text": p_res.text[:200]})
+                        continue
+                    p_json = p_res.json()
+                    manage_stock = bool(p_json.get("manageStock", False))
+                    available = int(p_json.get("inventoryQty", 0) or 0)
+                    logger.info(f"Product {pid} manageStock={manage_stock} available={available}", extra=log_ctx)
+                    if manage_stock and req_qty > available:
+                        insufficient.append({"productId": pid, "requested": req_qty, "available": available, "productName": p_json.get("productName")})
+                except Exception as e:
+                    logger.error("Failed to fetch product info for stock validation", extra={**log_ctx, "product_id": pid, "error": str(e)})
+                    products_api_failures.append({"productId": pid, "error": str(e)})
+
+            if products_api_failures:
+                return json.dumps({
+                    "error": "PRODUCT_API_ERROR",
+                    "message": "No fue posible verificar la información de producto para algunos ítems. Intenta nuevamente más tarde.",
+                    "details": products_api_failures
+                })
+
+            if insufficient:
+                return json.dumps({
+                    "error": "INSUFFICIENT_STOCK",
+                    "message": "No hay suficiente inventario para algunos artículos.",
+                    "details": insufficient
+                })
+
+            # Build order items (stock validated)
             order_items = []
             total_sum = 0
             for item in items:
