@@ -129,6 +129,9 @@ def process_product_update(msg_value):
         categories_str = ", ".join(category_names)
 
         # Prepare string for vectorization
+        # Include availability and manage_stock information in the searchable text
+        manage_stock_str = "Sí" if product.get('manageStock', False) else "No"
+        availability = product.get('inventoryQty', 0) if product.get('inventoryQty', None) is not None else 0
         searchable_text = f"""
         Nombre: {product.get('productName', '')}
         Categorías: {categories_str}
@@ -137,6 +140,8 @@ def process_product_update(msg_value):
         Marca: {product.get('brand', '')}
         Modelo: {product.get('model', '')}
         Precio: {product.get('price', '')}
+        Disponibilidad: {availability} unidades
+        Gestiona inventario: {manage_stock_str}
         """
 
         vector = get_embedding(searchable_text.strip())
