@@ -13,7 +13,7 @@ const config = {
 conn.on('ready', () => {
   console.log('✅ SSH Client Ready. Inspecting database...');
   
-  const sql = "USE cloud_master; SHOW TABLES; SELECT * FROM flyway_schema_history;";
+  const sql = "USE cloud_master; SELECT 'channels' AS tbl, id, tenant_id, company_id, instance_name, platform, status FROM channels; SELECT 'channel_configs' AS tbl, id, tenant_id, company_id, instance_name, channel_type, is_active FROM channel_configs;";
   const cmd = `docker exec -i mysql mysql -uroot -pwidowmaker -e "${sql}"`;
   
   conn.exec(cmd, (err, stream) => {

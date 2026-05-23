@@ -10,17 +10,15 @@ const config = {
 };
 
 conn.on('ready', () => {
-  const sql = "SHOW PROCESSLIST;";
-  const cmd = `docker exec -i mysql mysql -uroot -pwidowmaker cloud_master -e "${sql}"`;
+  const sql = "SELECT COUNT(*) FROM cloud_master.clientes;";
+  const cmd = `docker exec -i mysql mysql -uroot -pwidowmaker -N -e "${sql}"`;
   
   conn.exec(cmd, (err, stream) => {
     if (err) throw err;
+    let data = '';
     stream.on('close', () => {
+      console.log('CLIENTS_COUNT:', data.trim());
       conn.end();
-    }).on('data', (data) => {
-      process.stdout.write(data);
-    }).stderr.on('data', (data) => {
-      process.stderr.write(data);
-    });
+    }).on('data', d => data += d.toString()).stderr.on('data', e => console.error(e.toString()));
   });
 }).connect(config);

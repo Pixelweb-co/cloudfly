@@ -10,7 +10,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Awaitable
 
-from confluent_kafka import Consumer, KafkaException
+from confluent_kafka import Consumer, KafkaException, KafkaError
 
 from application.config import config
 
@@ -68,7 +68,7 @@ class AsyncKafkaConsumer:
             if msg is None:
                 continue
             if msg.error():
-                if msg.error().code() == KafkaException._PARTITION_EOF:
+                if msg.error().code() == KafkaError._PARTITION_EOF:
                     continue
                 logger.error("Kafka error", extra={"error": str(msg.error())})
                 continue
