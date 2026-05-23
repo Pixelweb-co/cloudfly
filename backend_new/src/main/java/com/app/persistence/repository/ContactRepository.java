@@ -12,8 +12,11 @@ public interface ContactRepository extends ReactiveCrudRepository<ContactEntity,
 
     Mono<ContactEntity> findByUuid(String uuid);
 
-    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) ORDER BY created_at DESC LIMIT 2000")
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) ORDER BY created_at DESC")
     Flux<ContactEntity> findByTenantIdAndCompanyId(Long tenantId, Long companyId);
+
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) ORDER BY created_at DESC LIMIT :limit OFFSET :offset")
+    Flux<ContactEntity> findPaginated(Long tenantId, Long companyId, int limit, int offset);
 
     @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND phone = :phone")
     Mono<ContactEntity> findByTenantIdAndCompanyIdAndPhone(Long tenantId, Long companyId, String phone);
