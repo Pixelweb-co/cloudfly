@@ -99,14 +99,16 @@ class EvolutionClient {
     /**
      * Marcar mensaje como leído (Doble check azul)
      */
-    async markRead(instanceName, remoteJid) {
+    async markRead(instanceName, remoteJid, messageId = null, fromMe = false) {
         try {
             const url = `/chat/markMessageAsRead/${instanceName}`;
             // Evolution API v2+ uses this structure
             const body = {
                 readMessages: [
                     {
-                        remoteJid: remoteJid
+                        remoteJid: remoteJid,
+                        id: messageId,
+                        fromMe: fromMe
                     }
                 ]
             };
