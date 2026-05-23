@@ -92,12 +92,37 @@ const columnHelper = createColumnHelper<ContactTypeWithAction>()
 
 const ContactsListTable = ({ reload, tableData }: any) => {
     const [rowSelection, setRowSelection] = useState({})
-    const [data, setData] = useState(tableData.sort((a: any, b: any) => b.id - a.id))
-    const [filteredData, setFilteredData] = useState(data)
+    const [data, setData] = useState(tableData?.sort((a: any, b: any) => b.id - a.id) || [])
+    const [filteredData, setFilteredData] = useState<ContactType[]>([])
     const [globalFilter, setGlobalFilter] = useState('')
     const [loadForm, setLoadForm] = useState(false)
     const [errorDeleteItem, setErrorDeleteItem] = useState<any | null>(null)
     const router = useRouter()
+
+    // Pagination Server-Side State
+    const [{ pageIndex, pageSize }, setPagination] = useState({
+        pageIndex: 0,
+        pageSize: 10
+    })
+    const [totalElements, setTotalElements] = useState(0)
+    const [pageCount, setPageCount] = useState(0)
+
+    const fetchPaginatedData = async () => {
+        try {
+            const res = await axiosInstance.get(`${API_BASE_URL}/contacts/paginated`, {
+                params: { page: pageIndex, size: pageSize }
+            })
+            setFilteredData(res.data.data)
+            setTotalElements(res.data.totalElements)
+            setPageCount(res.data.totalPages)
+        } catch (error) {
+            console.error('Error fetching paginated contacts:', error)
+        }
+    }
+
+    useEffect(() => {
+        fetchPaginatedData()
+    }, [pageIndex, pageSize])
 
     const deleteItem = async (id: any) => {
         try {
@@ -259,13 +284,15 @@ const ContactsListTable = ({ reload, tableData }: any) => {
         },
         state: {
             rowSelection,
-            globalFilter
-        },
-        initialState: {
+            globalFilter,
             pagination: {
-                pageSize: 10
+                pageIndex,
+                pageSize
             }
         },
+        manualPagination: true,
+        pageCount: pageCount,
+        onPaginationChange: setPagination,
         enableRowSelection: true,
         globalFilterFn: fuzzyFilter,
         onRowSelectionChange: setRowSelection,
@@ -287,7 +314,7 @@ const ContactsListTable = ({ reload, tableData }: any) => {
                     className='pbe-4'
                     subheader={
                         <Typography variant='body2' color='text.secondary'>
-                            {`Total: ${filteredData?.length || 0} contactos`}
+                            {`Total: ${totalElements || 0} contactos`}
                         </Typography>
                     }
                 />
@@ -394,7 +421,7 @@ const ContactsListTable = ({ reload, tableData }: any) => {
                 </div>
                 <TablePagination
                     component={() => <TablePaginationComponent table={table} />}
-                    count={table.getFilteredRowModel().rows.length}
+                    count={totalElements}
                     rowsPerPage={table.getState().pagination.pageSize}
                     page={table.getState().pagination.pageIndex}
                     onPageChange={(_, page) => {

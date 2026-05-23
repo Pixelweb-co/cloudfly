@@ -29,6 +29,25 @@ public class ContactService {
         }
     }
 
+    public Mono<com.app.dto.PageResponse<ContactEntity>> findPaginated(Long tenantId, Long companyId, int page, int size) {
+        int offset = page * size;
+        Mono<Integer> countMono = contactRepository.countTotalContacts(tenantId, companyId);
+        Mono<java.util.List<ContactEntity>> dataMono = contactRepository.findPaginated(tenantId, companyId, size, offset).collectList();
+
+        return Mono.zip(countMono, dataMono).map(tuple -> {
+            int totalElements = tuple.getT1();
+            java.util.List<ContactEntity> data = tuple.getT2();
+            int totalPages = (int) Math.ceil((double) totalElements / size);
+            return com.app.dto.PageResponse.<ContactEntity>builder()
+                    .data(data)
+                    .totalElements(totalElements)
+                    .totalPages(totalPages)
+                    .currentPage(page)
+                    .pageSize(size)
+                    .build();
+        });
+    }
+
     public Mono<ContactEntity> findById(Long id, Long tenantId, Long companyId) {
         return contactRepository.findById(id)
                 .filter(contact -> contact.getTenantId().equals(tenantId) && contact.getCompanyId().equals(companyId));

@@ -90,6 +90,24 @@ public class ContactController {
                 });
     }
 
+    @GetMapping("/paginated")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
+    public Mono<com.app.dto.PageResponse<ContactEntity>> getPaginatedContacts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestHeader Map<String, String> headers) {
+        return getCurrentUserContext(headers)
+                .flatMap(ctx -> {
+                    if (ctx.companyId() != null) {
+                        return contactService.findPaginated(ctx.tenantId(), ctx.companyId(), page, size);
+                    } else {
+                        return companyRepository.findFirstByTenantIdAndIsPrincipalTrue(ctx.tenantId())
+                                .flatMap(primary -> contactService.findPaginated(ctx.tenantId(), primary.getId(), page, size))
+                                .switchIfEmpty(contactService.findPaginated(ctx.tenantId(), null, page, size));
+                    }
+                });
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN', 'USER')")
     public Mono<ContactEntity> getContactById(@PathVariable Long id, @RequestHeader Map<String, String> headers) {
