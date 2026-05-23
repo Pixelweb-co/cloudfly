@@ -427,6 +427,7 @@ const ContactsListTable = ({ reload, tableData }: any) => {
                     onPageChange={(_, page) => {
                         table.setPageIndex(page)
                     }}
+                    sx={{ pb: 12 }}
                 />
             </Card>
 
