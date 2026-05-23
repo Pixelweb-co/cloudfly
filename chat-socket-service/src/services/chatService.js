@@ -45,10 +45,10 @@ class ChatService {
 
         const message = data.message;
         
-        // Extract remoteJid (conversationId) and messageId
+        // Extract remoteJid (conversationId) and external WhatsApp message id
         let remoteJid = data.key.remoteJid;
         const pushName = data.pushName || 'Unknown';
-        const messageId = data.key.id;
+        const externalMsgId = data.key.id;
 
         // 0. FILTER: No groups, No status, No echoes (fromMe)
         /* COMENTADO TEMPORALMENTE PARA PRUEBAS (REACTIVAR EN PRODUCCIÓN)
@@ -68,7 +68,7 @@ class ChatService {
             return;
         }
 
-        logger.info(`📥 [WEBHOOK_PROCEED] Processing message ${messageId} from ${remoteJid}`);
+        logger.info(`📥 [WEBHOOK_PROCEED] Processing message ${externalMsgId} from ${remoteJid}`);
 
         // Extract body and media
         let body = '';
@@ -146,11 +146,11 @@ class ChatService {
                 `INSERT INTO omni_channel_messages 
                 (tenant_id, company_id, channel_id, contact_id, direction, content, status, external_msg_id, conversation_id, created_at) 
                 VALUES (?, ?, ?, ?, 'INBOUND', ?, 'RECEIVED', ?, ?, NOW())`,
-                [tenantId, companyId, channelId, contact.id, body, data.key.id || null, conversationId]
+                [tenantId, companyId, channelId, contact.id, body, externalMsgId || null, conversationId]
             );
 
-            const messageId = result.insertId;
-            logger.info(`✅ [WEBHOOK_STEP_4_OK] Message saved (ID: ${messageId})`);
+            const internalMessageId = result.insertId;
+            logger.info(`✅ [WEBHOOK_STEP_4_OK] Message saved (internal ID: ${internalMessageId})`);
 
             // 5. Obtener últimos 10 mensajes
             const [history] = await db.execute(
@@ -168,7 +168,7 @@ class ChatService {
             
             const eventPayload = {
                 message: {
-                    id: messageId,
+                    id: internalMessageId,
                     content: body,
                     direction: 'INBOUND',
                     status: 'RECEIVED',
@@ -215,14 +215,14 @@ class ChatService {
                     // Buffer the message (3s debounce → Kafka)
                     const buffered = await messageBufferService.bufferMessage(
                         tenantId, companyId, contact.id, conversationId,
-                        { body, messageId, mediaType, mediaUrl, timestamp: new Date().toISOString() },
+                        { body, messageId: internalMessageId, externalMessageId: externalMsgId, mediaType, mediaUrl, timestamp: new Date().toISOString() },
                         { instance, remoteJid }
                     );
 
                     if (buffered) {
-                        logger.info(`📦 [WEBHOOK_STEP_7_OK] Message ${messageId} successfully buffered. AI response pending.`);
+                        logger.info(`📦 [WEBHOOK_STEP_7_OK] Message ${internalMessageId} successfully buffered. AI response pending.`);
                     } else {
-                        logger.warn(`⚠️ [WEBHOOK_STEP_7_FAIL] Buffer failed for message ${messageId}. Message will not reach AI agent.`);
+                        logger.warn(`⚠️ [WEBHOOK_STEP_7_FAIL] Buffer failed for message ${internalMessageId}. Message will not reach AI agent.`);
                     }
                 } else {
                     logger.info(`👤 [WEBHOOK_GATE] Chatbot is DISABLED. Human-only mode.`);
