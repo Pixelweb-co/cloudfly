@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTheme } from '@mui/material/styles'
 import {
   Box,
   Typography,
@@ -117,24 +118,38 @@ interface Props {
   workflowId?: number;
 }
 
-// Visual edges custom style mapper
-const styleEdge = (params: any) => {
-  const stroke = params.sourceHandle === 'then' 
-    ? '#28C76F' 
-    : params.sourceHandle === 'else' 
-    ? '#EA5455' 
-    : '#7367F0';
-  return {
-    ...params,
-    animated: true,
-    style: { stroke, strokeWidth: 2 }
-  }
-}
+// NOTE: styleEdge uses the active theme inside the component below
 
 function WorkflowEditorContent({ isNew = true, workflowId }: Props) {
   const router = useRouter()
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
+  const theme = useTheme()
+
+  // Visual edges custom style mapper using theme tokens
+  const styleEdge = (params: any) => {
+    const stroke = params.sourceHandle === 'then'
+      ? theme.palette.success.main
+      : params.sourceHandle === 'else'
+      ? theme.palette.error.main
+      : theme.palette.primary.main
+    return {
+      ...params,
+      animated: true,
+      style: { stroke, strokeWidth: 2 }
+    }
+  }
+
+  const resolveNodeColor = (nodeType: string, groupType: string) => {
+    // Prefer semantic colors by group and specific nodeType
+    if (groupType === 'LOGIC') return theme.palette.error.main
+    if (groupType === 'ACTION') {
+      if (nodeType === 'crm_tag') return theme.palette.warning.main
+      return theme.palette.success.main
+    }
+    // TRIGGER
+    return theme.palette.primary.main
+  }
 
   // Header & Info State
   const [name, setName] = useState('Nueva Automatización Premium')
@@ -163,7 +178,7 @@ function WorkflowEditorContent({ isNew = true, workflowId }: Props) {
           position: { x: 150, y: 200 },
           data: {
             label: 'Prospecto Creado',
-            color: '#7367F0',
+            color: resolveNodeColor('contact.created', 'TRIGGER'),
             icon: 'tabler:user-plus',
             type: 'TRIGGER',
             nodeType: 'contact.created',
@@ -201,8 +216,8 @@ function WorkflowEditorContent({ isNew = true, workflowId }: Props) {
           }
 
           const paletteItem = NODE_PALETTE.find(p => p.nodeType === nodeType)
-          const color = paletteItem?.color || '#7367F0'
           const icon = paletteItem?.icon || 'tabler:circle-check'
+          const color = resolveNodeColor(nodeType, type)
           const label = step.uiMetadata?.label || paletteItem?.label || 'Paso'
           
           let parameters = step.actionParameters || {}
@@ -314,7 +329,7 @@ function WorkflowEditorContent({ isNew = true, workflowId }: Props) {
           position,
           data: {
             label: payload.label,
-            color: payload.color,
+            color: resolveNodeColor(payload.nodeType, payload.type),
             icon: payload.icon,
             type: payload.type,
             nodeType: payload.nodeType,
@@ -569,8 +584,7 @@ function WorkflowEditorContent({ isNew = true, workflowId }: Props) {
             <Box display="flex" alignItems="center" gap={2}>
               <Icon icon="tabler:route" style={{ color: '#7367F0' }} fontSize="1.5rem" />
               <Typography variant="h6" sx={{ fontWeight: 600 }}>Visual Builder Interactivo</Typography>
-              <Chip label="React Flow" color="primary" size="small" variant="outlined" sx={{ borderColor: '#7367F0', color: '#7367F0' }} />
-            </Box>
+             </Box>
             <Typography variant="caption" color="text.secondary">Arrastra y suelta elementos, conecta y edita parámetros en tiempo real.</Typography>
           </Box>
         </Box>
@@ -659,14 +673,16 @@ function WorkflowEditorContent({ isNew = true, workflowId }: Props) {
           <Box display="flex" flexDirection="column" gap={4}>
             {/* Triggers Group */}
             <Typography variant="caption" sx={{ color: '#7367F0', fontWeight: 700 }}>TRIGGERS (Puntos de Entrada)</Typography>
-            {NODE_PALETTE.filter(p => p.type === 'TRIGGER').map((item) => (
+            {NODE_PALETTE.filter(p => p.type === 'TRIGGER').map((item) => {
+              const displayColor = resolveNodeColor(item.nodeType, item.type)
+              return (
               <Card
                 key={item.nodeType}
                 draggable
                 onDragStart={(e) => handleSidebarDragStart(e, item)}
                 sx={{
                   bgcolor: '#1c2138',
-                  border: '1px dashed #7367F055',
+                  border: `1px dashed ${theme.palette.divider}`,
                   p: 3,
                   cursor: 'grab',
                   display: 'flex',
@@ -674,13 +690,13 @@ function WorkflowEditorContent({ isNew = true, workflowId }: Props) {
                   gap: 3,
                   transition: 'all 0.15s ease',
                   '&:hover': {
-                    borderColor: '#7367F0',
+                    borderColor: displayColor,
                     transform: 'translateY(-2px)',
                     boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
                   }
                 }}
               >
-                <Avatar sx={{ bgcolor: `${item.color}15`, color: item.color, width: 32, height: 32 }}>
+                <Avatar sx={{ bgcolor: 'action.selected', color: displayColor, width: 32, height: 32 }}>
                   <Icon icon={item.icon} fontSize="1.1rem" />
                 </Avatar>
                 <Box>
@@ -688,18 +704,21 @@ function WorkflowEditorContent({ isNew = true, workflowId }: Props) {
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '10px' }}>{item.description}</Typography>
                 </Box>
               </Card>
-            ))}
+              )
+            })}
 
             {/* Logic Group */}
             <Typography variant="caption" sx={{ color: '#EA5455', fontWeight: 700, mt: 3 }}>LÓGICA (Evaluaciones)</Typography>
-            {NODE_PALETTE.filter(p => p.type === 'LOGIC').map((item) => (
+            {NODE_PALETTE.filter(p => p.type === 'LOGIC').map((item) => {
+              const displayColor = resolveNodeColor(item.nodeType, item.type)
+              return (
               <Card
                 key={item.nodeType}
                 draggable
                 onDragStart={(e) => handleSidebarDragStart(e, item)}
                 sx={{
                   bgcolor: '#1c2138',
-                  border: '1px dashed #EA545555',
+                  border: `1px dashed ${theme.palette.divider}`,
                   p: 3,
                   cursor: 'grab',
                   display: 'flex',
@@ -707,13 +726,13 @@ function WorkflowEditorContent({ isNew = true, workflowId }: Props) {
                   gap: 3,
                   transition: 'all 0.15s ease',
                   '&:hover': {
-                    borderColor: '#EA5455',
+                    borderColor: displayColor,
                     transform: 'translateY(-2px)',
                     boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
                   }
                 }}
               >
-                <Avatar sx={{ bgcolor: `${item.color}15`, color: item.color, width: 32, height: 32 }}>
+                <Avatar sx={{ bgcolor: 'action.selected', color: displayColor, width: 32, height: 32 }}>
                   <Icon icon={item.icon} fontSize="1.1rem" />
                 </Avatar>
                 <Box>
@@ -721,18 +740,21 @@ function WorkflowEditorContent({ isNew = true, workflowId }: Props) {
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '10px' }}>{item.description}</Typography>
                 </Box>
               </Card>
-            ))}
+              )
+            })}
 
             {/* Actions Group */}
             <Typography variant="caption" sx={{ color: '#28C76F', fontWeight: 700, mt: 3 }}>ACCIONES (Ejecuciones)</Typography>
-            {NODE_PALETTE.filter(p => p.type === 'ACTION').map((item) => (
+            {NODE_PALETTE.filter(p => p.type === 'ACTION').map((item) => {
+              const displayColor = resolveNodeColor(item.nodeType, item.type)
+              return (
               <Card
                 key={item.nodeType}
                 draggable
                 onDragStart={(e) => handleSidebarDragStart(e, item)}
                 sx={{
                   bgcolor: '#1c2138',
-                  border: '1px dashed #28C76F55',
+                  border: `1px dashed ${theme.palette.divider}`,
                   p: 3,
                   cursor: 'grab',
                   display: 'flex',
@@ -740,13 +762,13 @@ function WorkflowEditorContent({ isNew = true, workflowId }: Props) {
                   gap: 3,
                   transition: 'all 0.15s ease',
                   '&:hover': {
-                    borderColor: '#28C76F',
+                    borderColor: displayColor,
                     transform: 'translateY(-2px)',
                     boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
                   }
                 }}
               >
-                <Avatar sx={{ bgcolor: `${item.color}15`, color: item.color, width: 32, height: 32 }}>
+                <Avatar sx={{ bgcolor: 'action.selected', color: displayColor, width: 32, height: 32 }}>
                   <Icon icon={item.icon} fontSize="1.1rem" />
                 </Avatar>
                 <Box>
@@ -754,7 +776,8 @@ function WorkflowEditorContent({ isNew = true, workflowId }: Props) {
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '10px' }}>{item.description}</Typography>
                 </Box>
               </Card>
-            ))}
+              )
+            })}
           </Box>
         </Box>
 
