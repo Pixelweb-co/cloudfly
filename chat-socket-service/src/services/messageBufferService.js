@@ -155,8 +155,12 @@ class MessageBufferService {
                     // 6. ENVIAR DOUBLE CHECK AZUL (Read Receipt)
                     if (meta.instance && meta.remoteJid && meta.instance !== 'facebook') {
                         const lastMsg = messages[messages.length - 1] || {};
-                        const extMessageId = lastMsg.messageId || null;
-                        await evolutionClient.markRead(meta.instance, meta.remoteJid, extMessageId, false);
+                        const extMessageId = lastMsg.externalMessageId || null;
+                        if (extMessageId && typeof extMessageId === 'string') {
+                            await evolutionClient.markRead(meta.instance, meta.remoteJid, extMessageId, false);
+                        } else {
+                            logger.debug(`ℹ️ [DEBOUNCE] No external message id available for read receipt for ${meta.remoteJid}. Skipping.`);
+                        }
                     }
                 } else {
                     logger.error(`❌ [DEBOUNCE] Kafka publish failed for ${bufferKey}`);
