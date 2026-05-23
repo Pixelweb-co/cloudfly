@@ -656,6 +656,13 @@ class ChatService {
                 logger.error(`❌ [AI-RESPONSE] Error sending to Evolution API: ${evError.message}`);
             }
 
+            // 4.1 Si es transferencia (handoff), notificar a asesores
+            if (payload.isBotHandoff) {
+                this._notifyHandoffToAdvisors(tenantId, contact.company_id, contact, finalRespuesta, channel).catch(err => {
+                    logger.error(`❌ [AI-RESPONSE] Error in handoff notification: ${err.message}`);
+                });
+            }
+
             // 5. Notificar al Frontend vía Socket.IO
             const roomName = `tenant_${tenantId}_company_${contact.company_id}_contact_${contact.phone}`;
             const eventPayload = {
@@ -679,6 +686,98 @@ class ChatService {
         } catch (error) {
             logger.error(`❌ [AI-RESPONSE] Critical error: ${error.message}`);
             throw error;
+        }
+    }
+
+    /**
+     * Manejar la notificación de transferencia (handoff) a asesores
+     */
+    async _notifyHandoffToAdvisors(tenantId, companyId, contact, lastMessageContent, activeChannel) {
+        try {
+            let usersToNotify = [];
+            const dashboardUrl = `https://dashboard.cloudfly.com.co/marketing/contacts/${contact.id}`;
+
+            if (contact.assigned_user_ids && contact.assigned_user_ids.trim() !== '') {
+                // assigned_user_ids suele ser un string (e.g. JSON array o CSV)
+                let userIds = [];
+                try {
+                    const parsed = JSON.parse(contact.assigned_user_ids);
+                    if (Array.isArray(parsed)) userIds = parsed;
+                    else userIds = contact.assigned_user_ids.split(',');
+                } catch(e) {
+                    userIds = contact.assigned_user_ids.split(',');
+                }
+                
+                userIds = userIds.map(id => id.toString().trim()).filter(Boolean);
+
+                if (userIds.length > 0) {
+                    const placeholders = userIds.map(() => '?').join(',');
+                    const [assigned] = await db.execute(`
+                        SELECT u.email, u.nombres, u.apellidos, ct.phone 
+                        FROM users u 
+                        LEFT JOIN contacts ct ON u.contact_id = ct.id 
+                        WHERE u.id IN (${placeholders})
+                    `, userIds);
+                    usersToNotify = assigned;
+                }
+            }
+
+            // Si no hay usuarios asignados, buscamos administradores
+            if (usersToNotify.length === 0) {
+                const [admins] = await db.execute(`
+                    SELECT u.email, u.nombres, u.apellidos, ct.phone, c.nombre_cliente
+                    FROM users u 
+                    JOIN user_roles ur ON u.id = ur.user_id 
+                    JOIN roles r ON ur.role_id = r.id 
+                    JOIN clientes c ON u.customer_id = c.id
+                    LEFT JOIN contacts ct ON u.contact_id = ct.id
+                    WHERE u.customer_id = ? AND r.role_name IN ('ADMIN', 'MANAGER')
+                `, [tenantId]);
+                usersToNotify = admins;
+            }
+
+            if (usersToNotify.length === 0) {
+                logger.warn(`⚠️ [HANDOFF_NOTIFY] No advisors or admins found to notify for contact ${contact.id}`);
+                return;
+            }
+
+            for (const user of usersToNotify) {
+                if (activeChannel) {
+                    // Hay canal activo, intentamos enviar WhatsApp
+                    if (user.phone) {
+                        const isGroup = user.phone.includes('-') || user.phone.length > 15;
+                        const remoteJid = isGroup ? `${user.phone}@g.us` : `${user.phone}@s.whatsapp.net`;
+                        const msg = `🤖 *Nueva Transferencia de IA*\n\nHola ${user.nombres}, el agente virtual te ha transferido una conversación.\n\n👤 *Cliente:* ${contact.name}\n📱 *Teléfono:* ${contact.phone}\n💬 *Último mensaje:* "${lastMessageContent}"\n\n🔗 *Atender aquí:* ${dashboardUrl}`;
+                        
+                        await evolutionClient.sendMessage(activeChannel.instance_name, remoteJid, msg).catch(e => {
+                            logger.error(`❌ [HANDOFF_NOTIFY] Failed to send WA to ${user.phone}: ${e.message}`);
+                        });
+                    }
+                } else {
+                    // No hay canal activo, usamos correo
+                    if (user.email) {
+                        const notification = {
+                            to: user.email,
+                            subject: `👤 Nueva Transferencia de Chat - Cliente: ${contact.name}`,
+                            username: user.nombres,
+                            type: 'whatsapp-handoff',
+                            templateData: {
+                                clientName: contact.name,
+                                clientPhone: contact.phone,
+                                companyName: user.nombre_cliente || 'Tu Empresa',
+                                transferMessage: lastMessageContent,
+                                dashboardUrl: dashboardUrl
+                            }
+                        };
+                        
+                        await kafkaProducer.publishToEmailTopic(notification).catch(e => {
+                            logger.error(`❌ [HANDOFF_NOTIFY] Failed to publish email to ${user.email}: ${e.message}`);
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            logger.error(`❌ [HANDOFF_NOTIFY] Error computing handoff notification: ${error.message}`);
         }
     }
 
