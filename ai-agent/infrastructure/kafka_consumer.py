@@ -67,7 +67,7 @@ class AsyncKafkaConsumer:
             msg = self._consumer.poll(timeout=1.0)
             if msg is None:
                 continue
-            if msg.error():
+            if msg.error(): 
                 if msg.error().code() == KafkaError._PARTITION_EOF:
                     continue
                 logger.error("Kafka error", extra={"error": str(msg.error())})

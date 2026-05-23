@@ -15,7 +15,7 @@ conn.on('ready', () => {
   
   const cmd = 'docker logs --tail 1000 ai_agent';
 
-  conn.exec(cmd, (err, stream) => {
+  conn.exec(cmd, (err, stream) => { 
     if (err) {
       console.error(err);
       conn.end();
