@@ -93,12 +93,12 @@ public class ContactService {
                     boolean phoneChanged = !cleanPhone.equals(existingCleanPhone);
                     boolean emailChanged = (cleanEmail != null && !cleanEmail.equals(existingCleanEmail));
 
-                    Mono<Boolean> phoneExists = phoneChanged
+                    Mono<Boolean> phoneExists = (phoneChanged && !cleanPhone.isEmpty())
                             ? contactRepository.existsByPhoneAndCompanyIdAndIdNot(cleanPhone, companyId, id, tenantId)
                                     .map(count -> count > 0)
                             : Mono.just(false);
 
-                    Mono<Boolean> emailExists = emailChanged
+                    Mono<Boolean> emailExists = (emailChanged && !cleanEmail.isEmpty())
                             ? contactRepository.existsByEmailAndCompanyIdAndIdNot(cleanEmail, companyId, id, tenantId)
                                     .map(count -> count > 0)
                             : Mono.just(false);

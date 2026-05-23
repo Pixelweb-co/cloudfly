@@ -3,6 +3,7 @@ package com.app.dto;
 import com.app.persistence.entity.TenantEntity;
 import com.app.persistence.entity.RoleEntity;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class UserDto {
     private Long id;
@@ -67,6 +68,7 @@ public class UserDto {
     public void setUsername(String username) { this.username = username; }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+    @JsonProperty("isEnabled")
     public boolean isEnabled() { return isEnabled; }
     public void setEnabled(boolean enabled) { isEnabled = enabled; }
     public boolean isAccountNoExpired() { return accountNoExpired; }
