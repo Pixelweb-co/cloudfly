@@ -22,14 +22,35 @@ QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 COLLECTION_NAME = "products"
 
 try:
-    qdrant = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
-    # Ensure collection exists
-    if not qdrant.collection_exists(COLLECTION_NAME):
-        qdrant.create_collection(
-            collection_name=COLLECTION_NAME,
-            vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
-        )
-        logger.info(f"Créated Qdrant collection: {COLLECTION_NAME}")
+    qdrant = None
+
+    def get_qdrant_client():
+        global qdrant
+        if qdrant:
+            return qdrant
+        try:
+            qdrant = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
+            logger.info(f"Qdrant client initialized against {QDRANT_HOST}:{QDRANT_PORT}")
+        except Exception as e:
+            logger.error(f"Failed to connect to Qdrant: {e}")
+            qdrant = None
+        return qdrant
+
+    def ensure_collection_exists(collection_name):
+        client = get_qdrant_client()
+        if not client:
+            return False
+        try:
+            if not client.collection_exists(collection_name):
+                client.create_collection(
+                    collection_name=collection_name,
+                    vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
+                )
+                logger.info(f"Created Qdrant collection: {collection_name}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed ensuring collection {collection_name}: {e}")
+            return False
 except Exception as e:
     logger.error(f"Failed to connect to Qdrant: {e}")
 
@@ -142,17 +163,41 @@ def process_product_update(msg_value):
         
         # In java, we might pass categoryIds or imageUrls, if present we can add them here
         
-        qdrant.upsert(
-            collection_name=COLLECTION_NAME,
-            points=[
-                PointStruct(
-                    id=product_id, # Using MySQL native ID as vector ID
-                    vector=vector,
-                    payload=payload
-                )
-            ]
-        )
-        logger.info(f"✅ Vectorized product {product_id} for tenant {tenant_id}")
+        # Ensure collection exists before upsert; retry once if it was missing
+        if not ensure_collection_exists(COLLECTION_NAME):
+            logger.error(f"❌ Qdrant collection {COLLECTION_NAME} unavailable, aborting upsert for product {product_id}")
+            return
+
+        try:
+            qdrant.upsert(
+                collection_name=COLLECTION_NAME,
+                points=[
+                    PointStruct(
+                        id=product_id, # Using MySQL native ID as vector ID
+                        vector=vector,
+                        payload=payload
+                    )
+                ]
+            )
+            logger.info(f"✅ Vectorized product {product_id} for tenant {tenant_id}")
+        except Exception as e:
+            # If collection was deleted between check and upsert, try to recreate once
+            logger.error(f"Upsert failed for product {product_id}: {e}")
+            if ensure_collection_exists(COLLECTION_NAME):
+                try:
+                    qdrant.upsert(
+                        collection_name=COLLECTION_NAME,
+                        points=[
+                            PointStruct(
+                                id=product_id,
+                                vector=vector,
+                                payload=payload
+                            )
+                        ]
+                    )
+                    logger.info(f"✅ Vectorized product {product_id} after recreating collection")
+                except Exception as e2:
+                    logger.error(f"Retry upsert failed for product {product_id}: {e2}")
     except Exception as e:
         logger.error(f"❌ Error vectorizing product: {e}")
 
