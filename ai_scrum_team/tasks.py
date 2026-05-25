@@ -93,7 +93,7 @@ deployment_prep = Task(
     CRITICAL 3: You MUST use the 'Comment on Jira Issue' tool to post an update to the Jira Issue Keys stating that containers are running.
     CRITICAL 4: You MUST start your comment with "🤖 **DevOps Engineer**: " to identify yourself.
     CRITICAL 5: You have access to the 'Execute Console Command' tool. Use it to run 'docker-compose logs' to verify the containers are actually healthy and fixing any errors before passing to QA.
-    CRITICAL 6: After verifying the containers are running, you MUST use the 'Transition Jira Issue' tool to change the status of the Jira Issue Keys to 'In Review'.
+    CRITICAL 6: After verifying the containers are running, you MUST use the 'Transition Jira Issue' tool to change the status of the Jira Issue Keys to 'pruebas'.
     CRITICAL 7: If the sprint goal contains a LATEST COMMENT from the user, your Jira comment MUST acknowledge their feedback.
     ''',
     expected_output='Dockerfile and docker-compose.yml saved. Containers running. A Jira comment must be added.',

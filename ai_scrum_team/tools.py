@@ -109,6 +109,8 @@ def transition_issue(issue_key: str, status: str) -> str:
             match_keywords = ["curso", "progress", "in progress", "en curso"]
         elif any(w in status_lower for w in ["todo", "por hacer", "backlog", "abierto"]):
             match_keywords = ["por hacer", "todo", "to do", "tareas por hacer"]
+        elif any(w in status_lower for w in ["review", "revision", "revisión", "pruebas", "test", "validar"]):
+            match_keywords = ["pruebas", "review", "in review", "en pruebas", "validación", "testing"]
             
         # 1. Search using keywords mapping
         if match_keywords:
