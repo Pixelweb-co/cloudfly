@@ -11,10 +11,16 @@ class CampaignMessage:
     """
     Represents a structured marketing campaign message ready to be sent
     through the Evolution API (WhatsApp).
+
+    Attributes:
+        text: The message text content (WhatsApp Markdown formatted)
+        media_url: URL of the media file (image/video) if applicable
+        media_type: Type of media ('image', 'video', 'audio', 'document')
+        caption: Caption for media messages
     """
     text: str
     media_url: Optional[str] = None
-    media_type: Optional[str] = None          # "image", "video", "audio", "document"
+    media_type: Optional[str] = None
     caption: Optional[str] = None
 
     def has_media(self) -> bool:
@@ -52,7 +58,8 @@ class CampaignSummary:
         else:
             self.failed += 1
 
-    def __str__(self) -> str = (
-        f"CampaignSummary(product={self.product_name}, "
-        f"total={self.total_contacts}, sent={self.sent}, failed={self.failed})"
-    )
+    def __str__(self) -> str:
+        return (
+            f"CampaignSummary(product={self.product_name}, "
+            f"total={self.total_contacts}, sent={self.sent}, failed={self.failed})"
+        )
