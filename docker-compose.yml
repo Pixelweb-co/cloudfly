@@ -1,14 +1,22 @@
 version: "3.8"
 services:
-  app:
+  ia_scrum_team:
     build:
-      context: .
+      context: ./ai_scrum_team
       dockerfile: Dockerfile
-    container_name: cloudfly_app
+    image: ia_scrum_team:latest
+    container_name: ia_scrum_team
     restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
-      - .:/app
+      - ./ai_scrum_team:/app:ro
+      - ./model_cache:/cache
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: bridge
