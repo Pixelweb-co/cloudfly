@@ -254,9 +254,11 @@ El ciclo de desarrollo en Git, compilación de contenedores y despliegue en prod
 ### 3. Orquestación y Construcción del Frontend (`frontend_new`)
 *   **Compilación Local Obligatoria**: Debido al alto consumo de recursos (CPU, RAM) implicado en la compilación de la aplicación React/Next.js de `frontend_new`, **la construcción de esta imagen Docker NO se realiza dentro del servidor VPS**.
 *   **Procedimiento**:
-    1.  La imagen Docker de `frontend_new` se construye y compila localmente en la máquina de desarrollo (`docker build` local).
-    2.  Una vez compilada exitosamente la imagen local, se sube (push) al registro de contenedores privado configurado.
-    3.  Finalmente, el servidor VPS descarga la imagen ya compilada (`docker pull`) y reinicia el servicio correspondiente, evitando picos de carga en producción.
+    1.  La imagen Docker de `frontend_new` se construye y compila localmente en la máquina de desarrollo (`docker build` local con sus argumentos).
+    2.  Se exporta la imagen a un archivo `.tar` utilizando el comando `docker save`.
+    3.  Se sube el archivo `.tar` al servidor VPS a través de SCP.
+    4.  El servidor VPS carga la imagen localmente utilizando el comando `docker load`.
+    5.  Finalmente, se recrea y reinicia el contenedor correspondiente (`docker compose up -d`) asegurando que apunte a la imagen cargada, evitando así picos de carga en producción.
 
 ---
 > [!NOTE]

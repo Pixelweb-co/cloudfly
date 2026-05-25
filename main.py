@@ -1,1 +1,2 @@
-from marketing_agent.main import MarketingAgent
+# Root entry point for health checks
+from ai_scrum_team.main import app

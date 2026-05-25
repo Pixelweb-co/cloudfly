@@ -1,5 +1,6 @@
 // scratch/check_portainer.js
 // Verifies that the Portainer container is running and its HTTP API returns 200.
+// Allows optional HOST override via environment variable (default: localhost).
 
 const { execSync } = require('child_process');
 const http = require('http');
@@ -13,12 +14,18 @@ function containerRunning() {
   }
 }
 
-function httpStatus(callback) {
-  http
-    .get('http://localhost:9000/api/status', (res) => {
-      callback(null, res.statusCode);
-    })
-    .on('error', (err) => callback(err));
+function httpStatus(host, callback) {
+  const options = {
+    hostname: host,
+    port: 9000,
+    path: '/api/status',
+    method: 'GET',
+  };
+  const req = http.request(options, (res) => {
+    callback(null, res.statusCode);
+  });
+  req.on('error', (err) => callback(err));
+  req.end();
 }
 
 if (!containerRunning()) {
@@ -26,7 +33,8 @@ if (!containerRunning()) {
   process.exit(1);
 }
 
-httpStatus((err, status) => {
+const host = process.env.HOST || 'localhost';
+httpStatus(host, (err, status) => {
   if (err) {
     console.error('❌ HTTP request failed:', err.message);
     process.exit(1);
