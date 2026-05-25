@@ -1,40 +1,48 @@
-# Portainer Deployment on a VPS
+# Research – Portainer Deployment on VPS
 
-## 1. Requirements
-- **Port**: 9000 (host) – must be reachable from admin IPs.
-- **Volumes**:
-  - `/var/run/docker.sock:/var/run/docker.sock` (required for Docker API)
-  - `portainer_data:/data` (persistent UI data)
-- **Environment**: `TZ=America/Bogota` (optional)
+## Overview
+Portainer provides a web‑based UI to manage Docker containers, images, networks and volumes. Deploying it on a single‑node VPS is straightforward, but a few security considerations are required because the service needs access to the Docker socket.
 
-## 2. Security Recommendations
-- Do **not** expose via Traefik unless TLS termination is configured.
-- Restrict inbound traffic to port 9000 using firewall (e.g., ufw):
-  ```bash
-  ufw allow from <ADMIN_IP> to any port 9000
-  ufw deny 9000
-  ```
-- Keep Docker socket bind‑mount only on the host.
-- Use `restart: unless-stopped` to avoid endless restart loops.
-- Keep Portainer image up‑to‑date (`docker pull portainer/portainer-ce:latest`).
-
-## 3. Docker‑Compose Block (ready‑to‑copy)
+## Recommended Configuration
 ```yaml
 portainer:
   image: portainer/portainer-ce:latest
+  container_name: portainer
   restart: unless-stopped
   ports:
     - "9000:9000"
   volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    - portainer_data:/data
+    - /var/run/docker.sock:/var/run/docker.sock   # host Docker socket
+    - portainer_data:/data                         # persistent data volume
   environment:
     TZ: America/Bogota
   networks:
     - app-net
 ```
+- **Port**: `9000` (host → container). Direct exposure is acceptable for a VPS that is firewalled.
+- **Volumes**:
+  - `/var/run/docker.sock` gives Portainer full control over the Docker daemon – treat this as root access.
+  - `portainer_data` stores UI settings, users and persisted data.
+- **Restart policy**: `unless-stopped` matches the project's conventions.
+- **Network**: attach to existing `app-net` for internal communication.
 
-## 4. References
-- Official Portainer Docker install guide: https://docs.portainer.io/start/install/server/docker
-- Portainer security best practices: https://www.portainer.io/blog/portainer-security-best-practices
-- Securing Docker on a VPS (ufw example): https://www.digitalocean.com/community/tutorials/how-to-secure-docker-on-ubuntu-20-04
+## Security Recommendations
+1. **Firewall restriction** – allow inbound traffic to port `9000` only from trusted IP addresses (e.g., admin workstation). Example `ufw` rule:
+   ```bash
+   ufw allow from <trusted‑ip>/32 to any port 9000
+   ```
+2. **TLS/HTTPS** – Prefer terminating TLS with a lightweight reverse‑proxy (Nginx) in front of Portainer, or enable Portainer's built‑in TLS support.
+3. **Docker socket exposure** – The container runs with effectively root privileges on the host. Keep the VPS OS patched and limit SSH access.
+4. **Regular updates** – Schedule a weekly pull of the latest `portainer/portainer-ce` image and restart the service.
+5. **Backup** – Periodically back up the `portainer_data` volume:
+   ```bash
+   docker run --rm -v portainer_data:/data -v $(pwd):/backup alpine tar czf /backup/portainer_$(date +%F).tar.gz /data
+   ```
+
+## References
+- Official Portainer documentation: https://docs.portainer.io
+- Portainer security guide: https://docs.portainer.io/v2.9/deploy/security
+- Docker socket security considerations: https://docs.docker.com/engine/security/#docker-daemon-attack-surface
+
+---
+*Prepared by the System Architect and reviewed by the DevOps team.*

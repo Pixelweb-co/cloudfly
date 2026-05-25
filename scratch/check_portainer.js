@@ -1,39 +1,35 @@
 // scratch/check_portainer.js
-// Verifies that the Portainer container is running and its HTTP API returns 200.
-
-const { execSync } = require('child_process');
+// -------------------------------------------------
+// Portainer health‑check script
+// -------------------------------------------------
 const http = require('http');
+const { execSync } = require('child_process');
 
-function containerRunning() {
-  try {
-    const out = execSync('docker inspect -f "{{.State.Running}}" portainer', { encoding: 'utf8' }).trim();
-    return out === 'true';
-  } catch (e) {
-    return false;
-  }
-}
-
-function httpStatus(callback) {
-  http.get('http://localhost:9000/api/status', (res) => {
-    callback(null, res.statusCode);
-  }).on('error', (err) => callback(err));
-}
-
-if (!containerRunning()) {
-  console.error('❌ Portainer container is NOT running.');
+function fail(msg) {
+  console.error('❌', msg);
   process.exit(1);
 }
 
-httpStatus((err, status) => {
-  if (err) {
-    console.error('❌ HTTP request failed:', err.message);
-    process.exit(1);
-  }
-  if (status === 200) {
-    console.log('✅ Portainer is running and API returned 200.');
-    process.exit(0);
-  } else {
-    console.error(`❌ Unexpected HTTP status: ${status}`);
-    process.exit(1);
-  }
-});
+// 1️⃣ Verify container is running
+let running;
+try {
+  running = execSync(
+    'docker compose -f docker-compose-full-vps.yml ps --services --filter "status=running"'
+  ).toString().trim();
+} catch (e) {
+  fail('Docker compose command failed');
+}
+if (!running.includes('portainer')) {
+  fail('Portainer container is NOT running');
+}
+console.log('✅ Portainer container is running');
+
+// 2️⃣ HTTP health check
+http
+  .get('http://localhost:9000/api/status', (res) => {
+    if (res.statusCode !== 200) {
+      fail(`Portainer API returned status ${res.statusCode}`);
+    }
+    console.log('✅ Portainer API responded with 200');
+  })
+  .on('error', (e) => fail(`HTTP request failed: ${e.message}`));

@@ -1,22 +1,23 @@
 # Existing content omitted for brevity
-# -------------------------------------------------
-# Portainer – UI for Docker management.
-# Exposed directly on host port 9000 (no Traefik) as
-# requested by the Product Owner. Direct exposure
-# simplifies access on a single‑node VPS and avoids
-# an extra reverse‑proxy layer. Access should be
-# limited via host firewall (allow only trusted IPs).
-# -------------------------------------------------
-portainer:
-  image: portainer/portainer-ce:latest
-  container_name: portainer
-  restart: unless-stopped
-  ports:
-    - "9000:9000"
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    - portainer_data:/data
-  environment:
-    TZ: America/Bogota
-  networks:
-    - app-net
+  # -------------------------------------------------
+  # Portainer – UI for Docker management.
+  # Exposed directly on host port 9000 (no Traefik) as
+  # requested by the Product Owner. Direct exposure
+  # simplifies access on a single‑node VPS and avoids
+  # an extra reverse‑proxy layer. Access should be
+  # limited via host firewall (allow only trusted IPs).
+  # -------------------------------------------------
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped          # restart policy aligned with spec
+    ports:
+      - "9000:9000"                  # host‑port exposure, not behind Traefik
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    environment:
+      TZ: America/Bogota
+    networks:
+      - app-net
+# ... rest of file unchanged
