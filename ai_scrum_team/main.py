@@ -18,6 +18,30 @@ from agents import product_owner, system_architect, software_developer, qa_engin
 from tasks import sprint_planning, research_task, development_task, quality_assurance, deployment_prep, documentation_task, frontend_development_task
 from connector import ScrumConnector
 
+def record_lesson_learned(error_msg, context_area="General"):
+    """
+    Appends a new lesson learned entry to lessons_learned.md to continuously train
+    and improve the Scrum Team from its failures.
+    """
+    import os
+    import time
+    lessons_path = r"C:\apps\cloudfly\ai_scrum_team\lessons_learned.md"
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Extract clean error message to keep it token efficient
+    clean_err = str(error_msg).split(" - {'error':")[0] # Strip verbose raw JSON structures
+    
+    entry = f"\n\n## 🔄 Autocorrección y Aprendizaje Continuo ({timestamp}) - Área: {context_area}\n"
+    entry += f"*   **Fallo Detectado**: `{clean_err}`\n"
+    entry += f"*   **Lección y Acción Correctiva**: Cuando ocurra este error, el equipo debe re-evaluar la sintaxis o variables en juego, limpiar el búfer de rate limits, rotar las claves del pool de OpenRouter de inmediato y simplificar el volumen de datos consultado para reducir la carga de tokens.\n"
+    
+    try:
+        with open(lessons_path, "a", encoding="utf-8") as lf:
+            lf.write(entry)
+        print(f"🧠 [Memoria Scrum]: Nuevo aprendizaje registrado con éxito en 'lessons_learned.md' sobre: {clean_err}")
+    except Exception:
+        pass
+
 def print_jira_sprint_stats():
     import re
     import ast
@@ -113,6 +137,18 @@ def generate_codebase_context():
         return "No existing code found (C:\\apps\\cloudfly directory does not exist or is empty)."
         
     context = []
+    
+    # 0. Load the continuous lessons learned/memory log so agents learn from history
+    lessons_path = r"C:\apps\cloudfly\ai_scrum_team\lessons_learned.md"
+    if os.path.exists(lessons_path):
+        try:
+            with open(lessons_path, 'r', encoding='utf-8') as lf:
+                lessons_content = lf.read()
+            context.append("=== 🧠 APRENDIZAJES Y LECCIONES APRENDIDAS HISTÓRICAS (MEMORIA SCRUM) ===")
+            context.append(lessons_content)
+            context.append("=======================================================================\n")
+        except Exception:
+            pass
     
     # 1. Read a highly summarized preview of spec.md to save context space
     spec_path = os.path.join(base_dir, "spec.md")
@@ -566,6 +602,8 @@ Historial de Comentarios:
             sprint_number += 1
         except Exception as crew_err:
             print(f"\n❌ [Scrum Master]: Error crítico durante la ejecución del Crew: {crew_err}")
+            # Record lesson learned to build continuous memory database
+            record_lesson_learned(crew_err, "CrewExecution")
             print("🔄 [Scrum Master]: Se ha detectado un fallo. Reiniciando la consulta pendiente y limpiando límites temporales...")
             if hasattr(connector, 'local_rate_limits'):
                 connector.local_rate_limits.clear()
