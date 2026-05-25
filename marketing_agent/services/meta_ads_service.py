@@ -1,5 +1,5 @@
 import requests
-from ..config import fb_config
+from ..config import FacebookConfig, fb_config
 
 class FacebookAPI:
     """Thin wrapper around the Facebook Graph API.
@@ -12,8 +12,10 @@ class FacebookAPI:
 
     BASE_URL = "https://graph.facebook.com"
 
-    def __init__(self, config=fb_config):
-        self.config = config
+    def __init__(self, config=None):
+        # Create a fresh config instance if none provided to ensure
+        # we pick up any environment variables set at runtime.
+        self.config = config if config is not None else FacebookConfig()
         if not self.config.is_valid():
             raise ValueError("Facebook credentials are not fully configured")
 
@@ -59,8 +61,8 @@ class MetaAdsService:
     creation, ad set management, etc.) can be added here.
     """
 
-    def __init__(self):
-        self.fb_api = FacebookAPI()
+    def __init__(self, config=None):
+        self.fb_api = FacebookAPI(config)
 
     def verify_token(self) -> bool:
         """Return ``True`` if the stored access token is valid.

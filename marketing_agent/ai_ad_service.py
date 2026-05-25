@@ -33,19 +33,25 @@ def _build_prompt(product: Dict) -> str:
     )
 
 async def generate_image_ad(product: Dict) -> bytes:
-    """Call OpenRouter to generate an image and return raw PNG bytes."""
+    """
+    Calls OpenRouter Nemotron‑3‑nano‑omni‑30b‑a3b‑reasoning to generate an image.
+    Returns raw image bytes (PNG).
+    """
     if not API_KEY:
         raise RuntimeError("OPENROUTER_API_KEY not configured")
+
     payload = {
         "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
         "messages": [{"role": "user", "content": _build_prompt(product)}],
         "max_tokens": 2048,
         "temperature": 0.7,
     }
+
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(OPENROUTER_URL, json=payload, headers=HEADERS)
         resp.raise_for_status()
         data = resp.json()
+
     try:
         b64_image = data["choices"][0]["message"]["content"]
         return base64.b64decode(b64_image)
