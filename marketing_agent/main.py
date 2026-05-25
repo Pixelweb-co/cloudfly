@@ -1,6 +1,9 @@
 import time
 import random
 import logging
+import signal
+import sys
+import os
 import mysql.connector
 from config import Config
 from services.product_service import ProductService, ProductNotFoundException
@@ -14,6 +17,32 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Global flag for graceful shutdown
+_shutdown_requested = False
+
+
+def signal_handler(signum, frame):
+    """
+    Handle SIGTERM/SIGINT for graceful shutdown.
+    
+    Sets a flag to stop the main loop cleanly after the current operation completes.
+    This ensures:
+    - In-flight messages are completed
+    - Database connections are closed properly
+    - Resources are released before exit
+    """
+    global _shutdown_requested
+    sig_name = signal.Signals(signum).name
+    logger.info(f"⚠️ Received {sig_name} (signal {signum}). Initiating graceful shutdown...")
+    logger.info("   The agent will stop after the current operation completes.")
+    _shutdown_requested = True
+
+
+# Register signal handlers for graceful shutdown
+signal.signal(signal.SIGTERM, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)
+
 
 class MarketingAgent:
     """
@@ -51,23 +80,28 @@ class MarketingAgent:
         Returns:
             list: List of contact dictionaries with id, name, email, phone
         """
-        conn = mysql.connector.connect(**self.db_config)
-        cursor = conn.cursor(dictionary=True)
-        
-        query = """
-            SELECT id, name, email, phone 
-            FROM contacts 
-            WHERE tenant_id = %s 
-              AND company_id = %s 
-              AND is_active = 1
-        """
-        cursor.execute(query, (tenant_id, company_id))
-        contacts = cursor.fetchall()
-        
-        cursor.close()
-        conn.close()
-        
-        return contacts
+        conn = None
+        cursor = None
+        try:
+            conn = mysql.connector.connect(**self.db_config)
+            cursor = conn.cursor(dictionary=True)
+            
+            query = """
+                SELECT id, name, email, phone 
+                FROM contacts 
+                WHERE tenant_id = %s 
+                  AND company_id = %s 
+                  AND is_active = 1
+            """
+            cursor.execute(query, (tenant_id, company_id))
+            contacts = cursor.fetchall()
+            
+            return contacts
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
     
     def generate_ai_ad(self, product: dict) -> dict:
         """
@@ -95,13 +129,25 @@ class MarketingAgent:
         Args:
             generate_ad: Whether to generate AI ad copy before sending
         """
+        global _shutdown_requested
+        _shutdown_requested = False
+        
         logger.info("🚀 Marketing Agent started")
+        logger.info(f"   PID: {os.getpid()}")
+        logger.info(f"   DB: {Config.DB_HOST}:{Config.DB_PORT}/{Config.DB_NAME}")
+        logger.info(f"   Backend: {Config.BACKEND_URL}")
+        logger.info(f"   Evolution API: {Config.EVOLUTION_API_URL}")
         
         try:
             # Step 1: Fetch active product with image
             logger.info(f"📦 Fetching active product for tenant {Config.TENANT_ID}...")
             product = self.product_service.get_active_product_with_image(Config.TENANT_ID)
             logger.info(f"✅ Product found: {product.get('productName')}")
+            
+            # Check for shutdown after long-running operation
+            if _shutdown_requested:
+                logger.info("🛑 Shutdown requested. Stopping before campaign execution.")
+                return
             
             # Step 2: Build campaign message
             logger.info("📝 Building campaign message...")
@@ -114,6 +160,11 @@ class MarketingAgent:
                 ai_ad = self.generate_ai_ad(product)
                 if ai_ad:
                     logger.info(f"📢 AI Ad Headline: {ai_ad.get('headline')}")
+            
+            # Check for shutdown before sending messages
+            if _shutdown_requested:
+                logger.info("🛑 Shutdown requested. Stopping before message sending.")
+                return
             
             # Step 4: Fetch target contacts
             logger.info(f"👥 Fetching contacts for tenant {Config.TENANT_ID}...")
@@ -129,6 +180,11 @@ class MarketingAgent:
             failed = 0
             
             for idx, contact in enumerate(contacts, 1):
+                # Check for shutdown signal before each message
+                if _shutdown_requested:
+                    logger.info(f"🛑 Shutdown requested. Stopping campaign at message {idx}/{len(contacts)}.")
+                    break
+                
                 phone = contact.get("phone", "")
                 
                 # Clean phone number - remove non-digit characters
@@ -160,7 +216,15 @@ class MarketingAgent:
                         delay += batch_pause
                     
                     logger.info(f"⏳ Waiting {delay/1000}s before next message...")
-                    time.sleep(delay / 1000)
+                    
+                    # Interruptible sleep - check for shutdown during delay
+                    sleep_start = time.time()
+                    sleep_duration = delay / 1000
+                    while time.time() - sleep_start < sleep_duration:
+                        if _shutdown_requested:
+                            logger.info("🛑 Shutdown requested during delay. Stopping immediately.")
+                            break
+                        time.sleep(min(0.5, sleep_duration - (time.time() - sleep_start)))
             
             # Summary
             logger.info(f"""
@@ -182,6 +246,8 @@ class MarketingAgent:
             logger.error(f"❌ Product error: {e}")
         except Exception as e:
             logger.error(f"❌ Unexpected error: {e}", exc_info=True)
+        finally:
+            logger.info("👋 Marketing Agent shutting down gracefully.")
 
 
 if __name__ == "__main__":

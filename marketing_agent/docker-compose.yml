@@ -26,11 +26,17 @@ services:
       - BATCH_SIZE=${BATCH_SIZE:-20}
       - BATCH_PAUSE_MS=${BATCH_PAUSE_MS:-30000}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - META_ACCESS_TOKEN=${META_ACCESS_TOKEN}
+      - META_AD_ACCOUNT_ID=${META_AD_ACCOUNT_ID}
+      - META_PAGE_ID=${META_PAGE_ID}
     networks:
       - app-net
     depends_on:
       - backend-api
       - evolution-api
+    # Graceful shutdown configuration
+    stop_grace_period: 30s
+    stop_signal: SIGTERM
 
 networks:
   app-net:
