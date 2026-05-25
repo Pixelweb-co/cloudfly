@@ -1,0 +1,41 @@
+services:
+  freeswitch:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: freeswitch-pbx:latest
+    container_name: freeswitch-pbx
+    restart: unless-stopped
+    ports:
+      - "5060:5060/udp"    # SIP UDP
+      - "5060:5060/tcp"    # SIP TCP
+      - "5061:5061/tcp"    # SIP TLS
+      - "5080:5080/udp"    # SIP UDP (alternate)
+      - "5080:5080/tcp"    # SIP TCP (alternate)
+      - "8021:8021/tcp"    # Event Socket
+      - "16384-16484:16384-16484/udp"  # RTP Media
+    volumes:
+      - ./conf:/etc/freeswitch
+      - ./log:/var/log/freeswitch
+      - ./recordings:/var/lib/freeswitch/recordings
+    environment:
+      - FREESWITCH_LOG_LEVEL=info
+      - FREESWITCH_SIP_PORT=5060
+      - FREESWITCH_RTP_START_PORT=16384
+      - FREESWITCH_RTP_END_PORT=16484
+    healthcheck:
+      test: ["CMD", "fs_cli", "-x", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - pbx-network
+
+networks:
+  pbx-network:
+    name: freeswitch-pbx-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.0.0/24
