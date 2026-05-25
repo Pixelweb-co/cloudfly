@@ -59,6 +59,13 @@ CloudFly is built on a cutting-edge **Reactive Microservices** architecture, ens
 - **Smart Audience Segregation**: AI-assisted list management.
 - **Real-time Metrics**: Track conversion rates and engagement in real-time.
 
++### 📣 Meta Ads Integration
++- **Automated Ad Creation**: Create Facebook/Instagram ads programmatically
++- **AI-Powered Copy**: Generate ad content using OpenRouter/NVIDIA Nemotron
++- **Image Upload**: Automatic product image upload to Meta
++- **Campaign Management**: Full campaign lifecycle (Campaign → Ad Set → Ad)
++- **Colombia Targeting**: Pre-configured targeting for Colombian market
+
 ### 🤖 AI Conversational Engine
 - **Customizable Chatbots**: Deploy intelligent bots tailored to your industry.
 - **Lead Gen Workers**: Automated scraping and lead identification (Apify).
@@ -108,6 +115,12 @@ graph TD
         
         API & Notif & AI_Agent <--> Kafka
     end
+
+    subgraph "External Services"
+        META[Meta Ads API]
+    end
+
+    Mkt --> META
 ```
 
 ---
@@ -128,9 +141,32 @@ git pull origin main
 docker compose -f docker-compose-full-vps.yml up -d --build
 ```
 
+### Meta Ads Commands
+```bash
+# Generate AI ad copy only
+cd marketing_agent
+python main.py --generate-ad
+
+# Create Meta image ad
+python main.py --create-meta-ads
+
+# Full campaign with Meta ads
+python main.py --generate-ad --create-meta-ads
+
+# Specify daily budget (in COP)
+python main.py --create-meta-ads --meta-ads-budget 100000
+```
+
+### Meta Marketing API Configuration
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `META_ACCESS_TOKEN` | System User Access Token | `EAABsbCS1iHgBO...` |
+| `META_AD_ACCOUNT_ID` | Ad Account ID (format: `act_XXX`) | `act_123456789` |
+| `META_PAGE_ID` | Facebook Page ID | `123456789012345` |
+
 ---
+
 <p align="center">
   <b>© 2026 CloudFly AI - Intelligent Business Operating System</b><br>
   <i>Empowering the next generation of automated enterprises.</i>
 </p>
-

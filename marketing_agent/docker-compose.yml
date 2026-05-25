@@ -1,15 +1,22 @@
-version: '3.8'
+version: "3.8"
 services:
-  marketing-agent:
-    build: ./marketing_agent
-    container_name: marketing-agent
-    env_file:
-      - ./marketing_agent/.env.example
-    volumes:
-      - ./marketing_agent:/app
+  marketing_agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: marketing_agent
     restart: unless-stopped
+    environment:
+      META_ACCESS_TOKEN: ${META_ACCESS_TOKEN}
+      META_AD_ACCOUNT_ID: ${META_AD_ACCOUNT_ID}
+      META_PAGE_ID: ${META_PAGE_ID}
     networks:
       - app-net
+      - kafka-net
+    command: ["python", "main.py"]
+
 networks:
   app-net:
+    external: true
+  kafka-net:
     external: true

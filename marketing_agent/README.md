@@ -146,6 +146,12 @@ OPENROUTER_API_KEY=tu_openrouter_key
 META_ACCESS_TOKEN=tu_meta_token
 META_AD_ACCOUNT_ID=act_tu_account_id
 META_PAGE_ID=tu_page_id
+META_APP_ID=123456789012345
+META_APP_SECRET=your_app_secret
+META_SYSTEM_USER_ID=1234567890123456
+META_API_VERSION=v18.0
+META_IMAGE_MAX_SIZE_MB=8
+META_IMAGE_MAX_TEXT_PERCENTAGE=20
 ```
 
 ## Uso
@@ -300,6 +306,75 @@ Producto + Contenido IA
 4. Obtén el Ad Account ID desde Ads Manager
 5. Obtén el Page ID desde tu página de Facebook
 
+## Meta Setup Guide
+
+### Step 1: Create Meta Developer Account
+1. Go to [Meta for Developers](https://developers.facebook.com/)
+2. Click "Get Started" and create a developer account
+3. Verify your account with phone number
+
+### Step 2: Create a Business App
+1. In Meta for Developers, click "Create App"
+2. Select "Business" as app type
+3. Fill in app details and create
+
+### Step 3: Get Access Token
+1. Go to Business Manager → System Users
+2. Create a new System User
+3. Assign permissions: `ads_management`, `pages_read_engagement`, `business_management`
+4. Generate Access Token with these permissions
+
+### Step 4: Find Ad Account ID
+1. Go to [Ads Manager](https://www.facebook.com/adsmanager/)
+2. Click on account dropdown
+3. Find your Account ID (format: `act_XXXXXXXXXXXXXXX`)
+
+### Step 5: Find Page ID
+1. Go to your Facebook Page
+2. Click "About" → "Page Transparency"
+3. Find Page ID at bottom of section
+
+## Troubleshooting
+
+### Common API Errors
+
+| Error Code | Description | Solution |
+|------------|-------------|----------|
+| 17 | User-level throttling | Reduce request rate, wait before retrying |
+| 32 | Page-level throttling | Reduce request rate, wait before retrying |
+| 613 | Rate limit exceeded | Implement exponential backoff |
+
+### Image Upload Issues
+- **Error**: "Invalid image format"
+  - **Solution**: Use JPEG, PNG, or WebP formats only
+- **Error**: "Image too large"
+  - **Solution**: Keep images under 8MB
+- **Error**: "Image rejected"
+  - **Solution**: Ensure less than 20% text coverage
+
+### Authentication Problems
+- **Error**: "Invalid OAuth token"
+  - **Solution**: Token may expire, generate new System User token
+- **Error**: "Insufficient permissions"
+  - **Solution**: Verify `ads_management` permission is granted
+- **Error**: "Ad account not found"
+  - **Solution**: Check META_AD_ACCOUNT_ID format (must include 'act_' prefix)
+
+## Image Specifications
+
+### Recommended Dimensions
+| Placement | Size | Aspect Ratio |
+|-----------|------|--------------|
+| Facebook Feed | 1200 x 628 px | 1.91:1 |
+| Instagram Feed | 1080 x 1080 px | 1:1 |
+| Instagram Stories | 1080 x 1920 px | 9:16 |
+
+### File Requirements
+- **Formats**: JPEG, PNG, WebP, BMP, TIFF
+- **Max Size**: 8 MB
+- **Min Size**: 1 KB (recommended 100+ KB)
+- **Text Coverage**: Less than 20%
+
 ## Manejo de errores
 
 El servicio incluye:
@@ -307,6 +382,20 @@ El servicio incluye:
 - **Backoff exponencial**: Espera progresiva entre reintentos
 - **Manejo de timeouts**: Reintentos en caso de timeout
 - **Validación de configuración**: Verifica credenciales al inicio
+
+## Variables de Entorno
+
+| Variable | Descripción | Ejemplo |
+|----------|-------------|---------|
+| META_APP_ID | ID de la aplicación de Meta creada en el paso 2 | 123456789012345 |
+| META_APP_SECRET | Secreto de la aplicación de Meta | a1b2c3d4e5f6g7h8i9j0 |
+| META_SYSTEM_USER_ID | ID del System User creado en el paso 3 | 1234567890123456 |
+| META_ACCESS_TOKEN | Token de acceso de larga duración con permisos requeridos | EAAGm0PX4ZC... |
+| META_AD_ACCOUNT_ID | ID de la cuenta de anuncios (incluye prefijo `act_`) | act_123456789012345 |
+| META_PAGE_ID | ID de la página de Facebook vinculada | 112233445566778 |
+| META_API_VERSION | Versión de la Graph API a usar | v18.0 |
+| META_IMAGE_MAX_SIZE_MB | Tamaño máximo permitido para imágenes (MB) | 8 |
+| META_IMAGE_MAX_TEXT_PERCENTAGE | Porcentaje máximo de texto en la imagen | 20 |
 
 ## Contribución
 

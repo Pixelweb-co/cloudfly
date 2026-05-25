@@ -1,5 +1,5 @@
 import requests
-from .config import fb_config
+from ..config import fb_config
 
 class FacebookAPI:
     """Thin wrapper around the Facebook Graph API.
