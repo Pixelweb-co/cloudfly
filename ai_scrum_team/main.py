@@ -96,16 +96,16 @@ def check_pending_jira_tasks():
 
 def generate_codebase_context():
     r"""
-    Scans the C:\apps\cloudfly directory tree and generates a clean, optimized markdown
-    context representation to be injected into agent prompts.
-    To avoid overloading the LLM's context window and causing empty responses,
-    it limits the inline spec.md content and filters out heavy or irrelevant files/folders,
-    urging the agents to read files in parts or fully using their tools.
+    Scans the C:\apps\cloudfly directory tree at a limited depth of level 1 and generates a clean,
+    highly optimized markdown context representation to be injected into agent prompts.
+    This prevents overloading the LLM's context window and solves empty response errors,
+    guiding agents to read folders and files in parts using their native tools.
     """
     base_dir = r"C:\apps\cloudfly"
     exclude_dirs = {
         '.git', 'node_modules', '__pycache__', 'venv', '.env', 'db', '.gemini', 'tmp',
-        '.cloudflared', '.vscode', 'chatwoot', 'apache2', 'debug_reports', 'vuexy', 'terraform'
+        '.cloudflared', '.vscode', 'chatwoot', 'apache2', 'debug_reports', 'vuexy', 'terraform',
+        'screenshots', 'docs'
     }
     exclude_extensions = {'.log', '.txt', '.tar', '.zip', '.exe', '.png', '.jpg', '.jpeg', '.gif'}
     
@@ -114,20 +114,19 @@ def generate_codebase_context():
         
     context = []
     
-    # 1. Read a summarized preview of spec.md as the Master Reference
+    # 1. Read a highly summarized preview of spec.md to save context space
     spec_path = os.path.join(base_dir, "spec.md")
     if os.path.exists(spec_path):
         try:
             with open(spec_path, 'r', encoding='utf-8') as sf:
                 spec_content = sf.read()
             
-            # If the spec is long, we send the first part and instruct the agents to read the rest using tools
-            limit = 3500
+            limit = 1500
             if len(spec_content) > limit:
-                context.append("=== SPECIFICATION MASTER REFERENCE (spec.md) - PRIMERA PARTE ===")
+                context.append("=== SPECIFICATION MASTER REFERENCE (spec.md) - RESUMEN CORTO ===")
                 context.append(spec_content[:limit])
-                context.append(f"\n[!] AVISO SCRUM MASTER: El archivo spec.md es muy largo ({len(spec_content)} caracteres). Se ha enviado solo la primera parte para no sobrecargar el prompt.")
-                context.append("UTILIZA LA HERRAMIENTA DE LECTURA DE ARCHIVOS para leer las partes específicas o el archivo completo si necesitas más detalles.")
+                context.append("\n[!] AVISO SCRUM MASTER: El archivo spec.md es muy largo. Se ha incluido un resumen corto.")
+                context.append("UTILIZA LA HERRAMIENTA 'Read Code File' para leer spec.md completo si requieres más detalles técnicos.")
                 context.append("================================================\n")
             else:
                 context.append("=== SPECIFICATION MASTER REFERENCE (spec.md) ===")
@@ -136,12 +135,18 @@ def generate_codebase_context():
         except Exception as e:
             print(f"[!] Advertencia al leer spec.md para el contexto: {e}")
 
-    context.append("=== EXISTING DIRECTORY TREE (OPTIMIZED) ===")
+    context.append("=== EXISTING DIRECTORY TREE (OPTIMIZED DEPTH 1) ===")
     
-    # Build tree with heavy exclusions to save prompt space and allow models to process without errors
+    # Build tree with depth limit to 1 level (only root files and first-level folders)
     for root, dirs, files in os.walk(base_dir):
         dirs[:] = [d for d in dirs if not d.startswith('.') and d not in exclude_dirs]
         level = root.replace(base_dir, '').count(os.sep)
+        
+        # Stop descending deeper than level 1
+        if level >= 2:
+            dirs[:] = []
+            continue
+            
         indent = ' ' * 4 * level
         subfolder = os.path.basename(root)
         if subfolder:
@@ -165,8 +170,9 @@ def generate_codebase_context():
             except Exception:
                 pass
             
-    context.append("\n[!] IMPORTANTE PARA LOS AGENTES: Para ahorrar espacio de contexto y evitar respuestas vacías (None/empty response), el árbol de directorios ha sido optimizado y los archivos pesados no se listan ni se leen completos directamente en esta prompt.")
-    context.append("POR FAVOR, envía tus solicitudes y lee el código EN PARTES usando la herramienta 'Read Code File' para acceder al contenido real de cualquier archivo de código o especificación cuando lo requieras.")
+    context.append("\n[!] NOTA DE OPTIMIZACIÓN DEL SCRUM MASTER:")
+    context.append("Para evitar desbordar tu ventana de contexto y prevenir fallos, el árbol de directorios ha sido limitado al nivel 1 de profundidad.")
+    context.append("Por favor, procesa el desarrollo por partes: utiliza la herramienta 'List Directory Files' con parámetros específicos para ver archivos internos de subcarpetas (ej. 'backend/src/main/...') y la herramienta 'Read Code File' para leer archivos específicos bajo demanda.")
     return "\n".join(context)
 
 def run_sprint():
