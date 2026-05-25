@@ -293,3 +293,51 @@ class ScrumConnector:
                     break
         except Exception as e:
             print(f"[!] Error al rebalancear tareas: {e}")
+
+    def get_healthy_api_key(self, current_key=None, mark_rate_limited=False):
+        """
+        Retorna una clave de OpenRouter saludable del pool que no haya alcanzado el límite.
+        Si mark_rate_limited=True, registra 'current_key' como limitada en Redis por 12 horas.
+        """
+        import os
+        pool_str = os.getenv("OPENROUTER_KEYS_POOL") or os.getenv("OPENROUTER_API_KEY")
+        if not pool_str:
+            return None
+            
+        keys = [k.strip() for k in pool_str.split(",") if k.strip()]
+        if not keys:
+            return None
+            
+        try:
+            # 1. Si se reportó un rate limit, registrar la clave como limitada en Redis
+            if mark_rate_limited and current_key:
+                # Almacenar el lock de rate limit por 12 horas (43200 segundos)
+                self.redis_client.set(f"scrum:rate_limit:{current_key}", "limited", ex=43200)
+                print(f"⚠️ [Balanceador]: Registrado rate limit para la clave ...{current_key[-8:]} en Redis.")
+                
+            # 2. Filtrar el pool obteniendo solo las claves saludables (sin registro de rate limit)
+            healthy_keys = []
+            for k in keys:
+                is_limited = self.redis_client.get(f"scrum:rate_limit:{k}")
+                if not is_limited:
+                    healthy_keys.append(k)
+                    
+            if not healthy_keys:
+                print("🚨 [Balanceador] ADVERTENCIA: Todas las claves del pool han alcanzado su límite. Reusando la primera clave.")
+                return keys[0]
+                
+            # 3. Obtener el índice de este worker en el clúster
+            workers = list(self.redis_client.smembers("scrum:workers"))
+            active_workers = sorted([w for w in workers if self.redis_client.get(f"scrum:heartbeat:{w}")])
+            if self.instance_id not in active_workers:
+                active_workers.append(self.instance_id)
+                active_workers.sort()
+                
+            index = active_workers.index(self.instance_id)
+            
+            # 4. Asignar clave saludable de forma balanceada
+            assigned_key = healthy_keys[index % len(healthy_keys)]
+            return assigned_key
+        except Exception as e:
+            print(f"[!] Error al obtener clave saludable: {e}")
+            return keys[0]

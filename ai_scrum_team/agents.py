@@ -17,7 +17,7 @@ local_llm = LLM(
 # Owl Alpha is 100% free on OpenRouter, has a massive 1M token context window, 
 # and is specifically designed for agentic workloads and tool use, making it ideal for CrewAI!
 openrouter_llm = LLM(
-    model="openrouter/openrouter/owl-alpha",
+    model="openrouter/openrouter/free",
     base_url="https://openrouter.ai/api/v1",
     api_key=os.getenv("OPENROUTER_API_KEY"),
     temperature=0.2

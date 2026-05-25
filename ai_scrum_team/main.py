@@ -196,6 +196,20 @@ def run_sprint():
         atexit.register(connector.shutdown)
         # Intentar elegir Master
         connector.elect_master()
+        
+        # Balanceador dinámico de cuentas y tokens por worker al iniciar
+        active_key = connector.get_healthy_api_key()
+        if active_key:
+            print(f"\n🔑 [Balanceador de Cuentas]: Clave primaria asignada desde el pool: ...{active_key[-8:]}")
+            os.environ["OPENROUTER_API_KEY"] = active_key
+            os.environ["OPENAI_API_KEY"] = active_key
+            
+            # Actualizar todos los agentes en memoria
+            for agent in [product_owner, system_architect, software_developer, frontend_developer, devops_engineer, technical_writer, qa_engineer]:
+                if hasattr(agent, 'llm') and agent.llm:
+                    agent.llm.api_key = active_key
+                    if hasattr(agent.llm, 'kwargs') and isinstance(agent.llm.kwargs, dict):
+                        agent.llm.kwargs['api_key'] = active_key
 
     sprint_number = 1
     initial_feature_set = False
@@ -207,7 +221,7 @@ def run_sprint():
         os.environ["OPENAI_API_KEY"] = os.environ.get("OPENROUTER_API_KEY", "sk-or-...")
         os.environ["OPENAI_API_BASE"] = "https://openrouter.ai/api/v1"
         os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
-        os.environ["OPENAI_MODEL_NAME"] = "openrouter/openrouter/owl-alpha"
+        os.environ["OPENAI_MODEL_NAME"] = "openrouter/openrouter/free"
         
         scrum_crew = Crew(
             agents=[product_owner, system_architect, software_developer, frontend_developer, devops_engineer, technical_writer, qa_engineer],
@@ -218,11 +232,42 @@ def run_sprint():
             verbose=True
         )
         
-        result = scrum_crew.kickoff(inputs={
-            "feature": sprint_goal,
-            "codebase_context": codebase_ctx,
-            "jira_backlog_context": JIRA_ctx
-        })
+        try:
+            result = scrum_crew.kickoff(inputs={
+                "feature": sprint_goal,
+                "codebase_context": codebase_ctx,
+                "jira_backlog_context": JIRA_ctx
+            })
+        except Exception as e:
+            err_msg = str(e)
+            if "429" in err_msg or "rate limit" in err_msg.lower():
+                current_key = os.environ.get("OPENROUTER_API_KEY")
+                print(f"\n⚠️ [Rotación de API Key]: Se detectó un error de Rate Limit (429) en la clave ...{current_key[-8:] if current_key else 'None'}.")
+                
+                # Marcar la clave actual como limitada y obtener una nueva clave saludable desde Redis
+                new_key = connector.get_healthy_api_key(current_key=current_key, mark_rate_limited=True)
+                if new_key and new_key != current_key:
+                    print(f"🔄 Rotando automáticamente a una nueva clave saludable del pool: ...{new_key[-8:]}")
+                    os.environ["OPENROUTER_API_KEY"] = new_key
+                    os.environ["OPENAI_API_KEY"] = new_key
+                    
+                    # Update all agents' LLM objects in-place
+                    for agent in [product_owner, system_architect, software_developer, frontend_developer, devops_engineer, technical_writer, qa_engineer]:
+                        if hasattr(agent, 'llm') and agent.llm:
+                            agent.llm.api_key = new_key
+                            if hasattr(agent.llm, 'kwargs') and isinstance(agent.llm.kwargs, dict):
+                                agent.llm.kwargs['api_key'] = new_key
+                                
+                    print("🔄 Reintentando ejecución del Crew con la nueva clave saludable...")
+                    result = scrum_crew.kickoff(inputs={
+                        "feature": sprint_goal,
+                        "codebase_context": codebase_ctx,
+                        "jira_backlog_context": JIRA_ctx
+                    })
+                else:
+                    raise e
+            else:
+                raise e
         
         # Mostrar indicador de uso de tokens
         try:
