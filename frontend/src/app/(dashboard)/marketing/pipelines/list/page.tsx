@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState } from 'react'
 import { Grid, Typography } from '@mui/material'
 import PipelineListTable from '@/views/apps/marketing/pipelines/PipelineListTable'
