@@ -223,9 +223,23 @@ def run_sprint():
         os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
         os.environ["OPENAI_MODEL_NAME"] = "openrouter/openrouter/free"
         
+        # Check if DevOps should be excluded based on Jira or Sprint goal comments
+        exclude_devops = False
+        issue_text = (JIRA_ctx + " " + sprint_goal).lower()
+        if "devops no trabaja" in issue_text or "excluir devops" in issue_text:
+            print("\n🚫 [Scrum Master]: Se detectó que DevOps no trabaja en esta historia. Excluyendo al DevOps Engineer del equipo de este Sprint...")
+            exclude_devops = True
+
+        agents_list = [product_owner, system_architect, software_developer, frontend_developer, technical_writer, qa_engineer]
+        tasks_list = [sprint_planning, research_task, development_task, frontend_development_task, documentation_task, quality_assurance]
+
+        if not exclude_devops:
+            agents_list.insert(4, devops_engineer)
+            tasks_list.insert(4, deployment_prep)
+            
         scrum_crew = Crew(
-            agents=[product_owner, system_architect, software_developer, frontend_developer, devops_engineer, technical_writer, qa_engineer],
-            tasks=[sprint_planning, research_task, development_task, frontend_development_task, deployment_prep, documentation_task, quality_assurance],
+            agents=agents_list,
+            tasks=tasks_list,
             process=Process.sequential,
             memory=False,
             cache=False,
@@ -546,10 +560,25 @@ Historial de Comentarios:
         print("[🤖 Scrum Master]: Generando contexto del código fuente para el equipo...")
         codebase_context = generate_codebase_context()
         
-        # Start the local sprint execution (standalone fallback)
-        execute_crew_locally(current_sprint_goal, codebase_context, jira_backlog_context)
-        
-        sprint_number += 1
+        # Start the local sprint execution (standalone fallback) with automatic recovery
+        try:
+            execute_crew_locally(current_sprint_goal, codebase_context, jira_backlog_context)
+            sprint_number += 1
+        except Exception as crew_err:
+            print(f"\n❌ [Scrum Master]: Error crítico durante la ejecución del Crew: {crew_err}")
+            print("🔄 [Scrum Master]: Se ha detectado un fallo. Reiniciando la consulta pendiente y limpiando límites temporales...")
+            if hasattr(connector, 'local_rate_limits'):
+                connector.local_rate_limits.clear()
+            if connector.redis_client:
+                try:
+                    # Clear Redis rate limits
+                    for rkey in connector.redis_client.scan_iter("scrum:rate_limit:*"):
+                        connector.redis_client.delete(rkey)
+                except Exception:
+                    pass
+            print("⏳ Esperando 30 segundos antes de reiniciar el ciclo del sprint con claves restablecidas...")
+            import time
+            time.sleep(30)
 
 if __name__ == "__main__":
     run_sprint()
