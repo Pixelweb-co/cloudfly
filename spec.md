@@ -203,9 +203,15 @@ graph LR
 *   **Rol**: Programador de Interfaces de Usuario (UI/UX).
 *   **Misión**: Construir interfaces de usuario premium, realistas y responsivas en **Next.js 14 (App Router)**, React, TypeScript y Tailwind CSS estrictamente en el directorio de trabajo activo **`C:\apps\cloudfly\frontend_new`**.
 
+
 ### 5. DevOps & Cloud Engineer
 *   **Rol**: Automatización de Despliegue y Contenedores.
 *   **Misión**: Escribir Dockerfiles, configurar `docker-compose.yml` y levantar el entorno local mediante comandos de consola verificando que los microservicios estén saludables.
+*   **Regla de Exclusión (By-pass)**: Cuando el usuario especifique que DevOps no trabaja en la historia, o se solicite verificación local directa, el rol de DevOps se desactivará/comentará del orquestador `ai_scrum_team` para optimizar tokens y flujos. En este escenario, el **Agente Copiloto IA Secundario (Antigravity)** asume la responsabilidad de:
+    1. Ejecutar las pruebas unitarias y E2E locales del código desarrollado por el equipo Scrum.
+    2. Depurar el código de forma iterativa y solucionar bugs hasta cumplir perfectamente con el 100% de los criterios de aceptación.
+    3. Conectarse y desplegar de forma segura en el servidor VPS.
+    4. Realizar las pruebas de integración finales en el VPS y dejar un comentario de resumen detallado con los resultados en el ticket correspondiente de Jira.
 
 ### 6. Technical Writer and Diagram Specialist (`technical_writer`)
 *   **Rol**: Redactor Técnico y Modelador de Diagramas.
