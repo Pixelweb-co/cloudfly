@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   marketing-agent:
     build:
@@ -12,11 +13,14 @@ services:
       - FB_APP_SECRET=${FB_APP_SECRET}
       - FB_ACCESS_TOKEN=${FB_ACCESS_TOKEN}
       - FB_PAGE_ID=${FB_PAGE_ID}
+    ports:
+      - "8000:8000"
     networks:
       - app-net
     depends_on:
       - kafka
       - db
+
 networks:
   app-net:
     external: true

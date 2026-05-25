@@ -1,5 +1,7 @@
-# Existing content omitted for brevity
-
+# Updated docker-compose for VPS including marketing services
+version: "3.8"
+services:
+  # existing services omitted for brevity
   marketing-worker:
     image: cloudfly-marketing-worker:latest
     container_name: marketing-worker
@@ -34,5 +36,42 @@
       - "traefik.http.routers.marketing.tls.certresolver=le"
       - "traefik.http.services.marketing.loadbalancer.server.port=8080"
       - "traefik.docker.network=cloudfly_app-net"
-
-# Optional marketing-agent service can be added similarly
+  marketing-agent:
+    image: cloudfly-marketing-agent:latest
+    container_name: marketing-agent
+    restart: always
+    build:
+      context: ./marketing_agent
+      dockerfile: Dockerfile
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=cloud_master
+      - DB_USERNAME=root
+      - DB_PASSWORD=widowmaker
+      - KAFKA_HOST=kafka
+      - EVOLUTION_API_URL=http://evolution-api:8080
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - REDIS_HOST=redis_server
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=Elian2020#
+      - PUBLIC_DOMAIN=${MARKETING_AGENT_DOMAIN}
+    networks:
+      - app-net
+      - kafka-net
+    depends_on:
+      - kafka
+      - db
+      - redis
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.marketing_agent.rule=Host(`${MARKETING_AGENT_DOMAIN}`)"
+      - "traefik.http.routers.marketing_agent.entrypoints=websecure"
+      - "traefik.http.routers.marketing_agent.tls.certresolver=le"
+      - "traefik.http.services.marketing_agent.loadbalancer.server.port=8081"
+      - "traefik.docker.network=cloudfly_app-net"
+networks:
+  app-net:
+    external: true
+  kafka-net:
+    external: true
