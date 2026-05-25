@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  marketing-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: marketing-agent
+    restart: on-failure
+    environment:
+      - TZ=America/Bogota
+      - BACKEND_URL=${BACKEND_URL:-http://backend-api:8080}
+      - BACKEND_API_KEY=${BACKEND_API_KEY}
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL:-http://evolution-api:8080}
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - EVOLUTION_INSTANCE=${EVOLUTION_INSTANCE:-cloudfly-main}
+      - DB_HOST=${DB_HOST:-mysql}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_NAME=${DB_NAME:-cloud_master}
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - TENANT_ID=${TENANT_ID:-1}
+      - COMPANY_ID=${COMPANY_ID:-1}
+      - MIN_DELAY_MS=${MIN_DELAY_MS:-3000}
+      - MAX_DELAY_MS=${MAX_DELAY_MS:-12000}
+      - BATCH_SIZE=${BATCH_SIZE:-20}
+      - BATCH_PAUSE_MS=${BATCH_PAUSE_MS:-30000}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    networks:
+      - app-net
+    depends_on:
+      - backend-api
+      - evolution-api
+
+networks:
+  app-net:
+    external: true

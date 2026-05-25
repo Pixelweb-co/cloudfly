@@ -29,3 +29,6 @@ class Config:
     MAX_DELAY_MS = int(os.getenv("MAX_DELAY_MS", "12000"))
     BATCH_SIZE = int(os.getenv("BATCH_SIZE", "20"))
     BATCH_PAUSE_MS = int(os.getenv("BATCH_PAUSE_MS", "30000"))
+    
+    # OpenRouter API (for AI Ad Generation)
+    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")

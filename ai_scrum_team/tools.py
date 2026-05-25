@@ -357,12 +357,149 @@ def ask_human_clarification(question: str) -> str:
     print(f"==================================================\n")
     return answer
 
+@tool("Execute VPS SSH Command")
+def execute_vps_ssh_command(command: str) -> str:
+    """
+    Connects to the CloudFly VPS (api.cloudfly.com.co) via SSH and executes a bash command.
+    Used by DevOps for pulling git updates, building, or managing containers on the VPS.
+    :param command: The exact bash command to execute on the VPS (e.g. 'cd /app && git pull origin desarrollo && docker-compose restart').
+    """
+    import subprocess
+    import os
+    
+    key_path = r"C:\Users\Edwin\.ssh\id_rsa_cloudfly"
+    if not os.path.exists(key_path):
+        return f"Error: SSH private key not found at {key_path}."
+        
+    ssh_cmd = [
+        "ssh",
+        "-o", "StrictHostKeyChecking=no",
+        "-i", key_path,
+        "-p", "22",
+        "root@api.cloudfly.com.co",
+        command
+    ]
+    
+    try:
+        result = subprocess.run(
+            ssh_cmd,
+            capture_output=True,
+            text=True,
+            shell=True # Required on Windows for built-in command parsing
+        )
+        output = result.stdout + "\n" + result.stderr
+        return f"SSH command executed on VPS. Exit code: {result.returncode}\nOutput:\n{output.strip()}"
+    except Exception as e:
+        return f"Failed to execute SSH command on VPS: {str(e)}"
+
+@tool("Wait Seconds")
+def wait_seconds(seconds: int) -> str:
+    """
+    Pauses the agent execution for a specified number of seconds.
+    Extremely useful after starting Docker containers, starting a background process, or deploying to the VPS,
+    allowing services and migrations to fully boot up and become healthy before verifying or running tests.
+    :param seconds: The number of seconds to wait (e.g. 15, 30, 60).
+    """
+    import time
+    try:
+        sec_int = int(seconds)
+        print(f"\n⏳ [Timer]: Pausando ejecución por {sec_int} segundos para permitir la inicialización del servicio...")
+        time.sleep(sec_int)
+        return f"Successfully paused execution and waited for {sec_int} seconds. Background services, databases, or migrations should now be fully booted up and healthy. You can proceed with E2E verification."
+    except Exception as e:
+        return f"Failed to pause execution: {str(e)}"
+
+@tool("Execute Command and Wait")
+def execute_command_and_wait(command: str, is_vps: bool = False, expected_output: str = "", timeout_seconds: int = 120) -> str:
+    """
+    Executes a local command or a VPS SSH command asynchronously, polls and waits for its completion
+    every 2 seconds, verifies the exit code or search string, and returns once finished.
+    Useful for running builds, starting services, or executing long-running migrations and verifying results.
+    :param command: The exact command to run.
+    :param is_vps: If True, executes the command on the CloudFly VPS via SSH. If False, runs locally.
+    :param expected_output: Optional string to look for in the output to declare early success (e.g., 'Successfully compiled' or 'healthy').
+    :param timeout_seconds: Maximum time to wait in seconds (default 120).
+    """
+    import subprocess
+    import time
+    import os
+    import sys
+    
+    # 1. Build the command line
+    if is_vps:
+        key_path = r"C:\Users\Edwin\.ssh\id_rsa_cloudfly"
+        if not os.path.exists(key_path):
+            return f"Error: SSH private key not found at {key_path}."
+        final_cmd = f'ssh -o StrictHostKeyChecking=no -i "{key_path}" -p 22 root@api.cloudfly.com.co "{command}"'
+        cwd = None
+    else:
+        final_cmd = command
+        cwd = r"C:\apps\cloudfly"
+        
+    print(f"\n🚀 [Scrum Master - Polling Timer]: Lanzando comando {'en VPS' if is_vps else 'en Local'}: '{command}'")
+    print(f"⏳ Esperando terminación y verificando resultados (Timeout: {timeout_seconds}s)...")
+    
+    try:
+        # Start the process in the background (asynchronous)
+        process = subprocess.Popen(
+            final_cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, # Merge stdout and stderr
+            text=True,
+            cwd=cwd,
+            bufsize=1
+        )
+        
+        start_time = time.time()
+        output_accumulated = []
+        
+        # Poll the process status in a non-blocking loop
+        while process.poll() is None:
+            elapsed = int(time.time() - start_time)
+            if elapsed >= timeout_seconds:
+                process.terminate()
+                return f"Error: Command execution timed out after {timeout_seconds} seconds.\nAccumulated Output:\n" + "".join(output_accumulated)
+                
+            # Read stdout chunk-by-chunk without blocking
+            try:
+                line = process.stdout.readline()
+                if line:
+                    output_accumulated.append(line)
+                    # print to console in real-time
+                    sys.stdout.write(f" [VPS/Local Output]: {line}")
+                    sys.stdout.flush()
+                    
+                    if expected_output and expected_output in "".join(output_accumulated):
+                        process.terminate()
+                        return f"Success! Expected string '{expected_output}' detected early.\nOutput:\n" + "".join(output_accumulated)
+            except Exception:
+                pass
+                
+            time.sleep(2)
+            
+        # Read any remaining output after process completes
+        remaining = process.stdout.read()
+        if remaining:
+            output_accumulated.append(remaining)
+            
+        exit_code = process.returncode
+        complete_output = "".join(output_accumulated).strip()
+        
+        if exit_code == 0:
+            return f"Success! Command completed successfully with exit code 0.\nOutput:\n{complete_output}"
+        else:
+            return f"Error: Command completed with non-zero exit code {exit_code}.\nOutput:\n{complete_output}"
+            
+    except Exception as e:
+        return f"Failed to execute command: {str(e)}"
+
 def get_jira_tools():
     """
     Returns native CrewAI tools for Jira to avoid Pydantic validation errors 
     with LangChain community tools. Also disables tool caching globally.
     """
-    all_tools = [jql_query, create_issue, get_projects, write_code_to_file, docker_manage, test_endpoint, comment_issue, transition_issue, web_search, list_directory_files, read_code_file, read_jira_issue, execute_console_command, commit_code, ask_human_clarification]
+    all_tools = [jql_query, create_issue, get_projects, write_code_to_file, docker_manage, test_endpoint, comment_issue, transition_issue, web_search, list_directory_files, read_code_file, read_jira_issue, execute_console_command, commit_code, ask_human_clarification, execute_vps_ssh_command, wait_seconds, execute_command_and_wait]
     
     # Force disable caching on every tool to avoid 'from cache' ghost results
     for t in all_tools:
