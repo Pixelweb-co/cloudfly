@@ -1,39 +1,310 @@
-# Marketing Agent API Documentation
+# Marketing Agent – API Documentation
 
-## Overview
-The Marketing Agent is a **CLI‑driven** Python microservice. It does not expose a public HTTP API, but it interacts with several internal services:
+## Meta Marketing API Integration
 
-| Service | Base URL | Purpose |
-|---------|----------|---------|
-| Backend API | `http://backend:8080` | Product catalog, authentication |
-| Evolution API | `http://evolution-api:8080` | WhatsApp message delivery |
-| Meta Marketing API | `https://graph.facebook.com/v18.0` | Create campaigns, ad sets, ads |
+This document provides the complete API reference for Meta Ads integration used by the Marketing Agent.
 
-## Internal Python Service Interfaces
+### Base URL
+```
+https://graph.facebook.com/v18.0
+```
 
-### `services.product_service.ProductService.get_active_product_with_image(tenant_id: int) -> dict`
-- Calls **Backend API** `GET /products/active?tenant_id={tenant_id}`
-- Returns a JSON object with fields `productName`, `image_url`, `description`, `price`.
+### Authentication
+All requests require an OAuth 2.0 Bearer token in the header:
+```
+Authorization: Bearer {META_ACCESS_TOKEN}
+```
 
-### `services.ai_ad_service.AIAdService.generate_ad(product: dict) -> dict`
-- Calls **OpenRouter** `/v1/chat/completions` with a prompt built from the product data.
-- Returns a dictionary containing `{headline, primary_text, description, cta}`.
+---
 
-### `services.meta_ads_service.MetaAdsService.create_complete_ad(product: dict, ad_content: dict, daily_budget_cop: int) -> dict`
-- Executes the full Meta Ads flow (image upload → creative → campaign → ad set → ad) as described in `META_API_SPECIFICATION.md`.
-- Returns IDs of the created objects: `{campaign_id, ad_set_id, ad_id, creative_id, image_hash}`.
+## 1. Upload Ad Image
 
-### `services.evolution_service.EvolutionService.send_campaign(phone: str, message: str) -> bool`
-- Calls **Evolution API** `POST /whatsapp/send` with the generated message.
-- Returns `True` on success.
+**Endpoint**: `POST /{ad_account_id}/adimages`  
+**Purpose**: Upload a product image to Meta for use in ad creatives.
 
-## CLI Commands
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer {token} | Yes |
+| Content-Type | multipart/form-data | Yes |
 
-| Command | Description |
-|---------|-------------|
-| `python main.py --generate-ad` | Generates AI ad copy for the active product and prints it. |
-| `python main.py --create-meta-ads` | Creates a full Meta Ads campaign (paused) using the generated ad content. |
-| `python main.py --generate-ad --create-meta-ads` | Runs both generation and Meta Ads creation sequentially. |
-| `python main.py --create-meta-ads --meta-ads-budget 100000` | Sets the daily budget (in COP) for the Meta Ads campaign. |
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| file | binary | Image file (JPEG/PNG/WebP) | Yes |
 
-All commands rely on environment variables defined in `.env.example` and loaded via `marketing_agent/config.py`.
+**Response Schema**
+```
+{
+  "images": {
+    "filename.jpg": {
+      "hash": "string",
+      "url": "string"
+    }
+  }
+}
+```
+
+**Error Responses**
+
+| Code | Message | Solution |
+|------|---------|----------|
+| 100 | Invalid file format | Use JPEG/PNG/WebP |
+| 324 | Image too large | Reduce to < 8 MB |
+
+---
+
+## 2. Create Ad Creative
+
+**Endpoint**: `POST /{ad_account_id}/adcreatives`  
+**Purpose**: Create a new ad creative using the uploaded image hash.
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer {token} | Yes |
+| Content-Type | application/json | Yes |
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| name | string | Creative name | Yes |
+| object_story_spec | object | Ad story spec (image_hash, link, etc.) | Yes |
+
+**Response Schema**
+```
+{
+  "id": "string",
+  "name": "string",
+  "object_story_spec": { ... }
+}
+```
+
+**Error Responses**
+
+| Code | Message | Solution |
+|------|---------|----------|
+| 200 | Invalid JSON | Validate schema |
+| 300 | Image hash not found | Verify image upload |
+
+---
+
+## 3. Create Campaign
+
+**Endpoint**: `POST /{ad_account_id}/campaigns`  
+**Purpose**: Create a new campaign.
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer {token} | Yes |
+| Content-Type | application/json | Yes |
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| name | string | Campaign name | Yes |
+| objective | string | Campaign objective (e.g., "LINK_CLICKS") | Yes |
+| status | string | Campaign status (e.g., "PAUSED") | Yes |
+
+**Response Schema**
+```
+{
+  "id": "string",
+  "name": "string",
+  "objective": "string",
+  "status": "string"
+}
+```
+
+**Error Responses**
+
+| Code | Message | Solution |
+|------|---------|----------|
+| 400 | Invalid objective | Check objective list |
+| 401 | Unauthorized | Refresh token |
+
+---
+
+## 4. Create Ad Set
+
+**Endpoint**: `POST /{ad_account_id}/adsets`  
+**Purpose**: Create a new ad set under a campaign.
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer {token} | Yes |
+| Content-Type | application/json | Yes |
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| name | string | Ad set name | Yes |
+| campaign_id | string | Parent campaign ID | Yes |
+| daily_budget | integer | Daily budget in cents | Yes |
+| billing_event | string | Billing event (e.g., "IMPRESSIONS") | Yes |
+| optimization_goal | string | Optimization goal (e.g., "REACH") | Yes |
+| start_time | string | ISO 8601 start time | Yes |
+| end_time | string | ISO 8601 end time | Yes |
+
+**Response Schema**
+```
+{
+  "id": "string",
+  "name": "string",
+  "campaign_id": "string",
+  "daily_budget": "integer"
+}
+```
+
+**Error Responses**
+
+| Code | Message | Solution |
+|------|---------|----------|
+| 400 | Invalid budget | Ensure budget > 0 |
+| 404 | Campaign not found | Verify campaign ID |
+
+---
+
+## 5. Create Ad
+
+**Endpoint**: `POST /{ad_account_id}/ads`  
+**Purpose**: Create a new ad under an ad set.
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer {token} | Yes |
+| Content-Type | application/json | Yes |
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| name | string | Ad name | Yes |
+| adset_id | string | Parent ad set ID | Yes |
+| creative | object | Creative object (id) | Yes |
+| status | string | Ad status (e.g., "PAUSED") | Yes |
+
+**Response Schema**
+```
+{
+  "id": "string",
+  "name": "string",
+  "adset_id": "string",
+  "status": "string"
+}
+```
+
+**Error Responses**
+
+| Code | Message | Solution |
+|------|---------|----------|
+| 400 | Invalid creative | Verify creative ID |
+| 401 | Unauthorized | Refresh token |
+
+---
+
+## 6. Ad Status Check & Activation/Deactivation
+
+**Endpoint**: `GET /{ad_id}`  
+**Purpose**: Retrieve ad status.
+
+**Endpoint**: `POST /{ad_id}`  
+**Purpose**: Update ad status (e.g., activate/deactivate).
+
+| Header | Value | Required |
+|--------|-------|----------|
+| Authorization | Bearer {token} | Yes |
+| Content-Type | application/json | Yes |
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| status | string | New status (e.g., "ACTIVE" or "PAUSED") | Yes |
+
+**Response Schema**
+```
+{
+  "id": "string",
+  "status": "string"
+}
+```
+
+**Error Responses**
+
+| Code | Message | Solution |
+|------|---------|----------|
+| 404 | Ad not found | Verify ad ID |
+| 429 | Rate limit | Back‑off |
+
+---
+
+## 3. Command Line Interface
+
+### Available Flags
+
+| Flag | Description | Default | Example |
+|------|-------------|---------|---------|
+| `--generate-ad` | Generate AI ad copy | False | `--generate-ad` |
+| `--create-meta-ads` | Create Meta image ads | False | `--create-meta-ads` |
+| `--meta-ads-budget` | Daily budget in COP | 50000 | `--meta-ads-budget 100000` |
+
+### Usage Examples
+
+```bash
+# Generate AI ad copy only
+python main.py --generate-ad
+
+# Create Meta image ad with default budget
+python main.py --create-meta-ads
+
+# Full campaign with custom budget
+python main.py --generate-ad --create-meta-ads --meta-ads-budget 100000
+```
+
+---
+
+## 4. Configuration Reference
+
+### Required Environment Variables
+
+| Variable | Description | Format | Example |
+|----------|-------------|--------|---------|
+| META_ACCESS_TOKEN | System User OAuth token | String | EAABsbCS1iHgBO... |
+| META_AD_ACCOUNT_ID | Ad Account identifier | act_XXXXXXXXXXXXXXX | act_123456789 |
+| META_PAGE_ID | Facebook Page identifier | Numeric string | 123456789012345 |
+
+### Optional Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| META_API_VERSION | API version | v18.0 |
+| META_API_BASE_URL | API base URL | https://graph.facebook.com |
+
+---
+
+## 5. Error Handling Reference
+
+| Error Code | Description | Retry Strategy | Troubleshooting |
+|------------|-------------|----------------|----------------|
+| 100 | Invalid file format | 3× exponential back‑off | Verify MIME type |
+| 324 | Image too large | 3× exponential back‑off | Compress image |
+| 200 | Invalid JSON | 3× exponential back‑off | Validate payload |
+| 300 | Image hash not found | 3× exponential back‑off | Re‑upload image |
+| 401 | Unauthorized | Refresh token | Check `META_ACCESS_TOKEN` |
+| 429 | Rate limit exceeded | Exponential back‑off, respect `Retry-After` header | Reduce request frequency |
+
+---
+
+## 6. Sample cURL & Python Snippets
+
+*(Provide concise examples for each endpoint, demonstrating headers, body, and handling of responses.)*
+
+---
+
+## 7. Glossary
+
+*(Optional – define terms like Ad Creative, Campaign, Ad Set, etc.)*
+
+---
+
+## 8. References
+
+- Meta Marketing API Docs: https://developers.facebook.com/docs/marketing-api
+- `marketing_agent/META_API_SPECIFICATION.md` – Technical spec
+- `marketing_agent/config.py` – Environment variables
+- `marketing_agent/main.py` – CLI implementation
+
+---
+
+**End of Documentation**
