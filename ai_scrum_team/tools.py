@@ -186,7 +186,7 @@ def docker_manage(action: str = "up") -> str:
         return "Invalid action. Use 'up', 'down', or 'status'."
         
     try:
-        result = subprocess.run(cmd, cwd=base_dir, capture_output=True, text=True, check=True)
+        result = subprocess.run(cmd, cwd=base_dir, capture_output=True, encoding='utf-8', errors='replace', check=True)
         return f"Success:\n{result.stdout}\n{result.stderr}"
     except subprocess.CalledProcessError as e:
         return f"Error executing docker-compose {action}:\n{e.stderr}"
@@ -334,7 +334,8 @@ def execute_console_command(command: str) -> str:
             shell=True,
             cwd=workspace_dir,
             capture_output=True,
-            text=True
+            encoding='utf-8',
+            errors='replace'
         )
         output = result.stdout + "\n" + result.stderr
         return f"Command executed. Exit code: {result.returncode}\nOutput:\n{output.strip()}"
@@ -353,8 +354,8 @@ def commit_code(commit_message: str) -> str:
     """
     try:
         workspace_dir = r"C:\apps\cloudfly"
-        subprocess.run("git add .", shell=True, cwd=workspace_dir, capture_output=True, text=True)
-        result = subprocess.run(f'git commit -m "🤖 AI: {commit_message}"', shell=True, cwd=workspace_dir, capture_output=True, text=True)
+        subprocess.run("git add .", shell=True, cwd=workspace_dir, capture_output=True, encoding='utf-8', errors='replace')
+        result = subprocess.run(f'git commit -m "🤖 AI: {commit_message}"', shell=True, cwd=workspace_dir, capture_output=True, encoding='utf-8', errors='replace')
         return f"Git commit successful:\n{result.stdout}"
     except Exception as e:
         return f"Failed to commit code: {str(e)}"
@@ -400,7 +401,8 @@ def execute_vps_ssh_command(command: str) -> str:
         result = subprocess.run(
             ssh_cmd,
             capture_output=True,
-            text=True,
+            encoding='utf-8',
+            errors='replace',
             shell=True # Required on Windows for built-in command parsing
         )
         output = result.stdout + "\n" + result.stderr
@@ -462,7 +464,8 @@ def execute_command_and_wait(command: str, is_vps: bool = False, expected_output
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT, # Merge stdout and stderr
-            text=True,
+            encoding='utf-8',
+            errors='replace',
             cwd=cwd,
             bufsize=1
         )
