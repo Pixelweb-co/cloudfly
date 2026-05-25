@@ -36,13 +36,29 @@ def create_issue(summary: str, description: str, project_key: str = "CLOUD", iss
     if not jira_wrapper:
         return "Jira is not configured."
     import json
+    
+    # Map standard English issue types to Spanish equivalents for localized Jira instances
+    issue_type_lower = issue_type.lower()
+    if "sub-task" in issue_type_lower or "subtask" in issue_type_lower or "subtarea" in issue_type_lower:
+        mapped_issue_type = "Subtarea"
+    elif "task" in issue_type_lower or "tarea" in issue_type_lower:
+        mapped_issue_type = "Tarea"
+    elif "bug" in issue_type_lower or "error" in issue_type_lower or "defecto" in issue_type_lower:
+        mapped_issue_type = "Error"
+    elif "story" in issue_type_lower or "historia" in issue_type_lower:
+        mapped_issue_type = "Historia"
+    elif "epic" in issue_type_lower or "épica" in issue_type_lower:
+        mapped_issue_type = "Epic"
+    else:
+        mapped_issue_type = issue_type # Fallback
+        
     payload = {
         "summary": summary,
         "description": description,
         "project": {"key": project_key},
-        "issuetype": {"name": issue_type}
+        "issuetype": {"name": mapped_issue_type}
     }
-    if issue_type.lower() == "sub-task" and parent_key:
+    if mapped_issue_type == "Subtarea" and parent_key:
         payload["parent"] = {"key": parent_key}
         
     return jira_wrapper.run("create_issue", json.dumps(payload, ensure_ascii=False))
