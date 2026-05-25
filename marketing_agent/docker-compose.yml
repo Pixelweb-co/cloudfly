@@ -1,26 +1,35 @@
-version: '3.8'
-
 services:
   marketing-agent:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: marketing-agent
+    restart: always
+    ports:
+      - "8080:8080"
     env_file:
       - .env
     environment:
-      - FB_APP_ID=${FB_APP_ID}
-      - FB_APP_SECRET=${FB_APP_SECRET}
-      - FB_ACCESS_TOKEN=${FB_ACCESS_TOKEN}
-      - FB_PAGE_ID=${FB_PAGE_ID}
-    ports:
-      - "8000:8000"
+      - DB_HOST=${DB_HOST:-mysql}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_DATABASE=${DB_DATABASE:-cloud_master}
+      - DB_USERNAME=${DB_USERNAME:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-widowmaker}
+      - KAFKA_HOST=${KAFKA_HOST:-kafka}
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL:-http://evolution-api:8080}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
     networks:
       - app-net
-    depends_on:
-      - kafka
-      - db
+      - kafka-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.marketing-agent.rule=Host(`marketing-ai.bot.cloudfly.com.co`)"
+      - "traefik.http.routers.marketing-agent.entrypoints=websecure"
+      - "traefik.http.routers.marketing-agent.tls.certresolver=le"
+      - "traefik.http.services.marketing-agent.loadbalancer.server.port=8080"
 
 networks:
   app-net:
+    external: true
+  kafka-net:
     external: true

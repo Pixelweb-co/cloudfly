@@ -1,0 +1,1 @@
+from marketing_agent.services.product_service import *  # noqa: F401,F403
