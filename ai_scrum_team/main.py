@@ -118,7 +118,71 @@ def check_pending_jira_tasks():
     except Exception as e:
         print(f"[!] Advertencia al buscar tareas en Jira: {e}")
 
-def generate_codebase_context():
+def get_relevant_past_stories(sprint_goal, limit=2):
+    """
+    Performs a lightweight keyword/token overlap search against past_stories_db.json
+    to retrieve the top matching past stories dynamically, preventing token bloat.
+    """
+    import os
+    import json
+    import re
+    
+    db_path = r"C:\apps\cloudfly\ai_scrum_team\past_stories_db.json"
+    if not os.path.exists(db_path):
+        return ""
+        
+    try:
+        with open(db_path, 'r', encoding='utf-8') as f:
+            stories = json.load(f)
+            
+        if not stories:
+            return ""
+            
+        # Clean and tokenise the goal
+        stop_words = {"de", "la", "el", "en", "y", "a", "los", "las", "para", "con", "un", "una", "del", "por", "que", "se", "al"}
+        goal_tokens = set(re.findall(r'\w+', sprint_goal.lower())) - stop_words
+        
+        scored_stories = []
+        for s in stories:
+            # Combine fields to search
+            search_text = (s.get("summary", "") + " " + s.get("description", "") + " " + s.get("lessons", "")).lower()
+            story_tokens = set(re.findall(r'\w+', search_text))
+            
+            # Jaccard / Overlap similarity
+            intersection = goal_tokens.intersection(story_tokens)
+            score = len(intersection)
+            
+            # Boost score for exact matches on key technical terms
+            tech_terms = ["kafka", "whatsapp", "mysql", "evolution", "freeswitch", "frontend", "next", "role", "admin"]
+            for term in tech_terms:
+                if term in sprint_goal.lower() and term in search_text:
+                    score += 3
+                    
+            if score > 0:
+                scored_stories.append((score, s))
+                
+        # Sort by score descending
+        scored_stories.sort(key=lambda x: x[0], reverse=True)
+        top_matches = [item[1] for item in scored_stories[:limit]]
+        
+        if not top_matches:
+            # Fallback to last 2 if no search overlap
+            top_matches = stories[:limit]
+            
+        # Format as Markdown
+        ctx = []
+        for s in top_matches:
+            ctx.append(f"### 📌 [{s.get('key')}] {s.get('summary')}")
+            ctx.append(f"*   **Descripción**: {s.get('description')}")
+            ctx.append(f"*   **Solución Aplicada**: {s.get('solution')}")
+            ctx.append(f"*   **Lección Histórica**: {s.get('lessons')}")
+            ctx.append("")
+            
+        return "\n".join(ctx)
+    except Exception as e:
+        return f"Error al recuperar memoria de historias pasadas: {e}"
+
+def generate_codebase_context(sprint_goal=""):
     r"""
     Scans the C:\apps\cloudfly directory tree at a limited depth of level 1 and generates a clean,
     highly optimized markdown context representation to be injected into agent prompts.
@@ -137,6 +201,14 @@ def generate_codebase_context():
         return "No existing code found (C:\\apps\\cloudfly directory does not exist or is empty)."
         
     context = []
+    
+    # 0. Load relevant past completed stories to boost context intelligence (RAG Semántico)
+    if sprint_goal:
+        past_stories_ctx = get_relevant_past_stories(sprint_goal)
+        if past_stories_ctx:
+            context.append("=== 🧠 CONTEXTO HISTÓRICO Y MEMORIA DE HISTORIAS PASADAS RELACIONADAS ===")
+            context.append(past_stories_ctx)
+            context.append("=======================================================================\n")
     
     # 0. Load the continuous lessons learned/memory log so agents learn from history
     lessons_path = r"C:\apps\cloudfly\ai_scrum_team\lessons_learned.md"
@@ -417,7 +489,7 @@ Historial de Comentarios:
                 
                 connector.update_task_status(task_id, "Desarrollando", f"Ejecutando crews de diseño y código para {task_id}.")
                 
-                codebase_context = generate_codebase_context()
+                codebase_context = generate_codebase_context(sprint_goal)
                 
                 try:
                     res = execute_crew_locally(sprint_goal, codebase_context, jira_ctx)
@@ -594,7 +666,7 @@ Historial de Comentarios:
                 
         # Generate codebase context
         print("[🤖 Scrum Master]: Generando contexto del código fuente para el equipo...")
-        codebase_context = generate_codebase_context()
+        codebase_context = generate_codebase_context(current_sprint_goal)
         
         # Start the local sprint execution (standalone fallback) with automatic recovery
         try:
