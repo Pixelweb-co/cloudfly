@@ -1,108 +1,97 @@
-import React, { useState, useEffect } from 'react';
-import Head from 'next/head';
+import { useEffect, useState } from 'react';
+import { Metadata } from 'next';
+import { Button, Input, Card, Typography } from '@nextui-org/react';
 
-const FacebookCredentialsPage: React.FC = () => {
-  const [appId, setAppId] = useState('');
-  const [appSecret, setAppSecret] = useState('');
-  const [accessToken, setAccessToken] = useState('');
-  const [pageId, setPageId] = useState('');
-  const [saved, setSaved] = useState(false);
+export const metadata: Metadata = {
+  title: 'Facebook API Credentials',
+  description: 'Configure Facebook API credentials for marketing agent',
+};
 
-  // Load existing values from localStorage (multi‑tenant isolation can be handled by prefixing keys)
+const getTenant = () => localStorage.getItem('activeTenantId') ?? 'unknown';
+const getCompany = () => localStorage.getItem('activeCompanyId') ?? 'unknown';
+
+export default function FacebookCredentialsPage() {
+  const [tenant, setTenant] = useState<string>('');
+  const [company, setCompany] = useState<string>('');
+  const [appId, setAppId] = useState<string>('');
+  const [appSecret, setAppSecret] = useState<string>('');
+  const [accessToken, setAccessToken] = useState<string>('');
+  const [pageId, setPageId] = useState<string>('');
+  const [message, setMessage] = useState<string>('');
+
   useEffect(() => {
-    const tenant = localStorage.getItem('activeTenantId') || 'default';
-    setAppId(localStorage.getItem(`${tenant}_FB_APP_ID`) || '');
-    setAppSecret(localStorage.getItem(`${tenant}_FB_APP_SECRET`) || '');
-    setAccessToken(localStorage.getItem(`${tenant}_FB_ACCESS_TOKEN`) || '');
-    setPageId(localStorage.getItem(`${tenant}_FB_PAGE_ID`) || '');
+    setTenant(getTenant());
+    setCompany(getCompany());
   }, []);
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    const tenant = localStorage.getItem('activeTenantId') || 'default';
-    localStorage.setItem(`${tenant}_FB_APP_ID`, appId.trim());
-    localStorage.setItem(`${tenant}_FB_APP_SECRET`, appSecret.trim());
-    localStorage.setItem(`${tenant}_FB_ACCESS_TOKEN`, accessToken.trim());
-    localStorage.setItem(`${tenant}_FB_PAGE_ID`, pageId.trim());
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const handleSave = async () => {
+    try {
+      const res = await fetch('/api/facebook/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: tenant,
+          companyId: company,
+          appId,
+          appSecret,
+          accessToken,
+          pageId,
+        }),
+      });
+      if (!res.ok) throw new Error('Network response was not ok');
+      setMessage('Credentials saved successfully');
+    } catch (e) {
+      setMessage(`Error: ${(e as Error).message}`);
+    }
   };
 
   return (
-    <>
-      <Head>
-        <title>Facebook API Credentials</title>
-      </Head>
-      <main className="max-w-2xl mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">
-          Configuración de Credenciales de Facebook
-        </h1>
-        <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="appId">
-              App ID
-            </label>
-            <input
-              id="appId"
-              type="text"
-              value={appId}
-              onChange={(e) => setAppId(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="appSecret">
-              App Secret
-            </label>
-            <input
-              id="appSecret"
-              type="password"
-              value={appSecret}
-              onChange={(e) => setAppSecret(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="accessToken">
-              Access Token
-            </label>
-            <input
-              id="accessToken"
-              type="password"
-              value={accessToken}
-              onChange={(e) => setAccessToken(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="pageId">
-              Page ID
-            </label>
-            <input
-              id="pageId"
-              type="text"
-              value={pageId}
-              onChange={(e) => setPageId(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-md transition-colors"
-          >
-            Guardar Credenciales
-          </button>
-          {saved && (
-            <p className="mt-2 text-green-600 dark:text-green-400">Credenciales guardadas correctamente.</p>
-          )}
-        </form>
-      </main>
-    </>
+    <Card css={{ mw: '600px', margin: 'auto', mt: 20 }}>
+      <Card.Body>
+        <Typography h3>Facebook API Credentials</Typography>
+        <Typography>Tenant: {tenant}</Typography>
+        <Typography>Company: {company}</Typography>
+        <Input
+          clearable
+          bordered
+          fullWidth
+          label="App ID"
+          placeholder="Enter Facebook App ID"
+          value={appId}
+          onChange={(e) => setAppId(e.target.value)}
+        />
+        <Input.Password
+          clearable
+          bordered
+          fullWidth
+          label="App Secret"
+          placeholder="Enter Facebook App Secret"
+          value={appSecret}
+          onChange={(e) => setAppSecret(e.target.value)}
+        />
+        <Input.Password
+          clearable
+          bordered
+          fullWidth
+          label="Access Token"
+          placeholder="Enter Facebook Access Token"
+          value={accessToken}
+          onChange={(e) => setAccessToken(e.target.value)}
+        />
+        <Input
+          clearable
+          bordered
+          fullWidth
+          label="Page ID"
+          placeholder="Enter Facebook Page ID"
+          value={pageId}
+          onChange={(e) => setPageId(e.target.value)}
+        />
+        <Button auto color="primary" onClick={handleSave} css={{ mt: 10 }}>
+          Save
+        </Button>
+        {message && <Typography css={{ mt: 10 }}>{message}</Typography>}
+      </Card.Body>
+    </Card>
   );
-};
-
-export default FacebookCredentialsPage;
+}

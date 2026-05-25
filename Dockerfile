@@ -1,5 +1,14 @@
 FROM python:3.11-slim
+
 WORKDIR /app
-COPY . /app
-RUN pip install --no-cache-dir -r requirements.txt || true
-CMD ["pytest"]
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+ENV PYTHONUNBUFFERED=1
+
+CMD ["python", "-m", "pytest", "-q"]

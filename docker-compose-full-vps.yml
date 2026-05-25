@@ -9,6 +9,8 @@ services:
     build:
       context: ./marketing-worker
       dockerfile: Dockerfile
+    env_file:
+      - .env.vps
     environment:
       - DB_HOST=mysql
       - DB_PORT=3306
@@ -29,6 +31,12 @@ services:
       - kafka
       - db
       - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 10s
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.marketing.rule=Host(`${MARKETING_WORKER_DOMAIN}`)"
@@ -43,6 +51,8 @@ services:
     build:
       context: ./marketing_agent
       dockerfile: Dockerfile
+    env_file:
+      - .env.vps
     environment:
       - DB_HOST=mysql
       - DB_PORT=3306
@@ -63,6 +73,12 @@ services:
       - kafka
       - db
       - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 10s
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.marketing_agent.rule=Host(`${MARKETING_AGENT_DOMAIN}`)"

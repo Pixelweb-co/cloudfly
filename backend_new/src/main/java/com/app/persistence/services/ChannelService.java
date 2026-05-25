@@ -32,4 +32,10 @@ public class ChannelService {
         return channelRepository.findById(id)
                 .filter(c -> c.getCompanyId().equals(companyId) && c.getTenantId().equals(tenantId));
     }
+
+    public Mono<Void> deleteChannel(Long id, Long companyId, Long tenantId) {
+        return channelRepository.findById(id)
+                .filter(c -> c.getCompanyId().equals(companyId) && c.getTenantId().equals(tenantId))
+                .flatMap(c -> channelRepository.deleteById(c.getId()));
+    }
 }

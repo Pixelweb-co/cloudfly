@@ -109,4 +109,13 @@ public class ChannelController {
                 });
     }
 
+    @DeleteMapping("/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SUPERADMIN')")
+    public Mono<Void> deleteChannel(@PathVariable Long id) {
+        return Mono.zip(getCurrentCompanyId(), getCurrentTenantId())
+                .flatMap(tuple -> {
+                    return channelService.deleteChannel(id, tuple.getT1(), tuple.getT2());
+                });
+    }
+
 }
