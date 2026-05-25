@@ -133,16 +133,16 @@ quality_assurance = Task(
     2. You MUST use the 'Comment on Jira Issue' tool to post the final QA sign-off report summarizing all backend, database, messaging, and frontend tests run.
     
     SCENARIO B - FAILURE (Any endpoint failure, database inconsistency, automated test failure, or bug detected):
-    1. DO NOT transition the original issues to 'Done'. You MUST use the 'Transition Jira Issue' tool to change the original issue status back to 'To Do'.
-    2. You MUST use the 'Create Jira Issue' tool to create a NEW Bug/Task ticket detailing the exact failure, the specific automated test that failed, and what the developers need to fix in the next sprint.
-    3. You MUST use the 'Comment on Jira Issue' tool to notify on the original issues that validation failed and a new Bug ticket was created.
+    1. DO NOT transition the original issues to 'Done'. You MUST use the 'Transition Jira Issue' tool to change the original issue status back to 'To Do' (or keep it 'In Progress').
+    2. DO NOT CREATE ANY NEW JIRA TICKETS. Instead, you MUST use the 'Comment on Jira Issue' tool to post a detailed failure report on the active Jira issue detailing the exact failure, the specific automated test that failed, and relevant logs.
+    3. You MUST explicitly mention the Product Owner Edwin Guevara (`@edwin guevara` or `@Edwin`) in the comment to notify him about the failed validation/tests so he can review the blockers.
     
     In BOTH scenarios, ALWAYS start your comments with "🤖 **QA Engineer**: " to identify yourself.
     CRITICAL: If the sprint goal contains a LATEST COMMENT from the user reporting a bug, your Jira comment MUST explicitly confirm to the user whether their specific bug was successfully fixed or if it still fails.
     
     CRITICAL FOR SPEC-DRIVEN DEVELOPMENT: If a specification file is present in the codebase context (such as spec.md), you MUST validate the endpoints and configurations strictly against that specification. Any deviation from the spec MUST be reported as a BUG.
     ''',
-    expected_output='QA E2E sign-off report covering the entire project (Backend, Frontend, DB, Messaging), and Jira issues transitioned to Done (if success), OR a new Bug ticket created in Jira (if failure).',
+    expected_output='QA E2E sign-off report covering the entire project (Backend, Frontend, DB, Messaging), and Jira issues transitioned to Done (if success), OR a detailed failure comment mentioning Edwin Guevara on the active Jira issue (if failure).',
     agent=qa_engineer
 )
 

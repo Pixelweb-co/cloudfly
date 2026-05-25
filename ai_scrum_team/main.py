@@ -232,42 +232,48 @@ def run_sprint():
             verbose=True
         )
         
-        try:
-            result = scrum_crew.kickoff(inputs={
-                "feature": sprint_goal,
-                "codebase_context": codebase_ctx,
-                "jira_backlog_context": JIRA_ctx
-            })
-        except Exception as e:
-            err_msg = str(e)
-            if "429" in err_msg or "rate limit" in err_msg.lower():
-                current_key = os.environ.get("OPENROUTER_API_KEY")
-                print(f"\n⚠️ [Rotación de API Key]: Se detectó un error de Rate Limit (429) en la clave ...{current_key[-8:] if current_key else 'None'}.")
-                
-                # Marcar la clave actual como limitada y obtener una nueva clave saludable desde Redis
-                new_key = connector.get_healthy_api_key(current_key=current_key, mark_rate_limited=True)
-                if new_key and new_key != current_key:
-                    print(f"🔄 Rotando automáticamente a una nueva clave saludable del pool: ...{new_key[-8:]}")
-                    os.environ["OPENROUTER_API_KEY"] = new_key
-                    os.environ["OPENAI_API_KEY"] = new_key
+        max_retries = 6
+        retry_count = 0
+        result = None
+        
+        while retry_count < max_retries:
+            try:
+                result = scrum_crew.kickoff(inputs={
+                    "feature": sprint_goal,
+                    "codebase_context": codebase_ctx,
+                    "jira_backlog_context": JIRA_ctx
+                })
+                break # Success! Exit the retry loop
+            except Exception as e:
+                err_msg = str(e)
+                if "429" in err_msg or "rate limit" in err_msg.lower():
+                    retry_count += 1
+                    current_key = os.environ.get("OPENROUTER_API_KEY")
+                    print(f"\n⚠️ [Rotación de API Key - Intento {retry_count}/{max_retries}]: Se detectó un error de Rate Limit (429) en la clave ...{current_key[-8:] if current_key else 'None'}.")
                     
-                    # Update all agents' LLM objects in-place
-                    for agent in [product_owner, system_architect, software_developer, frontend_developer, devops_engineer, technical_writer, qa_engineer]:
-                        if hasattr(agent, 'llm') and agent.llm:
-                            agent.llm.api_key = new_key
-                            if hasattr(agent.llm, 'kwargs') and isinstance(agent.llm.kwargs, dict):
-                                agent.llm.kwargs['api_key'] = new_key
-                                
-                    print("🔄 Reintentando ejecución del Crew con la nueva clave saludable...")
-                    result = scrum_crew.kickoff(inputs={
-                        "feature": sprint_goal,
-                        "codebase_context": codebase_ctx,
-                        "jira_backlog_context": JIRA_ctx
-                    })
+                    # Marcar la clave actual como limitada y obtener una nueva clave saludable
+                    new_key = connector.get_healthy_api_key(current_key=current_key, mark_rate_limited=True)
+                    if new_key and new_key != current_key:
+                        print(f"🔄 Rotando automáticamente a una nueva clave saludable del pool: ...{new_key[-8:]}")
+                        os.environ["OPENROUTER_API_KEY"] = new_key
+                        os.environ["OPENAI_API_KEY"] = new_key
+                        
+                        # Update all agents' LLM objects in-place
+                        for agent in [product_owner, system_architect, software_developer, frontend_developer, devops_engineer, technical_writer, qa_engineer]:
+                            if hasattr(agent, 'llm') and agent.llm:
+                                agent.llm.api_key = new_key
+                                if hasattr(agent.llm, 'kwargs') and isinstance(agent.llm.kwargs, dict):
+                                    agent.llm.kwargs['api_key'] = new_key
+                                    
+                        print("🔄 Reintentando ejecución del Crew con la nueva clave saludable...")
+                    else:
+                        if retry_count >= max_retries:
+                            raise e
+                        print("⏳ No hay nuevas claves diferentes en el pool o Redis está desconectado. Esperando 10 segundos antes de reintentar...")
+                        import time
+                        time.sleep(10)
                 else:
                     raise e
-            else:
-                raise e
         
         # Mostrar indicador de uso de tokens
         try:

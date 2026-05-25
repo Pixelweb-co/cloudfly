@@ -24,6 +24,7 @@ class ScrumConnector:
         self.is_master = False
         self.heartbeat_active = True
         self.heartbeat_thread = None
+        self.local_rate_limits = {}
 
     def connect(self):
         try:
@@ -307,37 +308,77 @@ class ScrumConnector:
         keys = [k.strip() for k in pool_str.split(",") if k.strip()]
         if not keys:
             return None
+
+        if not hasattr(self, 'local_rate_limits'):
+            self.local_rate_limits = {}
             
         try:
-            # 1. Si se reportó un rate limit, registrar la clave como limitada en Redis
+            # 1. Si se reportó un rate limit, registrar la clave como limitada
             if mark_rate_limited and current_key:
-                # Almacenar el lock de rate limit por 12 horas (43200 segundos)
-                self.redis_client.set(f"scrum:rate_limit:{current_key}", "limited", ex=43200)
-                print(f"⚠️ [Balanceador]: Registrado rate limit para la clave ...{current_key[-8:]} en Redis.")
-                
-            # 2. Filtrar el pool obteniendo solo las claves saludables (sin registro de rate limit)
+                import time
+                expiry = time.time() + 43200 # 12 horas
+                self.local_rate_limits[current_key] = expiry
+                if self.redis_client:
+                    try:
+                        self.redis_client.set(f"scrum:rate_limit:{current_key}", "limited", ex=43200)
+                        print(f"⚠️ [Balanceador]: Registrado rate limit para la clave ...{current_key[-8:]} en Redis.")
+                    except Exception:
+                        pass
+                else:
+                    print(f"⚠️ [Balanceador - Standalone]: Registrado rate limit para la clave ...{current_key[-8:]} en memoria local.")
+                    
+            # 2. Filtrar el pool obteniendo solo las claves saludables
             healthy_keys = []
+            import time
+            now = time.time()
             for k in keys:
-                is_limited = self.redis_client.get(f"scrum:rate_limit:{k}")
+                is_limited = False
+                # Check local in-memory rate limit
+                if k in self.local_rate_limits:
+                    if now < self.local_rate_limits[k]:
+                        is_limited = True
+                    else:
+                        del self.local_rate_limits[k] # Expirado
+                
+                # Check Redis rate limit
+                if not is_limited and self.redis_client:
+                    try:
+                        res = self.redis_client.get(f"scrum:rate_limit:{k}")
+                        if res:
+                            is_limited = True
+                    except Exception:
+                        pass
+                        
                 if not is_limited:
                     healthy_keys.append(k)
                     
             if not healthy_keys:
-                print("🚨 [Balanceador] ADVERTENCIA: Todas las claves del pool han alcanzado su límite. Reusando la primera clave.")
+                print("🚨 [Balanceador] ADVERTENCIA: Todas las claves del pool han alcanzado su límite. Reseteando límites locales para evitar bloqueo.")
+                self.local_rate_limits.clear()
                 return keys[0]
                 
-            # 3. Obtener el índice de este worker en el clúster
-            workers = list(self.redis_client.smembers("scrum:workers"))
-            active_workers = sorted([w for w in workers if self.redis_client.get(f"scrum:heartbeat:{w}")])
-            if self.instance_id not in active_workers:
-                active_workers.append(self.instance_id)
-                active_workers.sort()
+            # 3. Obtener el índice para balanceo
+            try:
+                if self.redis_client:
+                    workers = list(self.redis_client.smembers("scrum:workers"))
+                    active_workers = sorted([w for w in workers if self.redis_client.get(f"scrum:heartbeat:{w}")])
+                    if self.instance_id not in active_workers:
+                        active_workers.append(self.instance_id)
+                        active_workers.sort()
+                    index = active_workers.index(self.instance_id)
+                else:
+                    index = 0
+            except Exception:
+                index = 0
                 
-            index = active_workers.index(self.instance_id)
-            
-            # 4. Asignar clave saludable de forma balanceada
+            # 4. Asignar clave saludable de forma balanceada o simplemente rotar secuencialmente si somos standalone
+            if current_key in healthy_keys and len(healthy_keys) > 1:
+                # Si la clave actual sigue siendo "saludable" (ej. no fue la que disparó el error), mantenerla
+                return current_key
+                
             assigned_key = healthy_keys[index % len(healthy_keys)]
             return assigned_key
         except Exception as e:
             print(f"[!] Error al obtener clave saludable: {e}")
             return keys[0]
+
