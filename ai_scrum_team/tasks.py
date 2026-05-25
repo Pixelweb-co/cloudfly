@@ -8,6 +8,9 @@ sprint_planning = Task(
     The user has requested the following for this sprint:
     "{feature}"
     
+    Here is the CURRENT JIRA BACKLOG AND ISSUE HISTORY CONTEXT (including statuses and full comment history of active sprint issues):
+    {jira_backlog_context}
+    
     Here is the CURRENT CODEBASE CONTEXT from your workspace root (C:\\apps\\cloudfly):
     {codebase_context}
     
@@ -36,7 +39,10 @@ sprint_planning = Task(
 
 research_task = Task(
     description='''
-    Based on the feature request "{feature}", the Jira issues from the Product Owner, and the CURRENT CODEBASE CONTEXT:
+    Based on the feature request "{feature}", the Jira issues from the Product Owner, the CURRENT JIRA BACKLOG AND ISSUE HISTORY CONTEXT:
+    {jira_backlog_context}
+    
+    and the CURRENT CODEBASE CONTEXT:
     {codebase_context}
     
     1. CRITICAL STARTING REFERENCE: You MUST begin your architectural research by reading and analyzing the master docker-compose configuration file `C:\\apps\\cloudfly\\docker-compose-full-vps.yml` using the 'Read Code File' tool. This file is the absolute blueprint of the system's microservices, networks, ports, databases, and dependencies. Use it as your primary reference to understand how the new feature's services and variables are wired into the existing stack.
@@ -51,10 +57,13 @@ research_task = Task(
 
 development_task = Task(
     description='''
-    Based on the technical blueprint provided by the System Architect and the CURRENT CODEBASE CONTEXT:
+    Based on the technical blueprint provided by the System Architect, the CURRENT JIRA BACKLOG AND ISSUE HISTORY CONTEXT:
+    {jira_backlog_context}
+    
+    and the CURRENT CODEBASE CONTEXT:
     {codebase_context}
     
-    CRITICAL 0: Before writing any code, you MUST use the 'Transition Jira Issue' tool to change the status of all processed Jira Issue Keys to 'In Progress'.
+    CRITICAL 0: Before writing any code, you MUST use the 'Transition Jira Issue' tool to change the status of all processed Jira Issue Keys to 'In Progress'. If a ticket is already 'In Progress' or further advanced in the status context, acknowledge it and build upon the existing work.
     
     Write all the necessary code, scripts, or configuration files (XML, JSON, YAML, Python, JS, etc) to build/complete "{feature}".
     You should build upon the existing code if it exists. DO NOT overwrite existing working files unless requested or necessary to extend them.
@@ -95,6 +104,9 @@ quality_assurance = Task(
     description='''
     Verify that the deployment was successful and that all changes comply with the specifications.
     CRITICAL MANDATE: You MUST perform comprehensive E2E Integration testing across the ENTIRE PROJECT ECOSYSTEM. You are responsible for verifying the complete system health, including the Backend APIs, Databases, Messaging layers (Evolution API/FreeSWITCH), and Frontend UIs.
+    
+    Here is the CURRENT JIRA BACKLOG AND ISSUE HISTORY CONTEXT:
+    {jira_backlog_context}
     
     Use the CURRENT CODEBASE CONTEXT to inspect what has been built:
     {codebase_context}
@@ -154,10 +166,13 @@ documentation_task = Task(
 
 frontend_development_task = Task(
     description='''
-    Based on the technical blueprint provided by the System Architect, the specifications in spec.md, and the CURRENT CODEBASE CONTEXT:
+    Based on the technical blueprint provided by the System Architect, the specifications in spec.md, the CURRENT JIRA BACKLOG AND ISSUE HISTORY CONTEXT:
+    {jira_backlog_context}
+    
+    and the CURRENT CODEBASE CONTEXT:
     {codebase_context}
     
-    CRITICAL 0: Before writing any frontend code, you MUST use the 'Transition Jira Issue' tool to change the status of the processed Jira Issue Keys to 'In Progress'.
+    CRITICAL 0: Before writing any frontend code, you MUST use the 'Transition Jira Issue' tool to change the status of the processed Jira Issue Keys to 'In Progress'. If a ticket is already 'In Progress' or further advanced in the status context, acknowledge it and build upon the existing work.
     
     Design and implement the necessary React/Next.js components, pages, services, or styling files in the active "frontend_new" directory to fulfill the frontend requirements of "{feature}".
     1. Focus on high visual quality: use sleek dark modes, HSL tailored color palettes, smooth hover micro-animations, and modern typography (Google Fonts Outfit/Inter).

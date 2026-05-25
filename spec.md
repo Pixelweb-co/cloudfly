@@ -238,5 +238,26 @@ Cada componente o script de este ecosistema debe validarse de forma local:
 5.  **Pruebas E2E del Frontend**: Asegurar que las pruebas del frontend (`AGENTE_DEV_*.spec.js`) en `frontend_new` corren sin errores de validación de elementos UI.
 
 ---
+
+## 8. Especificaciones de Git-Flow y Despliegue DevOps
+
+El ciclo de desarrollo en Git, compilación de contenedores y despliegue en producción debe cumplir estrictamente con las siguientes directrices técnicas:
+
+### 1. Estrategia de Ramas (Git Flow)
+*   **Entorno Local (Desarrollo)**: Todas las tareas que sean completadas en el entorno de desarrollo local relacionadas con el microservicio de marketing y la integración de campañas deben registrarse, confirmarse (commit) y subirse (push) estrictamente en una rama llamada **`marketing_ai_team`**.
+*   **Entorno VPS (Producción/Staging)**: El servidor VPS ejecuta e integra todo el ecosistema de microservicios de CloudFly utilizando únicamente la rama llamada **`desarrollo`**.
+
+### 2. Flujo de Despliegue y Autenticación en el VPS
+*   El despliegue en el VPS se realiza mediante conexión segura autenticada utilizando **Git SSH Keys** (llaves SSH previamente autorizadas en el servidor).
+*   La actualización y sincronización de código en el VPS se realiza ejecutando el comando **`git pull`** sobre la rama activa `desarrollo`.
+
+### 3. Orquestación y Construcción del Frontend (`frontend_new`)
+*   **Compilación Local Obligatoria**: Debido al alto consumo de recursos (CPU, RAM) implicado en la compilación de la aplicación React/Next.js de `frontend_new`, **la construcción de esta imagen Docker NO se realiza dentro del servidor VPS**.
+*   **Procedimiento**:
+    1.  La imagen Docker de `frontend_new` se construye y compila localmente en la máquina de desarrollo (`docker build` local).
+    2.  Una vez compilada exitosamente la imagen local, se sube (push) al registro de contenedores privado configurado.
+    3.  Finalmente, el servidor VPS descarga la imagen ya compilada (`docker pull`) y reinicia el servicio correspondiente, evitando picos de carga en producción.
+
+---
 > [!NOTE]
 > Este documento ha sido estructurado y redactado para servir de base estricta de desarrollo de software. Si detecta cualquier inconsistencia en la base de datos o API durante el proceso de Scrum, repórtelo inmediatamente.
