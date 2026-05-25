@@ -23,11 +23,7 @@ openrouter_llm = LLM(
     temperature=0.2
 )
 
-openai_llm = LLM(
-    model="gpt-4o",  # Can also be "gpt-4o-mini"
-    api_key=os.getenv("OPENAI_API_KEY"),
-    temperature=0.2
-)
+# OpenAI is disabled as per user instruction
 
 jira_tools = get_jira_tools()
 
