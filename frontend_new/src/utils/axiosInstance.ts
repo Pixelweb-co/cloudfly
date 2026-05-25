@@ -1,6 +1,7 @@
 'use client'
 
 import axios from 'axios'
+import { signOut } from 'next-auth/react'
 
 export const axiosInstance = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
@@ -61,13 +62,14 @@ axiosInstance.interceptors.response.use(
                 const isAuthPage = path.includes('/login') || path.includes('/register') || path.includes('/recover-password')
 
                 if (!isAuthPage) {
-                    console.warn('⚠️ [AXIOS-INSTANCE] Session might be invalid. Redirecting to login...')
+                    console.warn('⚠️ [AXIOS-INSTANCE] Session might be invalid. Triggering NextAuth signOut and redirecting to login...')
                     
-                    // Clear technical token only, preserve visual context (userData) for the redirect phase
+                    // Clear technical token
                     localStorage.removeItem('jwt')
+                    localStorage.removeItem('userData')
                     
-                    // FORCE REDIRECT to login
-                    window.location.href = '/login'
+                    // FORCE NextAuth to sign out and redirect to /login
+                    signOut({ callbackUrl: '/login' })
                 }
             }
         }
