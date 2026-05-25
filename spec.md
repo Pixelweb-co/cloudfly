@@ -266,6 +266,16 @@ El ciclo de desarrollo en Git, compilación de contenedores y despliegue en prod
     4.  El servidor VPS carga la imagen localmente utilizando el comando `docker load`.
     5.  Finalmente, se recrea y reinicia el contenedor correspondiente (`docker compose up -d`) asegurando que apunte a la imagen cargada, evitando así picos de carga en producción.
 
+
+
+### 4. Orquestación y Colaboración entre Antigravity (Copiloto) y Scrum Team
+*   **Modelo de Trabajo**: El Agente Copiloto IA (Antigravity) utiliza al equipo autónomo `ai_scrum_team` como su principal herramienta de desarrollo en segundo plano.
+*   **Procedimiento**:
+    1.  **Plan de Implementación**: Antigravity formula el diseño general y crea el plan de implementación detallado.
+    2.  **Historia de Usuario & Tareas**: Antigravity descompone el requerimiento en el backlog de Jira y lo traduce en historias de usuario estructuradas. Estas historias detallan e instruyen al `ai_scrum_team` a **analizar y crear sub-tareas pequeñas y atómicas**, optimizando significativamente el consumo de tokens y evitando errores de contexto.
+    3.  **Ejecución Autónoma**: Antigravity dispara e inicia la ejecución de la cola del Scrum Team en segundo plano.
+    4.  **Confirmación y Cierre**: Antigravity permanece de forma activa y vigilante en modo pendiente. Una vez que el Scrum Team termina de programar, Antigravity se encarga de probar, depurar, desplegar en el VPS y re-evaluar el código hasta confirmar de forma contundente que el requerimiento se encuentra 100% operativo en producción/staging y cumple todos los criterios.
+
 ---
 > [!NOTE]
 > Este documento ha sido estructurado y redactado para servir de base estricta de desarrollo de software. Si detecta cualquier inconsistencia en la base de datos o API durante el proceso de Scrum, repórtelo inmediatamente.
