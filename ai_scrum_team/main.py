@@ -42,6 +42,32 @@ def record_lesson_learned(error_msg, context_area="General"):
     except Exception:
         pass
 
+def scan_and_process_jira_images(j_issue, key):
+    """
+    Scans a Jira issue for image attachments and launches the asynchronous
+    VisionWorker to analyze them in a non-blocking background thread.
+    """
+    try:
+        import os
+        fields = j_issue.get("fields", {})
+        attachments = fields.get("attachment", [])
+        if not attachments:
+            return
+            
+        from vision_worker import VisionWorker
+        worker = VisionWorker()
+        
+        for att in attachments:
+            filename = att.get("filename", "")
+            ext = os.path.splitext(filename)[1].lower()
+            if ext in ('.png', '.jpg', '.jpeg', '.gif'):
+                att_id = att.get("id")
+                content_url = att.get("content")
+                # Trigger non-blocking vision analysis in background thread
+                worker.analyze_comment_image_async(key, att_id, filename, content_url)
+    except Exception as e:
+        print(f"[!] Advertencia al buscar imágenes adjuntas: {e}")
+
 def print_jira_sprint_stats():
     import re
     import ast
@@ -474,6 +500,8 @@ def run_sprint():
                             author = c.get("author", {}).get("displayName", "Unknown")
                             body = c.get("body", "")
                             comments_list.append(f"   [{author}]: {body}")
+                        # Scan and process image attachments in background (non-blocking)
+                        scan_and_process_jira_images(j_issue, task_id)
                 except Exception as e:
                     print(f"Error cargando detalles del ticket: {e}")
                     
@@ -620,6 +648,8 @@ Historial de Comentarios:
                                 c_author = c.get("author", {}).get("displayName", "Unknown")
                                 c_body = c.get("body", "")
                                 comments_list.append(f"   [{c_author}]: {c_body}")
+                            # Scan and process image attachments in background (non-blocking)
+                            scan_and_process_jira_images(j_issue, key)
                 except Exception as e:
                     print(f"Warning fetching details for {key}: {e}")
                 
