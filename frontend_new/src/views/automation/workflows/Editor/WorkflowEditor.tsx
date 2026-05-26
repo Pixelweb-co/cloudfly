@@ -1117,7 +1117,7 @@ function WorkflowEditorContent({ isNew = true, workflowId }: Props) {
         )}
       </Drawer>
 
-      {/* Global premium dynamic style injections */}
+      {/* Global premium dyna mic style injections */}
       <style jsx global>{`
         .react-flow__edge-path {
           stroke-linecap: round;

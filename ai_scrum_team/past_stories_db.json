@@ -1,0 +1,23 @@
+[
+  {
+    "key": "CLOUD-150",
+    "summary": "Integración del servicio de Evolution API en docker",
+    "description": "Establecer la Evolution API para envíos de WhatsApp en puerto 8080. El servicio utiliza docker-compose.yml con base de datos PostgreSQL.",
+    "solution": "Se levantó el contenedor de Evolution API, se configuró la conexión a PostgreSQL y se crearon las credenciales base. Los mensajes se envían consumiendo directamente el webhook en puerto 8080.",
+    "lessons": "La Evolution API requiere un retardo mínimo de 3 segundos entre envíos de mensajes de WhatsApp y simulación de presence 'composing' para evitar bloqueos por spam."
+  },
+  {
+    "key": "CLOUD-145",
+    "summary": "Configuración del microservicio de Mensajería con Kafka",
+    "description": "Orquestar el envío de notificaciones mediante Kafka. Agregar el broker de mensajería y configurar el topic whatsapp-notifications.",
+    "solution": "Se configuró el broker de Apache Kafka (puerto 9092) y se programó el microservicio Java notification-service que consume mensajes de la cola whatsapp-notifications y los despacha.",
+    "lessons": "El payload enviado a whatsapp-notifications debe estar estrictamente estructurado en formato JSON e incluir campos obligatorios: tenantId, companyId, phones, body, type y notifyVia."
+  },
+  {
+    "key": "CLOUD-130",
+    "summary": "Establecer aislamiento Multi-Tenant en MySQL",
+    "description": "Asegurar que todas las consultas y registros en el ERP filtren obligatoriamente por el campo tenant_id y company_id.",
+    "solution": "Se modificó el esquema de base de datos MySQL cloud_master agregando la columna tenant_id a la tabla de productos, contactos y transacciones, inyectando el filtro de aislamiento en el backend WebFlux.",
+    "lessons": "Ninguna consulta SQL puede omitir el filtro tenant_id. Si un usuario no está asociado a una compañía, se permite ver los datos de todas las compañías del tenant principal."
+  }
+]

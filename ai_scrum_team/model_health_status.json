@@ -1,0 +1,15 @@
+{
+  "healthiest_model": "groq/llama-3.3-70b-versatile",
+  "last_check": "2026-05-26T08:26:19.096615",
+  "models_status": {
+    "openrouter/openrouter/owl-alpha": {
+      "status": "unhealthy",
+      "latency": 8.0,
+      "error": "Timeout"
+    },
+    "groq/llama-3.3-70b-versatile": {
+      "status": "healthy",
+      "latency": 1.43
+    }
+  }
+}
