@@ -516,7 +516,8 @@ Responde únicamente con este formato JSON:
             company_id = company["id"]
             company_name = company["name"]
             logger.info(f"\n[Company {idx}/{len(companies)}] 🏢 Processing: {company_name} (ID: {company_id})")
-            logger.info(f"   Business Type: {company.get('business_type', 'N/A')}, Desc: {company.get('business_description', 'N/A')[:50]}...")
+            desc = company.get('business_description') or ''
+            logger.info(f"   Business Type: {company.get('business_type', 'N/A')}, Desc: {desc[:50]}...")
             
             # 1. Fetch active products
             logger.info(f"   → Fetching active products for company {company_id}...")
