@@ -236,78 +236,144 @@ def generate_codebase_context(sprint_goal=""):
             context.append(past_stories_ctx)
             context.append("=======================================================================\n")
     
-    # 0. Load the continuous lessons learned/memory log so agents learn from history
+    # 0. Load last 3 lessons learned only (keep context small for Groq TPM limits)
     lessons_path = r"C:\apps\cloudfly\ai_scrum_team\lessons_learned.md"
     if os.path.exists(lessons_path):
         try:
             with open(lessons_path, 'r', encoding='utf-8') as lf:
                 lessons_content = lf.read()
-            context.append("=== 🧠 APRENDIZAJES Y LECCIONES APRENDIDAS HISTÓRICAS (MEMORIA SCRUM) ===")
+            # Keep only last 2000 chars to avoid TPM overflow
+            if len(lessons_content) > 2000:
+                lessons_content = "..." + lessons_content[-2000:]
+            context.append("=== 🧠 LECCIONES RECIENTES (MEMORIA SCRUM) ===")
             context.append(lessons_content)
-            context.append("=======================================================================\n")
+            context.append("=============================================\n")
         except Exception:
             pass
     
-    # 1. Read a highly summarized preview of spec.md to save context space
+    # 1. Read a short preview of spec.md (800 chars max to save Groq TPM budget)
     spec_path = os.path.join(base_dir, "spec.md")
     if os.path.exists(spec_path):
         try:
             with open(spec_path, 'r', encoding='utf-8') as sf:
                 spec_content = sf.read()
-            
-            limit = 1500
-            if len(spec_content) > limit:
-                context.append("=== SPECIFICATION MASTER REFERENCE (spec.md) - RESUMEN CORTO ===")
-                context.append(spec_content[:limit])
-                context.append("\n[!] AVISO SCRUM MASTER: El archivo spec.md es muy largo. Se ha incluido un resumen corto.")
-                context.append("UTILIZA LA HERRAMIENTA 'Read Code File' para leer spec.md completo si requieres más detalles técnicos.")
-                context.append("================================================\n")
-            else:
-                context.append("=== SPECIFICATION MASTER REFERENCE (spec.md) ===")
-                context.append(spec_content)
-                context.append("================================================\n")
+            context.append("=== SPEC.MD (resumen - usa 'Read Code File' para ver completo) ===")
+            context.append(spec_content[:800])
+            context.append("[...] Usa la herramienta 'Read Code File' con path=C:\\apps\\cloudfly\\spec.md para leer el spec completo.")
+            context.append("================================================\n")
         except Exception as e:
             print(f"[!] Advertencia al leer spec.md para el contexto: {e}")
 
-    context.append("=== EXISTING DIRECTORY TREE (OPTIMIZED DEPTH 1) ===")
+    context.append("=== EXISTING DIRECTORY STRUCTURE (ROOT LEVEL ONLY) ===")
+    context.append("📁 C:\\apps\\cloudfly\\")
     
-    # Build tree with depth limit to 1 level (only root files and first-level folders)
-    for root, dirs, files in os.walk(base_dir):
-        dirs[:] = [d for d in dirs if not d.startswith('.') and d not in exclude_dirs]
-        level = root.replace(base_dir, '').count(os.sep)
-        
-        # Stop descending deeper than level 1
-        if level >= 2:
-            dirs[:] = []
-            continue
-            
-        indent = ' ' * 4 * level
-        subfolder = os.path.basename(root)
-        if subfolder:
-            context.append(f"{indent}📁 {subfolder}/")
-        else:
-            context.append("📁 [developmentAI Root]/")
-            
-        sub_indent = ' ' * 4 * (level + 1)
-        for f in sorted(files):
-            ext = os.path.splitext(f)[1].lower()
-            if ext in exclude_extensions:
+    # Only list root-level directories and key root config files - NO file listing inside subdirs
+    # This prevents the agent from getting lost in a massive file tree and exhausting iterations
+    try:
+        root_items = sorted(os.listdir(base_dir))
+        key_root_exts = {'.json', '.yml', '.yaml', '.md', '.py', '.sql', '.env'}
+        for item in root_items:
+            if item.startswith('.') or item in exclude_dirs:
                 continue
-            # Don't list root files unless they are config/specs to keep context extremely clean
-            if root == base_dir and ext not in ('.json', '.yml', '.yaml', '.md', '.py', '.sql', '.js'):
-                continue
-                
-            file_path = os.path.join(root, f)
-            try:
-                size_bytes = os.path.getsize(file_path)
-                context.append(f"{sub_indent}📄 {f} ({size_bytes} bytes)")
-            except Exception:
-                pass
+            item_path = os.path.join(base_dir, item)
+            if os.path.isdir(item_path):
+                # Count files inside for reference, but don't list them
+                try:
+                    n_files = len([f for f in os.listdir(item_path) if os.path.isfile(os.path.join(item_path, f))])
+                    context.append(f"    📁 {item}/  ({n_files} files — use 'List Directory Files' tool to explore)")
+                except Exception:
+                    context.append(f"    📁 {item}/")
+            else:
+                ext = os.path.splitext(item)[1].lower()
+                if ext in key_root_exts:
+                    try:
+                        size_bytes = os.path.getsize(item_path)
+                        context.append(f"    📄 {item} ({size_bytes} bytes)")
+                    except Exception:
+                        context.append(f"    📄 {item}")
+    except Exception as e:
+        context.append(f"[!] Error al listar directorio raíz: {e}")
             
-    context.append("\n[!] NOTA DE OPTIMIZACIÓN DEL SCRUM MASTER:")
-    context.append("Para evitar desbordar tu ventana de contexto y prevenir fallos, el árbol de directorios ha sido limitado al nivel 1 de profundidad.")
-    context.append("Por favor, procesa el desarrollo por partes: utiliza la herramienta 'List Directory Files' con parámetros específicos para ver archivos internos de subcarpetas (ej. 'backend/src/main/...') y la herramienta 'Read Code File' para leer archivos específicos bajo demanda.")
+    context.append("\n[!] INSTRUCCIÓN CRÍTICA DEL SCRUM MASTER:")
+    context.append("El árbol de archivos ha sido comprimido al nivel raíz para evitar desbordes de contexto.")
+    context.append("USA las herramientas 'List Directory Files' y 'Read Code File' para explorar subcarpetas y leer archivos específicos.")
+    context.append("NO intentes explorar el árbol completo manualmente — céntrate en completar la tarea del sprint.")
     return "\n".join(context)
+
+def summarize_context_with_ollama(raw_context: str, label: str = "contexto") -> str:
+    """
+    Uses local Ollama (llama3.2) to compress a large context string into a concise
+    summary of max ~2000 tokens. Falls back to truncation if Ollama is unavailable.
+    Logs elapsed time so we can measure Ollama's summarization speed.
+    """
+    import time
+    import requests
+
+    OLLAMA_BASE = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    MAX_CHARS_BEFORE_SUMMARY = 6000  # ~1500 tokens — only summarize if larger
+    TARGET_SUMMARY_WORDS = 350       # ~500 tokens output
+
+    original_chars = len(raw_context)
+    print(f"\n📏 [Context Manager]: '{label}' tiene {original_chars} chars ({original_chars//4} tokens aprox.)")
+
+    if original_chars <= MAX_CHARS_BEFORE_SUMMARY:
+        print(f"✅ [Context Manager]: Contexto dentro del límite — no se requiere resumen.")
+        return raw_context
+
+    print(f"⚠️  [Context Manager]: Contexto demasiado grande para Groq (límite ~10K tokens).")
+    print(f"🏠 [Context Manager]: Enviando a Ollama local para resumir ({original_chars} chars → ~{TARGET_SUMMARY_WORDS*5} chars)...")
+
+    prompt = (
+        f"Eres un asistente técnico. Resume el siguiente contexto de desarrollo de forma extremadamente neutra, concisa y en español. "
+        f"Mantén la información técnica esencial (rutas de archivos, endpoints, tecnologías, errores). "
+        f"CRÍTICO: Genera el resumen directamente en texto plano fluido (párrafos simples). No uses títulos llamativos, "
+        f"no formatees negritas como '**ID de Ticket**', no utilices listas complejas ni tablas, y no añadas introducciones ni saludos. "
+        f"El resumen debe tener máximo {TARGET_SUMMARY_WORDS} palabras.\n\n"
+        f"CONTEXTO:\n{raw_context[:12000]}\n\nRESUMEN PLANO:"
+    )
+
+    t_start = time.time()
+    try:
+        resp = requests.post(
+            f"{OLLAMA_BASE}/api/chat",
+            json={
+                "model": "llama3.2:latest",
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": False,
+                "options": {"num_predict": 600, "temperature": 0.1}
+            },
+            timeout=120
+        )
+        elapsed = round(time.time() - t_start, 2)
+
+        if resp.status_code == 200:
+            summary = resp.json().get("message", {}).get("content", "").strip()
+            # Clean up potential leading markdown headers if Ollama ignored instruction
+            if summary.startswith("###") or summary.startswith("##") or summary.startswith("#"):
+                summary = "\n".join([line for line in summary.splitlines() if not line.strip().startswith("#")])
+            summary_chars = len(summary)
+            compression = round((1 - summary_chars / original_chars) * 100, 1)
+            print(f"✅ [Context Manager]: Resumen generado en {elapsed}s")
+            print(f"   📉 Compresión: {original_chars} → {summary_chars} chars ({compression}% reducción)")
+            return summary
+        else:
+            elapsed = round(time.time() - t_start, 2)
+            print(f"❌ [Context Manager]: Ollama respondió {resp.status_code} en {elapsed}s — usando truncado de emergencia.")
+    except requests.exceptions.Timeout:
+        elapsed = round(time.time() - t_start, 2)
+        print(f"⏱️  [Context Manager]: Ollama timeout tras {elapsed}s — usando truncado de emergencia.")
+    except requests.exceptions.ConnectionError:
+        elapsed = round(time.time() - t_start, 2)
+        print(f"🔌 [Context Manager]: Ollama no disponible en {elapsed}s — usando truncado de emergencia.")
+    except Exception as ex:
+        elapsed = round(time.time() - t_start, 2)
+        print(f"❌ [Context Manager]: Error Ollama ({ex}) en {elapsed}s — usando truncado de emergencia.")
+
+    # Emergency fallback: hard truncate
+    truncated = raw_context[:MAX_CHARS_BEFORE_SUMMARY]
+    print(f"✂️  [Context Manager]: Contexto truncado a {len(truncated)} chars como fallback.")
+    return truncated
+
 
 def run_sprint():
     import threading
@@ -320,6 +386,62 @@ def run_sprint():
     
     # 1. Inicializar conector de Redis
     connector = ScrumConnector()
+    
+    # Iniciar Worker de salud de modelos en segundo plano y realizar primer chequeo síncronamente
+    try:
+        from model_health_worker import start_daemon_worker, run_health_check_cycle
+        print("🔍 [Scrum Master]: Inicializando Health Checker de Modelos síncronamente...")
+        run_health_check_cycle()
+        start_daemon_worker()
+    except Exception as e:
+        print(f"[!] Error al iniciar el Health Checker de Modelos: {e}")
+
+    def get_healthiest_model():
+        import json
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        status_path = os.path.join(base_dir, "model_health_status.json")
+        if os.path.exists(status_path):
+            try:
+                with open(status_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return data.get("healthiest_model", "openrouter/openrouter/owl-alpha")
+            except Exception:
+                pass
+        return "openrouter/openrouter/owl-alpha"
+
+    def configure_agent_llm(agent, active_key, model_name):
+        if not hasattr(agent, 'llm') or not agent.llm:
+            return
+        
+        # El Product Owner debe usar siempre openrouter/owl-alpha porque Groq es inestable con 'Create Jira Issue'
+        if agent.role == 'Product Owner' and model_name.startswith("groq/"):
+            model_name = "openrouter/openrouter/owl-alpha"
+
+        from crewai import LLM as CrewLLM
+        ollama_base = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        if model_name.startswith("ollama/"):
+            # Local Ollama — no API key needed, point to local server
+            agent.llm = CrewLLM(
+                model=model_name,
+                base_url=f"{ollama_base}/v1",
+                api_key="ollama",  # LiteLLM requires a non-empty key
+                temperature=0.2
+            )
+        elif model_name.startswith("groq/"):
+            groq_key = os.getenv("GROQ_API_KEY")
+            agent.llm = CrewLLM(
+                model=model_name,
+                api_key=groq_key,
+                temperature=0.2
+            )
+        else:
+            agent.llm = CrewLLM(
+                model=model_name,
+                api_key=active_key,
+                base_url="https://openrouter.ai/api/v1",
+                temperature=0.2
+            )
+
     if not connector.connect():
         print("[!] No se pudo conectar a Redis. Corriendo en modo STANDALONE tradicional...")
         use_distributed = False
@@ -331,19 +453,18 @@ def run_sprint():
         # Intentar elegir Master
         connector.elect_master()
         
-        # Balanceador dinámico de cuentas y tokens por worker al iniciar
-        active_key = connector.get_healthy_api_key()
-        if active_key:
-            print(f"\n🔑 [Balanceador de Cuentas]: Clave primaria asignada desde el pool: ...{active_key[-8:]}")
-            os.environ["OPENROUTER_API_KEY"] = active_key
-            os.environ["OPENAI_API_KEY"] = active_key
-            
-            # Actualizar todos los agentes en memoria
-            for agent in [product_owner, system_architect, software_developer, frontend_developer, devops_engineer, technical_writer, qa_engineer]:
-                if hasattr(agent, 'llm') and agent.llm:
-                    agent.llm.api_key = active_key
-                    if hasattr(agent.llm, 'kwargs') and isinstance(agent.llm.kwargs, dict):
-                        agent.llm.kwargs['api_key'] = active_key
+    # Balanceador dinámico de cuentas y tokens por worker al iniciar (Ejecutar siempre, incluso en standalone)
+    active_key = connector.get_healthy_api_key()
+    if active_key:
+        current_model = get_healthiest_model()
+        print(f"\n🔑 [Balanceador de Cuentas]: Clave primaria asignada desde el pool: ...{active_key[-8:]}")
+        print(f"📡 [Model Router]: Modelo más saludable asignado: {current_model}")
+        os.environ["OPENROUTER_API_KEY"] = active_key
+        os.environ["OPENAI_API_KEY"] = active_key
+        
+        # Actualizar todos los agentes en memoria con la clave activa y el modelo más saludable
+        for agent in [product_owner, system_architect, software_developer, frontend_developer, devops_engineer, technical_writer, qa_engineer]:
+            configure_agent_llm(agent, active_key, current_model)
 
     sprint_number = 1
     initial_feature_set = False
@@ -406,12 +527,11 @@ def run_sprint():
                         os.environ["OPENROUTER_API_KEY"] = new_key
                         os.environ["OPENAI_API_KEY"] = new_key
                         
-                        # Update all agents' LLM objects in-place
+                        # Update all agents' LLM objects in-place with the healthiest model
+                        current_model = get_healthiest_model()
+                        print(f"📡 [Model Router]: Cambiando al modelo más saludable: {current_model}")
                         for agent in [product_owner, system_architect, software_developer, frontend_developer, devops_engineer, technical_writer, qa_engineer]:
-                            if hasattr(agent, 'llm') and agent.llm:
-                                agent.llm.api_key = new_key
-                                if hasattr(agent.llm, 'kwargs') and isinstance(agent.llm.kwargs, dict):
-                                    agent.llm.kwargs['api_key'] = new_key
+                            configure_agent_llm(agent, new_key, current_model)
                                     
                         print("🔄 Reintentando ejecución del Crew con la nueva clave saludable...")
                     else:
@@ -574,13 +694,16 @@ Historial de Comentarios:
         pending_issues = check_pending_jira_tasks()
         
         if pending_issues:
-            if use_distributed and connector.is_master:
-                connector.redis_client.set("scrum:backlog_empty", "false")
-                
+            # Procesamos únicamente el primer ticket para trabajar estrictamente "tarea por tarea",
+            # evitando acumular contexto de otros tickets y optimizando los límites de tokens.
+            first_issue = pending_issues[0]
             print(f"\n[!] ¡Se han encontrado {len(pending_issues)} tareas/bugs PENDIENTES en Jira!")
+            print(f"🎯 [Scrum Master]: Modo 'Tarea por Tarea' activo. Seleccionando únicamente {first_issue.get('key')} para este ciclo.")
+            pending_issues = [first_issue]
             
             # Si estamos en modo distribuido y hay trabajadores conectados, repartirles las tareas
             if use_distributed and connector.is_master:
+                connector.redis_client.set("scrum:backlog_empty", "false")
                 workers = list(connector.redis_client.smembers("scrum:workers"))
                 
                 # Si no hay trabajadores, el Master asume la tarea localmente (Standalone)
@@ -619,16 +742,21 @@ Historial de Comentarios:
                     sprint_number += 1
                     continue
 
-            # Ejecución tradicional o fallback síncrono local si no hay workers
-            issue_details = []
-            backlog_parts = []
-            
-            for issue in pending_issues:
-                key = issue.get('key', 'Unknown')
+            # ── ONE TICKET AT A TIME ─────────────────────────────────────────────
+            # Procesar cada ticket individualmente para mantener el contexto pequeño
+            # y no superar el límite de TPM de Groq (12K tokens).
+            print(f"\n🗂️  [Scrum Master]: Procesando {len(pending_issues)} ticket(s) UNO POR UNO para optimizar contexto...")
+
+            for ticket_idx, issue in enumerate(pending_issues, start=1):
+                key   = issue.get('key', 'Unknown')
                 summary = issue.get('summary', 'No summary')
-                status = issue.get('status', 'Unknown')
-                print(f"    📌 [{key}] - {summary} (Estado: {status})")
-                
+                status  = issue.get('status', 'Unknown')
+
+                print(f"\n{'='*50}")
+                print(f"🎫 [Ticket {ticket_idx}/{len(pending_issues)}]: {key} — {summary}")
+                print(f"{'='*50}")
+
+                # ── Fetch full Jira details for this single ticket ────────────
                 description = "Sin descripcion."
                 comments_list = []
                 latest_comment_text = ""
@@ -639,42 +767,77 @@ Historial de Comentarios:
                         fields = j_issue.get("fields", {})
                         description = fields.get("description") or "Sin descripcion."
                         comments = fields.get("comment", {}).get("comments", [])
+                        print(f"   📝 Descripción: {len(description)} chars | Comentarios: {len(comments)}")
                         if comments:
                             latest_c = comments[-1]
                             author = latest_c.get("author", {}).get("displayName", "Unknown")
-                            body = latest_c.get("body", "")
+                            body   = latest_c.get("body", "")
                             latest_comment_text = f" - [LATEST COMMENT from {author}]: {body}"
                             for c in comments:
                                 c_author = c.get("author", {}).get("displayName", "Unknown")
-                                c_body = c.get("body", "")
+                                c_body   = c.get("body", "")
                                 comments_list.append(f"   [{c_author}]: {c_body}")
-                            # Scan and process image attachments in background (non-blocking)
                             scan_and_process_jira_images(j_issue, key)
                 except Exception as e:
-                    print(f"Warning fetching details for {key}: {e}")
-                
-                issue_details.append(f"[{key}]: '{summary}'{latest_comment_text}")
+                    print(f"   ⚠️  Warning al obtener detalles de {key}: {e}")
+
                 comments_str = "\n".join(comments_list) if comments_list else "Sin comentarios anteriores."
-                part = f"""--- TICKET JIRA: {key} ---
+                raw_jira_ctx = f"""--- TICKET JIRA: {key} ---
 Summary: {summary}
 Description: {description}
 Status en Jira: {status}
 Historial de Comentarios:
 {comments_str}
 -------------------------"""
-                backlog_parts.append(part)
-                
-            jira_backlog_context = "\n\n".join(backlog_parts)
-            print("\n[🤖 Scrum Master]: El equipo priorizará la resolución y cierre de estos tickets considerando sus comentarios recientes.")
-            current_sprint_goal = "Completar, finalizar y arreglar los errores mencionados en los comentarios de estas tareas pendientes: " + " | ".join(issue_details) + ". IMPORTANT: Use 'Read Jira Issue' tool if you need the full description and older comments."
-            initial_feature_set = True
-            
+
+                # ── Summarize Jira context with Ollama if too large ───────────
+                jira_backlog_context = summarize_context_with_ollama(
+                    raw_jira_ctx, label=f"Jira {key}"
+                )
+
+                sprint_goal_ticket = (
+                    f"Completar y cerrar el ticket {key}: '{summary}'{latest_comment_text}. "
+                    f"IMPORTANT: Usa la herramienta 'Read Jira Issue' si necesitas la descripción completa."
+                )
+                initial_feature_set = True
+
+                # ── Generate codebase context & summarize if needed ───────────
+                print(f"\n[🤖 Scrum Master]: Generando contexto del código fuente para {key}...")
+                raw_codebase_ctx = generate_codebase_context(sprint_goal_ticket)
+                codebase_context = summarize_context_with_ollama(
+                    raw_codebase_ctx, label="codebase context"
+                )
+
+                # ── Execute crew for this single ticket ───────────────────────
+                print(f"\n🚀 [Scrum Master]: Lanzando crew para {key}...")
+                try:
+                    execute_crew_locally(sprint_goal_ticket, codebase_context, jira_backlog_context)
+                    print(f"\n✅ [Scrum Master]: Ticket {key} procesado exitosamente.")
+                    sprint_number += 1
+                except Exception as crew_err:
+                    print(f"\n❌ [Scrum Master]: Error en crew para {key}: {crew_err}")
+                    record_lesson_learned(crew_err, f"CrewExecution-{key}")
+                    print(f"🔄 [Scrum Master]: Limpiando rate limits y continuando con el siguiente ticket...")
+                    if hasattr(connector, 'local_rate_limits'):
+                        connector.local_rate_limits.clear()
+                    if connector.redis_client:
+                        try:
+                            for rkey in connector.redis_client.scan_iter("scrum:rate_limit:*"):
+                                connector.redis_client.delete(rkey)
+                        except Exception:
+                            pass
+                    print("⏳ Esperando 15s antes del siguiente ticket...")
+                    time.sleep(15)
+
+            # All tickets processed for this sprint cycle
+            continue
+
         else:
             jira_backlog_context = "Backlog limpio de Jira. Esta es una tarea/funcionalidad completamente nueva."
             if use_distributed and connector.is_master:
                 connector.redis_client.set("scrum:backlog_empty", "true")
                 print("\n[🤖 Scrum Master]: No hay tareas disponibles.")
-                
+
             if not initial_feature_set:
                 print("\n[🤖 Scrum Master]: No hay tareas pendientes en Jira. El backlog está limpio.")
                 print("\n[!] Hola! Soy el Scrum Master de tu equipo autónomo de IA.")
@@ -682,7 +845,7 @@ Historial de Comentarios:
                 if not user_feature.strip():
                     user_feature = "Crear un PBX FreeSWITCH en docker con 2 extensiones"
                     print(f"Entrada vacía. Usando por defecto: '{user_feature}'")
-                
+
                 print(f"\nEntendido. Iniciando nueva funcionalidad: '{user_feature}'\n")
                 current_sprint_goal = user_feature
                 initial_feature_set = True
@@ -693,32 +856,29 @@ Historial de Comentarios:
                 print(f"[X] CICLO COMPLETADO EXITOSAMENTE TRAS {sprint_number - 1} SPRINTS")
                 print("==================================================")
                 break
-                
-        # Generate codebase context
-        print("[🤖 Scrum Master]: Generando contexto del código fuente para el equipo...")
-        codebase_context = generate_codebase_context(current_sprint_goal)
-        
-        # Start the local sprint execution (standalone fallback) with automatic recovery
-        try:
-            execute_crew_locally(current_sprint_goal, codebase_context, jira_backlog_context)
-            sprint_number += 1
-        except Exception as crew_err:
-            print(f"\n❌ [Scrum Master]: Error crítico durante la ejecución del Crew: {crew_err}")
-            # Record lesson learned to build continuous memory database
-            record_lesson_learned(crew_err, "CrewExecution")
-            print("🔄 [Scrum Master]: Se ha detectado un fallo. Reiniciando la consulta pendiente y limpiando límites temporales...")
-            if hasattr(connector, 'local_rate_limits'):
-                connector.local_rate_limits.clear()
-            if connector.redis_client:
-                try:
-                    # Clear Redis rate limits
-                    for rkey in connector.redis_client.scan_iter("scrum:rate_limit:*"):
-                        connector.redis_client.delete(rkey)
-                except Exception:
-                    pass
-            print("⏳ Esperando 30 segundos antes de reiniciar el ciclo del sprint con claves restablecidas...")
-            import time
-            time.sleep(30)
+
+            # ── Nueva funcionalidad (backlog vacío) ───────────────────────────
+            print("[🤖 Scrum Master]: Generando contexto del código fuente...")
+            raw_codebase_ctx = generate_codebase_context(current_sprint_goal)
+            codebase_context = summarize_context_with_ollama(raw_codebase_ctx, label="codebase context")
+
+            try:
+                execute_crew_locally(current_sprint_goal, codebase_context, jira_backlog_context)
+                sprint_number += 1
+            except Exception as crew_err:
+                print(f"\n❌ [Scrum Master]: Error crítico durante la ejecución del Crew: {crew_err}")
+                record_lesson_learned(crew_err, "CrewExecution")
+                print("🔄 [Scrum Master]: Reiniciando tras fallo...")
+                if hasattr(connector, 'local_rate_limits'):
+                    connector.local_rate_limits.clear()
+                if connector.redis_client:
+                    try:
+                        for rkey in connector.redis_client.scan_iter("scrum:rate_limit:*"):
+                            connector.redis_client.delete(rkey)
+                    except Exception:
+                        pass
+                print("⏳ Esperando 30 segundos antes de reiniciar...")
+                time.sleep(30)
 
 if __name__ == "__main__":
     run_sprint()

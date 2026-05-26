@@ -40,6 +40,7 @@ class ScrumConnector:
             return True
         except Exception as e:
             print(f"[🔌 Redis] ERROR: No se pudo conectar a Redis en {self.host}:{self.port}: {e}")
+            self.redis_client = None
             return False
 
     def elect_master(self):
@@ -301,11 +302,26 @@ class ScrumConnector:
         Si mark_rate_limited=True, registra 'current_key' como limitada en Redis por 12 horas.
         """
         import os
-        pool_str = os.getenv("OPENROUTER_KEYS_POOL") or os.getenv("OPENROUTER_API_KEY")
-        if not pool_str:
-            return None
-            
-        keys = [k.strip() for k in pool_str.split(",") if k.strip()]
+        import json
+        
+        # Primero intentar cargar de keys_pool.json local
+        keys = []
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        pool_json_path = os.path.join(base_dir, "keys_pool.json")
+        if os.path.exists(pool_json_path):
+            try:
+                with open(pool_json_path, "r", encoding="utf-8") as f:
+                    pool_data = json.load(f)
+                    keys = [k.strip() for k in pool_data.get("keys", []) if k.strip()]
+            except Exception as e:
+                print(f"[!] Error leyendo pool JSON: {e}")
+                
+        # Fallback al string de variables de entorno si no hay keys en el JSON
+        if not keys:
+            pool_str = os.getenv("OPENROUTER_KEYS_POOL") or os.getenv("OPENROUTER_API_KEY")
+            if pool_str:
+                keys = [k.strip() for k in pool_str.split(",") if k.strip()]
+                
         if not keys:
             return None
 

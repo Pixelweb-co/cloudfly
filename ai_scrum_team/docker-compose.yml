@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  ai-scrum-team:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai_scrum_team
+    ports:
+      - "8000:8000"
+    environment:
+      - ENV=development
+    volumes:
+      - ./model_cache:/cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped

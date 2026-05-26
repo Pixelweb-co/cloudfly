@@ -1,22 +1,35 @@
-version: "3.8"
+version: '3.8'
+
 services:
-  ia_scrum_team:
-    build:
-      context: ./ai_scrum_team
-      dockerfile: Dockerfile
-    image: ia_scrum_team:latest
-    container_name: ia_scrum_team
+  redis:
+    image: redis:7-alpine
+    container_name: redis
     restart: unless-stopped
     ports:
-      - "8000:8000"
-    environment:
-      - PYTHONUNBUFFERED=1
-    volumes:
-      - ./ai_scrum_team:/app:ro
-      - ./model_cache:/cache
-    networks:
-      - app-net
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
-networks:
-  app-net:
-    driver: bridge
+  ticket_resolver:
+    build:
+      context: ./ticket_resolver
+      dockerfile: Dockerfile
+    container_name: ticket_resolver
+    restart: unless-stopped
+    env_file:
+      - ./ticket_resolver/.env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

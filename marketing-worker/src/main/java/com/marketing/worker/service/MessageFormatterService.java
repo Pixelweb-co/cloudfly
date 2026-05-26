@@ -19,6 +19,8 @@ public class MessageFormatterService {
 
     private final ProductRepository productRepository;
 
+    private static final String DASHBOARD_BASE_URL = "https://dashboard.cloudfly.com.co/contacts/";
+
     // Zero-width characters used to make each message unique
     // WhatsApp won't display them but they prevent duplicate detection
     private static final char[] INVISIBLE_CHARS = {
@@ -41,10 +43,18 @@ public class MessageFormatterService {
             return productRepository.findById(campaign.getProductId())
                     .map(product -> appendProductDetails(formatted, product))
                     .defaultIfEmpty(formatted)
+                    .map(message -> appendChatLink(message, contact.getId()))
                     .map(this::addInvisibleFingerprint);
         }
         
-        return Mono.just(addInvisibleFingerprint(formatted));
+        return Mono.just(addInvisibleFingerprint(appendChatLink(formatted, contact.getId())));
+    }
+
+    private String appendChatLink(String message, Long contactId) {
+        if (contactId == null) {
+            return message;
+        }
+        return message + "\n\n💬 Chatea con nosotros: " + DASHBOARD_BASE_URL + contactId;
     }
 
     /**

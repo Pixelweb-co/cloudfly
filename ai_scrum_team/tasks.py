@@ -24,8 +24,8 @@ sprint_planning = Task(
        - When calling the tool, the 'description' MUST be extremely detailed. Include Acceptance Criteria, technical context, and what exactly the developer needs to do.
        - Start the issue description with "🤖 **Product Owner**: ".
     4. If it is to complete EXISTING pending tasks:
-       - DO NOT use the 'Create Jira Issue' tool (they are already logged).
-       - Analyze the context of the existing pending tasks passed in the instruction.
+       - DO NOT create a new primary task. If you decide to break down the existing pending task (e.g., CLOUD-178) into sub-tasks for the sprint, you MUST use the 'Create Jira Issue' tool setting issue_type to 'Sub-task' and ALWAYS pass that existing ticket's key (e.g. CLOUD-178) as the `parent_key`.
+       - CRITICAL: Never call 'Create Jira Issue' with an empty `parent_key` or `""` when breaking down or creating tasks. Link them to the parent issue key.
        - Summarize what needs to be done for each of them based on the CURRENT CODEBASE CONTEXT.
     5. In BOTH cases, record and output the list of ALL Jira Issue Keys (e.g., CLOUD-123, CLOUD-124) that must be processed in this sprint.
     
@@ -33,7 +33,7 @@ sprint_planning = Task(
     
     CRITICAL FOR SPEC-DRIVEN DEVELOPMENT: If the codebase context includes a specification document (like spec.md, openapi.yaml, etc.) or the user requests strict adherence to a spec, you MUST enforce that the generated Jira tasks strictly follow the specification exactly, without inventing extra features.
     ''',
-    expected_output='A clear breakdown of the sub-tasks to process, along with a list of all relevant Jira Issue Keys for this sprint.',
+    expected_output='A clear breakdown of the sub-tasks related to their parent keys, along with a list of all relevant Jira Issue Keys for this sprint.',
     agent=product_owner
 )
 
@@ -104,6 +104,8 @@ quality_assurance = Task(
     description='''
     Verify that the deployment was successful and that all changes comply with the specifications.
     CRITICAL MANDATE: You MUST perform comprehensive E2E Integration testing across the ENTIRE PROJECT ECOSYSTEM. You are responsible for verifying the complete system health, including the Backend APIs, Databases, Messaging layers (Evolution API/FreeSWITCH), and Frontend UIs.
+    
+    CRITICAL STORY RULE: As the QA Engineer, you MUST create/write the automated tests for this story and leave a detailed comment in the Jira ticket describing exactly how to execute them step-by-step. Since the DevOps engineer is not working on this story, you do not need to wait for Docker deployments or VPS deploys; you must perform verification against the locally written code and verify it works, then add the execution instructions comment.
     
     Here is the CURRENT JIRA BACKLOG AND ISSUE HISTORY CONTEXT:
     {jira_backlog_context}

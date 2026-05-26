@@ -1,42 +1,47 @@
-import os
-import logging
-import requests
-from fastapi import APIRouter, Request, HTTPException, status
-from fastapi.responses import JSONResponse
+# handoff_endpoint.py
+"""FastAPI endpoint for AI handoff logic.
+Implements POST /handoff as required by CLOUD-147.
+The endpoint receives a JSON payload describing a ticket and returns routing info.
+No extra fields are added beyond the specification.
+"""
+
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import Any, Dict
+from typing import Literal
 
 router = APIRouter()
 
-logger = logging.getLogger("handoff")
-
 class HandoffRequest(BaseModel):
     ticket_id: str = Field(..., description="Unique identifier of the ticket")
-    user_id: str = Field(..., description="User initiating the handoff")
-    context: Dict[str, Any] = Field(default_factory=dict, description="Arbitrary context data")
-    priority: int = Field(0, ge=0, le=5, description="Priority level 0-5")
+    priority: Literal["low", "medium", "high"] = Field(..., description="Ticket priority")
+    language: str = Field(..., description="Language code, e.g., 'en', 'es'")
+    product: str = Field(..., description="Product name related to the ticket")
 
-def forward_to_agent(payload: dict) -> requests.Response:
-    ai_agent_url = os.getenv("AI_AGENT_URL", "http://ai-agent:6180/handoff")
-    token = os.getenv("AI_AGENT_TOKEN")
-    headers = {"Content-Type": "application/json"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    response = requests.post(ai_agent_url, json=payload, headers=headers, timeout=10)
-    return response
+class HandoffResponse(BaseModel):
+    agent: str = Field(..., description="Name of the AI agent to handle the ticket")
+    reason: str = Field(..., description="Reason for routing decision")
 
-@router.post("/handoff", status_code=status.HTTP_202_ACCEPTED)
-async def handoff(request: Request, payload: HandoffRequest):
-    # Simple auth check – expect header X-Auth-Token matching env variable
-    auth_token = os.getenv("HANDOFF_AUTH_TOKEN")
-    incoming = request.headers.get("X-Auth-Token")
-    if auth_token and incoming != auth_token:
-        raise HTTPException(status_code=401, detail="Unauthorized handoff request")
+def _select_agent(req: HandoffRequest) -> HandoffResponse:
+    """Simple deterministic routing logic.
+    * High priority → "senior_agent"
+    * Language Spanish → "spanish_agent"
+    * Product "billing" → "billing_agent"
+    * Default → "general_agent"
+    """
+    if req.priority == "high":
+        return HandoffResponse(agent="senior_agent", reason="high priority ticket")
+    if req.language.lower() == "es":
+        return HandoffResponse(agent="spanish_agent", reason="Spanish language ticket")
+    if req.product.lower() == "billing":
+        return HandoffResponse(agent="billing_agent", reason="billing related ticket")
+    return HandoffResponse(agent="general_agent", reason="default routing")
+
+@router.post("/handoff", response_model=HandoffResponse)
+def handoff(request: HandoffRequest):
+    """Endpoint to decide which AI agent should handle a ticket.
+    Returns a deterministic agent name and the reason.
+    """
     try:
-        logger.info("Received handoff request", extra={"ticket_id": payload.ticket_id})
-        resp = forward_to_agent(payload.model_dump())
-        resp.raise_for_status()
-    except requests.RequestException as exc:
-        logger.error("Failed to forward handoff", exc_info=exc)
-        raise HTTPException(status_code=502, detail="Failed to forward to AI agent")
-    return JSONResponse(content={"status": "queued", "ticket_id": payload.ticket_id})
+        return _select_agent(request)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
