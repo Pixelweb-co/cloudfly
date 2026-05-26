@@ -46,3 +46,5 @@ callcenterIA/asterisk/data/*.sqlite3
 
 # IA Metadata
 brain/
+ai_scrum_team/keys_pool.json
+
