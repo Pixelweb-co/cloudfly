@@ -51,7 +51,12 @@ public class CompanyEntity {
     @Column("updated_at")
     private LocalDateTime updatedAt;
 
+    @Column("company_description")
+    private String companyDescription;
+
     // Explicit Getters and Setters for VPS environment compatibility
+    public String getCompanyDescription() { return companyDescription; }
+    public void setCompanyDescription(String companyDescription) { this.companyDescription = companyDescription; }
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
