@@ -394,7 +394,7 @@ services:
 
   marketing-agent:
     build:
-      context: ./marketing-agent
+      context: ./marketing_agent
       dockerfile: Dockerfile
     container_name: marketing-agent
     restart: always
@@ -411,6 +411,7 @@ services:
       - KAFKA_HOST=${KAFKA_HOST:-kafka}
       - EVOLUTION_API_URL=${EVOLUTION_API_URL:-http://evolution-api:8080}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     networks:
       - app-net
       - kafka-net
