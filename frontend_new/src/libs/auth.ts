@@ -38,7 +38,17 @@ export const authOptions: NextAuthOptions = {
             body: JSON.stringify({ username, password })
           })
 
-          const data = await res.json()
+          const responseText = await res.text()
+          console.log(`[NextAuth] Login response status: ${res.status}`)
+          console.log(`[NextAuth] Login response text: ${responseText.substring(0, 500)}`)
+          
+          let data;
+          try {
+            data = JSON.parse(responseText);
+          } catch (e) {
+            console.error(`[NextAuth] JSON parse error:`, e)
+            throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`)
+          }
 
           if (res.status === 401) {
             throw new Error(JSON.stringify(data))
