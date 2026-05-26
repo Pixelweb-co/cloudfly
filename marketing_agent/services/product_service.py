@@ -17,7 +17,7 @@ class ProductService:
     def __init__(self):
         self.base_url = Config.BACKEND_URL
         self.headers = {
-            "Authorization": f"Bearer {Config.BACKEND_API_KEY}",
+            "X-AI-Secret": "cloudfly_ai_secret_2026",
             "Content-Type": "application/json"
         }
     
