@@ -501,101 +501,144 @@ Responde únicamente con este formato JSON:
 
     def execute_workflow(self):
         """Autonomous campaign execution entry point."""
-        logger.info("🤖 Starting B2B Prospecting & Campaign Generator Workflow...")
+        logger.info("\n" + "="*80)
+        logger.info(f"🤖 START: B2B Prospecting & Campaign Generator Workflow at {datetime.now().isoformat()}")
+        logger.info("="*80)
         
         # Strictly query companies belonging to tenant 1 for testing (as requested by user)
         companies = self.get_active_companies_for_tenant(1)
-        logger.info(f"Found {len(companies)} active companies for tenant 1.")
+        logger.info(f"✓ Fetched {len(companies)} active companies for tenant 1.")
+        if not companies:
+            logger.warning("⚠️ No companies found. Workflow cannot proceed.")
+            return
         
-        for company in companies:
+        for idx, company in enumerate(companies, 1):
             company_id = company["id"]
             company_name = company["name"]
-            logger.info(f"🏢 Processing company: {company_name} (ID: {company_id})")
+            logger.info(f"\n[Company {idx}/{len(companies)}] 🏢 Processing: {company_name} (ID: {company_id})")
+            logger.info(f"   Business Type: {company.get('business_type', 'N/A')}, Desc: {company.get('business_description', 'N/A')[:50]}...")
             
             # 1. Fetch active products
+            logger.info(f"   → Fetching active products for company {company_id}...")
             products = self.get_company_products(1, company_id)
             if not products:
-                logger.warning(f"⚠️ No active products found for company {company_name}. Skipping.")
+                logger.warning(f"   ✗ No active products found. Skipping this company.")
                 continue
+            logger.info(f"   ✓ Found {len(products)} active products")
                 
             # 2. Classify and determine ICP categories via GPT-4o
+            logger.info(f"   → Analyzing company profile & products with GPT-4o...")
             analysis = self.analyze_company_and_products(
                 company_name,
                 company.get("business_type") or "",
                 company.get("business_description") or "",
                 products
             )
+            logger.info(f"   ✓ Analysis complete. Result: {analysis}")
             
             if not analysis.get("is_b2b"):
-                logger.info(f"⏭️ Company {company_name} is classified as B2C. Skipping.")
+                logger.info(f"   ✗ Company classified as B2C. Skipping B2B prospecting.")
                 continue
                 
-            logger.info(f"✅ Company {company_name} classified as B2B. Target categories: {analysis.get('categories')}")
+            categories = analysis.get('categories', [])
+            logger.info(f"   ✓ Company classified as B2B. Target categories ({len(categories)}): {categories}")
             
             # Fetch active WhatsApp channel
+            logger.info(f"   → Fetching active WhatsApp channel...")
             channel_id = self.get_active_whatsapp_channel(1, company_id)
             if not channel_id:
-                logger.warning(f"⚠️ No active WhatsApp channel found for company {company_name}. Skipping campaign creation.")
+                logger.warning(f"   ✗ No active WhatsApp channel found. Skipping campaign creation.")
                 continue
+            logger.info(f"   ✓ Found WhatsApp channel ID: {channel_id}")
                 
             # 3. Process each category
-            for category in analysis.get("categories", []):
+            for cat_idx, category in enumerate(analysis.get("categories", []), 1):
                 category = category.strip()
                 if not category:
                     continue
                     
-                logger.info(f"🎯 Processing ICP category: '{category}'")
+                logger.info(f"   [Category {cat_idx}] 🎯 Processing ICP category: '{category}'")
                 
                 # Check list/campaign duplicates
+                logger.info(f"      → Checking for existing list/campaign duplicates...")
                 if self.check_duplicate_list_or_campaign(1, company_id, category):
-                    logger.info(f"⏭️ Category list or campaign '{category}' already exists. Skipping duplication.")
+                    logger.info(f"      ✗ List or campaign '{category}' already exists. Skipping to avoid duplication.")
                     continue
+                logger.info(f"      ✓ No duplicates found.")
                     
                 # Create sending list
+                logger.info(f"      → Creating sending list '{category}'...")
                 sending_list_id = self.create_sending_list(1, company_id, category)
                 if not sending_list_id:
+                    logger.error(f"      ✗ Failed to create sending list. Skipping category.")
                     continue
+                logger.info(f"      ✓ Sending list created with ID: {sending_list_id}")
                     
                 # Fetch leads via Prospector
-                logger.info(f"🔍 Prospecting leads for '{category}'...")
+                logger.info(f"      → Prospecting leads for '{category}' (limit=5)...")
                 leads = self.prospector_service.fetch_leads_from_generator(category, limit=5)
                 
                 if not leads:
-                    logger.warning(f"⚠️ No leads found for category '{category}'")
+                    logger.warning(f"      ✗ No leads found from generator. Skipping category.")
                     continue
+                logger.info(f"      ✓ Fetched {len(leads)} leads from generator")
                     
                 # Qualify leads via GPT-4o
+                logger.info(f"      → Qualifying {len(leads)} leads with GPT-4o...")
                 qualified_leads = self.qualify_leads_gpt4o(leads, products)
                 if not qualified_leads:
-                    logger.info(f"⚠️ No leads passed GPT-4o qualification for category '{category}'")
+                    logger.info(f"      ✗ No leads passed GPT-4o qualification. Skipping category.")
                     continue
+                logger.info(f"      ✓ {len(qualified_leads)} leads qualified (passed filter)")
                     
                 # Save qualified leads without duplicates
+                logger.info(f"      → Saving {len(qualified_leads)} qualified leads to database...")
                 contact_ids = self.save_qualified_leads(1, company_id, sending_list_id, qualified_leads)
                 if not contact_ids:
-                    logger.warning(f"⚠️ No new unique leads added to category list '{category}'")
+                    logger.warning(f"      ✗ No new unique leads added to list (all duplicates?). Skipping campaign.")
                     continue
+                logger.info(f"      ✓ Saved {len(contact_ids)} new unique leads to sending list {sending_list_id}")
                     
                 # Create and schedule campaign
+                logger.info(f"      → Creating and scheduling WhatsApp campaign...")
                 campaign_id = self.create_and_schedule_campaign(
                     1, company_id, category, sending_list_id, channel_id, products
                 )
                 
                 if campaign_id:
                     # Sync Redis context
+                    logger.info(f"      → Syncing campaign context to Redis...")
                     self.sync_redis_campaign_context(contact_ids, campaign_id, products[0].get("id"), company_id)
+                    logger.info(f"      ✓ Category '{category}' workflow completed successfully!")
+                else:
+                    logger.error(f"      ✗ Campaign creation failed. Skipping Redis sync.")
 
 def run_worker_loop():
     """Loop running the worker every 10 minutes."""
+    logger.info("\n" + "#"*80)
+    logger.info("# MARKETING AGENT WORKER INITIALIZED - Starting autonomous loop")
+    logger.info(f"# Starting time: {datetime.now().isoformat()}")
+    logger.info(f"# Execution interval: 10 minutes")
+    logger.info("#"*80)
+    
     worker = AutonomousMarketingWorker()
+    cycle_count = 0
+    
     while True:
+        cycle_count += 1
         try:
+            logger.info(f"\n### CYCLE {cycle_count} START (Time: {datetime.now().isoformat()}) ###")
             worker.execute_workflow()
+            logger.info(f"### CYCLE {cycle_count} END - Workflow completed successfully ###")
         except Exception as e:
-            logger.error(f"❌ Error in autonomous worker loop: {e}", exc_info=True)
-        logger.info("⏳ Waiting 10 minutes for next execution...")
+            logger.error(f"### CYCLE {cycle_count} ERROR: {e}", exc_info=True)
+        
+        next_run = datetime.now() + timedelta(minutes=10)
+        logger.info(f"⏳ Waiting 10 minutes... Next execution at {next_run.isoformat()}")
         time.sleep(600)
 
 if __name__ == "__main__":
+    logger.info("Starting Marketing Agent autonomous worker...")
     worker = AutonomousMarketingWorker()
+    logger.info("Worker initialized. Entering autonomous loop...")
     worker.execute_workflow()
