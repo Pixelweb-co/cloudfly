@@ -392,6 +392,30 @@ services:
       - APIFY_BASE_URL=https://api.apify.com/v2
 
 
+  marketing-agent:
+    build:
+      context: ./marketing-agent
+      dockerfile: Dockerfile
+    container_name: marketing-agent
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=${DB_HOST:-mysql}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_DATABASE=${DB_DATABASE:-cloud_master}
+      - DB_USERNAME=${DB_USERNAME:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-widowmaker}
+      - KAFKA_HOST=${KAFKA_HOST:-kafka}
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL:-http://evolution-api:8080}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    networks:
+      - app-net
+      - kafka-net
+
+
   # ====================
   # N8N (Automatización)
   # ====================
