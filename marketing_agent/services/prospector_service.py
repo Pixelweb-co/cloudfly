@@ -35,42 +35,50 @@ class ProspectorService:
         """
         Generates optimal search keywords using OpenRouter LLM based on the product.
         """
-        api_key = _get_api_key()
-        url = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1/chat/completions")
-        
+        # Prefer OpenAI for autonomous prospecting keywords (use OPENAI_API_KEY)
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("OPENROUTER_API_KEY") or _get_api_key()
+        url = "https://api.openai.com/v1/chat/completions"
+
         prompt = f"""Analiza este producto y genera una única palabra clave de búsqueda en español (máximo 2 palabras) para encontrar clientes B2B potenciales en Google Maps.
-        Por ejemplo, si el producto es "Software para restaurantes", la palabra clave debe ser "restaurantes" o "cafeterías".
-        Si el producto es "Harina de trigo premium para panaderías", la palabra clave debe ser "panaderías".
+Por ejemplo, si el producto es "Software para restaurantes", la palabra clave debe ser "restaurantes" o "cafeterías".
+Si el producto es "Harina de trigo premium para panaderías", la palabra clave debe ser "panaderías".
 
-        Producto: {product_name}
-        Descripción: {description}
+Producto: {product_name}
+Descripción: {description}
 
-        Devuelve únicamente la palabra clave, sin explicaciones ni texto adicional."""
-        
+Devuelve únicamente la palabra clave, sin explicaciones ni texto adicional."""
+
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
-        
+
         payload = {
-            "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+            "model": "gpt-4o",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.3,
-            "max_tokens": 10
+            "max_tokens": 12
         }
-        
+
         try:
-            logger.info("🤖 Generating prospecting keywords using OpenRouter...")
+            logger.info("🤖 Generating prospecting keywords using OpenAI GPT...")
             resp = requests.post(url, json=payload, headers=headers, timeout=30)
             resp.raise_for_status()
-            content = resp.json()["choices"][0]["message"]["content"].strip()
-            # Clean up quote marks if any
+            data = resp.json()
+            # Support both OpenAI and OpenRouter response shapes
+            content = ""
+            if isinstance(data.get("choices"), list) and data["choices"]:
+                msg = data["choices"][0].get("message") or data["choices"][0]
+                if isinstance(msg, dict):
+                    content = msg.get("content", "").strip()
+                else:
+                    content = str(msg).strip()
+
             content = content.replace('"', '').replace("'", "").strip()
             logger.info(f"✅ Keywords generated: {content}")
             return content
         except Exception as e:
             logger.warning(f"⚠️ Failed to generate keywords using LLM: {e}. Falling back to default.")
-            # Fallback based on product name
             if "restaurante" in product_name.lower():
                 return "restaurantes"
             if "panader" in product_name.lower():
