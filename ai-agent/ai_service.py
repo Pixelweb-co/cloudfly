@@ -873,11 +873,53 @@ class AIService:
         # Contexto reducido: El modelo lo pedirá si lo necesita
         pipeline_context = "[PIPELINE] Usa get_contact_pipeline para consultar el estado del proceso interno cuando sea relevante."
 
+        # Fetch Redis campaign context if present
+        campaign_prompt = ""
+        if self.redis_client:
+            try:
+                camp_ctx = self.redis_client.get_campaign_context(contact_id)
+                if camp_ctx:
+                    campaign_id = camp_ctx.get("campaign_id")
+                    product_id = camp_ctx.get("product_id")
+                    company_id = camp_ctx.get("company_id")
+                    logger.info(f"🎯 Active campaign context found for contact {contact_id}: Campaign {campaign_id}, Product {product_id}")
+                    
+                    product_details = ""
+                    try:
+                        conn = self.pool.get_connection()
+                        cursor = conn.cursor(dictionary=True)
+                        cursor.execute("SELECT product_name, description, price FROM products WHERE id = %s", (product_id,))
+                        prod = cursor.fetchone()
+                        conn.close()
+                        if prod:
+                            product_details = f"Producto: {prod['product_name']}\nDescripción: {prod['description']}\nPrecio: {prod['price']}"
+                    except Exception as pe:
+                        logger.warning(f"Failed to fetch product details for campaign prompt: {pe}")
+                        product_details = f"ID de Producto: {product_id}"
+                    
+                    campaign_prompt = f"""
+⚠️ [CONTEXTO DE PROSPECCIÓN EN FRÍO]:
+Este cliente es un lead frío proveniente de la Campaña ID {campaign_id} (Empresa ID {company_id}).
+Fue contactado inicialmente ofreciéndole el siguiente producto:
+{product_details}
+
+REGLAS DE SEGUIMIENTO EN FRÍO Y CALIFICACIÓN DE LEAD:
+1. Continúa la conversación de manera natural basándote en la oferta de este producto.
+2. Evalúa las respuestas del cliente para calificar dinámicamente su interés (Lead Scoring):
+   - HOT (Caliente): Expresa interés claro, quiere comprar, cotizar o agendar demo.
+   - WARM (Tibio): Hace preguntas sobre características, precios o tiene dudas razonables.
+   - COLD (Frío): No le interesa, rechaza la propuesta o ignora la oferta.
+3. Mueve silenciosamente al cliente a la etapa adecuada del Pipeline de Ventas usando 'update_pipeline_stage' según identifiques su temperatura (ej: mover a interesado/oportunidad si es caliente/tibio).
+"""
+            except Exception as re:
+                logger.error(f"Error loading Redis campaign context: {re}")
+
         system_prompt = f"""Asistente de ventas profesional. Objetivo: ayudar con dudas y ventas usando neuromarketing.
 
 EMPRESA:
 {company_info}
 {pipeline_context}
+{campaign_prompt}
 
 FORMATO PRODUCTO (obligatorio si muestras productos):
 [IMAGE_URL] (solo si existe)

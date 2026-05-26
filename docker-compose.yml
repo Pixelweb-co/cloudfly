@@ -1,13 +1,35 @@
-version: "3.8"
+version: '3.8'
+
 services:
-  cloudfly-tests:
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  ticket_resolver:
     build:
-      context: .
+      context: ./ticket_resolver
       dockerfile: Dockerfile
-    container_name: cloudfly-tests
-    command: ["python", "-m", "pytest", "-q"]
-    volumes:
-      - .:/app
+    container_name: ticket_resolver
+    restart: unless-stopped
+    env_file:
+      - ./ticket_resolver/.env
     environment:
-      - PYTHONUNBUFFERED=1
-    # expose any needed ports (none for tests)
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

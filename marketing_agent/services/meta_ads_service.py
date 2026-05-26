@@ -1,5 +1,9 @@
 import requests
-from ..config import FacebookConfig, fb_config
+from config import FacebookConfig, fb_config
+
+class MetaAdsException(Exception):
+    """Exception raised for errors in the Meta Ads Service."""
+    pass
 
 class FacebookAPI:
     """Thin wrapper around the Facebook Graph API.

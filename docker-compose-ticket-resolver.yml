@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  ticket-resolver:
+    build:
+      context: ./ticket_resolver
+      dockerfile: Dockerfile
+    container_name: ticket_resolver
+    restart: unless-stopped
+    env_file:
+      - ./ticket_resolver/.env
+    ports:
+      - "8100:8100"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ticket-resolver.rule=PathPrefix(`/resolver` )"
+      - "traefik.http.routers.ticket-resolver.entrypoints=websecure"
+      - "traffik.http.services.ticket-resolver.loadbalancer.server.port=8100"
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8100/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  app-net:
+    driver: bridge

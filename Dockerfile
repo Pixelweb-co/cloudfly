@@ -1,14 +1,18 @@
+# Base image
 FROM python:3.11-slim
 
+# Set working directory
 WORKDIR /app
 
-# Install dependencies
+# Copy requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy source code
 COPY . .
 
-ENV PYTHONUNBUFFERED=1
+# Expose port 8000 (example)
+EXPOSE 8000
 
-CMD ["python", "-m", "pytest", "-q"]
+# Start the application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

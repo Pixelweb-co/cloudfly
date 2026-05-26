@@ -89,3 +89,32 @@ class RedisMemoryClient:
             self.client.set(key, result, ex=ttl)
         except Exception as e:
             logger.error(f"Error saving tool result: {e}")
+
+    def set_campaign_context(self, contact_id: str, campaign_id: str, product_id: str, company_id: str):
+        """
+        Sets cold campaign context for a contact in Redis.
+        """
+        key = f"campaign_context:contact:{contact_id}"
+        try:
+            self.client.hset(key, mapping={
+                "campaign_id": str(campaign_id),
+                "product_id": str(product_id),
+                "company_id": str(company_id)
+            })
+            self.client.expire(key, 604800) # 7-day TTL
+            logger.info(f"Saved campaign context in Redis for contact {contact_id}")
+        except Exception as e:
+            logger.error(f"Error setting campaign context in Redis: {e}")
+
+    def get_campaign_context(self, contact_id: str) -> dict:
+        """
+        Retrieves cold campaign context for a contact from Redis.
+        """
+        key = f"campaign_context:contact:{contact_id}"
+        try:
+            context = self.client.hgetall(key)
+            return context if context else None
+        except Exception as e:
+            logger.error(f"Error getting campaign context from Redis: {e}")
+            return None
+

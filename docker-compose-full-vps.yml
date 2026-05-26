@@ -1,8 +1,10 @@
+version: "3.8"
+
 services:
   db:
     image: mysql:8.0
     container_name: mysql
-    restart: always
+    restart: unless-stopped
     ports:
       - "3306:3306"
     environment:
@@ -20,7 +22,7 @@ services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
     container_name: zookeeper
-    restart: always
+    restart: unless-stopped
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -30,12 +32,9 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: kafka
-    restart: always
+    restart: unless-stopped
     depends_on:
       - zookeeper
-    # ports:
-    #   - "9092:9092"
-    #   - "9093:9093"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -73,7 +72,7 @@ services:
       - KAFKA_HOST=kafka
       - SPRING_PROFILES_ACTIVE=production
       - EVOLUTION_API_URL=http://evolution-api:8080
-      - EVOLUTION_API_KEY=CAMBIA_ESTA_LLAVE_LARGA_Y_UNICA
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - LEAD_GENERATOR_URL=http://lead-generator:8000
     networks:
@@ -93,7 +92,7 @@ services:
     build:
       context: ./billing-service
       dockerfile: Dockerfile
-    restart: always
+    restart: unless-stopped
     ports:
       - "8086:8080"
     env_file:
@@ -119,7 +118,7 @@ services:
   scheduler-service:
     image: cloudfly-scheduler-service:latest
     container_name: scheduler-service
-    restart: always
+    restart: unless-stopped
     ports:
       - "8085:8080"
     build:
@@ -158,7 +157,7 @@ services:
       context: ./notifications
       dockerfile: Dockerfile
     container_name: notification-service
-    restart: always
+    restart: unless-stopped
     environment:
       - TZ=America/Bogota
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
@@ -171,7 +170,7 @@ services:
       - EVOLUTION_API_URL=http://evolution-api:8080
       - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
       - SOCKET_SERVICE_URL=http://chat_socket:3001
-      - N8N_SECRET_KEY=cambia_esta_llave_para_n8n
+      - N8N_SECRET_KEY=${N8N_SECRET_KEY}
     networks:
       - kafka-net
       - app-net
@@ -187,7 +186,7 @@ services:
         - NEXT_PUBLIC_BASE_URL=https://dashboard.cloudfly.com.co
         - NEXT_PUBLIC_WOMPI_PUBLIC_KEY=${WOMPI_PUBLIC_KEY}
     container_name: frontend-react
-    restart: always
+    restart: unless-stopped
     environment:
       - NEXTAUTH_URL=https://dashboard.cloudfly.com.co
       - NEXTAUTH_SECRET=cloudfly-prod-secret-change-later
@@ -206,73 +205,41 @@ services:
     networks:
       - app-net
 
-#  frontend-dev:
-#    image: node:18-alpine
-#    container_name: frontend-dev
-#    restart: always
-#    working_dir: /app
-#    volumes:
-#      - ./frontend_new:/app
-#    ports:
-#      - "5420:3000"
-#    environment:
-#      - NEXT_PUBLIC_API_URL=https://api.cloudfly.com.co
-#      - NEXT_PUBLIC_BASE_URL=https://devdashboard.cloudfly.com.co
-#      - NEXT_PUBLIC_FRONTEND_URL=https://devdashboard.cloudfly.com.co
-#      - NEXTAUTH_URL=https://devdashboard.cloudfly.com.co
-#      - NEXTAUTH_SECRET=cloudfly-dev-secret
-#      - NODE_ENV=development
-#      - PORT=3000
-#    command: sh -c "npm install && npm run dev"
-#    networks:
-#      - app-net
-#    labels:
-#      - "traefik.enable=true"
-#      - "traefik.http.routers.frontdev.rule=Host(`devdashboard.cloudfly.com.co`)"
-#      - "traefik.http.routers.frontdev.entrypoints=websecure"
-#      - "traefik.http.routers.frontdev.tls.certresolver=le"
-#      - "traefik.http.services.frontdev.loadbalancer.server.port=3000"
-#      - "traefik.docker.network=cloudfly_app-net"
-
   redis:
     image: redis:latest
     container_name: redis_server
-    restart: always
-    
+    restart: unless-stopped
     networks:
       - app-net
-    command: redis-server --requirepass Elian2020#
-  
+    command: redis-server --requirepass "Elian2020#"
+
   portainer:
     image: portainer/portainer-ce:latest
     container_name: portainer
-    restart: always
+    restart: unless-stopped
     ports:
       - "9000:9000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
     environment:
-      TZ: America/Bogota
+      - TZ=America/Bogota
     networks:
       - app-net
-
 
   postgresql:
     image: pgvector/pgvector:pg15
     container_name: postgres_server
-    restart: always
+    restart: unless-stopped
     environment:
+      TZ: America/Bogota
       POSTGRES_DB: chatbotdb
       POSTGRES_USER: chatbot_user
       POSTGRES_PASSWORD: chatbot_pass
-    
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app-net
-
-
 
   # ====================
   # EVOLUTION API (WhatsApp)
@@ -281,14 +248,12 @@ services:
   evolution-api:
     image: evoapicloud/evolution-api:latest
     container_name: evolution_api
-    restart: always
-    extra_hosts:
-      - "chat.cloudfly.com.co:172.18.0.1"
-      - "api.cloudfly.com.co:172.18.0.1"
+    restart: unless-stopped
     ports:
-      - "8082:8080"  # Puerto para acceso local/desarrollo
+      - "8082:8080"
     environment:
       - CACHE_REDIS_URI=redis://:Elian2020%23@redis:6379/2
+      - TZ=America/Bogota
     env_file:
       - .env
     volumes:
@@ -301,20 +266,35 @@ services:
       - "traefik.http.routers.eapi.entrypoints=websecure"
       - "traefik.http.routers.eapi.tls.certresolver=le"
       - "traefik.http.services.eapi.loadbalancer.server.port=8080"
-  
-  
+
   chat-socket-service:
     build:
       context: ./chat-socket-service
       dockerfile: Dockerfile
     container_name: chat_socket
-    restart: always
+    restart: unless-stopped
     env_file:
       - .env
     ports:
       - "3001:3001"
     environment:
-      # AI-Ready Infrastructure
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3001
+      - TZ=America/Bogota
+      - FRONTEND_URL=${FRONTEND_URL:-https://dashboard.cloudfly.com.co}
+      - JAVA_API_URL=${JAVA_API_URL:-https://api.cloudfly.com.co}
+      - JWT_SECRET=${JWT_SECRET}
+      - N8N_SECRET_KEY=${N8N_SECRET_KEY}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=cloud_master
+      - DB_USER=root
+      - DB_PASSWORD=widowmaker
+      - EVOLUTION_API_URL=http://evolution_api:8080
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - REDIS_HOST=redis_server
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=Elian2020#
       - KAFKA_BROKER=kafka:9092
     depends_on:
       - kafka
@@ -335,16 +315,19 @@ services:
       context: ./ai-agent
       dockerfile: Dockerfile
     container_name: ai_agent
-    restart: always
+    restart: unless-stopped
     env_file:
       - .env
     environment:
+      - TZ=America/Bogota
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - DB_HOST=${MYSQL_HOST:-mysql}
-      - DB_USER=${MYSQL_USER:-root}
-      - DB_PASSWORD=${MYSQL_PASSWORD:-widowmaker}
-      - DB_NAME=${MYSQL_DATABASE:-cloud_master}
-      - JAVA_API_URL=http://backend-api:8080
+      - REDIS_HOST=redis_server
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=Elian2020#
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASSWORD=widowmaker
+      - DB_NAME=cloud_master
     networks:
       - app-net
       - kafka-net
@@ -360,15 +343,19 @@ services:
       context: ./ai-agent
       dockerfile: Dockerfile
     container_name: ai_vector_worker
-    restart: always
+    restart: unless-stopped
     env_file:
       - .env
     environment:
+      - TZ=America/Bogota
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - DB_HOST=${MYSQL_HOST:-mysql}
-      - DB_USER=${MYSQL_USER:-root}
-      - DB_PASSWORD=${MYSQL_PASSWORD:-widowmaker}
-      - DB_NAME=${MYSQL_DATABASE:-cloud_master}
+      - REDIS_HOST=redis_server
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=Elian2020#
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASSWORD=widowmaker
+      - DB_NAME=cloud_master
     networks:
       - app-net
       - kafka-net
@@ -377,21 +364,6 @@ services:
       - db
     command: ["python", "vector_worker.py"]
 
-  lead-generator:
-    build:
-      context: ./lead-generator
-      dockerfile: Dockerfile
-    container_name: lead-generator
-    restart: always
-    ports:
-      - "8001:8000"
-    networks:
-      - app-net
-    environment:
-      - APIFY_TOKEN=${APIFY_TOKEN}
-      - APIFY_BASE_URL=https://api.apify.com/v2
-
-
   # ====================
   # N8N (Automatización)
   # ====================
@@ -399,7 +371,7 @@ services:
   n8n:
     image: n8nio/n8n:latest
     container_name: n8nserver.com
-    restart: always
+    restart: unless-stopped
     environment:
       - N8N_HOST=autobot.cloudfly.com.co
       - N8N_PROTOCOL=https
@@ -408,6 +380,7 @@ services:
       - N8N_EDITOR_BASE_URL=https://autobot.cloudfly.com.co
       - NODE_ENV=production
       - N8N_SECURE_COOKIE=true
+      - TZ=America/Bogota
     volumes:
       - n8n_data:/home/node/.n8n
     networks:
@@ -422,7 +395,7 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant
-    restart: always
+    restart: unless-stopped
     ports:
       - "6333:6333"
     environment:
@@ -432,96 +405,61 @@ services:
     networks:
       - app-net
 
-  marketing-worker:
-    image: cloudfly-marketing-worker:latest
-    container_name: marketing-worker
-    restart: always
+  ia-scrum-team:
     build:
-      context: ./marketing-worker
+      context: ./ai_scrum_team
       dockerfile: Dockerfile
+    container_name: ia_scrum_team
+    restart: unless-stopped
     env_file:
-      - .env.vps
-    environment:
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_DATABASE=cloud_master
-      - DB_USERNAME=root
-      - DB_PASSWORD=widowmaker
-      - KAFKA_HOST=kafka
-      - EVOLUTION_API_URL=http://evolution-api:8080
-      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
-      - REDIS_HOST=redis_server
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=Elian2020#
-      - PUBLIC_DOMAIN=${MARKETING_WORKER_DOMAIN}
+      - ./ai_scrum_team/.env
+    volumes:
+      - ./ai_scrum_team:/app:ro
+      - ./model_cache:/cache
+    ports:
+      - "8000:8000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ia-scrum-team.rule=PathPrefix(`/ia_scrum_team`)"
+      - "traefik.http.routers.ia-scrum-team.entrypoints=websecure"
+      - "traefik.http.services.ia-scrum-team.loadbalancer.server.port=8000"
     networks:
       - app-net
-      - kafka-net
-    depends_on:
-      - kafka
-      - db
-      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  ticket_resolver:
+    build:
+      context: ./ticket_resolver
+      dockerfile: Dockerfile
+    container_name: ticket_resolver
+    restart: unless-stopped
+    env_file:
+      - ./ticket_resolver/.env
+    volumes:
+      - ./ticket_resolver:/app:ro
+    ports:
+      - "8080:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ticket_resolver.rule=PathPrefix(`/ticket_resolver`)"
+      - "traefik.http.routers.ticket_resolver.entrypoints=websecure"
+      - "traefik.http.services.ticket_resolver.loadbalancer.server.port=8080"
+    networks:
+      - app-net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 15s
+      interval: 30s
       timeout: 5s
-      retries: 4
-      start_period: 10s
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.marketing.rule=Host(`${MARKETING_WORKER_DOMAIN}`)"
-      - "traefik.http.routers.marketing.entrypoints=websecure"
-      - "traefik.http.routers.marketing.tls.certresolver=le"
-      - "traefik.http.services.marketing.loadbalancer.server.port=8080"
-      - "traefik.docker.network=cloudfly_app-net"
-
-  marketing-agent:
-    image: cloudfly-marketing-agent:latest
-    container_name: marketing-agent
-    restart: always
-    build:
-      context: ./marketing_agent
-      dockerfile: Dockerfile
-    env_file:
-      - .env.vps
-    environment:
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_DATABASE=cloud_master
-      - DB_USERNAME=root
-      - DB_PASSWORD=widowmaker
-      - KAFKA_HOST=kafka
-      - EVOLUTION_API_URL=http://evolution-api:8080
-      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
-      - REDIS_HOST=redis_server
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=Elian2020#
-      - PUBLIC_DOMAIN=${MARKETING_AGENT_DOMAIN}
-    networks:
-      - app-net
-      - kafka-net
-    depends_on:
-      - kafka
-      - db
-      - redis
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 4
-      start_period: 10s
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.marketing_agent.rule=Host(`${MARKETING_AGENT_DOMAIN}`)"
-      - "traefik.http.routers.marketing_agent.entrypoints=websecure"
-      - "traefik.http.routers.marketing_agent.tls.certresolver=le"
-      - "traefik.http.services.marketing_agent.loadbalancer.server.port=8081"
-      - "traefik.docker.network=cloudfly_app-net"
+      retries: 3
 
   traefik:
     image: traefik:v2.11
     container_name: traefik
-    restart: always
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
@@ -530,7 +468,6 @@ services:
       - "--api.dashboard=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=cloudfly_app-net"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
@@ -539,8 +476,6 @@ services:
       - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.le.acme.httpchallenge=true"
       - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
-      - "--metrics.prometheus=true"
-      - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik:/letsencrypt

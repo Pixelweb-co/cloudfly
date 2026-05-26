@@ -1,0 +1,1 @@
+from marketing_agent.services.campaign_service import CampaignService

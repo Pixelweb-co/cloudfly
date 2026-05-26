@@ -11,7 +11,7 @@
     "lint:fix": "next lint --fix",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx}\"",
     "build:icons": "npx tsx src/assets/iconify-icons/bundle-icons-css.ts",
-    "postinstall": "npm run build:icons"
+    "prebuild": "npm run build:icons"
   },
   "dependencies": {
     "@emoji-mart/data": "1.2.1",

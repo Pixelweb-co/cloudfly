@@ -203,9 +203,15 @@ graph LR
 *   **Rol**: Programador de Interfaces de Usuario (UI/UX).
 *   **Misión**: Construir interfaces de usuario premium, realistas y responsivas en **Next.js 14 (App Router)**, React, TypeScript y Tailwind CSS estrictamente en el directorio de trabajo activo **`C:\apps\cloudfly\frontend_new`**.
 
+
 ### 5. DevOps & Cloud Engineer
 *   **Rol**: Automatización de Despliegue y Contenedores.
 *   **Misión**: Escribir Dockerfiles, configurar `docker-compose.yml` y levantar el entorno local mediante comandos de consola verificando que los microservicios estén saludables.
+*   **Regla de Exclusión (By-pass)**: Cuando el usuario especifique que DevOps no trabaja en la historia, o se solicite verificación local directa, el rol de DevOps se desactivará/comentará del orquestador `ai_scrum_team` para optimizar tokens y flujos. En este escenario, el **Agente Copiloto IA Secundario (Antigravity)** asume la responsabilidad de:
+    1. Ejecutar las pruebas unitarias y E2E locales del código desarrollado por el equipo Scrum.
+    2. Depurar el código de forma iterativa y solucionar bugs hasta cumplir perfectamente con el 100% de los criterios de aceptación.
+    3. Conectarse y desplegar de forma segura en el servidor VPS.
+    4. Realizar las pruebas de integración finales en el VPS y dejar un comentario de resumen detallado con los resultados en el ticket correspondiente de Jira.
 
 ### 6. Technical Writer and Diagram Specialist (`technical_writer`)
 *   **Rol**: Redactor Técnico y Modelador de Diagramas.
@@ -254,9 +260,77 @@ El ciclo de desarrollo en Git, compilación de contenedores y despliegue en prod
 ### 3. Orquestación y Construcción del Frontend (`frontend_new`)
 *   **Compilación Local Obligatoria**: Debido al alto consumo de recursos (CPU, RAM) implicado en la compilación de la aplicación React/Next.js de `frontend_new`, **la construcción de esta imagen Docker NO se realiza dentro del servidor VPS**.
 *   **Procedimiento**:
-    1.  La imagen Docker de `frontend_new` se construye y compila localmente en la máquina de desarrollo (`docker build` local).
-    2.  Una vez compilada exitosamente la imagen local, se sube (push) al registro de contenedores privado configurado.
-    3.  Finalmente, el servidor VPS descarga la imagen ya compilada (`docker pull`) y reinicia el servicio correspondiente, evitando picos de carga en producción.
+    1.  La imagen Docker de `frontend_new` se construye y compila localmente en la máquina de desarrollo (`docker build` local con sus argumentos).
+    2.  Se exporta la imagen a un archivo `.tar` utilizando el comando `docker save`.
+    3.  Se sube el archivo `.tar` al servidor VPS a través de SCP.
+    4.  El servidor VPS carga la imagen localmente utilizando el comando `docker load`.
+    5.  Finalmente, se recrea y reinicia el contenedor correspondiente (`docker compose up -d`) asegurando que apunte a la imagen cargada, evitando así picos de carga en producción.
+
+### 4. Orquestación y Colaboración entre Antigravity (Copiloto) y Scrum Team
+*   **Modelo de Trabajo**: El Agente Copiloto IA (Antigravity) utiliza al equipo autónomo `ai_scrum_team` como su principal herramienta de desarrollo en segundo plano.
+*   **Procedimiento**:
+    1.  **Plan de Implementación**: Antigravity formula el diseño general y crea el plan de implementación detallado.
+    2.  **Historia de Usuario & Tareas**: Antigravity descompone el requerimiento en el backlog de Jira y lo traduce en historias de usuario estructuradas. Estas historias detallan e instruyen al `ai_scrum_team` a **analizar y crear sub-tareas pequeñas y atómicas**, optimizando significativamente el consumo de tokens y evitando errores de contexto.
+    3.  **Ejecución Autónoma**: Antigravity dispara e inicia la ejecución de la cola del Scrum Team en segundo plano.
+    4.  **Confirmación y Cierre**: Antigravity permanece de forma activa y vigilante en modo pendiente. Una vez que el Scrum Team termina de programar, Antigravity se encarga de probar, depurar, desplegar en el VPS y re-evaluar el código hasta confirmar de forma contundente que el requerimiento se encuentra 100% operativo en producción/staging y cumple todos los criterios.
+
+---
+
+## 9. Historias de Usuario Organizadas en Escenarios
+
+Para garantizar la consistencia, el desarrollo guiado por comportamiento (BDD) y la validación matemática de las metas, las historias de usuario de CloudFly se organizan en los siguientes escenarios explícitos:
+
+### Escenario 1: Ruteo y Notificación por WhatsApp en Transferencia Humana (`CLOUD-158`)
+**Historia de Usuario**:
+> **COMO** Operador o Administrador del sistema de soporte multi-tenant,
+> **QUIERO** recibir una notificación inmediata en WhatsApp cuando el Agente de IA inicie una transferencia a humano (`transfer_to_human`),
+> **PARA** poder atender la conversación del cliente en tiempo real y evitar demoras en el servicio.
+
+**Criterios de Aceptación & Escenarios BDD**:
+
+*   **Escenario A: Ruteo a asesores asignados al contacto**
+    *   **Dado** que un contacto tiene asesores asignados en el campo `assigned_user_ids` de la tabla `contacts` en MySQL.
+    *   **Cuando** el módulo conversacional de IA gatilla la acción `transfer_to_human` para dicho contacto.
+    *   **Entonces** el sistema debe hacer un `JOIN` con la tabla `users` para resolver los números de celular (a través de `users.contact_id = contacts.id`).
+    *   **Y** debe publicar un payload JSON en la cola de Kafka `whatsapp-notifications` para cada asesor asignado con la URL: `https://dashboard.cloudfly.com.co/contacts/{contactId}`.
+
+*   **Escenario B: Ruteo fallback a Administradores o Managers**
+    *   **Dado** que el campo `assigned_user_ids` del contacto está vacío en MySQL.
+    *   **Cuando** el módulo conversacional gatilla `transfer_to_human`.
+    *   **Entonces** el sistema debe consultar a todos los usuarios activos del Tenant con rol `ADMIN` (ID 2) o `MANAGER` (ID 3).
+    *   **Y** notificar a dichos usuarios vía Kafka respetando sus respectivos teléfonos registrados.
+
+---
+
+### Escenario 2: Resiliencia de LLMs y Balanceador de API Keys (`CLOUD-160`)
+**Historia de Usuario**:
+> **COMO** Administrador técnico de los Agentes de Scrum de CloudFly,
+> **QUIERO** que el orquestador valide en tiempo real la salud de las APIs de OpenRouter y Groq,
+> **PARA** enrutar dinámicamente el LLM al proveedor más rápido y disponible evitando que el equipo se detenga ante errores 429 de Rate Limit.
+
+**Criterios de Aceptación & Escenarios BDD**:
+
+*   **Escenario A: Rotación y failover dinámico en caliente**
+    *   **Dado** que el equipo Scrum autónomo encuentra una excepción `429 Rate Limit` (por ejemplo, `free-models-per-day-stealth` en OpenRouter).
+    *   **Cuando** el capturador de errores detecta la congestión.
+    *   **Entonces** debe rotar la API key utilizando el balanceador de `connector.py` apoyándose en `keys_pool.json`.
+    *   **Y** debe consultar `model_health_status.json` generado por el worker de salud para cambiar dinámicamente a los agentes a un modelo saludable (como **Groq** o **Owl Alpha** natively), reanudando el sprint de forma transparente.
+
+---
+
+### Escenario 3: Análisis Visual de Imágenes de Jira (`CLOUD-161`)
+**Historia de Usuario**:
+> **COMO** Ingeniero de Frontend o QA del equipo Scrum,
+> **QUIERO** que el orquestador extraiga, lea y analice de forma asíncrona las capturas de pantalla de los comentarios de Jira,
+> **PARA** incorporar este contexto visual en la planeación y evitar inconsistencias en el diseño.
+
+**Criterios de Aceptación & Escenarios BDD**:
+
+*   **Escenario A: Procesamiento asíncrono no-bloqueante**
+    *   **Dado** que el Product Owner detecta imágenes adjuntas en los comentarios de Jira.
+    *   **Cuando** se dispara la tarea del Sprint.
+    *   **Entonces** se debe instanciar un `vision_worker.py` en un hilo secundario utilizando el LLM visual gratuito de Gemini (`google/gemini-2.5-flash:free`).
+    *   **Y** debe volcar las conclusiones en `lessons_learned.md` sin retrasar el flujo síncrono del compilador del código.
 
 ---
 > [!NOTE]

@@ -46,6 +46,9 @@ class Config:
     BACKEND_URL = os.getenv("BACKEND_URL", "http://backend-api:8080")
     BACKEND_API_KEY = os.getenv("BACKEND_API_KEY", "")
 
+    # Lead Generator
+    LEAD_GENERATOR_URL = os.getenv("LEAD_GENERATOR_URL", "http://lead-generator:8001")
+
     # Evolution API (WhatsApp)
     EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL", "http://evolution-api:8080")
     EVOLUTION_API_KEY = os.getenv("EVOLUTION_API_KEY", "")
@@ -75,3 +78,12 @@ class Config:
     MAX_DELAY_MS = int(os.getenv("MAX_DELAY_MS", "12000"))
     BATCH_SIZE = int(os.getenv("BATCH_SIZE", "20"))
     BATCH_PAUSE_MS = int(os.getenv("BATCH_PAUSE_MS", "30000"))
+
+    # OpenRouter Keys Pool
+    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+    OPENROUTER_KEYS_POOL = [
+        key.strip() for key in os.getenv("OPENROUTER_KEYS_POOL", "").split(",") if key.strip()
+    ]
+    if not OPENROUTER_KEYS_POOL and OPENROUTER_API_KEY:
+        OPENROUTER_KEYS_POOL = [OPENROUTER_API_KEY]
+
