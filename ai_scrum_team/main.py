@@ -324,12 +324,11 @@ def summarize_context_with_ollama(raw_context: str, label: str = "contexto") -> 
     print(f"🏠 [Context Manager]: Enviando a Ollama local para resumir ({original_chars} chars → ~{TARGET_SUMMARY_WORDS*5} chars)...")
 
     prompt = (
-        f"Eres un asistente técnico. Resume el siguiente contexto de desarrollo de forma extremadamente neutra, concisa y en español. "
-        f"Mantén la información técnica esencial (rutas de archivos, endpoints, tecnologías, errores). "
-        f"CRÍTICO: Genera el resumen directamente en texto plano fluido (párrafos simples). No uses títulos llamativos, "
-        f"no formatees negritas como '**ID de Ticket**', no utilices listas complejas ni tablas, y no añadas introducciones ni saludos. "
+        f"Eres un asistente técnico. Resume el siguiente contexto de forma concisa en español, "
+        f"manteniendo TODA la información técnica clave (nombres de endpoints, rutas de archivos, "
+        f"errores específicos, IDs de tickets, stack tecnológico). "
         f"El resumen debe tener máximo {TARGET_SUMMARY_WORDS} palabras.\n\n"
-        f"CONTEXTO:\n{raw_context[:12000]}\n\nRESUMEN PLANO:"
+        f"CONTEXTO:\n{raw_context[:12000]}\n\nRESUMEN CONCISO:"
     )
 
     t_start = time.time()
@@ -348,14 +347,11 @@ def summarize_context_with_ollama(raw_context: str, label: str = "contexto") -> 
 
         if resp.status_code == 200:
             summary = resp.json().get("message", {}).get("content", "").strip()
-            # Clean up potential leading markdown headers if Ollama ignored instruction
-            if summary.startswith("###") or summary.startswith("##") or summary.startswith("#"):
-                summary = "\n".join([line for line in summary.splitlines() if not line.strip().startswith("#")])
             summary_chars = len(summary)
             compression = round((1 - summary_chars / original_chars) * 100, 1)
             print(f"✅ [Context Manager]: Resumen generado en {elapsed}s")
             print(f"   📉 Compresión: {original_chars} → {summary_chars} chars ({compression}% reducción)")
-            return summary
+            return f"[RESUMEN AUTOMÁTICO por Ollama en {elapsed}s]:\n{summary}"
         else:
             elapsed = round(time.time() - t_start, 2)
             print(f"❌ [Context Manager]: Ollama respondió {resp.status_code} en {elapsed}s — usando truncado de emergencia.")
@@ -412,11 +408,6 @@ def run_sprint():
     def configure_agent_llm(agent, active_key, model_name):
         if not hasattr(agent, 'llm') or not agent.llm:
             return
-        
-        # El Product Owner debe usar siempre openrouter/owl-alpha porque Groq es inestable con 'Create Jira Issue'
-        if agent.role == 'Product Owner' and model_name.startswith("groq/"):
-            model_name = "openrouter/openrouter/owl-alpha"
-
         from crewai import LLM as CrewLLM
         ollama_base = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         if model_name.startswith("ollama/"):
@@ -694,16 +685,13 @@ Historial de Comentarios:
         pending_issues = check_pending_jira_tasks()
         
         if pending_issues:
-            # Procesamos únicamente el primer ticket para trabajar estrictamente "tarea por tarea",
-            # evitando acumular contexto de otros tickets y optimizando los límites de tokens.
-            first_issue = pending_issues[0]
+            if use_distributed and connector.is_master:
+                connector.redis_client.set("scrum:backlog_empty", "false")
+                
             print(f"\n[!] ¡Se han encontrado {len(pending_issues)} tareas/bugs PENDIENTES en Jira!")
-            print(f"🎯 [Scrum Master]: Modo 'Tarea por Tarea' activo. Seleccionando únicamente {first_issue.get('key')} para este ciclo.")
-            pending_issues = [first_issue]
             
             # Si estamos en modo distribuido y hay trabajadores conectados, repartirles las tareas
             if use_distributed and connector.is_master:
-                connector.redis_client.set("scrum:backlog_empty", "false")
                 workers = list(connector.redis_client.smembers("scrum:workers"))
                 
                 # Si no hay trabajadores, el Master asume la tarea localmente (Standalone)
@@ -783,11 +771,11 @@ Historial de Comentarios:
 
                 comments_str = "\n".join(comments_list) if comments_list else "Sin comentarios anteriores."
                 raw_jira_ctx = f"""--- TICKET JIRA: {key} ---
-Summary: {summary}
-Description: {description}
-Status en Jira: {status}
-Historial de Comentarios:
-{comments_str}
+                    Summary: {summary}
+                    Description: {description}
+                    Status en Jira: {status}
+                    Historial de Comentarios:
+                    {comments_str}
 -------------------------"""
 
                 # ── Summarize Jira context with Ollama if too large ───────────
