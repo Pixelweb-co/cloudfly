@@ -15,6 +15,8 @@ RUN apt-get update && \
 
 # Copy requirements and install
 # Install Python dependencies first (layer cached unless requirements change)
+RUN ls
+RUN SLEEP 5
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
