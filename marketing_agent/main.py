@@ -114,5 +114,14 @@ class MarketingAgent:
             logger.error(f"❌ Unexpected error: {e}", exc_info=True)
 
 if __name__ == "__main__":
-    agent = MarketingAgent()
-    agent.run()
+    import threading
+    import uvicorn
+    from autonomous_worker import run_worker_loop
+
+    logger.info("Starting autonomous campaign worker thread...")
+    worker_thread = threading.Thread(target=run_worker_loop, daemon=True)
+    worker_thread.start()
+
+    logger.info("Starting FastAPI health check server on port 8080...")
+    uvicorn.run(app, host="0.0.0.0", port=8080)
+
