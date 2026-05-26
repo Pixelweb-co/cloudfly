@@ -28,6 +28,8 @@ class AutonomousMarketingWorker:
             "user": Config.DB_USER,
             "password": Config.DB_PASSWORD
         }
+
+        print("🔑 OpenAI API Key is set: ", os.getenv("OPENAI_API_KEY"))
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.prospector_service = ProspectorService()
         self.campaign_service = CampaignService()
