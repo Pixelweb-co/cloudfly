@@ -411,6 +411,8 @@ services:
       - EVOLUTION_API_URL=${EVOLUTION_API_URL:-http://evolution-api:8080}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AUTHENTICATION_API_KEY=${AUTHENTICATION_API_KEY}
+      - BACKEND_API_KEY=${AUTHENTICATION_API_KEY}
     networks:
       - app-net
       - kafka-net

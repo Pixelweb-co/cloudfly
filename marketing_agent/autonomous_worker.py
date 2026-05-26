@@ -96,7 +96,7 @@ class AutonomousMarketingWorker:
         query = """
             SELECT id, product_name, description, price, sale_price 
             FROM productos 
-            WHERE tenant_id = %s AND company_id = %s AND status = 'ACTIVE'
+            WHERE tenant_id = %s AND company_id = %s AND status IN ('ACTIVE', 'PUBLISHED')
         """
         try:
             cursor.execute(query, (tenant_id, company_id))

@@ -1,3 +1,4 @@
+import os
 import requests
 import logging
 from config import Config
@@ -16,8 +17,9 @@ class ProductService:
     
     def __init__(self):
         self.base_url = Config.BACKEND_URL
+        api_key = Config.BACKEND_API_KEY or os.getenv("AUTHENTICATION_API_KEY", "")
         self.headers = {
-            "X-AI-Secret": "cloudfly_ai_secret_2026",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
     
@@ -81,7 +83,7 @@ class ProductService:
         image_ids = product.get("imageIds")
         
         return (
-            status == "ACTIVE" and
+            status in ("ACTIVE", "PUBLISHED") and
             description and
             description.strip() and
             image_ids and
