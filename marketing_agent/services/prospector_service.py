@@ -177,14 +177,14 @@ Devuelve únicamente la palabra clave, sin explicaciones ni texto adicional."""
             "category": normalized,
             "country": country,
             "city": city,
-            "pages": 2,
+            "pages": 1,
             "max_links": limit,
             "country_code": "57"
         }
         
         try:
             logger.info(f"📞 Calling lead-scrapper-google at {url} for keyword '{keyword}' (normalized: '{normalized}') in {city or 'any city'}, {country}...")
-            resp = requests.post(url, json=payload, timeout=120)
+            resp = requests.post(url, json=payload, timeout=300)
             resp.raise_for_status()
             data = resp.json()
             raw_leads = data.get("results", [])
