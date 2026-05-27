@@ -287,7 +287,29 @@ class AutonomousMarketingFlow:
                     logger.info(f"✗ Product {product.get('product_name')} is not B2B. Skipping prospecting.")
                     continue
 
-                categories = analysis_json.get("categories", [])
+                raw_categories = analysis_json.get("categories", [])
+                # Normalize categories into objects with singular 'category' and explicit 'country'
+                normalized_categories = []
+                for cat in raw_categories:
+                    if isinstance(cat, dict):
+                        name = cat.get('category') or cat.get('name') or ''
+                        country = cat.get('country') or company.get('pais_nombre') or 'Colombia'
+                    else:
+                        name = str(cat)
+                        country = company.get('pais_nombre') or 'Colombia'
+
+                    # use prospector normalization to singularize and strip noise
+                    try:
+                        norm_name = self.prospector_service.normalize_keyword(name)
+                    except Exception:
+                        norm_name = name
+
+                    normalized_categories.append({
+                        'category': norm_name,
+                        'country': country
+                    })
+
+                categories = normalized_categories
                 logger.info(f"Target categories for prospecting: {categories}")
 
                 # Fetch active WhatsApp channel
@@ -296,17 +318,25 @@ class AutonomousMarketingFlow:
                     logger.warning("✗ No active WhatsApp channel found. Cannot create campaign.")
                     continue
 
-                for category in categories:
-                    logger.info(f"🎯 Processing category: '{category}' for product: {product.get('product_name')}")
+                for cat in categories:
+                    # support either simple string categories or dicts with explicit country
+                    if isinstance(cat, dict):
+                        category_name = cat.get('category') or cat.get('name') or ''
+                        category_country = cat.get('country') or company.get('pais_nombre') or 'Colombia'
+                    else:
+                        category_name = str(cat)
+                        category_country = company.get('pais_nombre') or 'Colombia'
+
+                    logger.info(f"🎯 Processing category: '{category_name}' for product: {product.get('product_name')} (country: {category_country})")
 
                     # 1. Fetch leads
                     leads = self.prospector_service.fetch_leads_from_generator(
-                        keyword=category,
-                        country=company.get("pais_nombre") or "Colombia",
+                        keyword=category_name,
+                        country=category_country,
                         limit=5
                     )
                     if not leads:
-                        logger.warning(f"No leads found for category {category}")
+                        logger.warning(f"No leads found for category {category_name}")
                         continue
 
                     # Phase 2: Qualification & Copywriting Crew
@@ -352,7 +382,7 @@ class AutonomousMarketingFlow:
                         qualified_leads = leads
 
                     # 2. Get/create list & Link contacts
-                    sending_list_id = self.get_or_create_sending_list(company['tenant_id'], company['id'], category)
+                    sending_list_id = self.get_or_create_sending_list(company['tenant_id'], company['id'], category_name)
                     contact_ids = self.save_qualified_leads_to_crm(company['tenant_id'], company['id'], sending_list_id, qualified_leads)
                     
                     if not contact_ids:
