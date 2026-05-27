@@ -46,7 +46,7 @@ function testVPSIntegration() {
       'echo "=== Checking lead-generator container status ==="',
       'docker compose -f docker-compose-full-vps.yml ps lead-generator',
       'echo "=== Making test request to lead-generator ==="',
-      `curl -s -X POST http://localhost:8001/leads/generate -H "Content-Type: application/json" -d '{"mode": "automatic", "filters": {"keyword": "${keyword}", "country": "${country}", "limit": 3, "source": "auto", "enrich": true}}'`
+      `curl -s -X POST http://localhost:8001/leads/generate -H "Content-Type: application/json" -d '{"mode": "automatic", "filters": {"keyword": "${keyword}", "country": "${country}", "limit": 3, "source": "google_search", "enrich": true}}'`
     ].join(' && ');
 
     console.log(`Running on VPS: ${testCmd}`);
