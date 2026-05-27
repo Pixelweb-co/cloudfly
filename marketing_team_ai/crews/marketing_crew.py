@@ -3,9 +3,23 @@ from crewai import Task, Crew, Process
 from agents.icp_agent import icp_agent
 from agents.qualification_agent import qualification_agent
 from agents.copywriter_agent import copywriter_agent
+from agents.researcher_agent import researcher_agent
 
 
 def build_marketing_crew(company, products, leads=None):
+
+    research_task = Task(
+        description=f'''
+        Investiga en internet la competencia, precios y estudios de mercado del producto:
+        {products}
+        
+        Identifica cuáles son las mayores debilidades de los competidores y qué precios manejan
+        para estructurar una oferta B2B irresistible con CloudFly enfocada a maximizar las ventas
+        y garantizar comisiones.
+        ''',
+        expected_output="Análisis de competidores y ventajas de precios",
+        agent=researcher_agent
+    )
 
     analyze_task = Task(
         description=f'''
@@ -22,10 +36,11 @@ def build_marketing_crew(company, products, leads=None):
         - si es B2B
         - ICP ideales
         - Nichos comerciales
-        - categorías Google Maps y buscadores, directorios, googgle etc. enfocadas a productos y servicios donde necesitan posicionarse, ventas por internet, agendamiendo de citas de servicios, etc. 
+        - categorías Google Maps y buscadores enfocadas a estos productos.
         ''',
         expected_output="JSON con is_b2b y categories",
-        agent=icp_agent
+        agent=icp_agent,
+        context=[research_task]
     )
 
     qualification_task = Task(
@@ -45,25 +60,29 @@ def build_marketing_crew(company, products, leads=None):
 
     copywriting_task = Task(
         description='''
-        Genera un mensaje persuasivo de WhatsApp.
-        Debe incluir:
-        - emojis
-        - CTA
-        - tono profesional
-        - enfoque B2B
+        Genera un mensaje altamente persuasivo de WhatsApp para conseguir ventas.
+        Debe incluir emojis, CTA, enfoque B2B y resaltar las ventajas competitivas
+        de precio y automatización encontradas en la investigación.
+
+        IMPORTANTE: Para evitar errores de formateo, debes responder estrictamente con un objeto JSON en el siguiente formato:
+        {
+          "message": "Mensaje final de WhatsApp con emojis aquí"
+        }
         ''',
-        expected_output="Mensaje listo para WhatsApp",
+        expected_output="Un objeto JSON válido con la propiedad 'message'",
         agent=copywriter_agent,
-        context=[qualification_task]
+        context=[qualification_task, research_task]
     )
 
     return Crew(
         agents=[
+            researcher_agent,
             icp_agent,
             qualification_agent,
             copywriter_agent
         ],
         tasks=[
+            research_task,
             analyze_task,
             qualification_task,
             copywriting_task
@@ -71,3 +90,4 @@ def build_marketing_crew(company, products, leads=None):
         process=Process.sequential,
         verbose=True
     )
+
