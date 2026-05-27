@@ -17,6 +17,7 @@ class AppConfig:
     kafka_bootstrap_servers: str
     topic_messages_in: str
     topic_messages_out: str
+    topic_whatsapp_notifications: str
     topic_dlq: str
     topic_product_updates: str
     consumer_group_id: str
@@ -65,6 +66,7 @@ def load_config() -> AppConfig:
         kafka_bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092"),
         topic_messages_in=os.getenv("TOPIC_MESSAGES_IN", "messages.in"),
         topic_messages_out=os.getenv("TOPIC_MESSAGES_OUT", "messages.out"),
+        topic_whatsapp_notifications=os.getenv("TOPIC_WHATSAPP_NOTIFICATIONS", "whatsapp-notifications"),
         topic_dlq=os.getenv("TOPIC_DLQ", "ai-agent-dlq"),
         topic_product_updates=os.getenv("TOPIC_PRODUCT_UPDATES", "product.updates"),
         consumer_group_id=os.getenv("CONSUMER_GROUP_ID", "ai-agents"),

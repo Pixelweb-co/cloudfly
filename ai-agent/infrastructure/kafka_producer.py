@@ -110,6 +110,37 @@ class AsyncKafkaProducer:
             },
         )
 
+    def send_whatsapp_notification(
+        self,
+        tenant_id: int,
+        company_id: int,
+        phones: list[str],
+        body: str,
+    ) -> None:
+        """
+        Publish a WhatsApp notification request for notification-service.
+        """
+        payload = {
+            "phones": phones,
+            "body": body,
+            "tenantId": tenant_id,
+            "companyId": company_id,
+            "notifyVia": "whatsapp",
+            "type": "whatsapp",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "source": "ai-agent",
+        }
+        key = f"whatsapp:{tenant_id}:{company_id}"
+        self._produce(config.topic_whatsapp_notifications, key, payload)
+        logger.info(
+            "WhatsApp notification enqueued",
+            extra={
+                "tenant_id": tenant_id,
+                "company_id": company_id,
+                "phones_count": len(phones),
+            },
+        )
+
     def flush(self) -> None:
         """Block until all queued messages are delivered. Call on shutdown."""
         self._producer.flush()

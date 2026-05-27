@@ -1,0 +1,34 @@
+services:
+
+  # ── API (modo principal) ───────────────────────────────────────────────────
+  api:
+    build: .
+    image: business-scraper
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./output:/app/output
+    environment:
+      - PYTHONUNBUFFERED=1
+    security_opt:
+      - seccomp:unconfined
+    shm_size: '2gb'
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── CLI (correr búsquedas manuales y guardar CSV) ─────────────────────────
+  scraper:
+    build: .
+    image: business-scraper
+    volumes:
+      - ./output:/app/output
+    environment:
+      - PYTHONUNBUFFERED=1
+    security_opt:
+      - seccomp:unconfined
+    shm_size: '2gb'
+    entrypoint: ["python", "business_scraper.py"]

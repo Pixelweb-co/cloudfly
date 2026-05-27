@@ -5,6 +5,7 @@ Async MySQL connection pool using aiomysql.
 Provides context-manager helpers for transactional queries.
 """
 import logging
+import json
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional, List, Dict, Any
 
@@ -75,6 +76,36 @@ class AsyncMySQLClient:
                 yield cur
 
     # ── Business Queries ───────────────────────────────────────────────────
+
+    @staticmethod
+    def _parse_assigned_user_ids(raw_value: Any) -> List[int]:
+        """
+        Parse contacts.assigned_user_ids which may arrive as:
+        - JSON array string: "[1,2,3]"
+        - Comma-separated string: "1,2,3"
+        - Python list/tuple
+        """
+        if raw_value is None:
+            return []
+
+        if isinstance(raw_value, (list, tuple)):
+            return [int(v) for v in raw_value if str(v).strip().isdigit()]
+
+        value = str(raw_value).strip()
+        if not value:
+            return []
+
+        # Try JSON first.
+        if value.startswith("[") and value.endswith("]"):
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return [int(v) for v in parsed if str(v).strip().isdigit()]
+            except (TypeError, ValueError, json.JSONDecodeError):
+                logger.warning("Invalid JSON in assigned_user_ids", extra={"raw_value": value[:120]})
+
+        # Fallback: comma-separated values.
+        return [int(part.strip()) for part in value.split(",") if part.strip().isdigit()]
 
     async def get_contact_pipeline_state(
         self, contact_id: int, tenant_id: int
@@ -285,6 +316,57 @@ class AsyncMySQLClient:
             extra={"contact_id": contact_id, "tenant_id": tenant_id},
         )
         return True
+
+    async def get_contact_assigned_advisors(self, contact_id: int, tenant_id: int) -> List[str]:
+        """
+        Return advisor phone numbers assigned to a contact via contacts.assigned_user_ids.
+        """
+        async with self.readonly() as cur:
+            await cur.execute(
+                "SELECT assigned_user_ids FROM contacts WHERE id = %s AND tenant_id = %s LIMIT 1",
+                (contact_id, tenant_id),
+            )
+            row = await cur.fetchone()
+
+            if not row:
+                return []
+
+            advisor_ids = self._parse_assigned_user_ids(row.get("assigned_user_ids"))
+            if not advisor_ids:
+                return []
+
+            placeholders = ", ".join(["%s"] * len(advisor_ids))
+            sql = f"""
+                SELECT DISTINCT c.phone
+                FROM users u
+                INNER JOIN contacts c ON c.id = u.contact_id
+                WHERE u.tenant_id = %s
+                  AND u.id IN ({placeholders})
+                  AND c.phone IS NOT NULL
+                  AND TRIM(c.phone) <> ''
+            """
+            await cur.execute(sql, (tenant_id, *advisor_ids))
+            rows = await cur.fetchall()
+            return [r["phone"] for r in rows if r.get("phone")]
+
+    async def get_tenant_admins(self, tenant_id: int) -> List[str]:
+        """
+        Return ADMIN/MANAGER phone numbers for a tenant.
+        Fallback roles are fixed by requirement IDs: ADMIN=2, MANAGER=3.
+        """
+        sql = """
+            SELECT DISTINCT c.phone
+            FROM users u
+            INNER JOIN contacts c ON c.id = u.contact_id
+            WHERE u.tenant_id = %s
+              AND u.role_id IN (2, 3)
+              AND c.phone IS NOT NULL
+              AND TRIM(c.phone) <> ''
+        """
+        async with self.readonly() as cur:
+            await cur.execute(sql, (tenant_id,))
+            rows = await cur.fetchall()
+            return [r["phone"] for r in rows if r.get("phone")]
     
     async def get_contact(self, identifier: str, tenant_id: int) -> Optional[Dict[str, Any]]:
         """Busca un contacto por email o teléfono."""

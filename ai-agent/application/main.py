@@ -211,6 +211,45 @@ class AIAgentApp:
                 await self.db.disable_chatbot(payload.contact_id, payload.tenant_id)
                 await self.redis.invalidate_chatbot_cache(payload.tenant_id, payload.contact_id)
 
+                advisor_phones = await self.db.get_contact_assigned_advisors(
+                    contact_id=payload.contact_id,
+                    tenant_id=payload.tenant_id,
+                )
+                notify_phones = advisor_phones
+                recipient_type = "assigned_advisors"
+
+                if not notify_phones:
+                    notify_phones = await self.db.get_tenant_admins(payload.tenant_id)
+                    recipient_type = "tenant_admins"
+
+                if notify_phones:
+                    dashboard_link = f"https://dashboard.cloudfly.com.co/contacts/{payload.contact_id}"
+                    notification_body = (
+                        "Se solicitó transferencia a asesor humano.\n"
+                        f"Tenant: {payload.tenant_id}\n"
+                        f"Contacto: {payload.contact_id}\n"
+                        f"Chat: {dashboard_link}"
+                    )
+                    self.producer.send_whatsapp_notification(
+                        tenant_id=payload.tenant_id,
+                        company_id=1,
+                        phones=notify_phones,
+                        body=notification_body,
+                    )
+                    logger.info(
+                        "📨 [AI_HANDOFF_NOTIFY] WhatsApp notification queued",
+                        extra={
+                            **log_ctx,
+                            "recipient_type": recipient_type,
+                            "phones_count": len(notify_phones),
+                        },
+                    )
+                else:
+                    logger.warning(
+                        "⚠️ [AI_HANDOFF_NOTIFY_SKIP] No advisor/admin phones found",
+                        extra=log_ctx,
+                    )
+
             # ⑧ Persist conversation turns
             logger.info("💾 [AI_STEP_8] Saving user and assistant messages to history/Redis", extra=log_ctx)
             await self.redis.save_message(

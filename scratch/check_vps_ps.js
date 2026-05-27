@@ -11,8 +11,8 @@ const config = {
 };
 
 conn.on('ready', () => {
-  console.log('✅ Connected to VPS. Checking Jira variables in .env...');
-  conn.exec('grep -i JIRA /apps/cloudfly/.env', (err, stream) => {
+  console.log('✅ Connected to VPS. Running ps aux inside lead-scrapper-google...');
+  conn.exec('docker exec lead-scrapper-google ps aux', (err, stream) => {
     if (err) throw err;
     stream.on('close', () => {
       conn.end();
