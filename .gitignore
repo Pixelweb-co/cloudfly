@@ -28,7 +28,7 @@ error_dom.html
 error_e2e.png
 frontend_log.txt
 *.log
-*.txt
+
 
 # Local Configs & Backups
 .cloudflared/
