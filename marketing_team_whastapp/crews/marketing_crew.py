@@ -22,7 +22,7 @@ def build_marketing_crew(company, products, leads=None):
         - si es B2B
         - ICP ideales
         - Nichos comerciales
-        - categorías Google Maps
+        - categorías Google Maps, googleando por cada categoría si hay clientes potenciales en Google Maps
         ''',
         expected_output="JSON con is_b2b y categories",
         agent=icp_agent
