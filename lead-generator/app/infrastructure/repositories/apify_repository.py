@@ -34,21 +34,38 @@ class LocalGoogleScraper:
                 if resp.status_code == 200:
                     html = resp.text
                     
-                    # Extract (url, title, snippet) blocks from DuckDuckGo HTML
-                    blocks = re.findall(
-                        r'<a class="result__a" href="([^"]+)"[^>]*>(.*?)</a>.*?<a class="result__snippet"[^>]*>(.*?)</a>', 
-                        html, 
-                        re.DOTALL
-                    )
+                    # Extract result blocks (H2 titles and snippets)
+                    h2_blocks = re.findall(r'<h2 class="result__title">(.*?)</h2>', html, re.DOTALL)
+                    snippets = re.findall(r'<a class="result__snippet"[^>]*>(.*?)</a>', html, re.DOTALL)
                     
                     phone_pattern = re.compile(r'\b(?:\+?57)?\s?(?:3[0-9]{2}|[1-7][0-9]{2})\s?[0-9]{3}\s?[0-9]{4}\b|\b3[0-9]{2}[0-9]{7}\b')
                     seen_phones = set()
                     seen_names = set()
                     
-                    for link_url, title_html, snippet_html in blocks:
-                        if "google.com" in link_url or "duckduckgo.com" in link_url or "youtube.com" in link_url:
+                    min_len = min(len(h2_blocks), len(snippets))
+                    for i in range(min_len):
+                        block = h2_blocks[i]
+                        snippet_html = snippets[i]
+                        
+                        # Find link and title inside the H2 block
+                        links = re.findall(r'<a\s+[^>]*href="([^"]+)"[^>]*>(.*?)</a>', block, re.DOTALL)
+                        if not links:
                             continue
                             
+                        link_url, title_html = links[0]
+                        if "google.com" in link_url or "duckduckgo.com" in link_url or "youtube.com" in link_url:
+                            # Keep going unless it's a direct DDG domain link
+                            if not "uddg=" in link_url:
+                                continue
+                                
+                        # Decode DDG redirect URL if present
+                        if "uddg=" in link_url:
+                            try:
+                                link_url = link_url.split("uddg=")[1].split("&")[0]
+                                link_url = urllib.parse.unquote(link_url)
+                            except Exception:
+                                pass
+                                
                         title = re.sub(r'<[^>]+>', '', title_html).strip()
                         title = urllib.parse.unquote(title)
                         title = re.sub(r'\b(?:Páginas Amarillas|Yelp|Tripadvisor|Facebook|Instagram|LinkedIn|Twitter)\b.*', '', title, flags=re.IGNORECASE).strip()
