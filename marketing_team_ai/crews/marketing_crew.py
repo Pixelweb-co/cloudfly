@@ -34,20 +34,11 @@ def build_analysis_crew(company, product):
         Determina:
         1. Si es un modelo B2B (los compradores ideales son dueños de negocios locales o empresas).
         2. Los ICP ideales que se beneficien directamente de este producto puntual.
-           Si el producto es un Chatbot, el foco absoluto debe estar en sectores locales de servicios y comercio que agenden citas o hagan pedidos:
-           - peluquerias, barberias, clinicas estetica, veterinarias, spas (agendamiento de citas)
-           - restaurantes, panaderias, reposterias, tiendas locales (pedidos y ventas)
-        3. Una lista de hasta 8 categorías de búsqueda de Google Maps y buscadores en español muy específicas para encontrar estos clientes potenciales para este producto.
-                4. Además, describe hasta 5 oportunidades de negocio concretas y necesidades detectadas (por ejemplo: "pequeñas clínicas sin sitio web que usan WhatsApp para agendar citas", "restaurantes sin sistema de pedidos online") que justifiquen la prospección y cómo el producto los soluciona.
-
-                IMPORTANTE: Responde estrictamente con un objeto JSON con la siguiente forma:
-                {{
-                    "is_b2b": true|false,
-                    "categories": ["categoria1", ...],
-                    "opportunities": ["oportunidad1", ...]
-                }}
+           Si el producto es un Chatbot, el foco absoluto debe estar en sectores locales de servicios y comercio que agenden citas o hagan pedidos.
+           
+           CRÍTICO: Cada categoría de búsqueda en la lista de 'categories' debe consistir estrictamente en una única palabra, en minúsculas, en plural y sin acentos (por ejemplo: "peluquerias", "barberias", "veterinarias", "restaurantes", "spas", "panaderias", "odontologos", "esteticas"). No uses frases como "salones de belleza" o "clinicas de estetica", prefiere siempre una sola palabra en plural como "peluquerias" o "esteticas".
         ''',
-                expected_output="JSON con is_b2b, categories y opportunities",
+        expected_output="JSON con is_b2b, categories y opportunities",
         agent=create_icp_agent(product.get('product_name'), product.get('description')),
         context=[research_task]
     )

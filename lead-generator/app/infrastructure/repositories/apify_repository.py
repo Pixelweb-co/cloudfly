@@ -14,8 +14,8 @@ class ApifyLeadRepository(LeadRepository):
         
         # Actor mappings
         self.actors = {
-            "auto": "compass/crawler-google-places",
-            "google_maps": "compass/crawler-google-places",
+            "auto": "apify/google-maps-scraper",
+            "google_maps": "apify/google-maps-scraper",
             "google_search": "apify/google-search-scraper"
         }
 

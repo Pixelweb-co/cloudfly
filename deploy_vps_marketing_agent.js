@@ -20,7 +20,7 @@ conn.on('ready', () => {
     'git stash',
     'git checkout develop-may-2026',
     'git pull origin develop-may-2026',
-    'docker compose -f docker-compose-full-vps.yml up -d --build marketing-agent'
+    'docker compose -f docker-compose-full-vps.yml up -d --build marketing-agent lead-generator'
   ].join(' && ');
 
   console.log(`\n🏃 Running: ${deploymentCmd}`);

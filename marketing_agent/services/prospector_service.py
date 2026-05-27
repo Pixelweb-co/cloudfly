@@ -129,13 +129,7 @@ Devuelve únicamente la palabra clave, sin explicaciones ni texto adicional."""
 
         first = words[0]
 
-        # basic singularization for first word
-        if len(first) > 3 and first.endswith('es'):
-            first = first[:-2]
-        elif len(first) > 2 and first.endswith('s'):
-            first = first[:-1]
-
-        # If phrase is like 'salon de belleza', keep 'de X' if present
+        # Do not singularize, as Apify works best with single-word plural terms
         result = first
         if len(words) >= 3 and words[1] == 'de':
             second = words[2]
