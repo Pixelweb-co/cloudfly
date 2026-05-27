@@ -1,26 +1,26 @@
-# Use official Python runtime as a parent image
 FROM python:3.11-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-# Set work directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc libpq-dev && \
-    rm -rf /var/lib/apt/lists/*
+# Dependencias del sistema
+RUN apt-get update && apt-get install -y \
+    gcc \
+    default-libmysqlclient-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy project files (ensure requirements.txt is available in the build context)
+# Copiar requirements primero (cache Docker)
+COPY requirements.txt .
+
+# Instalar dependencias
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copiar proyecto
 COPY . .
 
-# Install Python dependencies
-RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+# Puerto
+EXPOSE 8000
 
-# Expose port
-EXPOSE 8080
-
-# Run the application
+# Ejecutar worker
 CMD ["python", "main.py"]
