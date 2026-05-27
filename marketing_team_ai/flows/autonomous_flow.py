@@ -81,10 +81,20 @@ class AutonomousMarketingFlow:
 
             logger.info(result)
 
+            raw_output = str(result).strip()
+            # Limpiar posibles bloques markdown envueltos en ```json ... ```
+            if raw_output.startswith("```json"):
+                raw_output = raw_output[7:]
+            if raw_output.endswith("```"):
+                raw_output = raw_output[:-3]
+            raw_output = raw_output.strip()
+
             try:
-                result_json = json.loads(str(result))
+                result_json = json.loads(raw_output)
+                logger.info("✅ Crew output successfully parsed as JSON!")
             except Exception:
                 logger.warning("Crew output is not valid JSON")
                 continue
 
             logger.info(result_json)
+
