@@ -63,9 +63,13 @@ class AutonomousMarketingWorker:
             resp = requests.post(url, json=payload, headers=headers, timeout=60)
             resp.raise_for_status()
             content = resp.json()["choices"][0]["message"]["content"].strip()
+            logger.info("⏳ Waiting 20 seconds to respect API rate limits...")
+            time.sleep(20)
             return content
         except Exception as e:
             logger.error(f"❌ OpenAI GPT-4o call failed: {e}")
+            logger.info("⏳ Waiting 20 seconds to respect API rate limits...")
+            time.sleep(20)
             return ""
 
     def get_active_companies_for_tenant(self, tenant_id: int) -> List[Dict]:
@@ -240,23 +244,49 @@ Responde únicamente con el siguiente formato JSON:
             cursor.close()
             conn.close()
 
-    def create_sending_list(self, tenant_id: int, company_id: int, name: str) -> Optional[int]:
-        """Create a new sending list."""
+    def check_campaign_exists(self, tenant_id: int, company_id: int, name: str) -> Optional[int]:
+        """Checks if a campaign with this name already exists, returning its ID if found."""
+        conn = mysql.connector.connect(**self.db_config)
+        cursor = conn.cursor()
+        query = "SELECT id FROM campaigns WHERE tenant_id = %s AND company_id = %s AND name = %s LIMIT 1"
+        try:
+            cursor.execute(query, (tenant_id, company_id, name))
+            row = cursor.fetchone()
+            if row:
+                return row[0]
+            return None
+        except Exception as e:
+            logger.error(f"❌ Error checking campaign existence: {e}")
+            return None
+        finally:
+            cursor.close()
+            conn.close()
+
+    def get_or_create_sending_list(self, tenant_id: int, company_id: int, name: str) -> Optional[int]:
+        """Finds an existing active sending list by name, or creates a new one."""
         conn = mysql.connector.connect(**self.db_config)
         cursor = conn.cursor()
         
-        query = """
-            INSERT INTO sending_lists (tenant_id, company_id, name, description, status)
-            VALUES (%s, %s, %s, %s, 'ACTIVE')
-        """
+        query_find = "SELECT id FROM sending_lists WHERE tenant_id = %s AND company_id = %s AND name = %s LIMIT 1"
         try:
-            cursor.execute(query, (tenant_id, company_id, name, f"Lista automática para nicho {name}"))
+            cursor.execute(query_find, (tenant_id, company_id, name))
+            row = cursor.fetchone()
+            if row:
+                logger.info(f"📋 Found existing sending list '{name}' with ID {row[0]}")
+                return row[0]
+            
+            # If not found, create new
+            query_insert = """
+                INSERT INTO sending_lists (tenant_id, company_id, name, description, status)
+                VALUES (%s, %s, %s, %s, 'ACTIVE')
+            """
+            cursor.execute(query_insert, (tenant_id, company_id, name, f"Lista automática para nicho {name}"))
             conn.commit()
             list_id = cursor.lastrowid
             logger.info(f"📋 Created sending list '{name}' with ID {list_id}")
             return list_id
         except Exception as e:
-            logger.error(f"❌ Failed to create sending list: {e}")
+            logger.error(f"❌ Failed to get or create sending list: {e}")
             conn.rollback()
             return None
         finally:
@@ -562,24 +592,20 @@ Responde únicamente con este formato JSON:
                     
                 logger.info(f"   [Category {cat_idx}] 🎯 Processing ICP category: '{category}'")
                 
-                # Check list/campaign duplicates
-                logger.info(f"      → Checking for existing list/campaign duplicates...")
-                if self.check_duplicate_list_or_campaign(1, company_id, category):
-                    logger.info(f"      ✗ List or campaign '{category}' already exists. Skipping to avoid duplication.")
-                    continue
-                logger.info(f"      ✓ No duplicates found.")
-                    
-                # Create sending list
-                logger.info(f"      → Creating sending list '{category}'...")
-                sending_list_id = self.create_sending_list(1, company_id, category)
+                # Find or create sending list
+                logger.info(f"      → Finding or creating sending list '{category}'...")
+                sending_list_id = self.get_or_create_sending_list(1, company_id, category)
                 if not sending_list_id:
-                    logger.error(f"      ✗ Failed to create sending list. Skipping category.")
+                    logger.error(f"      ✗ Failed to find or create sending list. Skipping category.")
                     continue
-                logger.info(f"      ✓ Sending list created with ID: {sending_list_id}")
                     
                 # Fetch leads via Prospector
                 logger.info(f"      → Prospecting leads for '{category}' (limit=5)...")
                 leads = self.prospector_service.fetch_leads_from_generator(category, limit=5)
+                
+                # Wait 25 seconds to respect lead-generator rate limits
+                logger.info("⏳ Waiting 25 seconds to respect lead-generator rate limits...")
+                time.sleep(25)
                 
                 if not leads:
                     logger.warning(f"      ✗ No leads found from generator. Skipping category.")
@@ -598,15 +624,21 @@ Responde únicamente con este formato JSON:
                 logger.info(f"      → Saving {len(qualified_leads)} qualified leads to database...")
                 contact_ids = self.save_qualified_leads(1, company_id, sending_list_id, qualified_leads)
                 if not contact_ids:
-                    logger.warning(f"      ✗ No new unique leads added to list (all duplicates?). Skipping campaign.")
+                    logger.warning(f"      ✗ No new unique leads added to list (all duplicates?). Skipping campaign workflow.")
                     continue
                 logger.info(f"      ✓ Saved {len(contact_ids)} new unique leads to sending list {sending_list_id}")
                     
-                # Create and schedule campaign
-                logger.info(f"      → Creating and scheduling WhatsApp campaign...")
-                campaign_id = self.create_and_schedule_campaign(
-                    1, company_id, category, sending_list_id, channel_id, products
-                )
+                # Check if campaign already exists
+                existing_campaign_id = self.check_campaign_exists(1, company_id, category)
+                if existing_campaign_id:
+                    logger.info(f"      ℹ️ Campaign for category '{category}' already exists with ID {existing_campaign_id}. Bypassing creation.")
+                    campaign_id = existing_campaign_id
+                else:
+                    # Create and schedule campaign
+                    logger.info(f"      → Creating and scheduling WhatsApp campaign...")
+                    campaign_id = self.create_and_schedule_campaign(
+                        1, company_id, category, sending_list_id, channel_id, products
+                    )
                 
                 if campaign_id:
                     # Sync Redis context
@@ -614,7 +646,7 @@ Responde únicamente con este formato JSON:
                     self.sync_redis_campaign_context(contact_ids, campaign_id, products[0].get("id"), company_id)
                     logger.info(f"      ✓ Category '{category}' workflow completed successfully!")
                 else:
-                    logger.error(f"      ✗ Campaign creation failed. Skipping Redis sync.")
+                    logger.error(f"      ✗ Campaign processing failed. Skipping Redis sync.")
 
 def run_worker_loop():
     """Loop running the worker every 10 minutes."""
