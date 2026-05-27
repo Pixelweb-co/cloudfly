@@ -394,7 +394,7 @@ services:
 
   marketing-agent:
     build:
-      context: ./marketing_agent
+      context: ./marketing_team_ai
       dockerfile: Dockerfile
     container_name: marketing-agent
     restart: always
