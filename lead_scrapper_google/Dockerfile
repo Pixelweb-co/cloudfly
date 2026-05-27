@@ -1,13 +1,16 @@
-FROM python:3.10-slim
+FROM ubuntu:22.04
 
 WORKDIR /app
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    python3-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY lead_scrapper_google/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Instalar únicamente el navegador Chromium y sus dependencias del sistema
 RUN playwright install --with-deps chromium
