@@ -6,8 +6,7 @@ from agents.copywriter_agent import copywriter_agent
 from agents.researcher_agent import researcher_agent
 
 
-def build_marketing_crew(company, products, leads=None):
-
+def build_analysis_crew(company, products):
     research_task = Task(
         description=f'''
         Investiga en internet la competencia, precios y estudios de mercado del producto:
@@ -43,6 +42,15 @@ def build_marketing_crew(company, products, leads=None):
         context=[research_task]
     )
 
+    return Crew(
+        agents=[researcher_agent, icp_agent],
+        tasks=[research_task, analyze_task],
+        process=Process.sequential,
+        verbose=True
+    )
+
+
+def build_campaign_crew(company, products, leads):
     qualification_task = Task(
         description=f'''
         Califica los siguientes leads:
@@ -54,15 +62,14 @@ def build_marketing_crew(company, products, leads=None):
         {products}
         ''',
         expected_output="Lista JSON de leads calificados",
-        agent=qualification_agent,
-        context=[analyze_task]
+        agent=qualification_agent
     )
 
     copywriting_task = Task(
         description='''
         Genera un mensaje altamente persuasivo de WhatsApp para conseguir ventas.
         Debe incluir emojis, CTA, enfoque B2B y resaltar las ventajas competitivas
-        de precio y automatización encontradas en la investigación.
+        de precio y automatización encontradas.
 
         IMPORTANTE: Para evitar errores de formateo, debes responder estrictamente con un objeto JSON en el siguiente formato:
         {
@@ -71,23 +78,18 @@ def build_marketing_crew(company, products, leads=None):
         ''',
         expected_output="Un objeto JSON válido con la propiedad 'message'",
         agent=copywriter_agent,
-        context=[qualification_task, research_task]
+        context=[qualification_task]
     )
 
     return Crew(
-        agents=[
-            researcher_agent,
-            icp_agent,
-            qualification_agent,
-            copywriter_agent
-        ],
-        tasks=[
-            research_task,
-            analyze_task,
-            qualification_task,
-            copywriting_task
-        ],
+        agents=[qualification_agent, copywriter_agent],
+        tasks=[qualification_task, copywriting_task],
         process=Process.sequential,
         verbose=True
     )
+
+
+def build_marketing_crew(company, products, leads=None):
+    # Legacy fallback function just in case
+    return build_analysis_crew(company, products)
 
