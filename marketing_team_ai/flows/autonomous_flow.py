@@ -395,7 +395,7 @@ class AutonomousMarketingFlow:
                     campaign_id = self.create_campaign_in_db(
                         tenant_id=company['tenant_id'],
                         company_id=company['id'],
-                        category_name=category,
+                        category_name=category_name,
                         sending_list_id=sending_list_id,
                         channel_id=channel_id,
                         message_body=message_body,
@@ -409,7 +409,7 @@ class AutonomousMarketingFlow:
                             tenant_id=company['tenant_id'],
                             company_id=company['id'],
                             campaign_id=campaign_id,
-                            campaign_name=f"{product.get('product_name')} - {category}",
+                            campaign_name=f"{product.get('product_name')} - {category_name}",
                             scheduled_at=scheduled_at
                         )
                         
@@ -420,7 +420,7 @@ class AutonomousMarketingFlow:
                             product_id=product.get('id'),
                             company_id=company['id']
                         )
-                        logger.info(f"🎉 Fully completed autonomous workflow for product '{product.get('product_name')}' and category '{category}'!")
+                        logger.info(f"🎉 Fully completed autonomous workflow for product '{product.get('product_name')}' and category '{category_name}'!")
                     else:
                         logger.error("Failed to create campaign record.")or("Failed to create campaign record.")
 

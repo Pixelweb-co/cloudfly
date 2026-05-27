@@ -1,4 +1,5 @@
 import os
+import re
 import httpx
 import logging
 import mysql.connector
@@ -80,20 +81,79 @@ Devuelve únicamente la palabra clave, sin explicaciones ni texto adicional."""
         except Exception as e:
             logger.warning(f"⚠️ Failed to generate keywords using LLM: {e}. Falling back to default.")
             if "restaurante" in product_name.lower():
-                return "restaurantes"
+                return "restaurante"
             if "panader" in product_name.lower():
-                return "panaderias"
-            return "empresas"
+                return "panaderia"
+            return "empresa"
+
+    def _remove_accents(self, s: str) -> str:
+        accents = {
+            'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+            'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U',
+            'ñ': 'n', 'Ñ': 'N', 'ü': 'u', 'Ü': 'U'
+        }
+        return ''.join(accents.get(c, c) for c in s)
+
+    def normalize_keyword(self, keyword: str) -> str:
+        """
+        Normalize a generated category/keyword to a compact, singular form
+        suitable for searching (e.g., 'peluquerías cerca de mí' -> 'peluqueria',
+        'salones de belleza' -> 'salon de belleza').
+        """
+        if not keyword:
+            return keyword
+
+        # remove bracketed placeholders like [ciudad]
+        keyword = re.sub(r"\[.*?\]", "", keyword)
+        keyword = keyword.lower()
+
+        # remove accents first for consistent processing
+        keyword = self._remove_accents(keyword)
+
+        # remove common noisy phrases (use word boundaries)
+        noisy_patterns = [
+            r"\bcerca de mi\b", r"\bcerca de mi\b", r"\bcerca\b",
+            r"\ben linea\b", r"\bcon servicio a domicilio\b", r"\bcon servicio\b",
+            r"\blocales\b", r"\bnear\b"
+        ]
+        for n in noisy_patterns:
+            keyword = re.sub(n, "", keyword)
+
+        # strip punctuation and normalize whitespace
+        keyword = re.sub(r"[\,\.\;\:\"\(\)\[\]]", "", keyword)
+        keyword = re.sub(r"\s+", " ", keyword).strip()
+
+        words = keyword.split()
+        if not words:
+            return keyword
+
+        first = words[0]
+
+        # basic singularization for first word
+        if len(first) > 3 and first.endswith('es'):
+            first = first[:-2]
+        elif len(first) > 2 and first.endswith('s'):
+            first = first[:-1]
+
+        # If phrase is like 'salon de belleza', keep 'de X' if present
+        result = first
+        if len(words) >= 3 and words[1] == 'de':
+            second = words[2]
+            result = f"{first} de {second}"
+
+        return result
             
     def fetch_leads_from_generator(self, keyword: str, country: str = "Colombia", state: str = None, city: str = None, limit: int = 10) -> List[Dict]:
         """
         Calls lead-generator FastAPI client (port 8000) to fetch potential cold leads.
         """
+        # Normalize keyword to increase chance of matching in lead-generator
+        normalized = self.normalize_keyword(keyword)
         url = f"{self.lead_generator_url}/leads/generate"
         payload = {
             "mode": "automatic",
             "filters": {
-                "keyword": keyword,
+                "keyword": normalized,
                 "country": country,
                 "state": state,
                 "city": city,
@@ -104,7 +164,7 @@ Devuelve únicamente la palabra clave, sin explicaciones ni texto adicional."""
         }
         
         try:
-            logger.info(f"📞 Calling lead-generator at {url} for keyword '{keyword}' in {city or 'any city'}, {state or 'any state'}, {country}...")
+            logger.info(f"📞 Calling lead-generator at {url} for keyword '{keyword}' (normalized: '{normalized}') in {city or 'any city'}, {state or 'any state'}, {country}...")
             resp = requests.post(url, json=payload, timeout=90)
             resp.raise_for_status()
             data = resp.json()
