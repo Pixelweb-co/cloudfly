@@ -44,6 +44,9 @@ class Config:
 
     # Services
     LEAD_GENERATOR_URL = os.getenv("LEAD_GENERATOR_URL", "http://lead-generator:8000")
+    BACKEND_URL = os.getenv("BACKEND_URL", "http://backend-api:8080")
+    BACKEND_API_KEY = os.getenv("BACKEND_API_KEY", "")
+
     
     # Evolution API (WhatsApp)
     EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL", "http://evolution-api:8080")
