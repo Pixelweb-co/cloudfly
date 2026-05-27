@@ -257,137 +257,140 @@ class AutonomousMarketingFlow:
             if not products:
                 continue
 
-            # Phase 1: B2B Analysis Crew (Researcher & ICP Strategist)
-            analysis_crew = build_analysis_crew(
-                company=company,
-                products=products
-            )
-            result = analysis_crew.kickoff()
-            logger.info(f"Crew kickoff results: {result}")
+            for product in products:
+                logger.info(f"Processing campaign for product: {product.get('product_name')} (ID: {product.get('id')})")
 
-            # Parse strategist task output
-            analysis_raw = analysis_crew.tasks[1].output.raw.strip()
-            if analysis_raw.startswith("```json"):
-                analysis_raw = analysis_raw[7:]
-            if analysis_raw.endswith("```"):
-                analysis_raw = analysis_raw[:-3]
-            analysis_raw = analysis_raw.strip()
-
-            try:
-                analysis_json = json.loads(analysis_raw)
-                logger.info("✅ B2B analysis successfully parsed as JSON!")
-            except Exception:
-                logger.warning(f"B2B analysis output is not valid JSON: {analysis_raw}")
-                continue
-
-            if not analysis_json.get("is_b2b"):
-                logger.info(f"✗ Company {company['name']} is B2C. Skipping prospecting.")
-                continue
-
-            categories = analysis_json.get("categories", [])
-            logger.info(f"Target categories for prospecting: {categories}")
-
-            # Fetch active WhatsApp channel
-            channel_id = self.get_active_whatsapp_channel(company['tenant_id'], company['id'])
-            if not channel_id:
-                logger.warning("✗ No active WhatsApp channel found. Cannot create campaign.")
-                continue
-
-            for category in categories:
-                logger.info(f"🎯 Processing category: '{category}'")
-
-                # 1. Fetch leads
-                leads = self.prospector_service.fetch_leads_from_generator(
-                    keyword=category,
-                    country=company.get("pais_nombre") or "Colombia",
-                    limit=5
-                )
-                if not leads:
-                    logger.warning(f"No leads found for category {category}")
-                    continue
-
-                # Phase 2: Qualification & Copywriting Crew
-                campaign_crew = build_campaign_crew(
+                # Phase 1: B2B Analysis Crew (Researcher & ICP Strategist)
+                analysis_crew = build_analysis_crew(
                     company=company,
-                    products=products,
-                    leads=leads
+                    product=product
                 )
-                campaign_result = campaign_crew.kickoff()
-                
-                campaign_raw = campaign_crew.tasks[1].output.raw.strip()
-                if campaign_raw.startswith("```json"):
-                    campaign_raw = campaign_raw[7:]
-                if campaign_raw.endswith("```"):
-                    campaign_raw = campaign_raw[:-3]
-                campaign_raw = campaign_raw.strip()
+                result = analysis_crew.kickoff()
+                logger.info(f"Crew kickoff results: {result}")
+
+                # Parse strategist task output
+                analysis_raw = analysis_crew.tasks[1].output.raw.strip()
+                if analysis_raw.startswith("```json"):
+                    analysis_raw = analysis_raw[7:]
+                if analysis_raw.endswith("```"):
+                    analysis_raw = analysis_raw[:-3]
+                analysis_raw = analysis_raw.strip()
 
                 try:
-                    campaign_json = json.loads(campaign_raw)
-                    logger.info("✅ Campaign copywriting parsed as JSON!")
+                    analysis_json = json.loads(analysis_raw)
+                    logger.info("✅ B2B analysis successfully parsed as JSON!")
                 except Exception:
-                    logger.warning(f"Campaign copywriting output is not valid JSON: {campaign_raw}")
+                    logger.warning(f"B2B analysis output is not valid JSON: {analysis_raw}")
                     continue
 
-                message_body = campaign_json.get("message")
-                if not message_body:
-                    logger.warning("WhatsApp campaign message body is empty. Skipping.")
+                if not analysis_json.get("is_b2b"):
+                    logger.info(f"✗ Product {product.get('product_name')} is not B2B. Skipping prospecting.")
                     continue
 
-                # Extract qualified leads list from qualification task
-                qual_raw = campaign_crew.tasks[0].output.raw.strip()
-                if qual_raw.startswith("```json"):
-                    qual_raw = qual_raw[7:]
-                if qual_raw.endswith("```"):
-                    qual_raw = qual_raw[:-3]
-                qual_raw = qual_raw.strip()
+                categories = analysis_json.get("categories", [])
+                logger.info(f"Target categories for prospecting: {categories}")
 
-                try:
-                    qualified_leads = json.loads(qual_raw)
-                    if isinstance(qualified_leads, dict) and "qualified_leads" in qualified_leads:
-                        qualified_leads = qualified_leads["qualified_leads"]
-                except Exception:
-                    qualified_leads = leads
-
-                # 2. Get/create list & Link contacts
-                sending_list_id = self.get_or_create_sending_list(company['tenant_id'], company['id'], category)
-                contact_ids = self.save_qualified_leads_to_crm(company['tenant_id'], company['id'], sending_list_id, qualified_leads)
-                
-                if not contact_ids:
-                    logger.warning("No new unique contacts saved for list. Skipping campaign.")
+                # Fetch active WhatsApp channel
+                channel_id = self.get_active_whatsapp_channel(company['tenant_id'], company['id'])
+                if not channel_id:
+                    logger.warning("✗ No active WhatsApp channel found. Cannot create campaign.")
                     continue
 
-                # 3. Create Campaign and Schedule for 2 days (48 hours) later!
-                scheduled_at = datetime.now() + timedelta(days=2)
-                
-                campaign_id = self.create_campaign_in_db(
-                    tenant_id=company['tenant_id'],
-                    company_id=company['id'],
-                    category_name=category,
-                    sending_list_id=sending_list_id,
-                    channel_id=channel_id,
-                    message_body=message_body,
-                    product_id=products[0]['id'],
-                    scheduled_at=scheduled_at
-                )
+                for category in categories:
+                    logger.info(f"🎯 Processing category: '{category}' for product: {product.get('product_name')}")
 
-                if campaign_id:
-                    # 4. Schedule event in scheduler-service calendar
-                    self.call_scheduler_service(
+                    # 1. Fetch leads
+                    leads = self.prospector_service.fetch_leads_from_generator(
+                        keyword=category,
+                        country=company.get("pais_nombre") or "Colombia",
+                        limit=5
+                    )
+                    if not leads:
+                        logger.warning(f"No leads found for category {category}")
+                        continue
+
+                    # Phase 2: Qualification & Copywriting Crew
+                    campaign_crew = build_campaign_crew(
+                        company=company,
+                        product=product,
+                        leads=leads
+                    )
+                    campaign_result = campaign_crew.kickoff()
+                    
+                    campaign_raw = campaign_crew.tasks[1].output.raw.strip()
+                    if campaign_raw.startswith("```json"):
+                        campaign_raw = campaign_raw[7:]
+                    if campaign_raw.endswith("```"):
+                        campaign_raw = campaign_raw[:-3]
+                    campaign_raw = campaign_raw.strip()
+
+                    try:
+                        campaign_json = json.loads(campaign_raw)
+                        logger.info("✅ Campaign copywriting parsed as JSON!")
+                    except Exception:
+                        logger.warning(f"Campaign copywriting output is not valid JSON: {campaign_raw}")
+                        continue
+
+                    message_body = campaign_json.get("message")
+                    if not message_body:
+                        logger.warning("WhatsApp campaign message body is empty. Skipping.")
+                        continue
+
+                    # Extract qualified leads list from qualification task
+                    qual_raw = campaign_crew.tasks[0].output.raw.strip()
+                    if qual_raw.startswith("```json"):
+                        qual_raw = qual_raw[7:]
+                    if qual_raw.endswith("```"):
+                        qual_raw = qual_raw[:-3]
+                    qual_raw = qual_raw.strip()
+
+                    try:
+                        qualified_leads = json.loads(qual_raw)
+                        if isinstance(qualified_leads, dict) and "qualified_leads" in qualified_leads:
+                            qualified_leads = qualified_leads["qualified_leads"]
+                    except Exception:
+                        qualified_leads = leads
+
+                    # 2. Get/create list & Link contacts
+                    sending_list_id = self.get_or_create_sending_list(company['tenant_id'], company['id'], category)
+                    contact_ids = self.save_qualified_leads_to_crm(company['tenant_id'], company['id'], sending_list_id, qualified_leads)
+                    
+                    if not contact_ids:
+                        logger.warning("No new unique contacts saved for list. Skipping campaign.")
+                        continue
+
+                    # 3. Create Campaign and Schedule for 2 days (48 hours) later!
+                    scheduled_at = datetime.now() + timedelta(days=2)
+                    
+                    campaign_id = self.create_campaign_in_db(
                         tenant_id=company['tenant_id'],
                         company_id=company['id'],
-                        campaign_id=campaign_id,
-                        campaign_name=category,
+                        category_name=category,
+                        sending_list_id=sending_list_id,
+                        channel_id=channel_id,
+                        message_body=message_body,
+                        product_id=product.get('id'),
                         scheduled_at=scheduled_at
                     )
-                    
-                    # 5. Redis sync context
-                    self.sync_redis_campaign_context(
-                        contact_ids=contact_ids,
-                        campaign_id=campaign_id,
-                        product_id=products[0]['id'],
-                        company_id=company['id']
-                    )
-                    logger.info(f"🎉 Fully completed autonomous workflow for category '{category}'!")
-                else:
-                    logger.error("Failed to create campaign record.")
+
+                    if campaign_id:
+                        # 4. Schedule event in scheduler-service calendar
+                        self.call_scheduler_service(
+                            tenant_id=company['tenant_id'],
+                            company_id=company['id'],
+                            campaign_id=campaign_id,
+                            campaign_name=f"{product.get('product_name')} - {category}",
+                            scheduled_at=scheduled_at
+                        )
+                        
+                        # 5. Redis sync context
+                        self.sync_redis_campaign_context(
+                            contact_ids=contact_ids,
+                            campaign_id=campaign_id,
+                            product_id=product.get('id'),
+                            company_id=company['id']
+                        )
+                        logger.info(f"🎉 Fully completed autonomous workflow for product '{product.get('product_name')}' and category '{category}'!")
+                    else:
+                        logger.error("Failed to create campaign record.")or("Failed to create campaign record.")
 
