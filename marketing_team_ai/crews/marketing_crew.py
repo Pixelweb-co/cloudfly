@@ -1,6 +1,6 @@
 from crewai import Task, Crew, Process
 
-from agents.icp_agent import icp_agent
+from agents.icp_agent import icp_agent, create_icp_agent
 from agents.qualification_agent import qualification_agent
 from agents.copywriter_agent import copywriter_agent
 from agents.researcher_agent import researcher_agent
@@ -16,6 +16,10 @@ def build_analysis_crew(company, product):
         Identifica cuáles son las mayores debilidades de los competidores y qué precios manejan
         para estructurar una oferta B2B irresistible enfocada al 100% en maximizar las ventas
         de este producto específico.
+
+        Además, analiza las necesidades del mercado relacionadas con este producto y
+        detecta oportunidades de negocio concretas (problemas no resueltos, segmentos con alta demanda,
+        casos de uso locales) donde el producto puede servir y generar valor. Devuelve ejemplos accionables.
         ''',
         expected_output="Análisis de competidores y ventajas de precios",
         agent=researcher_agent
@@ -34,9 +38,17 @@ def build_analysis_crew(company, product):
            - peluquerias, barberias, clinicas estetica, veterinarias, spas (agendamiento de citas)
            - restaurantes, panaderias, reposterias, tiendas locales (pedidos y ventas)
         3. Una lista de hasta 8 categorías de búsqueda de Google Maps y buscadores en español muy específicas para encontrar estos clientes potenciales para este producto.
+                4. Además, describe hasta 5 oportunidades de negocio concretas y necesidades detectadas (por ejemplo: "pequeñas clínicas sin sitio web que usan WhatsApp para agendar citas", "restaurantes sin sistema de pedidos online") que justifiquen la prospección y cómo el producto los soluciona.
+
+                IMPORTANTE: Responde estrictamente con un objeto JSON con la siguiente forma:
+                {
+                    "is_b2b": true|false,
+                    "categories": ["categoria1", ...],
+                    "opportunities": ["oportunidad1", ...]
+                }
         ''',
-        expected_output="JSON con is_b2b y categories",
-        agent=icp_agent,
+                expected_output="JSON con is_b2b, categories y opportunities",
+        agent=create_icp_agent(product.get('product_name'), product.get('description')),
         context=[research_task]
     )
 

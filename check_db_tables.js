@@ -10,7 +10,8 @@ const config = {
 };
 
 conn.on('ready', () => {
-  const sql = "SHOW DATABASES;";
+  const sql = "USE cloud_master; SELECT business_type, business_description FROM clientes WHERE id = 1;";
+
   const cmd = `docker exec -i mysql mysql -uroot -pwidowmaker -e "${sql}"`;
   
   conn.exec(cmd, (err, stream) => {

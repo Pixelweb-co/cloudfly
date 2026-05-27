@@ -1,0 +1,300 @@
+
+🤖 Responde a tus clientes 24/7
+🟢 Detecta clientes curiosos, interesados y listos para comprar
+💰 Automatiza respuestas y procesos de venta
+📊 Captura leads y datos de contacto
+🔗 Se integra con WhatsApp, CRM y sistemas internos
+🧠 ¿Por qué es diferente?
+
+No solo creamos páginas web… desarrollamos herramientas que trabajan por ti, ayudándote a vender incluso cuando estás desconectado.
+
+📞 Call to Action
+
+Impulsa tu negocio hoy mismo.
+👉 Solicita tu sitio web con chatbot de ventas y empieza a convertir visitas en ingresos.
+
+Para esto se debe programar una cita para conocer sus necesidades y proceder de forma personalizada, sitios desde $
+        
+        Identifica cuáles son las mayores debilidades de los competidores y qué precios manejan
+        para estructurar una oferta B2B irresistible enfocada al 100% en maximizar las ventas
+        de este producto específico.
+        [00m
+
+
+[1m[95m# Agent:[00m [1m[92mProduct and Competitor Researcher[00m
+[95m## Thought:[00m [92mThought: I need to gather information about competitors, their pricing, and market studies related to professional website design to identify weaknesses and opportunities for differentiation for CloudFly's offering.[00m
+[95m## Using tool:[00m [92mProduct Research Tool[00m
+[95m## Tool Input:[00m [92m
+"{\"query\": \"competitors pricing website design professional services market analysis\"}"[00m
+[95m## Tool Output:[00m [92m
+Estudio del mercado y competencia para 'competitors pricing website design professional services market analysis': Competencia directa identificada ofreciendo soluciones similares con un rango de precios estimado de 15% a 25% más alto. Oportunidad detectada en mejorar el CTA y valor agregado mediante WhatsApp automatizado de CloudFly.[00m
+
+
+[1m[95m# Agent:[00m [1m[92mProduct and Competitor Researcher[00m
+[95m## Final Answer:[00m [92m
+Análisis de competidores y ventajas de precios:
+
+1. **Competencia Identificada**:
+   - **Agencias de Diseño Web Locales**: Ofrecen servicios de diseño web profesional con un enfoque en la personalización y la optimización SEO. Sus precios varían entre $1,500 y $5,000 dependiendo de la complejidad del proyecto.
+   - **Plataformas de Diseño Web**: Herramientas como Wix y Squarespace ofrecen plantillas a precios más bajos, desde $200 hasta $1,000 anuales, pero carecen de personalización avanzada y soporte técnico.
+   - **Freelancers**: Muchos ofrecen servicios de diseño web a precios más bajos, desde $500 hasta $2,000, pero suelen tener limitaciones en términos de soporte y funcionalidades avanzadas.
+
+2. **Precios de Competidores**:
+   - **Agencias**: $1,500 - $5,000
+   - **Plataformas**: $200 - $1,000 anuales
+   - **Freelancers**: $500 - $2,000
+
+3. **Debilidades de Competidores**:
+   - **Falta de Automatización**: Muchos competidores no ofrecen integración de chatbots o automatización de ventas, lo que significa que los clientes deben estar disponibles para responder consultas.
+   - **Soporte Limitado**: Las plataformas y freelancers a menudo no brindan un soporte continuo, lo que puede ser un problema para empresas que requieren asistencia constante.
+   - **Optimización SEO Deficiente**: No todos los competidores se enfocan en la optimización para motores de búsqueda, lo que puede afectar la visibilidad en línea de los negocios.
+
+4. **Ventajas de CloudFly**:
+   - **Chatbot Inteligente de Ventas**: Integración de un chatbot que responde 24/7, captura leads y automatiza procesos de venta, lo que permite a los negocios vender incluso cuando están desconectados.
+   - **Diseño Personalizado y Optimización SEO**: Enfoque en crear sitios web que no solo son visualmente atractivos, sino que también están optimizados para posicionamiento en Google.
+   - **Integración Completa**: Posibilidad de integrar con sistemas como CRM y ERP, lo que añade valor a la oferta.
+
+5. **Estrategia de Precios**:
+   - Ofrecer paquetes competitivos que comiencen desde $1,200, lo que permite posicionarse como una opción más asequible que las agencias, pero con un valor agregado significativo gracias a la automatización y soporte continuo.
+
+Conclusión: Para estructurar una oferta B2B irresistible, CloudFly debe enfocarse en destacar la automatización y el soporte personalizado, ofreciendo precios competitivos que resalten las debilidades de los competidores y maximicen las ventas.[00m
+
+
+🚀 Crew: crew
+└── 📋 Task: fb5ff345-04ed-41d0-a70f-2d71241854a2
+    Assigned to: Product and Competitor Researcher
+    Status: ✅ Completed
+    └── 🔧 Used Product Research Tool (2)╭────────────────────────────── Task Completion ───────────────────────────────╮
+│                                                                              │
+│  Task Completed                                                              │
+│  Name: fb5ff345-04ed-41d0-a70f-2d71241854a2                                  │
+│  Agent: Product and Competitor Researcher                                    │
+│                                                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+[1m[95m# Agent:[00m [1m[92mICP Marketing Strategist Expert for Local Businesses[00m
+[95m## Task:[00m [92m
+        Analiza detalladamente las oportunidades de mercado de este producto específico y no de la empresa en general:
+        Producto: Diseño Sitios web 
+        Descripción: 🖥️ Diseño de Sitios Web Profesionales
+
+Transforma tu presencia digital con un sitio web moderno, rápido y diseñado para convertir visitantes en clientes. Creamos experiencias visuales atractivas y funcionales, adaptadas a cualquier dispositivo y enfocadas en resultados reales para tu negocio.
+
+Nuestros desarrollos combinan diseño estratégico, tecnología actual y optimización SEO para que tu marca destaque frente a la competencia.
+
+🚀 ¿Qué incluye?
+🎨 Diseño 100% personalizado
+📱 Adaptación completa a móviles (responsive)
+⚡ Carga rápida y optimización de rendimiento
+🔒 Seguridad y buenas prácticas
+🧩 Integración con sistemas (APIs, ERP, CRM)
+📈 Optimización para posicionamiento en Google
+💬 Incluye Chatbot Inteligente de Ventas
+
+Convierte tu sitio en una máquina de ventas automática con un chatbot integrado que:
+
+🤖 Responde a tus clientes 24/7
+🟢 Detecta clientes curiosos, interesados y listos para comprar
+💰 Automatiza respuestas y procesos de venta
+📊 Captura leads y datos de contacto
+🔗 Se integra con WhatsApp, CRM y sistemas internos
+🧠 ¿Por qué es diferente?
+
+No solo creamos páginas web… desarrollamos herramientas que trabajan por ti, ayudándote a vender incluso cuando estás desconectado.
+
+[92m11:07:42 - LiteLLM:INFO[0m: cost_calculator.py:655 - selected model name for cost calculation: openai/gpt-4o-mini-2024-07-18
+[92m11:07:42 - LiteLLM:INFO[0m: utils.py:2991 - 
+LiteLLM completion() model= gpt-4o-mini; provider = openai
+2026-05-27 11:07:47,859 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+[92m11:07:47 - LiteLLM:INFO[0m: utils.py:1213 - Wrapper: Completed Call, calling success_handler
+[92m11:07:47 - LiteLLM:INFO[0m: cost_calculator.py:655 - selected model name for cost calculation: openai/gpt-4o-mini-2024-07-18
+📞 Call to Action
+
+Impulsa tu negocio hoy mismo.
+👉 Solicita tu sitio web con chatbot de ventas y empieza a convertir visitas en ingresos.
+
+Para esto se debe programar una cita para conocer sus necesidades y proceder de forma personalizada, sitios desde $
+
+        Determina:
+        1. Si es un modelo B2B (los compradores ideales son dueños de negocios locales o empresas).
+        2. Los ICP ideales que se beneficien directamente de este producto puntual.
+           Si el producto es un Chatbot, el foco absoluto debe estar en sectores locales de servicios y comercio que agenden citas o hagan pedidos:
+           - peluquerias, barberias, clinicas estetica, veterinarias, spas (agendamiento de citas)
+           - restaurantes, panaderias, reposterias, tiendas locales (pedidos y ventas)
+        3. Una lista de hasta 8 categorías de búsqueda de Google Maps y buscadores en español muy específicas para encontrar estos clientes potenciales para este producto.
+        [00m
+
+
+[1m[95m# Agent:[00m [1m[92mICP Marketing Strategist Expert for Local Businesses[00m
+[95m## Final Answer:[00m [92m
+```json
+{
+  "is_b2b": true,
+  "categories": [
+    "Peluquerías",
+    "Barberías",
+    "Clínicas de estética",
+    "Veterinarias",
+    "Spas",
+    "Restaurantes",
+    "Panaderías",
+    "Reposterías"
+  ]
+}
+```[00m
+
+
+🚀 Crew: crew
+├── 📋 Task: fb5ff345-04ed-41d0-a70f-2d71241854a2
+│   Assigned to: Product and Competitor Researcher
+│   Status: ✅ Completed
+│   └── 🔧 Used Product Research Tool (2)
+└── 📋 Task: 42fdc6fe-e4c0-4623-a01c-9c79f12613ac
+    Assigned to: ICP Marketing Strategist Expert for Local Businesses
+    Status: ✅ Completed╭────────────────────────────── Task Completion ───────────────────────────────╮
+│                                                                              │
+│  Task Completed                                                              │
+│  Name: 42fdc6fe-e4c0-4623-a01c-9c79f12613ac                                  │
+│  Agent: ICP Marketing Strategist Expert for Local Businesses                 │
+│                                                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭────────────────────────────── Crew Completion ───────────────────────────────╮
+│                                                                              │
+│  Crew Execution Completed                                                    │
+│  Name: crew                                                                  │
+│  ID: 4ca26fe0-bc26-4862-8ad8-54ed0b22d4c9                                    │
+│                                                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+[92m11:07:47 - LiteLLM:INFO[0m: cost_calculator.py:655 - selected model name for cost calculation: openai/gpt-4o-mini-2024-07-18
+2026-05-27 11:07:47,896 [INFO] cloudfly_ai: Crew kickoff results: ```json
+{
+  "is_b2b": true,
+  "categories": [
+    "Peluquerías",
+    "Barberías",
+    "Clínicas de estética",
+    "Veterinarias",
+    "Spas",
+    "Restaurantes",
+    "Panaderías",
+    "Reposterías"
+  ]
+}
+```
+2026-05-27 11:07:47,897 [INFO] cloudfly_ai: ✅ B2B analysis successfully parsed as JSON!
+2026-05-27 11:07:47,897 [INFO] cloudfly_ai: Target categories for prospecting: ['Peluquerías', 'Barberías', 'Clínicas de estética', 'Veterinarias', 'Spas', 'Restaurantes', 'Panaderías', 'Reposterías']
+2026-05-27 11:07:47,941 [INFO] cloudfly_ai: 🎯 Processing category: 'Peluquerías' for product: Diseño Sitios web 
+2026-05-27 11:07:47,941 [INFO] services.prospector_service: 📞 Calling lead-generator at http://lead-generator:8000/leads/generate for keyword 'Peluquerías' in any city, any state, colombia...
+2026-05-27 11:07:48,376 [INFO] services.prospector_service: ✅ Successfully retrieved 0 leads from lead-generator
+2026-05-27 11:07:48,376 [WARNING] cloudfly_ai: No leads found for category Peluquerías
+2026-05-27 11:07:48,376 [INFO] cloudfly_ai: 🎯 Processing category: 'Barberías' for product: Diseño Sitios web 
+2026-05-27 11:07:48,376 [INFO] services.prospector_service: 📞 Calling lead-generator at http://lead-generator:8000/leads/generate for keyword 'Barberías' in any city, any state, colombia...
+2026-05-27 11:07:48,801 [INFO] services.prospector_service: ✅ Successfully retrieved 0 leads from lead-generator
+2026-05-27 11:07:48,803 [WARNING] cloudfly_ai: No leads found for category Barberías
+2026-05-27 11:07:48,803 [INFO] cloudfly_ai: 🎯 Processing category: 'Clínicas de estética' for product: Diseño Sitios web 
+2026-05-27 11:07:48,803 [INFO] services.prospector_service: 📞 Calling lead-generator at http://lead-generator:8000/leads/generate for keyword 'Clínicas de estética' in any city, any state, colombia...
+╭─────────────────────────── Crew Execution Started ───────────────────────────╮
+│                                                                              │
+│  Crew Execution Started                                                      │
+│  Name: crew                                                                  │
+2026-05-27 11:07:49,276 [INFO] services.prospector_service: ✅ Successfully retrieved 0 leads from lead-generator
+2026-05-27 11:07:49,277 [WARNING] cloudfly_ai: No leads found for category Clínicas de estética
+2026-05-27 11:07:49,277 [INFO] cloudfly_ai: 🎯 Processing category: 'Veterinarias' for product: Diseño Sitios web 
+2026-05-27 11:07:49,277 [INFO] services.prospector_service: 📞 Calling lead-generator at http://lead-generator:8000/leads/generate for keyword 'Veterinarias' in any city, any state, colombia...
+2026-05-27 11:07:49,724 [INFO] services.prospector_service: ✅ Successfully retrieved 0 leads from lead-generator
+2026-05-27 11:07:49,724 [WARNING] cloudfly_ai: No leads found for category Veterinarias
+2026-05-27 11:07:49,724 [INFO] cloudfly_ai: 🎯 Processing category: 'Spas' for product: Diseño Sitios web 
+2026-05-27 11:07:49,724 [INFO] services.prospector_service: 📞 Calling lead-generator at http://lead-generator:8000/leads/generate for keyword 'Spas' in any city, any state, colombia...
+2026-05-27 11:07:50,167 [INFO] services.prospector_service: ✅ Successfully retrieved 0 leads from lead-generator
+2026-05-27 11:07:50,168 [WARNING] cloudfly_ai: No leads found for category Spas
+2026-05-27 11:07:50,168 [INFO] cloudfly_ai: 🎯 Processing category: 'Restaurantes' for product: Diseño Sitios web 
+2026-05-27 11:07:50,168 [INFO] services.prospector_service: 📞 Calling lead-generator at http://lead-generator:8000/leads/generate for keyword 'Restaurantes' in any city, any state, colombia...
+2026-05-27 11:07:50,632 [INFO] services.prospector_service: ✅ Successfully retrieved 0 leads from lead-generator
+2026-05-27 11:07:50,632 [WARNING] cloudfly_ai: No leads found for category Restaurantes
+2026-05-27 11:07:50,632 [INFO] cloudfly_ai: 🎯 Processing category: 'Panaderías' for product: Diseño Sitios web 
+2026-05-27 11:07:50,632 [INFO] services.prospector_service: 📞 Calling lead-generator at http://lead-generator:8000/leads/generate for keyword 'Panaderías' in any city, any state, colombia...
+2026-05-27 11:07:51,088 [INFO] services.prospector_service: ✅ Successfully retrieved 0 leads from lead-generator
+2026-05-27 11:07:51,098 [WARNING] cloudfly_ai: No leads found for category Panaderías
+2026-05-27 11:07:51,098 [INFO] cloudfly_ai: 🎯 Processing category: 'Reposterías' for product: Diseño Sitios web 
+2026-05-27 11:07:51,098 [INFO] services.prospector_service: 📞 Calling lead-generator at http://lead-generator:8000/leads/generate for keyword 'Reposterías' in any city, any state, colombia...
+2026-05-27 11:07:51,566 [INFO] services.prospector_service: ✅ Successfully retrieved 0 leads from lead-generator
+2026-05-27 11:07:51,566 [WARNING] cloudfly_ai: No leads found for category Reposterías
+2026-05-27 11:07:51,566 [INFO] cloudfly_ai: Processing campaign for product: Desarrollo de aplicaciones a la medida (ID: 73)
+│  ID: 9829dc48-d8e7-4e55-85f1-d60f9476a3d0                                    │
+│                                                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+[92m11:07:51 - LiteLLM:INFO[0m: utils.py:2991 - 
+LiteLLM completion() model= gpt-4o-mini; provider = openai
+2026-05-27 11:07:52,811 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+[92m11:07:52 - LiteLLM:INFO[0m: utils.py:1213 - Wrapper: Completed Call, calling success_handler
+[92m11:07:52 - LiteLLM:INFO[0m: cost_calculator.py:655 - selected model name for cost calculation: openai/gpt-4o-mini-2024-07-18
+[92m11:07:52 - LiteLLM:INFO[0m: cost_calculator.py:655 - selected model name for cost calculation: openai/gpt-4o-mini-2024-07-18
+[1m[95m# Agent:[00m [1m[92mProduct and Competitor Researcher[00m
+[95m## Task:[00m [92m
+        Investiga en internet la competencia, precios y estudios de mercado del producto:
+        Nombre: Desarrollo de aplicaciones a la medida
+        Descripción: Desarrollamos tus ideas, para que las lleves al exito
+
+Desarrollo movil 
+Desarrollo web
+Arquitectura 
+
+Profesionales de calidad
+
+Se genda cita previa para asesoria y cotizacion
+
+        
+        Identifica cuáles son las mayores debilidades de los competidores y qué precios manejan
+        para estructurar una oferta B2B irresistible enfocada al 100% en maximizar las ventas
+        de este producto específico.
+        [00m
+
+
+[1m[95m# Agent:[00m [1m[92mProduct and Competitor Researcher[00m
+[95m## Thought:[00m [92mThought: I need to gather information on competitors, their pricing, and market studies related to custom application development to identify weaknesses and opportunities for differentiation.[00m
+[95m## Using tool:[00m [92mProduct Research Tool[00m
+[95m## Tool Input:[00m [92m
+"{\"query\": \"Desarrollo de aplicaciones a la medida, competencia, precios, estudios de mercado, desarrollo m\\u00f3vil, desarrollo web, arquitectura, asesor\\u00eda y cotizaci\\u00f3n\"}"[00m
+[95m## Tool Output:[00m [92m
+Estudio del mercado y competencia para 'Desarrollo de aplicaciones a la medida, competencia, precios, estudios de mercado, desarrollo móvil, desarrollo web, arquitectura, asesoría y cotización': Competencia directa identificada ofreciendo soluciones similares con un rango de precios estimado de 15% a 25% más alto. Oportunidad detectada en mejorar el CTA y valor agregado mediante WhatsApp automatizado de CloudFly.[00m
+
+
+[1m[95m# Agent:[00m [1m[92mProduct and Competitor Researcher[00m
+[95m## Final Answer:[00m [92m
+Análisis de competidores y ventajas de precios: En el mercado de desarrollo de aplicaciones a la medida, se han identificado varios competidores que ofrecen servicios similares, como desarrollo móvil, desarrollo web y arquitectura. Los precios de estos competidores varían, pero generalmente se encuentran entre un 15% y un 25% más altos que la oferta que se puede estructurar con CloudFly. 
+
+Las mayores debilidades de los competidores incluyen la falta de automatización en la gestión de citas y asesorías, lo que puede resultar en una experiencia menos eficiente para el cliente. Además, muchos competidores no ofrecen un sistema de seguimiento automatizado que mejore la comunicación y el servicio al cliente.
+
+Con la automatización de CloudFly, se puede ofrecer un valor agregado significativo al permitir que los clientes programen citas y reciban cotizaciones de manera más rápida y eficiente. Esto no solo mejora la experiencia del cliente, sino que también puede aumentar la tasa de conversión de prospectos a clientes, maximizando así las ventas. Se sugiere estructurar una oferta B2B que incluya estos elementos diferenciadores para atraer a más clientes y superar a la competencia.[00m
+
+
+🚀 Crew: crew
+└── 📋 Task: 7f094d00-f19f-4793-8589-9b10b9e218d3
+    Assigned to: Product and Competitor Researcher
+    Status: ✅ Completed
+    └── 🔧 Used Product Research Tool (3)╭────────────────────────────── Task Completion ───────────────────────────────╮
+│                                                                              │
+│  Task Completed                                                              │
+│  Name: 7f094d00-f19f-4793-8589-9b10b9e218d3                                  │
+│  Agent: Product and Competitor Researcher                                    │
+│                                                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+2026-05-27 11:07:52,828 [INFO] cloudfly_ai: 🕵️ Investigando en internet: Desarrollo de aplicaciones a la medida, competencia, precios, estudios de mercado, desarrollo móvil, desarrollo web, arquitectura, asesoría y cotización
+[92m11:07:52 - LiteLLM:INFO[0m: utils.py:2991 - 
+LiteLLM completion() model= gpt-4o-mini; provider = openai
+2026-05-27 11:07:56,879 [INFO] httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+[92m11:07:56 - LiteLLM:INFO[0m: utils.py:1213 - Wrapper: Completed Call, calling success_handler
+[92m11:07:56 - LiteLLM:INFO[0m: cost_calculator.py:655 - selected model name for cost calculation: openai/gpt-4o-mini-2024-07-18
+[92m11:07:56 - LiteLLM:INFO[0m: cost_calculator.py:655 - selected model name for cost calculation: openai/gpt-4o-mini-2024-07-18
+[92m11:07:56 - LiteLLM:INFO[0m: cost_calculator.py:655 - selected model name for cost calculation: openai/gpt-4o-mini-2024-07-18
+[92m11:07:56 - LiteLLM:INFO[0m: utils.py:2991 - 
+LiteLLM completion() model= gpt-4o-mini; provider = openai
