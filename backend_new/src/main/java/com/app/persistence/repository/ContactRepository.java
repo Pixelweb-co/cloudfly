@@ -1,0 +1,71 @@
+package com.app.persistence.repository;
+
+import com.app.persistence.entity.ContactEntity;
+import org.springframework.data.r2dbc.repository.Query;
+import org.springframework.data.repository.reactive.ReactiveCrudRepository;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+public interface ContactRepository extends ReactiveCrudRepository<ContactEntity, Long> {
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId")
+    Flux<ContactEntity> findByTenantId(Long tenantId);
+
+    Mono<ContactEntity> findByUuid(String uuid);
+
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId)")
+    Flux<ContactEntity> findByTenantIdAndCompanyId(Long tenantId, Long companyId);
+
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) ORDER BY created_at DESC LIMIT :limit OFFSET :offset")
+    Flux<ContactEntity> findPaginated(Long tenantId, Long companyId, int limit, int offset);
+
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND phone = :phone")
+    Mono<ContactEntity> findByTenantIdAndCompanyIdAndPhone(Long tenantId, Long companyId, String phone);
+
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND LOWER(name) LIKE LOWER(CONCAT('%', :name, '%'))")
+    Flux<ContactEntity> findByTenantIdAndCompanyIdAndNameContainingIgnoreCase(Long tenantId, Long companyId,
+            String name);
+
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND pipeline_id = :pipelineId")
+    Flux<ContactEntity> findByTenantIdAndCompanyIdAndPipelineId(Long tenantId, Long companyId, Long pipelineId);
+
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND pipeline_id = :pipelineId AND stage_id = :stageId")
+    Flux<ContactEntity> findByTenantIdAndCompanyIdAndPipelineIdAndStageId(Long tenantId, Long companyId,
+            Long pipelineId, Long stageId);
+
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND email = :email")
+    Mono<ContactEntity> findByTenantIdAndCompanyIdAndEmail(Long tenantId, Long companyId, String email);
+
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND document_number = :documentNumber")
+    Mono<ContactEntity> findByTenantIdAndCompanyIdAndDocumentNumber(Long tenantId, Long companyId,
+            String documentNumber);
+
+    @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND phone = :phone")
+    Mono<Integer> countByTenantIdAndCompanyIdAndPhone(Long tenantId, Long companyId, String phone);
+
+    @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND email = :email")
+    Mono<Integer> countByTenantIdAndCompanyIdAndEmail(Long tenantId, Long companyId, String email);
+
+    @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND pipeline_id = :pipelineId AND stage_id = :stageId")
+    Mono<Integer> countByPipelineAndStage(Long tenantId, Long companyId, Long pipelineId, Long stageId);
+
+    @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId)")
+    Mono<Integer> countTotalContacts(Long tenantId, Long companyId);
+
+    @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND created_at >= CURDATE()")
+    Mono<Integer> countContactsToday(Long tenantId, Long companyId);
+
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND (:companyId IS NULL OR company_id = :companyId) AND pipeline_id = :pipelineId")
+    Flux<ContactEntity> findByPipelineId(Long tenantId, Long companyId, Long pipelineId);
+
+    @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND email = :email AND id != :id")
+    Mono<Integer> existsByEmailAndCompanyIdAndIdNot(String email, Long companyId, Long id, Long tenantId);
+
+    @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND phone = :phone AND id != :id")
+    Mono<Integer> existsByPhoneAndCompanyIdAndIdNot(String phone, Long companyId, Long id, Long tenantId);
+
+    @Query("SELECT * FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND (LOWER(name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(email) LIKE LOWER(CONCAT('%', :query, '%')) OR document_number LIKE CONCAT('%', :query, '%')) LIMIT 20")
+    Flux<ContactEntity> searchContacts(Long tenantId, Long companyId, String query);
+
+    @Query("SELECT COUNT(*) FROM contacts WHERE tenant_id = :tenantId AND company_id = :companyId AND document_number = :documentNumber AND id != :id")
+    Mono<Integer> existsByDocumentAndCompanyIdAndIdNot(String documentNumber, Long companyId, Long id, Long tenantId);
+}

@@ -1,0 +1,520 @@
+'use client'
+
+// React Imports
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+
+// MUI Imports
+import Box from '@mui/material/Box'
+import Stepper from '@mui/material/Stepper'
+import Step from '@mui/material/Step'
+import StepLabel from '@mui/material/StepLabel'
+import Button from '@mui/material/Button'
+import Typography from '@mui/material/Typography'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Grid from '@mui/material/Grid'
+
+// Component Imports
+import Logo from '@components/layout/shared/Logo'
+import Link from '@components/Link'
+import AuthIllustrationWrapperCustomer from './AuthIllustrationWrapperCustomer'
+import FormCustomer from '@/views/apps/customers/form/page'
+import WhatsAppConfigForm from '@/views/apps/comunicaciones/canales/whatsapp/WhatsAppConfigForm'
+import ProductCreationStep from './ProductCreationStep'
+import StepBillingPlan from './StepBillingPlan'
+import { userMethods } from '@/utils/userMethods'
+import { axiosInstance } from '@/utils/axiosInstance'
+
+// Custom Step Icon Component extracted to avoid re-creation on each render
+const CustomStepIcon = (props: { active: boolean; completed: boolean; icon: string; index: number }) => {
+  const { active, completed, icon, index } = props
+
+  return (
+    <Box
+      sx={{
+        width: 40,
+        height: 40,
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: active || completed ? 'primary.main' : 'action.hover',
+        color: active || completed ? 'primary.contrastText' : 'text.secondary',
+        fontSize: '1.25rem',
+        fontWeight: 'bold',
+        transition: 'all 0.3s'
+      }}
+    >
+      <span>{completed ? '✓' : icon}</span>
+    </Box>
+  )
+}
+
+const steps = [
+  {
+    title: 'Bienvenido',
+    subtitle: 'Configuración inicial',
+    icon: '👋'
+  },
+  {
+    title: 'Tu Negocio',
+    subtitle: 'Información comercial',
+    icon: '🏢'
+  },
+  {
+    title: 'Chatbot IA',
+    subtitle: 'WhatsApp & Automatización',
+    icon: '🤖'
+  },
+  {
+    title: 'Productos',
+    subtitle: 'Catálogo inicial',
+    icon: '📦'
+  },
+  {
+    title: 'Plan y Pago',
+    subtitle: 'Activa tu trial',
+    icon: '💳'
+  }
+]
+
+const AccountSetup = () => {
+  const { update: updateSession } = useSession()
+  const [activeStep, setActiveStep] = useState(0)
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const [isLoadingData, setIsLoadingData] = useState(true)
+
+  // Hydration states
+  const [initialCustomerData, setInitialCustomerData] = useState<any>(null)
+  const [initialWhatsAppData, setInitialWhatsAppData] = useState<any>(null)
+
+  const router = useRouter()
+
+  useEffect(() => {
+    setIsMounted(true)
+    const user = userMethods.getUserLogin()
+    if (!user) return
+
+    const loadData = async () => {
+      try {
+        console.log('🔍 [HYDRATION] Fetching existing onboarding data...')
+
+        // 1. Fetch Business Data if customerId exists
+        const localActiveTenantId = typeof window !== 'undefined' ? localStorage.getItem('activeTenantId') : null
+        const resolvedCustomerId = user.customerId || (localActiveTenantId && localActiveTenantId !== '0' ? parseInt(localActiveTenantId, 10) : null)
+        
+        let hasCustomerId = !!resolvedCustomerId
+        if (resolvedCustomerId) {
+          try {
+            const custRes = await axiosInstance.get(`/customers/${resolvedCustomerId}`)
+            if (custRes.data) {
+              console.log('🏢 [HYDRATION] Customer data found')
+              setInitialCustomerData(custRes.data)
+              hasCustomerId = true
+            }
+          } catch (e) { /* No customer data found */ }
+        }
+
+        // 2. Fetch WhatsApp Config
+        let waData = null
+        try {
+          const waRes = await axiosInstance.get('/api/channel-config/config')
+          if (waRes.data) {
+            console.log('🤖 [HYDRATION] WhatsApp config found')
+            setInitialWhatsAppData(waRes.data)
+            waData = waRes.data
+          }
+        } catch (e) { /* No config yet */ }
+
+        // 3. Fetch Products (Catálogo Inicial)
+        let hasProducts = false
+        try {
+          const prodRes = await axiosInstance.get('/api/v1/products')
+          if (prodRes.data && prodRes.data.length > 0) {
+            console.log('📦 [HYDRATION] Products found')
+            hasProducts = true
+          }
+        } catch (e) { /* No products yet */ }
+
+        // Resume logic with smart skip
+        const savedStep = localStorage.getItem('account_setup_step')
+        let targetStep = savedStep ? parseInt(savedStep, 10) : 0
+
+        // Smart skip based on real database state:
+        if (hasCustomerId && targetStep < 2) {
+          targetStep = 2
+        }
+
+        if (waData && targetStep < 3) {
+          targetStep = 3
+        }
+
+        if (hasProducts && targetStep < 4) {
+          targetStep = 4
+        }
+
+        console.log(`🚀 [HYDRATION] Initializing active step at: ${targetStep}`)
+        setActiveStep(targetStep)
+        localStorage.setItem('account_setup_step', targetStep.toString())
+      } catch (error) {
+        console.error('❌ [HYDRATION] Error loading onboarding data:', error)
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  // Sync step to localStorage
+  useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem('account_setup_step', activeStep.toString())
+    }
+  }, [activeStep, isMounted])
+
+  const finishOnboarding = async () => {
+    try {
+      const user = userMethods.getUserLogin()
+      if (!user?.id) {
+        router.push('/login')
+        return
+      }
+
+      console.log('🏁 [WIZARD] Finalizing onboarding. User:', user.id);
+      const response = await axiosInstance.post('/auth/complete-onboarding', { userId: user.id })
+
+      console.log('📦 [WIZARD] Backend response received:', response.data.status, response.data.message);
+
+      if (response.data.status) {
+        console.log('✅ [WIZARD] Onboarding backend sync success.');
+
+        // ACTUALIZAR TOKEN Y USERDATA (Trae el nuevo customerId y onboardingCompleted: true)
+        if (response.data.jwt) {
+          localStorage.setItem('jwt', response.data.jwt)
+          console.log('🔑 [WIZARD] JWT Token refreshed. New token iat:', JSON.parse(atob(response.data.jwt.split('.')[1])).iat);
+        }
+
+        if (response.data.user) {
+          localStorage.setItem('userData', JSON.stringify(response.data.user))
+
+          if (response.data.user.activeCompanyId) {
+            localStorage.setItem('activeCompanyId', response.data.user.activeCompanyId.toString())
+          }
+          if (response.data.user.customerId) {
+            localStorage.setItem('activeTenantId', response.data.user.customerId.toString())
+          }
+        }
+      }
+
+      localStorage.removeItem('account_setup_step')
+
+      // Update NextAuth session to reflect new user data (important for AuthSync)
+      if (updateSession) {
+        console.log('🔄 [WIZARD] Updating NextAuth session...')
+        await updateSession({
+          user: {
+            onboardingCompleted: true,
+            activeCompanyId: response.data.user?.activeCompanyId,
+            customerId: response.data.user?.customerId
+          }
+        })
+      }
+
+      // Hard redirect to re-initialize all guards with new session state
+      window.location.href = '/home'
+    } catch (error) {
+      console.error('❌ [ACCOUNT-SETUP] Error finishing onboarding:', error)
+      window.location.href = '/home' // Fallback redirect
+    }
+  }
+
+  const handleNext = async () => {
+    if (isTransitioning) return;
+
+    setIsTransitioning(true);
+    setTimeout(() => setIsTransitioning(false), 1000); // 1s cooldown
+
+    console.log(`➡️ [WIZARD] handleNext called. Current Step: ${activeStep}, Steps Length: ${steps.length}`);
+    if (activeStep === steps.length - 1) {
+      console.log('🎯 [WIZARD] Reached last step. Calling finishOnboarding...');
+      await finishOnboarding()
+      return
+    }
+
+    const nextStep = activeStep + 1
+    console.log(`📍 [WIZARD] Moving to next step: ${nextStep}`);
+    setActiveStep(nextStep)
+    localStorage.setItem('account_setup_step', nextStep.toString())
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleBack = () => {
+    setActiveStep(prevActiveStep => prevActiveStep - 1)
+  }
+
+  const handleCustomerSuccess = async (customerData: any) => {
+    // Update NextAuth session so it knows about the new IDs immediately
+    if (updateSession && customerData.customerId) {
+      console.log('🔄 [WIZARD] Updating NextAuth session with new Customer/Company IDs after Step 1...')
+      await updateSession({
+        user: {
+          activeCompanyId: customerData.activeCompanyId,
+          customerId: customerData.customerId
+        }
+      })
+    }
+
+    // 🔥 ACTUALIZACIÓN INMEDIATA DEL CONTEXTO (LocalStorage)
+    // Para que los endpoints subsecuentes (ej: products, categories) funcionen correctamente
+    if (customerData.customerId) {
+      localStorage.setItem('activeTenantId', customerData.customerId.toString())
+    }
+    if (customerData.activeCompanyId) {
+      localStorage.setItem('activeCompanyId', customerData.activeCompanyId.toString())
+    }
+
+    const currentUserStr = localStorage.getItem('userData');
+    if (currentUserStr) {
+      try {
+        const userObj = JSON.parse(currentUserStr);
+        userObj.customerId = customerData.customerId;
+        userObj.activeCompanyId = customerData.activeCompanyId;
+        localStorage.setItem('userData', JSON.stringify(userObj));
+      } catch (e) {
+        console.error('Error updating userData in localStorage', e);
+      }
+    }
+
+    // Una vez configurado el negocio, avanzar al siguiente paso (WhatsApp)
+    setActiveStep(2)
+  }
+
+  const renderStepContent = (step: number) => {
+    if (isLoadingData) {
+      return (
+        <Box className='flex flex-col items-center justify-center py-20'>
+          <i className='tabler-loader animate-spin text-4xl text-primary mb-4' />
+          <Typography>Recuperando tu progreso...</Typography>
+        </Box>
+      )
+    }
+
+    switch (step) {
+      case 0:
+        return (
+          <Box className='text-center py-12'>
+            <Typography variant='h2' className='mb-4 font-bold'>
+              ¡Bienvenido a CloudFly! 🚀
+            </Typography>
+            <Typography variant='h5' className='mb-6 text-textSecondary font-normal'>
+              Estamos emocionados de ayudarte a automatizar tu negocio
+            </Typography>
+
+            <Grid container spacing={3} className='max-w-4xl mx-auto mt-8'>
+              <Grid item xs={12} md={6}>
+                <Box className='p-6 rounded-xl border border-divider hover:border-primary transition-colors'>
+                  <Typography fontSize='3rem' className='mb-2'>⚡</Typography>
+                  <Typography variant='h6' className='mb-2 font-semibold'>
+                    Configuración Rápida
+                  </Typography>
+                  <Typography variant='body2' className='text-textSecondary'>
+                    Solo 4 pasos simples para tener tu sistema completamente operativo
+                  </Typography>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Box className='p-6 rounded-xl border border-divider hover:border-primary transition-colors'>
+                  <Typography fontSize='3rem' className='mb-2'>🤖</Typography>
+                  <Typography variant='h6' className='mb-2 font-semibold'>
+                    IA Integrada
+                  </Typography>
+                  <Typography variant='body2' className='text-textSecondary'>
+                    Chatbot inteligente que responderá a tus clientes 24/7
+                  </Typography>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Box className='p-6 rounded-xl border border-divider hover:border-primary transition-colors'>
+                  <Typography fontSize='3rem' className='mb-2'>📊</Typography>
+                  <Typography variant='h6' className='mb-2 font-semibold'>
+                    Gestión Completa
+                  </Typography>
+                  <Typography variant='body2' className='text-textSecondary'>
+                    Productos, ventas, clientes y reportes en un solo lugar
+                  </Typography>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Box className='p-6 rounded-xl border border-divider hover:border-primary transition-colors'>
+                  <Typography fontSize='3rem' className='mb-2'>🎯</Typography>
+                  <Typography variant='h6' className='mb-2 font-semibold'>
+                    Soporte Dedicado
+                  </Typography>
+                  <Typography variant='body2' className='text-textSecondary'>
+                    Nuestro equipo está listo para ayudarte en cada paso
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+
+            <Box className='mt-8 p-4 bg-primary/10 rounded-xl max-w-2xl mx-auto'>
+              <Typography variant='body1' className='font-medium'>
+                <span>💡 </span>
+                <strong>Tiempo estimado:</strong>
+                <span> 10-15 minutos para completar toda la configuración</span>
+              </Typography>
+            </Box>
+
+            {/* Navigation Buttons for Step 0 */}
+            <Box className='flex justify-between mt-12'>
+              <Button
+                disabled={activeStep === 0}
+                onClick={handleBack}
+                variant='outlined'
+              >
+                Atrás
+              </Button>
+              <Button
+                variant='contained'
+                onClick={handleNext}
+                size='large'
+                className='min-w-[120px] next-wizard-step'
+              >
+                <span>{initialCustomerData ? 'Continuar Progreso' : 'Comenzar'}</span>
+              </Button>
+            </Box>
+          </Box>
+        )
+
+      case 1:
+        return (
+          <Box>
+            <Typography variant='h5' className='mb-2 font-semibold text-center'>
+              Información de tu Negocio
+            </Typography>
+            <Typography variant='body2' className='mb-6 text-textSecondary text-center'>
+              Esta información nos ayudará a personalizar CloudFly específicamente para tu empresa
+            </Typography>
+            <FormCustomer onSuccess={handleCustomerSuccess} onBack={handleBack} initialData={initialCustomerData} />
+          </Box>
+        )
+
+      case 2:
+        return (
+          <Box>
+            <Typography variant='h5' className='mb-2 font-semibold text-center'>
+              Configura tu Chatbot de WhatsApp
+            </Typography>
+            <Typography variant='body2' className='mb-6 text-textSecondary text-center'>
+              Conecta tu número de WhatsApp Business y personaliza tu asistente IA
+            </Typography>
+            <WhatsAppConfigForm onSuccess={handleNext} onBack={handleBack} mode="onboarding" initialConfig={initialWhatsAppData} />
+          </Box>
+        )
+
+
+      case 3:
+        return (
+          <ProductCreationStep onProductCreated={handleNext} onBack={handleBack} />
+        )
+
+      case 4:
+        {
+          const user = userMethods.getUserLogin()
+          const localActiveTenantId = typeof window !== 'undefined' ? localStorage.getItem('activeTenantId') : null
+          const resolvedTenantId = user?.customerId || (localActiveTenantId && localActiveTenantId !== '0' ? parseInt(localActiveTenantId, 10) : 0)
+          
+          return (
+            <StepBillingPlan
+              handleNext={handleNext}
+              handleBack={handleBack}
+              tenantId={resolvedTenantId}
+              userId={user?.id || 0}
+            />
+          )
+        }
+
+      default:
+        return null
+    }
+  }
+
+  if (!isMounted) {
+    return (
+      <AuthIllustrationWrapperCustomer>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100vh', py: 4 }}>
+          <Card className='flex flex-col sm:is-[1400px]' sx={{ height: 'auto', minHeight: 'fit-content', mt: 4 }}>
+            <CardContent className='sm:!p-12'>
+              <Link href={'/'} className='flex justify-center mbe-6'>
+                <Logo />
+              </Link>
+              <Box className='flex flex-col items-center justify-center py-20'>
+                <i className='tabler-loader animate-spin text-4xl text-primary mb-4' />
+                <Typography>Cargando configuración...</Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
+      </AuthIllustrationWrapperCustomer>
+    )
+  }
+
+  return (
+    <AuthIllustrationWrapperCustomer>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', minHeight: '100vh', py: 4 }}>
+        <Card className='flex flex-col sm:is-[1400px]' sx={{ height: 'auto', minHeight: 'fit-content', mt: 4 }}>
+          <CardContent className='sm:!p-12'>
+            <Link href={'/'} className='flex justify-center mbe-6'>
+              <Logo />
+            </Link>
+
+            <Stepper activeStep={activeStep} alternativeLabel className='mb-8'>
+              {steps.map((step, index) => (
+                <Step
+                  key={step.title}
+                  onClick={() => setActiveStep(index)}
+                  sx={{ cursor: 'pointer' }}
+                >
+                  <StepLabel
+                    icon={
+                      <CustomStepIcon
+                        active={activeStep === index}
+                        completed={activeStep > index}
+                        icon={step.icon}
+                        index={index}
+                      />
+                    }
+                  >
+                    <Typography variant='body2' className='font-semibold'>
+                      {step.title}
+                    </Typography>
+                    <Typography variant='caption' className='text-textSecondary'>
+                      {step.subtitle}
+                    </Typography>
+                  </StepLabel>
+                </Step>
+              ))}
+            </Stepper>
+
+            {/* Step Content — key forces full remount on step change to avoid
+               insertBefore crashes when Chrome translate has mutated the DOM */}
+            <Box className='min-h-[400px]' translate="no">
+              <Box key={activeStep} className='wizard-step-container'>
+                {renderStepContent(activeStep)}
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+    </AuthIllustrationWrapperCustomer>
+  )
+}
+
+export default AccountSetup

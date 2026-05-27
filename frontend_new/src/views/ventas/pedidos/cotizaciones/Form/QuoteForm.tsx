@@ -1,0 +1,452 @@
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    Grid,
+    Button,
+    Typography,
+    IconButton,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    Paper,
+    MenuItem,
+    Divider
+} from '@mui/material'
+import CustomTextField from '@core/components/mui/TextField'
+import { toast } from 'react-hot-toast'
+import { axiosInstance } from '@/utils/axiosInstance'
+import { productService } from '@/services/ventas/productService'
+import { contactService } from '@/services/marketing/contactService'
+import type { Contact } from '@/types/marketing/contactTypes'
+import type { Product } from '@/types/ventas/productTypes'
+import type { OrderType, OrderItemType } from '@/types/ventas/orderTypes'
+
+const OrderForm = () => {
+    const router = useRouter()
+    const params = useParams()
+    const id = params?.id
+
+    const [loading, setLoading] = useState(false)
+    const [customers, setCustomers] = useState<Contact[]>([])
+    const [products, setProducts] = useState<Product[]>([])
+    const [searchTerm, setSearchTerm] = useState('')
+
+    // Form State
+    const [formData, setFormData] = useState({
+        customerId: '',
+        expirationDate: '',
+        status: 'PROCESANDO',
+        notes: '',
+        terms: '',
+        discount: 0,
+        tax: 0
+    })
+
+    const [items, setItems] = useState<Partial<OrderItemType>[]>([])
+
+    useEffect(() => {
+        loadInitialData()
+        if (id) {
+            loadOrder(id as string)
+        }
+    }, [id])
+
+    const loadInitialData = async () => {
+        try {
+            const [contactsData, productsData] = await Promise.all([
+                contactService.getAllContacts(),
+                productService.getAllProducts()
+            ])
+
+            setCustomers(contactsData.filter(c => c.type === 'CUSTOMER' || c.type === 'LEAD'))
+            setProducts(productsData)
+        } catch (error) {
+            console.error('Error loading initial data:', error)
+            toast.error('Error al cargar datos iniciales')
+        }
+    }
+
+    const loadOrder = async (orderId: string) => {
+        try {
+            setLoading(true)
+            const res = await axiosInstance.get(`/orders/${orderId}`)
+            const order: OrderType = res.data
+
+            setFormData({
+                customerId: order.customerId?.toString() || '',
+                expirationDate: order.expirationDate ? order.expirationDate.split('T')[0] : '',
+                status: order.status,
+                notes: order.notes || '',
+                terms: order.terms || '',
+                discount: order.discount || 0,
+                tax: order.tax || 0
+            })
+
+            setItems(order.items.map(item => ({
+                productId: item.productId,
+                productName: item.productName,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                discount: item.discount,
+                subtotal: item.subtotal,
+                total: item.total
+            })))
+        } catch (error) {
+            console.error('Error loading order:', error)
+            toast.error('Error al cargar la cotización')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleAddItem = (product: Product) => {
+        const existingItem = items.find(item => item.productId === product.id)
+
+        if (existingItem) {
+            toast.error('El producto ya está en la lista')
+            return
+        }
+
+        const newItem: Partial<OrderItemType> = {
+            productId: product.id,
+            productName: product.productName,
+            quantity: 1,
+            unitPrice: product.salePrice || product.price || 0,
+            discount: 0,
+            subtotal: product.salePrice || product.price || 0,
+            total: product.salePrice || product.price || 0
+        }
+
+        setItems([...items, newItem])
+        setSearchTerm('')
+    }
+
+    const handleUpdateItem = (index: number, field: string, value: number) => {
+        const newItems = [...items]
+        const item = newItems[index]
+
+        if (field === 'quantity') item.quantity = value
+        if (field === 'unitPrice') item.unitPrice = value
+        if (field === 'discount') item.discount = value
+
+        // Recalcular
+        item.subtotal = (item.quantity || 0) * (item.unitPrice || 0)
+        item.total = (item.subtotal || 0) - (item.discount || 0)
+
+        setItems(newItems)
+    }
+
+    const handleRemoveItem = (index: number) => {
+        const newItems = [...items]
+        newItems.splice(index, 1)
+        setItems(newItems)
+    }
+
+    const calculateTotals = () => {
+        const subtotal = items.reduce((acc, item) => acc + (item.subtotal || 0), 0)
+        const discount = items.reduce((acc, item) => acc + (item.discount || 0), 0)
+        const total = items.reduce((acc, item) => acc + (item.total || 0), 0)
+        return { subtotal, discount, total }
+    }
+
+    const handleSubmit = async () => {
+        if (!formData.customerId) {
+            toast.error('Seleccione un cliente')
+            return
+        }
+        if (items.length === 0) {
+            toast.error('Agregue al menos un producto')
+            return
+        }
+
+        try {
+            setLoading(true)
+
+            const totals = calculateTotals()
+            const payload = {
+                customerId: Number(formData.customerId),
+                expirationDate: formData.expirationDate ? new Date(formData.expirationDate).toISOString() : null,
+                status: formData.status,
+                notes: formData.notes,
+                terms: formData.terms,
+                subtotal: totals.subtotal,
+                discount: totals.discount,
+                tax: 0,
+                total: totals.total,
+                items: items.map(item => ({
+                    productId: item.productId,
+                    productName: item.productName,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    discount: item.discount,
+                    subtotal: item.subtotal
+                }))
+            }
+
+            if (id) {
+                // Como mencioné en el análisis, el backend original solo usaba POST para crear.
+                // Implementé OrderController en backend_new con POST. 
+                // Para edición real necesitaría un endpoint PUT. 
+                // Por ahora, lanzaremos un toast informando que es modo lectura o implementación pendiente.
+                toast.error('La edición se habilitará en la próxima actualización del backend')
+                return
+            }
+
+            await axiosInstance.post('/orders', payload)
+
+            toast.success('Pedido guardada exitosamente')
+            router.push('/ventas/pedidos/list')
+        } catch (error) {
+            console.error('Error saving order:', error)
+            toast.error('Error al guardar cotización')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const filteredProducts = products.filter(p =>
+        p.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.barcode && p.barcode.includes(searchTerm))
+    ).slice(0, 5)
+
+    const totals = calculateTotals()
+
+    return (
+        <Grid container spacing={6}>
+            <Grid item xs={12}>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <IconButton onClick={() => router.push('/ventas/pedidos/list')}>
+                            <i className='tabler-arrow-left' />
+                        </IconButton>
+                        <Typography variant="h4">{id ? 'Ver Pedido' : 'Nueva Pedido'}</Typography>
+                    </div>
+                    <Button
+                        variant="contained"
+                        startIcon={<i className='tabler-device-floppy' />}
+                        onClick={handleSubmit}
+                        disabled={loading || !!id}
+                    >
+                        {loading ? 'Guardando...' : 'Guardar Pedido'}
+                    </Button>
+                </div>
+            </Grid>
+
+            {/* Datos Generales */}
+            <Grid item xs={12} md={4}>
+                <Card>
+                    <CardHeader title="Información General" />
+                    <Divider />
+                    <CardContent className="flex flex-col gap-5">
+                        <CustomTextField
+                            select
+                            fullWidth
+                            label="Cliente"
+                            value={formData.customerId}
+                            onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
+                        >
+                            {customers.map((customer) => (
+                                <MenuItem key={customer.id} value={customer.id}>
+                                    {customer.name}
+                                </MenuItem>
+                            ))}
+                        </CustomTextField>
+
+                        <CustomTextField
+                            type="date"
+                            fullWidth
+                            label="Fecha de Vencimiento"
+                            InputLabelProps={{ shrink: true }}
+                            value={formData.expirationDate}
+                            onChange={(e) => setFormData({ ...formData, expirationDate: e.target.value })}
+                        />
+
+                        <CustomTextField
+                            select
+                            fullWidth
+                            label="Estado"
+                            value={formData.status}
+                            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        >
+                            <MenuItem value="PROCESANDO">Borrador</MenuItem>
+                            <MenuItem value="DESPACHADO">Enviada</MenuItem>
+                            <MenuItem value="FACTURADO">Aceptada</MenuItem>
+                            <MenuItem value="PROCESANDO">Rechazada</MenuItem>
+                        </CustomTextField>
+                    </CardContent>
+                </Card>
+            </Grid>
+
+            {/* Buscador y Tabla de Items */}
+            <Grid item xs={12} md={8}>
+                <Card className="h-full">
+                    <CardHeader title="Productos y Servicios" />
+                    <Divider />
+                    <CardContent>
+                        {/* Buscador */}
+                        <div className="relative mb-6">
+                            <CustomTextField
+                                fullWidth
+                                placeholder="Buscar producto por nombre o código..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                InputProps={{
+                                    startAdornment: <i className='tabler-search mr-2 text-textSecondary' />
+                                }}
+                            />
+                            {searchTerm.length > 1 && (
+                                <Paper className="absolute z-10 w-full mt-1 max-h-60 overflow-y-auto border shadow-lg">
+                                    {filteredProducts.map((product) => (
+                                        <div
+                                            key={product.id}
+                                            className="p-3 hover:bg-actionHover cursor-pointer border-b flex justify-between items-center"
+                                            onClick={() => handleAddItem(product)}
+                                        >
+                                            <div>
+                                                <Typography className="font-bold">{product.productName}</Typography>
+                                                <Typography variant="caption" color="textSecondary">Stock: {product.inventoryQty || 0}</Typography>
+                                            </div>
+                                            <Typography className="font-bold text-primary">
+                                                ${product.salePrice || product.price || 0}
+                                            </Typography>
+                                        </div>
+                                    ))}
+                                    {filteredProducts.length === 0 && (
+                                        <div className="p-3 text-center text-textSecondary">No se encontraron productos</div>
+                                    )}
+                                </Paper>
+                            )}
+                        </div>
+
+                        {/* Tabla */}
+                        <TableContainer component={Paper} variant="outlined" className="border-none shadow-none">
+                            <Table size="small">
+                                <TableHead className="bg-actionHover">
+                                    <TableRow>
+                                        <TableCell>Producto</TableCell>
+                                        <TableCell width={80}>Cant.</TableCell>
+                                        <TableCell width={120}>Precio</TableCell>
+                                        <TableCell width={100}>Desc.</TableCell>
+                                        <TableCell width={100} align="right">Total</TableCell>
+                                        <TableCell width={50}></TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {items.map((item, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell>
+                                                <Typography variant="body2" className="font-medium">{item.productName}</Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <CustomTextField
+                                                    type="number"
+                                                    size="small"
+                                                    value={item.quantity}
+                                                    onChange={(e) => handleUpdateItem(index, 'quantity', Number(e.target.value))}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <CustomTextField
+                                                    type="number"
+                                                    size="small"
+                                                    value={item.unitPrice}
+                                                    onChange={(e) => handleUpdateItem(index, 'unitPrice', Number(e.target.value))}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <CustomTextField
+                                                    type="number"
+                                                    size="small"
+                                                    value={item.discount}
+                                                    onChange={(e) => handleUpdateItem(index, 'discount', Number(e.target.value))}
+                                                />
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <Typography variant="body2" className="font-bold">${(item.total || 0).toLocaleString()}</Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <IconButton size="small" color="error" onClick={() => handleRemoveItem(index)}>
+                                                    <i className='tabler-trash' />
+                                                </IconButton>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {items.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={6} align="center" className="py-12">
+                                                <Typography color="textSecondary">Agregue productos usando el buscador superior</Typography>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+
+                        {/* Totales */}
+                        <Divider className="my-4" />
+                        <div className="flex justify-end">
+                            <div className="w-64 space-y-3">
+                                <div className="flex justify-between">
+                                    <Typography color="textSecondary">Subtotal:</Typography>
+                                    <Typography className="font-bold">${totals.subtotal.toLocaleString()}</Typography>
+                                </div>
+                                <div className="flex justify-between">
+                                    <Typography color="error">Descuento:</Typography>
+                                    <Typography color="error" className="font-bold">-${totals.discount.toLocaleString()}</Typography>
+                                </div>
+                                <div className="flex justify-between pt-2 border-t">
+                                    <Typography variant="h6">Total:</Typography>
+                                    <Typography variant="h6" color="primary">${totals.total.toLocaleString()}</Typography>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </Grid>
+
+            {/* Notas y Términos */}
+            <Grid item xs={12}>
+                <Card>
+                    <CardHeader title="Notas y Términos" />
+                    <Divider />
+                    <CardContent>
+                        <Grid container spacing={5}>
+                            <Grid item xs={12} md={6}>
+                                <CustomTextField
+                                    fullWidth
+                                    multiline
+                                    rows={3}
+                                    label="Notas internas"
+                                    placeholder="Estas notas no son visibles para el cliente"
+                                    value={formData.notes}
+                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <CustomTextField
+                                    fullWidth
+                                    multiline
+                                    rows={3}
+                                    label="Términos y Condiciones"
+                                    placeholder="Términos legales, garantías, etc."
+                                    value={formData.terms}
+                                    onChange={(e) => setFormData({ ...formData, terms: e.target.value })}
+                                />
+                            </Grid>
+                        </Grid>
+                    </CardContent>
+                </Card>
+            </Grid>
+        </Grid>
+    )
+}
+
+export default OrderForm

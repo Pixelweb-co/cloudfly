@@ -1,0 +1,122 @@
+import axios from 'axios'
+
+const CALENDAR_API_URL = process.env.NEXT_PUBLIC_CALENDAR_API_URL || 'https://calendar.cloudfly.com.co'
+
+export interface CalendarEvent {
+  id?: number
+  tenantId: number
+  companyId: number
+  calendarId: number
+  title: string
+  description?: string
+  eventType: 'NOTIFICATION' | 'REST_ACTION' | 'WHATSAPP_CAMPAIGN'
+  eventSubtype?: string
+  status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'FAILED'
+  startTime: string
+  endTime?: string
+  allDay?: boolean
+  relatedEntityType?: string
+  relatedEntityId?: number
+  payload?: string
+  recurrence?: string
+}
+
+const getAuthHeader = () => {
+  const token = typeof window !== 'undefined' ? (localStorage.getItem('AuthToken') || localStorage.getItem('jwt')) : null
+  const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenantId') : null
+  const companyId = typeof window !== 'undefined' ? (localStorage.getItem('activeCompanyId') || localStorage.getItem('companyId')) : null
+  
+  const headers: any = {}
+  if (token) headers.Authorization = `Bearer ${token}`
+  if (tenantId) headers['X-Tenant-Id'] = tenantId
+  if (companyId) headers['X-Company-Id'] = companyId
+  
+  return headers
+}
+
+const calendarService = {
+  getEvents: async (tenantId: number, companyId: number, startDate?: string, endDate?: string) => {
+    const params: any = { tenantId, companyId }
+    if (startDate) params.startDate = startDate
+    if (endDate) params.endDate = endDate
+
+    const response = await axios.get<CalendarEvent[]>(`${CALENDAR_API_URL}/api/events`, { 
+      params,
+      headers: getAuthHeader()
+    })
+    return response.data
+  },
+
+  getEventById: async (id: number, tenantId: number, companyId: number) => {
+    const response = await axios.get<CalendarEvent>(`${CALENDAR_API_URL}/api/events/${id}`, {
+      params: { tenantId, companyId },
+      headers: getAuthHeader()
+    })
+    return response.data
+  },
+
+  createEvent: async (event: CalendarEvent) => {
+    const response = await axios.post<CalendarEvent>(`${CALENDAR_API_URL}/api/events`, event, {
+      headers: getAuthHeader()
+    })
+    return response.data
+  },
+
+  updateEvent: async (id: number, tenantId: number, companyId: number, event: Partial<CalendarEvent>) => {
+    const response = await axios.put<CalendarEvent>(`${CALENDAR_API_URL}/api/events/${id}`, event, {
+      params: { tenantId, companyId },
+      headers: getAuthHeader()
+    })
+    return response.data
+  },
+
+  deleteEvent: async (id: number, tenantId: number, companyId: number) => {
+    await axios.delete(`${CALENDAR_API_URL}/api/events/${id}`, {
+      params: { tenantId, companyId },
+      headers: getAuthHeader()
+    })
+  },
+
+  // --- NEW AVAILABILITY API ---
+  getSlots: async (tenantId: number, companyId: number, start: string, end: string) => {
+    const response = await axios.get(`${CALENDAR_API_URL}/api/availability/slots`, {
+      params: { tenantId, companyId, start, end },
+      headers: getAuthHeader()
+    })
+    return response.data
+  },
+
+  saveTemplate: async (template: any) => {
+    const response = await axios.post(`${CALENDAR_API_URL}/api/availability/templates`, template, {
+      headers: getAuthHeader()
+    })
+    return response.data
+  },
+
+  generateSlots: async (tenantId: number, companyId: number, templateId: number, startDate?: string, endDate?: string): Promise<void> => {
+    const params: any = { tenantId, companyId, templateId }
+    if (startDate) params.startDate = startDate
+    if (endDate) params.endDate = endDate
+    await axios.post(`${CALENDAR_API_URL}/api/availability/generate`, null, {
+      params,
+      headers: getAuthHeader()
+    })
+  },
+
+  // --- NEW APPOINTMENTS API ---
+  bookAppointment: async (appointment: any) => {
+    const response = await axios.post(`${CALENDAR_API_URL}/api/appointments`, appointment, {
+      headers: getAuthHeader()
+    })
+    return response.data
+  },
+
+  cancelAppointment: async (id: number, tenantId: number, companyId: number) => {
+    await axios.patch(`${CALENDAR_API_URL}/api/appointments/${id}/cancel`, null, {
+      params: { tenantId, companyId },
+      headers: getAuthHeader()
+    })
+  }
+}
+
+export default calendarService

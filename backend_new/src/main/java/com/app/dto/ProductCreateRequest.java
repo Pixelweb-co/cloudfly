@@ -1,0 +1,43 @@
+package com.app.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ProductCreateRequest {
+    private Long id;
+    private Long tenantId;
+    private Long companyId;
+    private String productName;
+    private String description;
+    private String productType;
+    private BigDecimal price;
+    private BigDecimal salePrice;
+    private String sku;
+    private String barcode;
+    private Boolean manageStock;
+    private String inventoryStatus;
+    private String allowBackorders;
+    private Integer inventoryQty;
+    private Boolean soldIndividually;
+    private BigDecimal weight;
+    private String dimensions;
+    private String upsellProducts;
+    private String crossSellProducts;
+    private String status;
+    private String brand;
+    private String model;
+    
+    private List<Long> categoryIds;
+    private List<String> categoryNames;
+    private List<Long> imageIds;
+    private List<String> imageUrls;
+}

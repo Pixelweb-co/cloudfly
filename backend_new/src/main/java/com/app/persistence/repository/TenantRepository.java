@@ -1,0 +1,20 @@
+package com.app.persistence.repository;
+
+import org.springframework.data.r2dbc.repository.Query;
+import com.app.persistence.entity.TenantEntity;
+import org.springframework.data.repository.reactive.ReactiveCrudRepository;
+import reactor.core.publisher.Mono;
+
+public interface TenantRepository extends ReactiveCrudRepository<TenantEntity, Long> {
+    @Query("SELECT * FROM clientes WHERE nombre_cliente = :name")
+    Mono<TenantEntity> findByName(String name);
+
+    @Query("UPDATE clientes SET onboarding_completed = :completed WHERE id = :tenantId")
+    Mono<Void> updateOnboardingStatus(Long tenantId, boolean completed);
+
+    @Query("SELECT * FROM clientes WHERE identificacion_cliente = :nit")
+    reactor.core.publisher.Flux<TenantEntity> findByNit(String nit);
+
+    @Query("SELECT * FROM clientes WHERE email_cliente = :email")
+    reactor.core.publisher.Flux<TenantEntity> findByEmail(String email);
+}

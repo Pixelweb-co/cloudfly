@@ -1,0 +1,8 @@
+{
+  "event": "connection.update",
+  "instance": "cloudfly_t1_c1",
+  "data": {
+    "state": "refused",
+    "statusReason": 428
+  }
+}

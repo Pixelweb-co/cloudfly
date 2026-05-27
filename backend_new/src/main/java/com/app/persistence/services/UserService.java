@@ -1,0 +1,312 @@
+package com.app.persistence.services;
+
+import com.app.dto.AuthRegisterRequest;
+import com.app.dto.UserDto;
+import com.app.persistence.entity.TenantEntity;
+import com.app.persistence.entity.*;
+import com.app.persistence.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.kafka.core.reactive.ReactiveKafkaProducerTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+@Service
+public class UserService {
+
+        private static final Logger log = LoggerFactory.getLogger(UserService.class);
+        private final UserRepository userRepository;
+        private final RoleRepository roleRepository;
+        private final UserRoleRepository userRoleRepository;
+        private final TenantService tenantService;
+        private final PasswordEncoder passwordEncoder;
+        private final TenantRepository tenantRepository;
+        private final ReactiveKafkaProducerTemplate<String, Object> kafkaTemplate;
+        private final PlanRepository planRepository;
+        private final PlanModuleRepository planModuleRepository;
+        private final SubscriptionRepository subscriptionRepository;
+        private final SubscriptionModuleRepository subscriptionModuleRepository;
+        private final CompanyRepository companyRepository;
+
+        public UserService(UserRepository userRepository, 
+                           RoleRepository roleRepository, 
+                           UserRoleRepository userRoleRepository, 
+                           TenantService tenantService, 
+                           PasswordEncoder passwordEncoder, 
+                           TenantRepository tenantRepository, 
+                           ReactiveKafkaProducerTemplate<String, Object> kafkaTemplate, 
+                           PlanRepository planRepository, 
+                           PlanModuleRepository planModuleRepository, 
+                           SubscriptionRepository subscriptionRepository, 
+                           SubscriptionModuleRepository subscriptionModuleRepository, 
+                           CompanyRepository companyRepository) {
+                this.userRepository = userRepository;
+                this.roleRepository = roleRepository;
+                this.userRoleRepository = userRoleRepository;
+                this.tenantService = tenantService;
+                this.passwordEncoder = passwordEncoder;
+                this.tenantRepository = tenantRepository;
+                this.kafkaTemplate = kafkaTemplate;
+                this.planRepository = planRepository;
+                this.planModuleRepository = planModuleRepository;
+                this.subscriptionRepository = subscriptionRepository;
+                this.subscriptionModuleRepository = subscriptionModuleRepository;
+                this.companyRepository = companyRepository;
+        }
+
+        @Transactional
+        public Mono<UserEntity> registerUser(AuthRegisterRequest request) {
+                Mono<Long> customerIdProvider = (request.getCompanyName() != null
+                                && !request.getCompanyName().trim().isEmpty())
+                                                ? tenantService.createTenant(request.getCompanyName())
+                                                                .map(tenant -> tenant.getId())
+                                                : Mono.just(0L);
+
+                return customerIdProvider.flatMap(custId -> {
+                        Long finalCustId = (custId == 0L) ? null : custId;
+                        UserEntity user = UserEntity.builder()
+                                        .nombres(request.getNombres())
+                                        .apellidos(request.getApellidos())
+                                        .username(request.getUsername())
+                                        .password(passwordEncoder.encode(request.getPassword()))
+                                        .email(request.getEmail())
+                                        .isEnabled(false)
+                                        .accountNoExpired(true)
+                                        .accountNoLocked(true)
+                                        .credentialNoExpired(true)
+                                        .verificationToken(UUID.randomUUID().toString())
+                                        .customerId(finalCustId)
+                                        .createdAt(LocalDateTime.now())
+                                        .updatedAt(LocalDateTime.now())
+                                        .build();
+
+                        return userRepository.save(user)
+                                        .flatMap(savedUser -> {
+                                                Flux<String> rolesToAssign = (request.getRoles() == null
+                                                                || request.getRoles().isEmpty())
+                                                                                ? Flux.just("ADMIN")
+                                                                                : Flux.fromIterable(request.getRoles());
+
+                                                // ACTUALIZAR EL TENANT CON EL ID DEL USUARIO ADMIN
+                                                Mono<Void> updateTenantAdminMono = (finalCustId != null)
+                                                                ? tenantRepository.findById(finalCustId)
+                                                                                .flatMap(tenant -> {
+                                                                                        tenant.setAdminUserId(savedUser.getId());
+                                                                                        return tenantRepository.save(tenant);
+                                                                                }).then()
+                                                                : Mono.empty();
+
+                                                return rolesToAssign
+                                                                .flatMap(roleName -> roleRepository
+                                                                                .findByName(roleName))
+                                                                .flatMap(role -> userRoleRepository.insertRole(savedUser.getId(), role.getId()))
+                                                                .then(updateTenantAdminMono)
+                                                                .then(handleAutomaticSubscription(finalCustId))
+                                                                .then(Mono.defer(() -> {
+                                                                        sendRegistrationEmail(savedUser);
+                                                                        return Mono.just(savedUser);
+                                                                }));
+                                        });
+                });
+        }
+
+        private Mono<Void> handleAutomaticSubscription(Long customerId) {
+                if (customerId == null)
+                        return Mono.empty();
+
+                return planRepository.findByIsFreeTrue()
+                                .next()
+                                .flatMap(freePlan -> {
+                                        SubscriptionEntity subscription = SubscriptionEntity.builder()
+                                                        .planId(freePlan.getId())
+                                                        .customerId(customerId)
+                                                        .status("ACTIVE")
+                                                        .billingCycle("MONTHLY")
+                                                        .startDate(LocalDateTime.now())
+                                                        .endDate(LocalDateTime.now()
+                                                                        .plusDays(freePlan.getDurationDays() != null
+                                                                                        ? freePlan.getDurationDays()
+                                                                                        : 365))
+                                                        .aiTokensLimit(freePlan.getAiTokensLimit())
+                                                        .usersLimit(freePlan.getUsersLimit())
+                                                        .monthlyPrice(BigDecimal.ZERO)
+                                                        .createdAt(LocalDateTime.now())
+                                                        .updatedAt(LocalDateTime.now())
+                                                        .build();
+
+                                        return subscriptionRepository.save(subscription)
+                                                        .flatMap(savedSub -> planModuleRepository
+                                                                        .findByPlanId(freePlan.getId())
+                                                                        .flatMap(pm -> subscriptionModuleRepository.insertModule(savedSub.getId(), pm.getModuleId()))
+                                                                        .then());
+                                });
+        }
+
+        private void sendRegistrationEmail(UserEntity savedUser) {
+                kafkaTemplate.send("register-user", Map.of(
+                                "name", savedUser.getNombres(),
+                                "email", savedUser.getEmail(),
+                                "token", savedUser.getVerificationToken()))
+                                .subscribe(
+                                                result -> {
+                                                },
+                                                error -> log.error("Error enviando a Kafka: {}", error.getMessage()));
+        }
+
+        public Mono<UserDto> convertToDto(UserEntity user) {
+                return roleRepository.findRolesByUserId(user.getId())
+                                .collectList()
+                                .flatMap(roles -> {
+                                         if (user.getCustomerId() == null) {
+                                                return Mono.just(buildUserDto(user, roles, null, false, null));
+                                        }
+
+                                        Mono<TenantEntity> tenantMono = tenantRepository.findById(user.getCustomerId())
+                                                        .defaultIfEmpty(new TenantEntity());
+                                        
+                                        Mono<Boolean> subMono = subscriptionRepository.findFirstByCustomerIdAndStatusOrderByEndDateDesc(user.getCustomerId(), "ACTIVE")
+                                                        .map(s -> true)
+                                                        .defaultIfEmpty(false);
+                                        
+                                        Mono<CompanyEntity> companyMono = companyRepository.findByTenantId(user.getCustomerId())
+                                                        .filter(CompanyEntity::getIsPrincipal)
+                                                        .next()
+                                                        .switchIfEmpty(companyRepository.findByTenantId(user.getCustomerId()).next())
+                                                        .defaultIfEmpty(new CompanyEntity());
+
+                                        return Mono.zip(tenantMono, subMono, companyMono)
+                                                        .map(tuple -> buildUserDto(user, roles, 
+                                                                tuple.getT1().getId() != null ? tuple.getT1() : null, 
+                                                                tuple.getT2(), 
+                                                                tuple.getT3()));
+                                });
+        }
+
+        private UserDto buildUserDto(UserEntity user, List<RoleEntity> roles, TenantEntity tenant, boolean hasActiveSub, CompanyEntity activeCompany) {
+                return UserDto.builder()
+                                .id(user.getId())
+                                .nombres(user.getNombres())
+                                .apellidos(user.getApellidos())
+                                .username(user.getUsername())
+                                .email(user.getEmail())
+                                .isEnabled(user.isEnabled())
+                                .accountNoExpired(user.isAccountNoExpired())
+                                .accountNoLocked(user.isAccountNoLocked())
+                                .credentialNoExpired(user.isCredentialNoExpired())
+                                .verificationToken(user.getVerificationToken())
+                                .recoveryToken(user.getRecoveryToken())
+                                .customerId(user.getCustomerId())
+                                .tenant_id(user.getCustomerId()) // Alias
+                                .activeCompanyId(activeCompany != null && activeCompany.getId() != null ? activeCompany.getId() : null)
+                                .activeCompanyName(activeCompany != null ? activeCompany.getName() : null)
+                                .company_id(activeCompany != null && activeCompany.getId() != null ? activeCompany.getId() : null) // Alias
+                                .company_name(activeCompany != null ? activeCompany.getName() : null) // Alias
+                                .roles(roles)
+                                .tenant(tenant)
+                                .customer(tenant) // Alias for frontend compatibility
+                                .hasActiveSubscription(hasActiveSub)
+                                .onboardingCompleted(tenant != null && Boolean.TRUE.equals(tenant.getOnboardingCompleted()))
+                                .build();
+        }
+
+        public Mono<UserEntity> getCurrentUser() {
+                return org.springframework.security.core.context.ReactiveSecurityContextHolder.getContext()
+                                .map(org.springframework.security.core.context.SecurityContext::getAuthentication)
+                                .flatMap(auth -> findByUsername(auth.getName()));
+        }
+
+        public Mono<java.util.Map<String, Long>> getCurrentUserContext() {
+                return getCurrentUser()
+                                .flatMap(user -> {
+                                        Long tenantId = user.getCustomerId();
+                                        if (tenantId == null) return Mono.empty();
+                                        
+                                        return companyRepository.findByTenantId(tenantId)
+                                                        .filter(CompanyEntity::getIsPrincipal)
+                                                        .next()
+                                                        .switchIfEmpty(companyRepository.findByTenantId(tenantId).next())
+                                                        .map(company -> java.util.Map.of("tenantId", tenantId, "companyId", company.getId()))
+                                                        .defaultIfEmpty(java.util.Map.of("tenantId", tenantId, "companyId", 0L));
+                                });
+        }
+
+        public Mono<Boolean> verifyEmail(String token) {
+                return userRepository.enableUserByToken(token)
+                                .map(count -> count > 0)
+                                .defaultIfEmpty(false);
+        }
+
+        public Mono<Boolean> checkUsernameAvailability(String username) {
+                return userRepository.existsByUsername(username)
+                                .map(count -> count == 0);
+        }
+
+        public Mono<Boolean> checkEmailAvailability(String email) {
+                return userRepository.existsByEmail(email)
+                                .map(count -> count == 0);
+        }
+
+    public Mono<UserEntity> findByUsername(String username) {
+        return userRepository.findByUsername(username);
+    }
+
+    public Mono<UserEntity> updateLastLogin(String username) {
+        return userRepository.findByUsername(username)
+                .flatMap(user -> {
+                    user.setLastLoginAt(LocalDateTime.now());
+                    return userRepository.save(user);
+                });
+    }
+
+    public Mono<Void> forgotPassword(String email) {
+        return userRepository.findByEmail(email)
+                .flatMap(user -> {
+                    user.setRecoveryToken(UUID.randomUUID().toString());
+                    return userRepository.save(user)
+                            .flatMap(savedUser -> {
+                                String resetLink = "https://dashboard.cloudfly.com.co/reset-password/" + savedUser.getRecoveryToken();
+                                return kafkaTemplate.send("email-notifications", Map.of(
+                                        "to", savedUser.getEmail(),
+                                        "subject", "🔐 Recuperación de Contraseña - CloudFly",
+                                        "body", resetLink,
+                                        "type", "recover-password",
+                                        "username", savedUser.getUsername()
+                                )).then();
+                            });
+                });
+    }
+
+    public Mono<Void> resetPassword(String token, String newPassword) {
+        return userRepository.findByRecoveryToken(token)
+                .switchIfEmpty(Mono.error(new RuntimeException("Token inválido o expirado.")))
+                .flatMap(user -> {
+                    user.setPassword(passwordEncoder.encode(newPassword));
+                    user.setRecoveryToken(null);
+                    return userRepository.save(user).then();
+                });
+    }
+
+    @Transactional
+    public Mono<UserEntity> completeOnboarding(Long userId) {
+        log.info("🎯 [USER-SERVICE] Marking onboarding as completed for user: {} (will update tenant)", userId);
+        return userRepository.findById(userId)
+                .flatMap(user -> {
+                    if (user.getCustomerId() == null) {
+                        log.warn("⚠️ [USER-SERVICE] User {} has no tenant. Skipping tenant onboarding flag.", userId);
+                        return Mono.just(user);
+                    }
+                    return tenantRepository.updateOnboardingStatus(user.getCustomerId(), true)
+                            .thenReturn(user);
+                })
+                .doOnSuccess(u -> log.info("✅ [USER-SERVICE] Onboarding flag set to TRUE for tenant of user: {}", userId));
+    }
+}

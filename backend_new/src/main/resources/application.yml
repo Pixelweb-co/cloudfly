@@ -1,0 +1,69 @@
+spring:
+  r2dbc:
+    url: r2dbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_DATABASE:cloud_master}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:widowmaker}
+  main:
+    web-application-type: reactive
+  kafka:
+    bootstrap-servers: ${KAFKA_HOST:localhost}:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, prometheus, metrics
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.app: DEBUG
+    org.springframework.data.r2dbc: DEBUG
+    io.asyncer.r2dbc.mysql: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: TRACE
+    org.springframework.http: TRACE
+
+jwt:
+  secret: ${JWT_SECRET:cloudfly-production-secret-998877}
+  expiration: 86400000 # 1 día en ms
+
+evolution:
+  api:
+    url: ${EVOLUTION_API_URL:http://evolution-api:8080}
+    key: ${EVOLUTION_API_KEY:CAMBIA_ESTA_LLAVE_LARGA_Y_UNICA}
+  webhook:
+    url: ${EVOLUTION_WEBHOOK_URL:https://api.cloudfly.com.co/api/webhooks/evolution}
+
+services:
+  socket:
+    url: ${SOCKET_URL:http://chat-socket-service:3001}
+    secret: ${N8N_SECRET_KEY:cloudfly_secret_key_2024}
+  scheduler:
+    url: ${SCHEDULER_URL:http://scheduler-service:8080}
+
+facebook:
+  app:
+    id: ${FACEBOOK_APP_ID:}
+    secret: ${FACEBOOK_APP_SECRET:}
+    version: v19.0
+
+lead-generator:
+  url: ${LEAD_GENERATOR_URL:http://lead-generator:8000}

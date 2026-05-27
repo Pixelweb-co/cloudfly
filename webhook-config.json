@@ -1,0 +1,1 @@
+{"webhook":{"url":"https://chat.cloudfly.com.co/webhook/evolution","enabled":true,"base64":true,"webhook_by_events":false,"events":["MESSAGES_UPSERT","MESSAGES_UPDATE","MESSAGES_DELETE","SEND_MESSAGE","CONNECTION_UPDATE","TYPEBOT_START","TYPEBOT_CHANGE_STATUS","REMOVE_INSTANCE"]}}

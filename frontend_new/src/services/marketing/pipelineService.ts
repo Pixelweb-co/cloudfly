@@ -1,0 +1,65 @@
+import { axiosInstance } from '@/utils/axiosInstance'
+import type { Pipeline, CreatePipelineDto, PipelineKanbanCard, MoveConversationDto } from '@/types/marketing/pipelineTypes'
+
+export const pipelineService = {
+  getAllPipelines: async (tenantId?: number, companyId?: number): Promise<Pipeline[]> => {
+    const params = new URLSearchParams()
+    if (tenantId) params.append('tenantId', tenantId.toString())
+    if (companyId) params.append('companyId', companyId.toString())
+    
+    const url = `/api/pipelines${params.toString() ? `?${params.toString()}` : ''}`
+    const response = await axiosInstance.get(url)
+    
+    return response.data
+  },
+
+  getPipelineById: async (id: number): Promise<Pipeline> => {
+    const response = await axiosInstance.get(`/api/pipelines/${id}`)
+    
+    return response.data
+  },
+
+  createPipeline: async (data: CreatePipelineDto): Promise<Pipeline> => {
+    const response = await axiosInstance.post('/api/pipelines', data)
+    
+    return response.data
+  },
+
+  updatePipeline: async (id: number, data: Partial<CreatePipelineDto>): Promise<Pipeline> => {
+    const response = await axiosInstance.put(`/api/pipelines/${id}`, data)
+    
+    return response.data
+  },
+
+  deletePipeline: async (id: number): Promise<void> => {
+    await axiosInstance.delete(`/api/pipelines/${id}`)
+  },
+
+  toggleStatus: async (id: number): Promise<Pipeline> => {
+    const response = await axiosInstance.patch(`/api/pipelines/${id}/toggle-status`)
+    
+    return response.data
+  },
+
+  getKanbanData: async (id: number): Promise<Record<string, PipelineKanbanCard[]>> => {
+    const response = await axiosInstance.get(`/api/pipelines/${id}/kanban`)
+    
+    return response.data
+  },
+
+  moveConversation: async (id: string, data: MoveConversationDto): Promise<void> => {
+    await axiosInstance.post('/api/pipelines/move-conversation', data)
+  },
+
+  updateCardStage: async (pipelineId: number, contactId: number, targetStageId: number): Promise<void> => {
+    await axiosInstance.put(`/api/pipelines/${pipelineId}/kanban/cards/${contactId}/stage?targetStageId=${targetStageId}`)
+  },
+
+  toggleChatbot: async (contactId: number, enabled: boolean): Promise<void> => {
+    await axiosInstance.patch(`/api/v1/contacts/${contactId}/chatbot`, { enabled })
+  },
+
+  assignConversationToPipeline: async (conversationId: string, pipelineId: number, stageId: number): Promise<void> => {
+    await axiosInstance.post(`/api/pipelines/${pipelineId}/assign-conversation`, { conversationId, stageId })
+  }
+}

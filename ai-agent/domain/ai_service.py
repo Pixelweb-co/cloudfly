@@ -1,0 +1,1381 @@
+"""
+domain/ai_service.py
+
+Core AI service: builds system prompts, calls OpenAI with retries,
+dispatches tool calls, and tracks token usage.
+
+Design decisions:
+  - Uses tenacity for exponential-backoff retries on transient OpenAI errors.
+  - Pipeline state is injected directly into the system prompt (no tool call
+    needed to read it) to guarantee the LLM always has stage IDs available.
+  - Tool execution is a simple dispatcher pattern — easy to extend.
+  - Token usage is logged on every call for cost monitoring.
+"""
+import hashlib
+import json
+import logging
+from typing import Any, Dict, List, Optional
+from datetime import datetime, timedelta
+import requests
+import httpx
+from openai import AsyncOpenAI, RateLimitError, APITimeoutError, APIConnectionError
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+)
+
+from application.config import config
+from domain.models import ChatMessage, ContactPipelineState, TokenUsage
+from domain.exceptions import RetryableError, NonRetryableError
+from token_tracker import TokenTracker
+
+logger = logging.getLogger(__name__)
+
+# Constants for optimization
+MAX_HISTORY = 6
+PROMPT_TOKEN_PRICE = getattr(config, 'prompt_token_price', 0.0000025)
+COMPLETION_TOKEN_PRICE = getattr(config, 'completion_token_price', 0.00001)
+
+# Transient OpenAI errors that are worth retrying
+_OPENAI_RETRYABLE = (RateLimitError, APITimeoutError, APIConnectionError)
+
+# --- Dynamic Prompt Constants ---
+
+PROMPT_EXPLORE = """Eres un estratega de ventas de {company_info}. Tu misión es conectar emocionalmente con el cliente, identificar su 'dolor' y despertar un deseo genuino por nuestras soluciones.
+
+PROTOCOLO DE PERSUASIÓN:
+1. Empatía Activa: Valida la necesidad del cliente antes de vender.
+2. Beneficio sobre Característica: No digas qué hace el producto, di cómo transforma la vida del cliente.
+3. Lenguaje de Poder: Usa verbos de acción (Descubre, Transforma, Logra).
+4. Facilidad Cognitiva: Respuestas cortas, claras y fáciles de leer.
+
+FORMATO DE PRODUCTO:
+Si el producto tiene imagen, DEBES mostrarla así: [URL_DE_LA_IMAGEN]
+*Nombre del Producto* - Resumen del beneficio principal.
+Precio: $X.XXX
+
+REGLA DE PROACTIVIDAD:
+1. Si el cliente pregunta por un servicio o muestra interés claro, usa 'get_availability_slots' y ofrece opciones con nuestros **Proveedores de Servicio** de inmediato. No esperes a que el cliente lo pida.
+2. Captura Nombre/Email con 'manage_contact' al primer indicio.
+3. Siempre termina con una pregunta abierta para mantener el control de la conversación."""
+
+PROMPT_INTENT = """Eres un experto comercial senior de {company_info}. El cliente tiene interés; tu trabajo es convertir ese interés en una decisión de compra usando gatillos mentales de autoridad y prueba social.
+
+[ESTADO INTERNO DEL PIPELINE]
+{pipeline_context}
+
+PROTOCOLO DE CIERRE PREVIO:
+1. Prueba Social: Insinúa que otros clientes ya están obteniendo resultados (ej: "Es nuestra opción más solicitada").
+2. Escasez: Enfócate en la exclusividad o disponibilidad (ej: "Aprovechemos para asegurar tu lugar/pedido ahora").
+3. Micro-Sí: Haz preguntas que el cliente responda con "sí" para preparar el cierre final.
+
+FORMATO DE PRODUCTO:
+Si el producto tiene imagen, [URL_DE_LA_IMAGEN]
+*Nombre del Producto* - ¿Cómo le ayuda este producto específicamente?
+
+REGLA DE ORO: Sigue instrucciones especiales de la descripción (links, flujos externos) con prioridad total.
+REGLA DE PERFILAMIENTO: Guarda datos faltantes con 'manage_contact' y valida los existentes. Usa 'search_products_semantically' para precisión."""
+
+PROMPT_CLOSING = """Eres un cerrador de ventas de ÉLITE de {company_info}. El cliente está en el umbral de la decisión. Tu enfoque es la eliminación de fricción y el cierre inmediato.
+
+[ESTADO INTERNO DEL PIPELINE]
+{pipeline_context}
+
+PROTOCOLO DE CIERRE MAESTRO:
+1. Asunción de Venta: Actúa como si el cliente ya hubiera decidido (ej: "¿Prefieres recibirlo en casa o recogerlo?").
+2. Reducción de Riesgo: Asegura que está tomando la mejor decisión.
+3. Urgencia Real: Si es un servicio, enfatiza que los espacios con los mejores **Proveedores de Servicio** se agotan rápido.
+
+FORMATO DE PRODUCTO:
+[URL_DE_LA_IMAGEN]
+*Nombre del Producto* - Inversión: $X.XXX
+
+SECUENCIA OBLIGATORIA PARA AGENDAR UN SERVICIO (NO saltar pasos):
+1. Usa 'search_products_semantically' para encontrar el servicio y obtener su ID real (product_id).
+2. Llama a 'get_availability_slots' con el service_id = product_id del paso anterior.
+3. Si noSchedule=true → 'transfer_to_human' de inmediato. NO intentes reservar.
+4. Muestra al cliente el nombre del **Proveedor de Servicio** y los horarios disponibles. Pregunta: "¿Te gustaría agendar con [nombre del Proveedor de Servicio] a las [hora]?"
+5. ESPERA la confirmación del cliente. NUNCA reserves sin confirmación explícita.
+6. Solo después de la confirmación, usa 'book_appointment' con slot_id y service_id.
+7. Después de reservar, crea la orden con 'create_order'.
+
+REGLA DE ORO:
+1. Valida Nombre y Email antes de reservar. Si faltan, pídelos.
+2. Para REPROGRAMAR o CANCELAR citas, solicita Número de Identificación y valida con 'search_contact_by_identification'.
+
+REGLA DE TIPO DE ITEM:
+- PRODUCT: Ofrece 'create_order'.
+- SERVICE: Sigue la SECUENCIA OBLIGATORIA de arriba.
+
+REGLA ESTRICTA: Eres responsable del cierre. No delegues a menos que sea inevitable. Mantén el mensaje corto (máximo 3 párrafos de 2 líneas) para máxima retención en WhatsApp."""
+
+def classify_mode_by_pipeline(pipeline_data: dict, message: str) -> str:
+    msg = message.lower()
+    
+    # Priority 1: Direct Purchase/Order/Calendar Intent -> Always CLOSING (Tools enabled)
+    if any(k in msg for k in ["comprar", "lo quiero", "confirmo", "pedido", "pedir", "orden", "haz el pedido", "cita", "visita", "reprograme", "reprogramar", "agendar", "disponibilidad", "disponible", "hora", "horario", "turno", "agendamiento"]):
+        return "CLOSING"
+    
+    # Priority 2: Providing contact data -> At least INTENT
+    if "@" in msg or any(char.isdigit() for char in msg if char not in " +-.()"):
+        # If it's just a number/email, it's likely a response to a previous data request.
+        # We classify as INTENT to ensure tools are active and profiling rule is present.
+        return "INTENT"
+    
+    # Priority 2: Product/Price Interest -> Always INTENT (Tools enabled)
+    if any(k in msg for k in ["precio", "producto", "catalogo", "catálogo", "cuánto", "cuanto", "valen", "vale"]):
+        return "INTENT"
+
+    # Priority 3: Pipeline-based classification
+    if not pipeline_data:
+        return "EXPLORE"
+        
+    stage_name = pipeline_data.get("current_stage_name", "").lower()
+    
+    if any(s in stage_name for s in ["negociacion", "negociación", "cierre", "venta", "cliente"]):
+        return "CLOSING"
+    if any(s in stage_name for s in ["interes", "interés", "cotizacion", "cotización"]):
+        return "INTENT"
+        
+    return "EXPLORE"
+
+# Tool definitions exposed to the LLM
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "search_products_semantically",
+            "description": "Busca productos en el catálogo usando lenguaje natural. Úsalo para encontrar qué vendemos.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Descripción del producto o necesidad del cliente.",
+                    }
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "check_products_stock",
+            "description": "Verifica el stock y disponibilidad de uno o varios productos por sus IDs.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "product_ids": {
+                        "type": "array",
+                        "items": {"type": "integer"},
+                        "description": "Lista de IDs de productos a verificar.",
+                    }
+                },
+                "required": ["product_ids"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_contact",
+            "description": "Busca un contacto existente por su teléfono o email.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "identifier": {
+                        "type": "string",
+                        "description": "Teléfono o email del contacto.",
+                    }
+                },
+                "required": ["identifier"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "manage_contact",
+            "description": "Crea o actualiza la información de un contacto (nombre, email, dirección, documento, etc). Úsalo siempre que el cliente proporcione o confirme sus datos.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {"type": "string", "enum": ["create", "update"]},
+                    "contact_id": {"type": "integer", "description": "Requerido para update."},
+                    "name": {"type": "string"},
+                    "email": {"type": "string"},
+                    "phone": {"type": "string"},
+                    "address": {"type": "string"},
+                    "tax_id": {"type": "string", "description": "NIT o ID tributario"},
+                    "document_type": {"type": "string", "enum": ["CC", "NIT", "TI", "PASAPORTE"]},
+                    "document_number": {"type": "string"},
+                },
+                "required": ["action"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_order",
+            "description": "Crea un pedido oficial. Llama a esto SOLO después de haber solicitado y confirmado el Nombre y Email del cliente para actualizar su ficha.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "customer_id": {"type": "integer"},
+                    "notes": {"type": "string"},
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "productId": {"type": "integer"},
+                                "productName": {"type": "string"},
+                                "quantity": {"type": "integer"},
+                                "unitPrice": {"type": "number"},
+                            },
+                            "required": ["productId", "productName", "quantity", "unitPrice"],
+                        },
+                    },
+                },
+                "required": ["customer_id", "items"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_order",
+            "description": "Consulta detalles de un pedido previo.",
+            "parameters": {
+                "type": "object",
+                "properties": {"order_id": {"type": "integer"}},
+                "required": ["order_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "modify_order",
+            "description": "Modifica un pedido existente.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "order_id": {"type": "integer"},
+                    "items": {"type": "array", "items": {"type": "object"}},
+                    "notes": {"type": "string"},
+                },
+                "required": ["order_id", "items"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_pipeline_stage",
+            "description": (
+                "Actualiza silenciosamente la etapa de venta del contacto. "
+                "Usa SOLO los IDs de etapa que vienen en el [ESTADO INTERNO DEL PIPELINE]."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contact_id": {"type": "integer"},
+                    "stage_id": {"type": "integer"},
+                },
+                "required": ["contact_id", "stage_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_contact_pipeline",
+            "description": "Consulta todas las etapas disponibles del pipeline para un contacto.",
+            "parameters": {
+                "type": "object",
+                "properties": {"contact_id": {"type": "integer"}},
+                "required": ["contact_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_quote",
+            "description": "Crea una cotización (proforma). Úsalo SOLO después de haber solicitado y confirmado el Nombre y Email del cliente para actualizar su ficha.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "customer_id": {"type": "integer"},
+                    "notes": {"type": "string"},
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "productId": {"type": "integer"},
+                                "productName": {"type": "string"},
+                                "quantity": {"type": "integer"},
+                                "unitPrice": {"type": "number"},
+                            },
+                            "required": ["productId", "productName", "quantity", "unitPrice"],
+                        },
+                    },
+                },
+                "required": ["customer_id", "items"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "convert_quote_to_order",
+            "description": "Convierte una cotización previa en un pedido oficial.",
+            "parameters": {
+                "type": "object",
+                "properties": {"quote_id": {"type": "integer"}},
+                "required": ["quote_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "transfer_to_human",
+            "description": (
+                "Transfiere la conversación a un asesor humano cuando no puedas ayudar al cliente, "
+                "si el cliente lo pide explícitamente, o si detectas frustración extrema."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "description": "Breve razón de la transferencia.",
+                    }
+                },
+                "required": ["reason"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_availability_slots",
+            "description": "Busca disponibilidad de un servicio por fecha. Devuelve proveedores con sus horarios libres.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "service_id": {"type": "integer", "description": "ID del producto tipo SERVICIO"},
+                    "start_date": {"type": "string", "description": "Fecha inicio ISO (YYYY-MM-DD)"},
+                    "end_date": {"type": "string", "description": "Fecha fin ISO (YYYY-MM-DD)"}
+                },
+                "required": ["service_id", "start_date"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_contact_by_identification",
+            "description": "Busca un contacto usando su número de identificación (cédula/DNI). Úsalo para validar identidad antes de gestionar citas.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "identification": {"type": "string", "description": "Número de documento"}
+                },
+                "required": ["identification"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "book_appointment",
+            "description": "Reserva una cita real en el módulo de agenda vinculada a un producto tipo servicio.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "slot_id": {"type": "integer", "description": "ID del slot de disponibilidad elegido"},
+                    "service_id": {"type": "integer", "description": "ID del producto tipo SERVICIO"},
+                    "title": {"type": "string", "description": "Título de la cita (ej: Corte de Cabello)"},
+                    "observations": {"type": "string", "description": "Notas adicionales"}
+                },
+                "required": ["slot_id", "title"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "manage_calendar_event",
+            "description": "Gestiona eventos tipo RECORDATORIO o NOTIFICACIÓN en el calendario general. NO usar para citas de servicio con agenda.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "action": {"type": "string", "enum": ["create", "update", "cancel"]},
+                    "event_id": {"type": "integer"},
+                    "title": {"type": "string"},
+                    "start_time": {"type": "string", "description": "ISO 8601"},
+                    "description": {"type": "string"},
+                },
+                "required": ["action"]
+            }
+        }
+    }
+]
+
+
+class AIService:
+    """
+    Orchestrates OpenAI calls with tool-use support.
+    Inject db and qdrant at construction time for easy testing/mocking.
+    """
+
+    def __init__(self, db, qdrant: Optional[QdrantClient] = None) -> None:
+        self._openai = AsyncOpenAI(api_key=config.openai_api_key)
+        self._db = db
+        self._qdrant = qdrant
+        self.tracker = TokenTracker()
+
+    # ── OpenAI Call (with retries) ─────────────────────────────────────────
+
+    @retry(
+        retry=retry_if_exception_type(_OPENAI_RETRYABLE),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(3),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        reraise=True,
+    )
+    async def _call_openai_dynamic(self, messages: List[Dict], tools: Optional[List[Dict]], temperature: float, model: Optional[str] = None) -> Any:
+        return await self._openai.chat.completions.create(
+            model=model or config.openai_model,
+            messages=messages,
+            tools=tools if tools else None,
+            temperature=temperature,
+            timeout=config.openai_timeout_seconds,
+        )
+
+    def _select_model(self, message: str) -> str:
+        """Enruta mensajes cortos a modelos más económicos."""
+        msg = message.lower()
+        # Cualquier mensaje de menos de 50 caracteres usa el modelo económico
+        if len(msg) < 50:
+            return "gpt-4o-mini"
+        return config.openai_model
+
+    def _get_tools_for_context(self, message: str, history: List[ChatMessage]) -> Optional[List[Dict]]:
+        """Filtra herramientas dinámicamente para reducir tokens de sistema."""
+        msg = message.lower()
+        
+        # Herramientas base (siempre útiles)
+        essential = ["search_products_semantically", "manage_contact"]
+        
+        # Herramientas de orden/cotización
+        order_intent = ["comprar", "pedido", "orden", "cotizar", "cotizacion", "precio", "cuanto", "vale"]
+        if any(k in msg for k in order_intent):
+            essential += ["create_order", "create_quote", "check_products_stock"]
+            
+        # Herramientas de calendario y agenda
+        calendar_intent = ["cita", "agenda", "visita", "reprogramar", "horario", "disponibilidad", "slot", "cedula", "identificacion", "dni", "cancelar", "hoy", "mañana", "mañana", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
+        
+        # Check for time patterns (e.g. 9:10, 10am, 15:00)
+        import re
+        time_pattern = r"\d{1,2}(:\d{2}|am|pm|:)"
+        
+        if any(k in msg for k in calendar_intent) or re.search(time_pattern, msg):
+            essential += ["manage_calendar_event", "get_availability_slots", "book_appointment", "search_contact_by_identification"]
+
+        # Si el mensaje es muy corto, limitamos para ahorrar tokens
+        if len(msg) < 15:
+            return [t for t in TOOLS if t["function"]["name"] in essential]
+            
+        return TOOLS
+
+    def _compress_history(self, history: List[ChatMessage]) -> List[ChatMessage]:
+        """Comprime el historial para mantener el contexto sin exceder límites de tokens."""
+        if len(history) <= 4:
+            return history
+        
+        recent = history[-4:]
+        old = history[:-4]
+        
+        summary_parts = []
+        for h in old:
+            role = "U" if h.role == "user" else "A"
+            content = h.content or ""
+            if content:
+                summary_parts.append(f"{role}:{content[:50]}..")
+        
+        summary_content = f"[CONTEXTO PREVIO: {' | '.join(summary_parts)}]"
+        summary_msg = ChatMessage(role="system", content=summary_content)
+        
+        return [summary_msg] + recent
+
+    # ── Tool Dispatcher ───────────────────────────────────────────────────
+
+    async def _execute_tool(
+        self,
+        function_name: str,
+        function_args: Dict[str, Any],
+        tenant_id: int,
+        contact_id: int,
+        company_id: Optional[int] = None,
+        message_id: str = "unknown",
+    ) -> str:
+        """Dispatch a tool call to its implementation. Returns a JSON string."""
+        log_ctx = {"tool": function_name, "func_args": function_args, "tenant_id": tenant_id, "contact_id": contact_id, "message_id": message_id}
+        logger.info(f"Executing tool: {function_name}", extra=log_ctx)
+        try:
+            if function_name == "search_products_semantically":
+                return await self._search_products(function_args["query"], tenant_id)
+            elif function_name == "check_products_stock":
+                return self._check_stock(function_args["product_ids"], tenant_id)
+            elif function_name == "update_pipeline_stage":
+                return json.dumps({
+                    "action": "update_pipeline_stage",
+                    "contact_id": function_args["contact_id"],
+                    "stage_id": function_args["stage_id"],
+                })
+            elif function_name == "get_contact_pipeline":
+                return await self._get_contact_pipeline(function_args["contact_id"], tenant_id)
+            elif function_name == "get_contact":
+                return await self._get_contact(function_args["identifier"], tenant_id)
+            elif function_name == "manage_contact":
+                return await self._manage_contact(function_args, tenant_id)
+            elif function_name == "create_order":
+                return await self._create_order(
+                    function_args["customer_id"], 
+                    function_args["items"], 
+                    tenant_id, 
+                    function_args.get("notes"),
+                    message_id
+                )
+            elif function_name == "get_order":
+                return await self._get_order(function_args["order_id"], tenant_id)
+            elif function_name == "modify_order":
+                return await self._modify_order(
+                    function_args["order_id"], function_args["items"], tenant_id, function_args.get("notes")
+                )
+            elif function_name == "transfer_to_human":
+                return self._transfer_to_human(function_args["reason"])
+            elif function_name == "create_quote":
+                return await self._create_quote(
+                    function_args["customer_id"],
+                    function_args["items"],
+                    tenant_id,
+                    function_args.get("notes"),
+                    message_id
+                )
+            elif function_name == "convert_quote_to_order":
+                return await self._convert_quote_to_order(function_args["quote_id"], tenant_id)
+            elif function_name == "get_availability_slots":
+                resolved_company_id = company_id or 1
+                return await self._get_availability_slots(
+                    function_args.get("service_id"),
+                    function_args.get("start_date"),
+                    function_args.get("end_date"),
+                    tenant_id, resolved_company_id
+                )
+            elif function_name == "search_contact_by_identification":
+                resolved_company_id = company_id or 1
+                return await self._search_contact_by_identification(
+                    function_args.get("identification"),
+                    tenant_id, resolved_company_id
+                )
+            elif function_name == "book_appointment":
+                resolved_company_id = company_id or 1
+                return await self._book_appointment(
+                    function_args.get("slot_id"),
+                    function_args.get("title"),
+                    function_args.get("observations", ""),
+                    tenant_id, resolved_company_id, contact_id,
+                    function_args.get("service_id")
+                )
+            elif function_name == "manage_calendar_event":
+                return await self._manage_calendar_event(function_args, tenant_id, contact_id)
+            elif function_name == "search_calendar_events":
+                return await self._search_calendar_events(function_args, tenant_id, contact_id)
+            elif function_name == "delete_calendar_event":
+                return await self._delete_calendar_event(function_args, tenant_id)
+            else:
+                return json.dumps({"error": f"Unknown tool: {function_name}"})
+        except Exception as exc:
+            logger.error("Tool execution failed", extra={"tool": function_name, "error": str(exc)})
+            return json.dumps({"error": str(exc)})
+
+    # ── Public Entry Point ────────────────────────────────────────────────
+
+    async def generate_response(
+        self,
+        tenant_id: int,
+        company_id: Optional[int],
+        contact_id: int,
+        conversation_id: str,
+        message: str,
+        history: List[ChatMessage],
+        pipeline_state: Optional[ContactPipelineState],
+        message_id: str = "unknown",
+    ) -> tuple[str, Optional[Dict], Optional[Dict], TokenUsage]:
+        """
+        Builds the prompt and calls OpenAI in a tool execution loop.
+        Returns (final_text, pipeline_update_request, handoff_request, token_usage)
+        """
+        log_ctx = {
+            "tenant_id": tenant_id,
+            "contact_id": contact_id,
+            "conversation_id": conversation_id,
+            "message_id": message_id
+        }
+        # 1. Fetch Context and Pipeline State
+        company_info_data = await self._db.get_company_info(tenant_id, company_id)
+        company_info_str = f"{company_info_data.get('name')} (NIT: {company_info_data.get('nit')})"
+        
+        pipeline_data = {}
+        try:
+            # Reusing internal tool implementation to fetch full pipeline JSON
+            pipeline_json = await self._get_contact_pipeline(contact_id, tenant_id)
+            pipeline_data = json.loads(pipeline_json) if not "error" in pipeline_json else {}
+        except Exception as e:
+            logger.warning(f"Could not fetch pipeline data: {e}", extra=log_ctx)
+
+        # 2.1 Truncar y Comprimir Historial
+        history = history[-MAX_HISTORY:] if len(history) > MAX_HISTORY else history
+        history = self._compress_history(history)
+
+        # 2.2 Classify Mode and Set Dynamic Parameters
+        mode = classify_mode_by_pipeline(pipeline_data, message)
+        logger.info(f"AI Mode: {mode}", extra=log_ctx)
+
+        if mode == "EXPLORE":
+            system_prompt = PROMPT_EXPLORE.format(company_info=company_info_str)
+            temp = 0.7
+            active_tools = self._get_tools_for_context(message, history)
+        elif mode == "INTENT":
+            pipeline_context = json.dumps(pipeline_data, indent=2)
+            logger.info(f"Pipeline Context for LLM (INTENT): {pipeline_context}", extra=log_ctx)
+            system_prompt = PROMPT_INTENT.format(company_info=company_info_str, pipeline_context=pipeline_context)
+            temp = 0.5
+            active_tools = self._get_tools_for_context(message, history)
+        else: # CLOSING
+            pipeline_context = json.dumps(pipeline_data, indent=2)
+            logger.info(f"Pipeline Context for LLM: {pipeline_context}", extra=log_ctx)
+            system_prompt = PROMPT_CLOSING.format(company_info=company_info_str, pipeline_context=pipeline_context)
+            temp = 0.3
+            active_tools = TOOLS # En cierre, permitir todas las herramientas por seguridad
+            
+        # Append current datetime to system prompt
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+        system_prompt += f"\n\n[CONTEXTO DEL SISTEMA]\nFecha y hora actual: {now_str}\nUsa esta fecha como referencia para 'hoy', 'mañana', etc."
+
+        messages: List[Dict] = [{"role": "system", "content": system_prompt}]
+        for h in history:
+            messages.append({"role": h.role, "content": h.content})
+        messages.append({"role": "user", "content": message})
+
+        pipeline_update_request: Optional[Dict] = None
+        handoff_request: Optional[Dict] = None
+        usage = TokenUsage()
+        final_text = ""
+
+        selected_model = self._select_model(message)
+
+        # Loop to handle sequential tool calls (max 5 iterations)
+        for i in range(5):
+            try:
+                # Usar modelo económico si es la primera llamada y es simple. 
+                # Escalar a modelo potente si hay herramientas involucradas.
+                current_model = selected_model if i == 0 else config.openai_model
+                response = await self._call_openai_dynamic(messages, active_tools, temp, model=current_model)
+            except _OPENAI_RETRYABLE as exc:
+                raise RetryableError(f"OpenAI transient error: {exc}") from exc
+            except Exception as exc:
+                raise NonRetryableError(f"OpenAI fatal error: {exc}") from exc
+
+            # Track token usage
+            if response.usage:
+                label = "PRIMERA_LLAMADA" if i == 0 else f"LLAMADA_{i+1}"
+                self.tracker.track(response.usage, label, tenant_id, conversation_id, contact_id=contact_id, model_name=current_model)
+                
+                usage.prompt_tokens += response.usage.prompt_tokens
+                usage.completion_tokens += response.usage.completion_tokens
+                usage.total_tokens += response.usage.total_tokens
+
+            response_message = response.choices[0].message
+            messages.append(response_message)
+
+            if not response_message.tool_calls:
+                # No more tools to call, we have a final text response
+                final_text = response_message.content or ""
+                if i == 0:
+                    self.tracker.track(usage, "LLAMADA_DIRECTA", tenant_id, conversation_id, contact_id=contact_id, model_name=current_model)
+                else:
+                    self.tracker.track(usage, "TOTAL_TURNO", tenant_id, conversation_id, contact_id=contact_id, model_name=current_model)
+                break
+
+            # Handle tool calls
+            for tool_call in response_message.tool_calls:
+                fn_name = tool_call.function.name
+                fn_args = json.loads(tool_call.function.arguments)
+
+                tool_result = await self._execute_tool(fn_name, fn_args, tenant_id, contact_id, company_id=company_id, message_id=conversation_id)
+                tool_data = json.loads(tool_result)
+
+                # Capture pipeline update intent (executed async by orchestrator)
+                if fn_name == "update_pipeline_stage" and "action" in tool_data:
+                    pipeline_update_request = {
+                        "contact_id": tool_data["contact_id"],
+                        "stage_id": tool_data["stage_id"],
+                    }
+                    tool_result = json.dumps({"success": True})
+
+                # Capture handoff intent
+                if fn_name == "transfer_to_human" and "action" in tool_data:
+                    handoff_request = {"reason": fn_args.get("reason", "No reason provided")}
+                    tool_result = json.dumps({"success": True, "status": "transfer_initiated"})
+
+                messages.append({
+                    "tool_call_id": tool_call.id,
+                    "role": "tool",
+                    "name": fn_name,
+                    "content": tool_result,
+                })
+            # Continue the loop for the next assistant response
+        else:
+            logger.warning("Tool call limit reached", extra={"contact_id": contact_id})
+            final_text = "Disculpa, estoy procesando mucha información. ¿Podrías ser más específico?"
+
+        # Fallback for empty content (shouldn't happen with Gpt-4o but good for safety)
+        if not final_text.strip() and not pipeline_update_request:
+             final_text = "Entendido. ¿En qué más puedo ayudarte?"
+
+        # 4. Final Formatting (WhatsApp Optimization)
+        final_text = self._format_output_for_whatsapp(final_text)
+
+        logger.info(
+            "AI response generated",
+            extra={
+                "tenant_id": tenant_id,
+                "contact_id": contact_id,
+                "conversation_id": conversation_id,
+                "prompt_tokens": usage.prompt_tokens,
+                "completion_tokens": usage.completion_tokens,
+                "total_tokens": usage.total_tokens,
+                "pipeline_update": pipeline_update_request is not None,
+                "mode": mode
+            },
+        )
+
+        return final_text, pipeline_update_request, handoff_request, usage
+
+    # ── Output Formatting ───────────────────────────────────────────────
+
+    def _format_output_for_whatsapp(self, text: str) -> str:
+        """
+        Cleans the AI output to be more human-like and compatible with WhatsApp.
+        Inspired by n8n 'Verificador de Respuesta' logic.
+        """
+        if not text:
+            return text
+
+        # 1. Remove Markdown headers and bold markers
+        # WhatsApp supports *bold*, but OpenAI often uses it excessively for labels.
+        # We'll remove '#' and keep '*' only if the user specifically wants it, 
+        # but for now, following n8n logic of total cleanup:
+        text = text.replace("#", "")
+        text = text.replace("*", "")
+
+        # 2. Punctuation cleanup (Simplified chat style)
+        text = text.replace("¿", "")
+        text = text.replace("¡", "")
+
+        # 3. Remove internal thinking artifacts or meta-commentary
+        # (Though prompts should handle this, this is a safety net)
+        text = text.replace("Utilizando la herramienta", "")
+        text = text.replace("He consultado", "Ya revisé")
+
+        # 4. Cleanup white spaces and multiple newlines
+        lines = [line.strip() for line in text.split("\n")]
+        text = "\n".join(filter(None, lines))
+
+        return text.strip()
+
+    def split_text_for_whatsapp(self, text: str, max_chars: int = 450) -> List[str]:
+        """
+        Splits a long message into multiple fragments, trying to respect newlines.
+        """
+        if not text or len(text) <= max_chars:
+            return [text] if text else []
+
+        fragments = []
+        current_fragment = []
+        current_length = 0
+
+        # Split by lines to preserve structure
+        lines = text.split("\n")
+        
+        for line in lines:
+            if current_length + len(line) > max_chars and current_fragment:
+                fragments.append("\n".join(current_fragment))
+                current_fragment = []
+                current_length = 0
+            
+            current_fragment.append(line)
+            current_length += len(line) + 1 # +1 for the newline
+
+        if current_fragment:
+            fragments.append("\n".join(current_fragment))
+
+        return fragments
+
+    # ── Tool Implementations ──────────────────────────────────────────────
+
+    def _transfer_to_human(self, reason: str) -> str:
+        """Called when the AI wants to hand over to a human advisor."""
+        logger.info("Human handoff request received from AI", extra={"reason": reason})
+        return json.dumps({"action": "handoff", "status": "pending", "reason": reason})
+
+    async def _search_products(self, query: str, tenant_id: int) -> str:
+        if not self._qdrant:
+            return json.dumps({"error": "Vector database unreachable"})
+        try:
+            vector_res = await self._openai.embeddings.create(
+                input=query, model="text-embedding-3-small"
+            )
+            query_vector = vector_res.data[0].embedding
+            results = self._qdrant.query_points(
+                collection_name="products",
+                query=query_vector,
+                query_filter=Filter(
+                    must=[FieldCondition(key="tenant_id", match=MatchValue(value=tenant_id))]
+                ),
+                limit=5,
+            )
+            points = results.points if hasattr(results, "points") else results
+            return json.dumps([p.payload for p in points])
+        except Exception as exc:
+            logger.error("Vector search failed", extra={"error": str(exc)})
+            return json.dumps({"error": str(exc)})
+
+    def _check_stock(self, product_ids: List[int], tenant_id: int) -> str:
+        try:
+            ids_str = ",".join(map(str, product_ids))
+            url = f"{config.java_api_url}/productos/stock/multiple?ids={ids_str}&tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
+            headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
+            res = requests.get(url, headers=headers, timeout=5)
+            if res.status_code == 200:
+                data = res.json()
+                slim = [
+                    {"id": p["id"], "stock": p["inventoryQty"], "status": p["inventoryStatus"]}
+                    for p in data
+                ]
+                return json.dumps(slim)
+            return json.dumps({"error": f"API {res.status_code}"})
+        except Exception as exc:
+            logger.error("Stock check failed", extra={"error": str(exc)})
+            return json.dumps({"error": str(exc)})
+
+    async def _get_contact(self, identifier: str, tenant_id: int) -> str:
+        contact = await self._db.get_contact(identifier, tenant_id)
+        if not contact:
+            return json.dumps({"error": "Contact not found"})
+        # Stringify dates for JSON
+        for k, v in contact.items():
+            if hasattr(v, "isoformat"):
+                contact[k] = v.isoformat()
+        return json.dumps(contact)
+
+    async def _manage_contact(self, args: Dict[str, Any], tenant_id: int) -> str:
+        args = dict(args)  # Avoid mutating the original dict
+        action = args.pop("action")
+        
+        # Ensure company_id is present if not provided (Default to principal company)
+        if "company_id" not in args:
+            comp = await self._db.get_company_info(tenant_id)
+            if comp.get("id"):
+                args["company_id"] = comp["id"]
+                
+        if action == "create":
+            # Check for duplicate email before creation
+            if args.get("email"):
+                existing = await self._db.get_contact(args.get("email"), tenant_id)
+                if existing:
+                    logger.info(f"Email {args.get('email')} already exists for contact {existing.get('id')}. Returning info instead of creating new.", extra={"tenant_id": tenant_id})
+                    return json.dumps({
+                        "success": True,
+                        "info": "CONTACT_ALREADY_EXISTS",
+                        "id": existing.get("id"),
+                        "name": existing.get("name"),
+                        "email": existing.get("email"),
+                        "message": "Este correo ya está registrado. He vinculado la información."
+                    })
+            new_id = await self._db.create_contact(tenant_id, args)
+            return json.dumps({"success": True, "id": new_id, "message": "Contact created"})
+        elif action == "update":
+            cid = args.pop("contact_id", None)
+            if not cid:
+                return json.dumps({"error": "contact_id required for update"})
+            
+            # Check for duplicate email before update
+            if args.get("email"):
+                existing = await self._db.get_contact(args.get("email"), tenant_id)
+                if existing and existing.get("id") != cid:
+                    logger.info(f"Email {args.get('email')} already exists for contact {existing.get('id')}. Returning info.", extra={"tenant_id": tenant_id})
+                    return json.dumps({
+                        "success": True,
+                        "info": "CONTACT_ALREADY_EXISTS",
+                        "contact_id": existing.get("id"),
+                        "name": existing.get("name"),
+                        "email": existing.get("email")
+                    })
+                    
+            success = await self._db.update_contact(cid, tenant_id, args)
+            return json.dumps({"success": success})
+        return json.dumps({"error": "Invalid action"})
+
+    async def _get_contact_pipeline(self, contact_id: int, tenant_id: int) -> str:
+        state = await self._db.get_contact_pipeline_state(contact_id, tenant_id)
+        if not state:
+            return json.dumps({"error": "No pipeline assigned or contact not found"})
+        return json.dumps({
+            "contact_name": state.contact_name,
+            "contact_email": state.contact_email,
+            "pipeline_id": state.pipeline_id,
+            "pipeline_name": state.pipeline_name,
+            "current_stage_id": state.current_stage_id,
+            "stages": [
+                {"id": s.id, "name": s.name, "position": s.position, "color": s.color}
+                for s in state.stages
+            ]
+        })
+
+    async def _create_order(self, customer_id: int, items: List[Dict], tenant_id: int, notes: str = None, message_id: str = "unknown") -> str:
+        # 0. Pre-validation: Check for missing name or email in contact
+        contact = await self._db.get_contact_by_id(customer_id, tenant_id)
+        if not contact or not contact.get("name") or not contact.get("email"):
+            return json.dumps({
+                "error": "INCOMPLETE_CONTACT_INFO",
+                "message": "Falta el nombre o el correo electrónico del contacto. Por favor, solicítalos antes de crear el pedido."
+            })
+
+        # Idempotency: generate a hash of the critical order data + message_id
+        import hashlib
+        raw = f"{customer_id}:{json.dumps(items, sort_keys=True)}:{message_id}"
+        idempotency_key = hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+        log_ctx = {
+            "customer_id": customer_id,
+            "tenant_id": tenant_id,
+            "idempotency_key": idempotency_key,
+            "message_id": message_id
+        }
+        logger.info(f"Creating order for customer {customer_id}", extra=log_ctx)
+        try:
+            # 1. Fetch contact to get company_id (important for multitenancy/multicompany)
+            contact = await self._db.get_contact_by_id(customer_id, tenant_id)
+            company_id = contact.get("company_id") if contact else None
+            
+            # Fallback to default company for the tenant if contact doesn't have one
+            if not company_id:
+                comp = await self._db.get_company_info(tenant_id)
+                company_id = comp.get("id")
+
+            # --- Stock validation: for each item, check if the product manages stock.
+            # If manageStock == false -> allow sale. If true -> ensure requested qty <= inventoryQty.
+            insufficient = []
+            products_api_failures = []
+            for item in items:
+                pid = item.get("productId")
+                req_qty = int(item.get("quantity", 0) or 0)
+                try:
+                    prod_url = f"{config.java_api_url}/productos/{pid}?tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
+                    headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
+                    p_res = requests.get(prod_url, headers=headers, timeout=5)
+                    if p_res.status_code != 200:
+                        products_api_failures.append({"productId": pid, "status": p_res.status_code, "text": p_res.text[:200]})
+                        continue
+                    p_json = p_res.json()
+                    manage_stock = bool(p_json.get("manageStock", False))
+                    available = int(p_json.get("inventoryQty", 0) or 0)
+                    logger.info(f"Product {pid} manageStock={manage_stock} available={available}", extra=log_ctx)
+                    if manage_stock and req_qty > available:
+                        insufficient.append({"productId": pid, "requested": req_qty, "available": available, "productName": p_json.get("productName")})
+                except Exception as e:
+                    logger.error("Failed to fetch product info for stock validation", extra={**log_ctx, "product_id": pid, "error": str(e)})
+                    products_api_failures.append({"productId": pid, "error": str(e)})
+
+            if products_api_failures:
+                return json.dumps({
+                    "error": "PRODUCT_API_ERROR",
+                    "message": "No fue posible verificar la información de producto para algunos ítems. Intenta nuevamente más tarde.",
+                    "details": products_api_failures
+                })
+
+            if insufficient:
+                return json.dumps({
+                    "error": "INSUFFICIENT_STOCK",
+                    "message": "No hay suficiente inventario para algunos artículos.",
+                    "details": insufficient
+                })
+
+            # Build order items (stock validated)
+            order_items = []
+            total_sum = 0
+            for item in items:
+                qty = item.get("quantity", 0)
+                price = item.get("unitPrice", 0)
+                subtotal = qty * price
+                total_sum += subtotal
+                order_items.append({
+                    "productId": item.get("productId"),
+                    "productName": item.get("productName"),
+                    "quantity": qty,
+                    "unitPrice": price,
+                    "discount": 0,
+                    "subtotal": subtotal
+                })
+
+            payload = {
+                "customerId": customer_id,
+                "companyId": company_id,
+                "status": "PROCESANDO",
+                "notes": notes,
+                "items": order_items,
+                "total": total_sum,
+                "externalReference": idempotency_key # Used for idempotency in the backend
+            }
+
+            url = f"{config.java_api_url}/orders?tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
+            headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
+            logger.info(f"🚀 [AI-API-TOOL] Calling POST {url} for company {company_id}", extra=log_ctx)
+            res = requests.post(url, json=payload, headers=headers, timeout=10)
+            logger.info(f"📥 [AI-API-TOOL] Response {res.status_code}: {res.text}", extra=log_ctx)
+            if res.status_code in [200, 201]:
+                return json.dumps(res.json())
+            return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
+        except Exception as exc:
+            logger.error("Order creation failed", extra={"error": str(exc)})
+            return json.dumps({"error": str(exc)})
+
+    async def _get_order(self, order_id: int, tenant_id: int) -> str:
+        try:
+            url = f"{config.java_api_url}/orders/{order_id}?tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
+            headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
+            res = requests.get(url, headers=headers, timeout=5)
+            if res.status_code == 200:
+                return json.dumps(res.json())
+            return json.dumps({"error": f"API {res.status_code}"})
+        except Exception as exc:
+            logger.error("Fetch order failed", extra={"error": str(exc)})
+            return json.dumps({"error": str(exc)})
+
+    async def _modify_order(self, order_id: int, items: List[Dict], tenant_id: int, notes: str = None) -> str:
+        try:
+            order_items = []
+            for item in items:
+                qty = item.get("quantity", 0)
+                price = item.get("unitPrice", 0)
+                order_items.append({
+                    "productId": item.get("productId"),
+                    "productName": item.get("productName"),
+                    "quantity": qty,
+                    "unitPrice": price,
+                    "discount": 0,
+                    "subtotal": qty * price
+                })
+
+            payload = {"notes": notes, "items": order_items}
+            url = f"{config.java_api_url}/orders/{order_id}?tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
+            headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
+            res = requests.put(url, json=payload, headers=headers, timeout=10)
+            if res.status_code == 200:
+                return json.dumps(res.json())
+            return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
+        except Exception as exc:
+            logger.error("Modify order failed", extra={"error": str(exc)})
+            return json.dumps({"error": str(exc)})
+
+    async def _create_quote(self, customer_id: int, items: List[Dict], tenant_id: int, notes: str = None, message_id: str = "unknown") -> str:
+        try:
+            # Fetch contact to get company_id
+            contact = await self._db.get_contact_by_id(customer_id, tenant_id)
+            company_id = contact.get("company_id") if contact else None
+
+            quote_items = []
+            total_sum = 0
+            for item in items:
+                qty = item.get("quantity", 0)
+                price = item.get("unitPrice", 0)
+                subtotal = qty * price
+                total_sum += subtotal
+                quote_items.append({
+                    "productId": item.get("productId"),
+                    "productName": item.get("productName"),
+                    "quantity": qty,
+                    "unitPrice": price,
+                    "subtotal": subtotal
+                })
+
+            payload = {
+                "customerId": customer_id,
+                "companyId": company_id,
+                "notes": notes,
+                "items": quote_items,
+                "total": total_sum,
+                "status": "PENDING"
+            }
+
+            url = f"{config.java_api_url}/quotes?tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
+            headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
+            res = requests.post(url, json=payload, headers=headers, timeout=10)
+            if res.status_code in [200, 201]:
+                return json.dumps(res.json())
+            return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
+        except Exception as exc:
+            logger.error("Quote creation failed", extra={"error": str(exc)})
+            return json.dumps({"error": str(exc)})
+
+    async def _convert_quote_to_order(self, quote_id: int, tenant_id: int) -> str:
+        try:
+            url = f"{config.java_api_url}/quotes/{quote_id}/convert-to-order?tenantId={tenant_id}&ai_secret={config.ai_api_secret}"
+            headers = {"X-AI-Secret": config.ai_api_secret, "Authorization": f"AI-Secret {config.ai_api_secret}"}
+            res = requests.post(url, headers=headers, timeout=10)
+            if res.status_code in [200, 201]:
+                return json.dumps(res.json())
+            return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
+        except Exception as exc:
+            logger.error("Quote conversion failed", extra={"error": str(exc)})
+            return json.dumps({"error": str(exc)})
+
+    async def _get_availability_slots(self, service_id: int, start_date: str, end_date: str = None, tenant_id: int = 1, company_id: int = 1) -> str:
+        if not end_date:
+            end_date = start_date
+        
+        try:
+            url = f"http://scheduler-service:8080/api/availability/slots/by-service"
+            params = {
+                "tenantId": tenant_id,
+                "companyId": company_id,
+                "serviceId": service_id,
+                "start": f"{start_date}T00:00:00",
+                "end": f"{end_date}T23:59:59"
+            }
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(url, params=params, timeout=10.0)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if not data.get("providers") or data.get("noSchedule"):
+                        return json.dumps({"noSchedule": True, "message": "No hay programación para este servicio. Transfiere al asesor."})
+                    # Limitar a 3 proveedores, 5 slots cada uno para ahorrar tokens
+                    for p in data.get("providers", []):
+                        p["availableSlots"] = p["availableSlots"][:5]
+                    data["providers"] = data["providers"][:3]
+                    return json.dumps(data)
+                return json.dumps({"error": f"API Error: {resp.status_code}"})
+        except Exception as e:
+            return json.dumps({"error": str(e)})
+
+    async def _search_contact_by_identification(self, identification: str, tenant_id: int, company_id: int) -> str:
+        try:
+            url = f"{config.java_api_url}/api/v1/contacts/search"
+            headers = {"x-tenant-id": str(tenant_id), "x-company-id": str(company_id)}
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(url, params={"q": identification}, headers=headers, timeout=10.0)
+                if resp.status_code == 200:
+                    return json.dumps(resp.json())
+                return json.dumps({"error": "No se encontró el contacto"})
+        except Exception as e:
+            return json.dumps({"error": str(e)})
+
+    async def _book_appointment(self, slot_id: int, title: str, observations: str = "", tenant_id: int = 1, company_id: int = 1, contact_id: int = 0, service_id: int = None) -> str:
+        try:
+            url = f"http://scheduler-service:8080/api/appointments"
+            payload = {
+                "tenantId": tenant_id,
+                "companyId": company_id,
+                "contactId": contact_id,
+                "slotId": slot_id,
+                "title": title,
+                "observations": observations,
+                "status": "RESERVED",
+                "channel": "Agente IA"
+            }
+            if service_id:
+                payload["serviceId"] = service_id
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(url, json=payload, timeout=10.0)
+                if resp.status_code == 200:
+                    return json.dumps({"status": "success", "data": resp.json()})
+                return json.dumps({"error": f"API Error: {resp.status_code}"})
+        except Exception as e:
+            return json.dumps({"error": str(e)})
+
+    async def _manage_calendar_event(self, args: Dict[str, Any], tenant_id: int, contact_id: int) -> str:
+        action = args.pop("action")
+        
+        # 1. Fetch contact to check for name and email
+        contact = await self._db.get_contact_by_id(contact_id, tenant_id)
+        if not contact:
+            return json.dumps({"error": "Contact not found"})
+        
+        name = contact.get("name")
+        email = args.get("email") or contact.get("email")
+        
+        if not name or not email:
+            return json.dumps({
+                "error": "INCOMPLETE_CONTACT_INFO", 
+                "message": "Necesito el nombre completo y el correo electrónico del cliente para agendar la cita. ¿Podrías pedírselos?"
+            })
+        
+        # 2. Update contact if a new email was provided
+        if args.get("email") and args.get("email") != contact.get("email"):
+            # Idempotency check: does this email already belong to someone else?
+            existing_contact = await self._db.get_contact(args.get("email"), tenant_id)
+            if existing_contact and existing_contact.get("id") != contact_id:
+                logger.info(f"Using existing contact email {args.get('email')} for event without updating current contact.", extra={"tenant_id": tenant_id})
+                email = args.get("email")
+            else:
+                await self._db.update_contact(contact_id, tenant_id, {"email": args.get("email")})
+                email = args.get("email")
+        else:
+            email = email or contact.get("email")
+        
+        # 3. Get or create "Calendario IA"
+        company_id = contact.get("company_id")
+        if not company_id:
+            comp = await self._db.get_company_info(tenant_id)
+            company_id = comp.get("id")
+        
+        calendar_id = await self._db.get_or_create_ai_calendar(tenant_id, company_id)
+        
+        # 4. Prepare event data
+        start_time_str = args["start_time"]
+        try:
+            # ISO 8601 parsing
+            clean_time = start_time_str.replace("Z", "").split(".")[0]
+            start_dt = datetime.fromisoformat(clean_time)
+            end_dt = start_dt + timedelta(minutes=30)
+            end_time_str = end_dt.isoformat()
+        except Exception as e:
+            return json.dumps({"error": f"Invalid date format: {str(e)}"})
+            
+        event_data = {
+            "calendar_id": calendar_id,
+            "title": args["title"],
+            "description": args.get("description", ""),
+            "start_time": start_time_str,
+            "end_time": end_time_str,
+            "event_type": "NOTIFICATION",
+            "event_subtype": "whatsapp",
+            "status": "SCHEDULED",
+            "related_entity_type": "CONTACT",
+            "related_entity_id": contact_id,
+            "payload": json.dumps({
+                "remindBefore": 5,
+                "remindUnit": "MINUTES",
+                "notifyVia": "email",
+                "to": email,
+                "subject": f"Confirmación de Cita: {args['title']}",
+                "body": f"Hola {contact.get('name', 'cliente')}, tu cita para '{args['title']}' ha sido agendada para el {start_dt.strftime('%d/%m/%Y a las %H:%M')}.",
+                "sendConfirmation": True
+            })
+        }
+        
+        if action == "create":
+            try:
+                url = f"{config.scheduler_api_url}/api/events"
+                # EventDto expected by Java
+                payload = {
+                    "tenantId": tenant_id,
+                    "companyId": company_id,
+                    "calendarId": calendar_id,
+                    "title": args["title"],
+                    "description": str(args.get("description", ""))[:500],
+                    "eventType": "NOTIFICATION",
+                    "eventSubtype": "whatsapp",
+                    "startTime": args["start_time"],
+                    "endTime": end_time_str,
+                    "relatedEntityType": "CONTACT",
+                    "relatedEntityId": contact_id,
+                    "payload": json.dumps({
+                        "remindBefore": 5,
+                        "remindUnit": "MINUTES",
+                        "notifyVia": "email",
+                        "to": email,
+                        "subject": f"Confirmación de Cita: {args['title']}",
+                        "body": f"Hola {contact.get('name', 'cliente')}, tu cita para '{args['title']}' ha sido agendada para el {start_dt.strftime('%d/%m/%Y a las %H:%M')}.",
+                        "sendConfirmation": True
+                    })
+                }
+                logger.info(f"🚀 Calling scheduler-service API: {url}")
+                res = requests.post(url, json=payload, timeout=10)
+                if res.status_code in [200, 201]:
+                    return json.dumps({"success": True, "data": res.json(), "message": "Cita agendada correctamente y confirmación enviada."})
+                return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
+            except Exception as e:
+                logger.error(f"Failed to call scheduler API: {e}")
+                return json.dumps({"error": str(e)})
+
+        elif action == "update":
+            eid = args.get("event_id")
+            if not eid:
+                return json.dumps({"error": "event_id is required for update"})
+            try:
+                url = f"{config.scheduler_api_url}/api/events/{eid}"
+                update_payload = {
+                    "title": args["title"],
+                    "description": args.get("description", ""),
+                    "startTime": args["start_time"],
+                    "endTime": end_time_str,
+                    "payload": json.dumps({
+                        "remindBefore": 5,
+                        "remindUnit": "MINUTES",
+                        "notifyVia": "email",
+                        "to": email,
+                        "subject": f"Reprogramación de Cita: {args['title']}",
+                        "body": f"Hola {contact.get('name', 'cliente')}, tu cita para '{args['title']}' ha sido REPROGRAMADA para el {start_dt.strftime('%d/%m/%Y a las %H:%M')}.",
+                        "sendConfirmation": True
+                    })
+                }
+                res = requests.put(url, json=update_payload, timeout=10)
+                if res.status_code == 200:
+                    return json.dumps({"success": True, "message": "Cita reprogramada correctamente y notificación enviada."})
+                return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
+            except Exception as e:
+                return json.dumps({"error": str(e)})
+            
+        return json.dumps({"error": "Invalid action"})
+
+    async def _search_calendar_events(self, args: Dict[str, Any], tenant_id: int, contact_id: int) -> str:
+        contact = await self._db.get_contact_by_id(contact_id, tenant_id)
+        company_id = contact.get("company_id") if contact else None
+        if not company_id:
+            comp = await self._db.get_company_info(tenant_id)
+            company_id = comp.get("id")
+            
+        cid = contact_id if args.get("filter_by_contact") else None
+        events = await self._db.get_calendar_events(tenant_id, company_id, args["start_time"], args["end_time"], cid)
+        for ev in events:
+            for k, v in ev.items():
+                if hasattr(v, "isoformat"):
+                    ev[k] = v.isoformat()
+        return json.dumps(events)
+
+    async def _delete_calendar_event(self, args: Dict[str, Any], tenant_id: int) -> str:
+        eid = args.get("event_id")
+        try:
+            url = f"{config.scheduler_api_url}/api/events/{eid}"
+            res = requests.delete(url, timeout=10)
+            if res.status_code in [200, 204]:
+                return json.dumps({"success": True})
+            return json.dumps({"error": f"API {res.status_code}", "detail": res.text})
+        except Exception as e:
+            return json.dumps({"error": str(e)})

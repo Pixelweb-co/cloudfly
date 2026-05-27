@@ -1,0 +1,36 @@
+package com.app.dto;
+
+import com.app.persistence.entity.QuoteStatus;
+import lombok.Data;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Data
+public class QuoteRequestDTO {
+    private Long tenantId;
+    private Long companyId;
+    private Long customerId;
+    private String customerName;
+    private LocalDateTime quoteDate;
+    private LocalDateTime expirationDate;
+    private QuoteStatus status;
+    private String notes;
+    private String terms;
+    private BigDecimal subtotal;
+    private BigDecimal discount;
+    private BigDecimal tax;
+    private BigDecimal total;
+    private String externalReference;
+    private List<QuoteItemRequestDTO> items;
+
+    @Data
+    public static class QuoteItemRequestDTO {
+        private Long productId;
+        private String productName;
+        private Integer quantity;
+        private BigDecimal unitPrice;
+        private BigDecimal discount;
+        private BigDecimal subtotal;
+    }
+}

@@ -1,0 +1,45 @@
+version: "3.1"
+services:
+    www:
+        build: .
+        ports: 
+            - "8082:80"
+        volumes:
+            - ./public:/var/www/html
+        links:
+            - db
+        networks:
+            - default
+
+    db:
+        image: mysql:8.0
+        ports:
+            - "3306:3306"  # Puerto mapeado para MySQL
+        command: --default-authentication-plugin=mysql_native_password  # Soluciona problemas de autenticación
+        environment:
+            MYSQL_DATABASE: dbname  # Nombre de la base de datos predeterminada
+            MYSQL_ROOT_PASSWORD: Elian2020#  # Contraseña del usuario root
+        volumes:
+            - ./dump:/docker-entrypoint-initdb.d  # Volumen para el volcado de la base de datos
+            - ./conf:/etc/mysql/conf.d  # Volumen para configuraciones personalizadas de MySQL
+            - persistent:/var/lib/mysql  # Volumen persistente para los datos de MySQL
+        networks:
+            - default
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        links:
+            - db:db
+        ports:
+            - "8081:80"  # Puerto mapeado para phpMyAdmin
+        environment:
+            MYSQL_ROOT_PASSWORD: Elian2020#  # Usamos la misma contraseña de root de MySQL
+        networks:
+            - default
+
+volumes:
+    persistent:  # Volumen persistente para los datos de MySQL
+
+networks:
+    default:
+        driver: bridge

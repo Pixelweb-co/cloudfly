@@ -1,0 +1,75 @@
+// MUI Imports
+import Button from '@mui/material/Button'
+
+// Type Imports
+import type { ChildrenType } from '@core/types'
+
+// Layout Imports
+import LayoutWrapper from '@layouts/LayoutWrapper'
+import VerticalLayout from '@layouts/VerticalLayout'
+import HorizontalLayout from '@layouts/HorizontalLayout'
+
+// Component Imports
+import Providers from '@components/Providers'
+import Navigation from '@components/layout/vertical/Navigation'
+import Header from '@components/layout/horizontal/Header'
+import Navbar from '@components/layout/vertical/Navbar'
+import VerticalFooter from '@components/layout/vertical/Footer'
+import HorizontalFooter from '@components/layout/horizontal/Footer'
+import Customizer from '@core/components/customizer'
+import ScrollToTop from '@core/components/scroll-to-top'
+import AuthSync from '@/components/AuthSync'
+import OnboardingGuard from '@/components/OnboardingGuard'
+
+// Util Imports
+import { getMode, getSystemMode, getSettingsFromCookie } from '@core/utils/serverHelpers'
+
+// Context & Chat Imports
+import { SocketProvider } from '@/contexts/SocketContext'
+import { PopupChatProvider } from '@/contexts/PopupChatContext'
+import ChatPopupsContainer from '@/components/chat/ChatPopupsContainer'
+
+const Layout = async ({ children }: ChildrenType) => {
+  // Vars
+  const direction = 'ltr'
+  const mode = getMode()
+  const systemMode = getSystemMode()
+  const settingsCookie = getSettingsFromCookie()
+
+  return (
+    <Providers direction={direction} mode={mode} systemMode={systemMode} settingsCookie={settingsCookie}>
+      <SocketProvider>
+        <PopupChatProvider>
+          <AuthSync />
+          <OnboardingGuard />
+          <LayoutWrapper
+            systemMode={systemMode}
+            verticalLayout={
+              <VerticalLayout
+                navigation={<Navigation mode={mode} systemMode={systemMode} />}
+                navbar={<Navbar />}
+                footer={<VerticalFooter />}
+              >
+                {children}
+              </VerticalLayout>
+            }
+            horizontalLayout={
+              <HorizontalLayout header={<Header />} footer={<HorizontalFooter />}>
+                {children}
+              </HorizontalLayout>
+            }
+          />
+          <ChatPopupsContainer />
+          <ScrollToTop className='mui-fixed'>
+            <Button variant='contained' className='is-10 bs-10 rounded-full p-0 min-is-0 flex items-center justify-center'>
+              <i className='tabler-arrow-up' />
+            </Button>
+          </ScrollToTop>
+          <Customizer dir={direction} />
+        </PopupChatProvider>
+      </SocketProvider>
+    </Providers>
+  )
+}
+
+export default Layout

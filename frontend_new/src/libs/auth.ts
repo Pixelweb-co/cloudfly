@@ -1,0 +1,175 @@
+// Third-party Imports
+import CredentialProvider from 'next-auth/providers/credentials'
+import GoogleProvider from 'next-auth/providers/google'
+import type { NextAuthOptions } from 'next-auth'
+
+export const authOptions: NextAuthOptions = {
+
+  // ** Configure one or more authentication providers
+  // ** Please refer to https://next-auth.js.org/configuration/options#providers for more `providers` options
+  providers: [
+    CredentialProvider({
+      // ** The name to display on the sign in form (e.g. 'Sign in with...')
+      // ** For more details on Credentials Provider, visit https://next-auth.js.org/providers/credentials
+      name: 'Credentials',
+      type: 'credentials',
+
+      /*
+       * As we are using our own Sign-in page, we do not need to change
+       * username or password attributes manually in following credentials object.
+       */
+      credentials: {},
+      async authorize(credentials) {
+        /*
+         * You need to provide your own logic here that takes the credentials submitted and returns either
+         * an object representing a user or value that is false/null if the credentials are invalid.
+         * For e.g. return { id: 1, name: 'J Smith', email: 'jsmith@example.com' }
+         * You can also use the `req` object to obtain additional parameters (i.e., the request IP address)
+         */
+        const { username, password } = credentials as { username: string; password: string }
+
+        try {
+          // ** Login API Call to match the user credentials and receive user data in response along with his role
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+          })
+
+          const responseText = await res.text()
+          console.log(`[NextAuth] Login response status: ${res.status}`)
+          console.log(`[NextAuth] Login response text: ${responseText.substring(0, 500)}`)
+          
+          let data;
+          try {
+            data = JSON.parse(responseText);
+          } catch (e) {
+            console.error(`[NextAuth] JSON parse error:`, e)
+            throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`)
+          }
+
+          if (res.status === 401) {
+            throw new Error(JSON.stringify(data))
+          }
+
+          if (res.status === 200) {
+            /*
+             * Please unset all the sensitive information of the user either from API response or before returning
+             * user data below. Below return statement will set the user object in the token and the same is set in
+             * the session which will be accessible all over the app.
+             */
+            return data
+          }
+
+          return null
+        } catch (e: any) {
+          throw new Error(e.message)
+        }
+      }
+    }),
+
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string
+    })
+
+    // ** ...add more providers here
+  ],
+
+  // ** Please refer to https://next-auth.js.org/configuration/options#session for more `session` options
+  session: {
+    /*
+     * Choose how you want to save the user session.
+     * The default is `jwt`, an encrypted JWT (JWE) stored in the session cookie.
+     * If you use an `adapter` however, NextAuth default it to `database` instead.
+     * You can still force a JWT session by explicitly defining `jwt`.
+     * When using `database`, the session cookie will only contain a `sessionToken` value,
+     * which is used to look up the session in the database.
+     * If you use a custom credentials provider, user accounts will not be persisted in a database by NextAuth.js (even if one is configured).
+     * The option to use JSON Web Tokens for session tokens must be enabled to use a custom credentials provider.
+     */
+    strategy: 'jwt',
+
+    // ** Seconds - How long until an idle session expires and is no longer valid
+    maxAge: 30 * 24 * 60 * 60 // ** 30 days
+  },
+
+  // ** Please refer to https://next-auth.js.org/configuration/options#pages for more `pages` options
+  pages: {
+    signIn: '/login'
+  },
+
+  // ** Please refer to https://next-auth.js.org/configuration/options#callbacks for more `callbacks` options
+  callbacks: {
+    async jwt({ token, user, trigger, session }) {
+      if (user) {
+        // When user signs in, user object maps to the return value of authorize callback
+        const u = user as any
+
+        token.accessToken = u.jwt || u.token || u.accessToken
+
+        // Mapear datos desde el UserDto anidado
+        if (u.user) {
+          token.id = u.user.id
+          token.role = u.user.roles?.[0]?.role_name || u.user.roles?.[0]?.name || u.role
+          token.name = `${u.user.nombres || ''} ${u.user.apellidos || ''}`.trim() || u.username
+          token.enabled = u.user.enabled
+          token.verificationToken = u.user.verificationToken
+          token.userCapabilities = u.user.userCapabilities
+          token.customerId = u.user.customerId
+          token.activeCompanyId = u.user.activeCompanyId
+          token.roles = u.user.roles || []
+          token.onboardingCompleted = u.user.onboardingCompleted // NEW
+          token.customer = u.user.customer // MAP DE CUSTOMER
+        } else {
+          token.id = u.id
+          token.role = u.role
+          token.name = u.fullName || u.name
+          token.enabled = u.enabled
+          token.verificationToken = u.verificationToken
+          token.userCapabilities = u.userCapabilities
+          token.customerId = u.customerId
+          token.activeCompanyId = u.activeCompanyId
+          token.roles = u.roles || []
+          token.onboardingCompleted = u.onboardingCompleted // NEW
+          token.customer = u.customer // MAP DE CUSTOMER
+        }
+      }
+
+      // Handle session updates from client
+      if (trigger === "update" && session) {
+        if (session.user) {
+          token.onboardingCompleted = session.user.onboardingCompleted
+          token.activeCompanyId = session.user.activeCompanyId
+          token.customerId = session.user.customerId
+          token.customer = session.user.customer // MAP DE CUSTOMER EN UPDATE
+        }
+      }
+
+
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        // Pass properties from token to session
+        ; (session as any).accessToken = token.accessToken
+          ; (session as any).user.id = token.id
+          ; (session as any).user.role = token.role
+          ; (session as any).user.name = token.name
+          ; (session as any).user.enabled = token.enabled
+          ; (session as any).user.verificationToken = token.verificationToken
+          ; (session as any).user.userCapabilities = token.userCapabilities
+          ; (session as any).user.customerId = token.customerId
+          ; (session as any).user.activeCompanyId = token.activeCompanyId
+          ; (session as any).user.roles = token.roles
+          ; (session as any).user.onboardingCompleted = token.onboardingCompleted // NEW
+          ; (session as any).user.customer = token.customer // MAP DE CUSTOMER A LA SESION
+      }
+
+
+      return session
+    }
+  }
+}
