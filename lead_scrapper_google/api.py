@@ -102,7 +102,7 @@ def run_scrape(req: SearchRequest) -> list[Lead]:
         pages=req.pages,
         country_code=req.country_code,
         headless=True,          # siempre headless en API/Docker
-        verbose=False,
+        verbose=True,
         max_links=req.max_links,
     )
 

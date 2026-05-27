@@ -404,6 +404,8 @@ services:
     security_opt:
       - seccomp:unconfined
     shm_size: '2gb'
+    environment:
+      - PYTHONUNBUFFERED=1
 
   marketing-agent:
     build:
