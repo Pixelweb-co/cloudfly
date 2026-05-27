@@ -19,6 +19,8 @@ RUN pip install --upgrade pip && \
 # Copiar proyecto y el modulo de servicios del agente antiguo para resolver dependencias
 COPY marketing_team_ai/ .
 COPY marketing_agent/services/ ./services/
+COPY marketing_agent/models/ ./models/
+
 
 
 # Puerto
