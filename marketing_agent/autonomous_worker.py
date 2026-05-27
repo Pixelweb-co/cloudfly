@@ -78,7 +78,8 @@ class AutonomousMarketingWorker:
         cursor = conn.cursor(dictionary=True)
         
         query = """
-            SELECT c.id, c.tenant_id, c.name, cl.business_type, cl.business_description
+            SELECT c.id, c.tenant_id, c.name, cl.business_type, cl.business_description,
+                   cl.pais_nombre, cl.ciudad_dian, cl.departamento_dian
             FROM companies c
             JOIN clientes cl ON c.tenant_id = cl.id
             WHERE c.tenant_id = %s AND c.status = 1
@@ -599,9 +600,20 @@ Responde únicamente con este formato JSON:
                     logger.error(f"      ✗ Failed to find or create sending list. Skipping category.")
                     continue
                     
-                # Fetch leads via Prospector
-                logger.info(f"      → Prospecting leads for '{category}' (limit=5)...")
-                leads = self.prospector_service.fetch_leads_from_generator(category, limit=5)
+                # Extract location from company/tenant database columns
+                country = company.get("pais_nombre") or "Colombia"
+                state = company.get("departamento_dian")
+                city = company.get("ciudad_dian")
+
+                # Fetch leads via Prospector with dynamic location
+                logger.info(f"      → Prospecting leads for '{category}' in {city or 'any city'}, {state or 'any state'}, {country} (limit=5)...")
+                leads = self.prospector_service.fetch_leads_from_generator(
+                    keyword=category,
+                    country=country,
+                    state=state,
+                    city=city,
+                    limit=5
+                )
                 
                 # Wait 25 seconds to respect lead-generator rate limits
                 logger.info("⏳ Waiting 25 seconds to respect lead-generator rate limits...")

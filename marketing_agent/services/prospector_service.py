@@ -85,16 +85,18 @@ Devuelve únicamente la palabra clave, sin explicaciones ni texto adicional."""
                 return "panaderias"
             return "empresas"
             
-    def fetch_leads_from_generator(self, keyword: str, limit: int = 10) -> List[Dict]:
+    def fetch_leads_from_generator(self, keyword: str, country: str = "Colombia", state: str = None, city: str = None, limit: int = 10) -> List[Dict]:
         """
-        Calls lead-generator FastAPI client (port 8001) to fetch potential cold leads.
+        Calls lead-generator FastAPI client (port 8000) to fetch potential cold leads.
         """
         url = f"{self.lead_generator_url}/leads/generate"
         payload = {
             "mode": "automatic",
             "filters": {
                 "keyword": keyword,
-                "country": "Colombia",
+                "country": country,
+                "state": state,
+                "city": city,
                 "limit": limit,
                 "source": "auto",
                 "enrich": True
@@ -102,7 +104,7 @@ Devuelve únicamente la palabra clave, sin explicaciones ni texto adicional."""
         }
         
         try:
-            logger.info(f"📞 Calling lead-generator at {url} for keyword '{keyword}'...")
+            logger.info(f"📞 Calling lead-generator at {url} for keyword '{keyword}' in {city or 'any city'}, {state or 'any state'}, {country}...")
             resp = requests.post(url, json=payload, timeout=90)
             resp.raise_for_status()
             data = resp.json()
