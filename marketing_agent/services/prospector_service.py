@@ -137,36 +137,77 @@ Devuelve únicamente la palabra clave, sin explicaciones ni texto adicional."""
 
         return result
             
+    def clean_and_normalize_phone(self, phone_str: str, country: str = "Colombia") -> str:
+        """
+        Cleans phone_str (keeping only digits) and prepends country code if missing.
+        """
+        if not phone_str:
+            return ""
+        
+        # Keep only digits
+        digits = ''.join(filter(str.isdigit, phone_str))
+        if not digits:
+            return ""
+        
+        country_lower = country.lower() if country else "colombia"
+        if "colombia" in country_lower:
+            # Colombia mobile starts with 3 (10 digits)
+            if len(digits) == 10 and digits.startswith("3"):
+                return "57" + digits
+            # If it already starts with 57 and has 12 digits, it's correct
+            if len(digits) == 12 and digits.startswith("57"):
+                return digits
+        elif "mexico" in country_lower or "méxico" in country_lower:
+            # Mexico mobile code is 52
+            if len(digits) == 10:
+                return "52" + digits
+            if len(digits) == 12 and digits.startswith("52"):
+                return digits
+                
+        return digits
+
     def fetch_leads_from_generator(self, keyword: str, country: str = "Colombia", state: str = None, city: str = None, limit: int = 10) -> List[Dict]:
         """
-        Calls lead-generator FastAPI client (port 8000) to fetch potential cold leads.
+        Calls lead_scrapper_google FastAPI client (port 8000) to fetch potential cold leads.
         """
-        # Normalize keyword to increase chance of matching in lead-generator
+        # Normalize keyword to increase chance of matching
         normalized = self.normalize_keyword(keyword)
-        url = f"{self.lead_generator_url}/leads/generate"
+        url = f"{Config.LEAD_SCRAPER_GOOGLE_URL}/search"
         payload = {
-            "mode": "automatic",
-            "filters": {
-                "keyword": normalized,
-                "country": country,
-                "state": state,
-                "city": city,
-                "limit": limit,
-                "source": "auto",
-                "enrich": True
-            }
+            "category": normalized,
+            "country": country,
+            "city": city,
+            "pages": 2,
+            "max_links": limit,
+            "country_code": "57"
         }
         
         try:
-            logger.info(f"📞 Calling lead-generator at {url} for keyword '{keyword}' (normalized: '{normalized}') in {city or 'any city'}, {state or 'any state'}, {country}...")
-            resp = requests.post(url, json=payload, timeout=90)
+            logger.info(f"📞 Calling lead-scrapper-google at {url} for keyword '{keyword}' (normalized: '{normalized}') in {city or 'any city'}, {country}...")
+            resp = requests.post(url, json=payload, timeout=120)
             resp.raise_for_status()
             data = resp.json()
-            leads = data.get("leads", [])
-            logger.info(f"✅ Successfully retrieved {len(leads)} leads from lead-generator")
+            raw_leads = data.get("results", [])
+            
+            leads = []
+            for item in raw_leads:
+                raw_phone = item.get("telefono") or item.get("whatsapp") or ""
+                # Normalize and clean phone numbers without spaces and with country code
+                clean_phone = self.clean_and_normalize_phone(raw_phone, country)
+                
+                if clean_phone:
+                    leads.append({
+                        "name": item.get("nombre") or item.get("titulo") or "Cliente Frío",
+                        "phone": clean_phone,
+                        "whatsapp": item.get("whatsapp") or "",
+                        "email": item.get("email") or "",
+                        "website": item.get("sitio_web") or ""
+                    })
+            
+            logger.info(f"✅ Successfully retrieved and normalized {len(leads)} leads from lead-scrapper-google")
             return leads
         except Exception as e:
-            logger.error(f"❌ Failed to fetch leads from lead-generator: {e}")
+            logger.error(f"❌ Failed to fetch leads from lead-scrapper-google: {e}")
             return []
 
     def save_leads_to_crm(self, tenant_id: int, company_id: int, leads: List[Dict]) -> List[int]:

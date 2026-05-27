@@ -391,6 +391,19 @@ services:
       - APIFY_TOKEN=${APIFY_TOKEN}
       - APIFY_BASE_URL=https://api.apify.com/v2
 
+  lead-scrapper-google:
+    build:
+      context: ./
+      dockerfile: lead_scrapper_google/Dockerfile
+    container_name: lead-scrapper-google
+    restart: always
+    ports:
+      - "8002:8000"
+    networks:
+      - app-net
+    security_opt:
+      - seccomp:unconfined
+    shm_size: '2gb'
 
   marketing-agent:
     build:
@@ -415,6 +428,7 @@ services:
       - AUTHENTICATION_API_KEY=${AUTHENTICATION_API_KEY}
       - BACKEND_API_KEY=${AUTHENTICATION_API_KEY}
       - LEAD_GENERATOR_URL=http://lead-generator:8000
+      - LEAD_SCRAPER_GOOGLE_URL=http://lead-scrapper-google:8000
     networks:
       - app-net
       - kafka-net

@@ -49,6 +49,9 @@ class Config:
     # Lead Generator
     LEAD_GENERATOR_URL = os.getenv("LEAD_GENERATOR_URL", "http://lead-generator:8001")
 
+    # Lead Scraper Google
+    LEAD_SCRAPER_GOOGLE_URL = os.getenv("LEAD_SCRAPER_GOOGLE_URL", "http://lead-scrapper-google:8000")
+
     # Evolution API (WhatsApp)
     EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL", "http://evolution-api:8080")
     EVOLUTION_API_KEY = os.getenv("EVOLUTION_API_KEY", "")
