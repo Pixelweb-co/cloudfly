@@ -41,11 +41,11 @@ def build_analysis_crew(company, product):
                 4. Además, describe hasta 5 oportunidades de negocio concretas y necesidades detectadas (por ejemplo: "pequeñas clínicas sin sitio web que usan WhatsApp para agendar citas", "restaurantes sin sistema de pedidos online") que justifiquen la prospección y cómo el producto los soluciona.
 
                 IMPORTANTE: Responde estrictamente con un objeto JSON con la siguiente forma:
-                {
+                {{
                     "is_b2b": true|false,
                     "categories": ["categoria1", ...],
                     "opportunities": ["oportunidad1", ...]
-                }
+                }}
         ''',
                 expected_output="JSON con is_b2b, categories y opportunities",
         agent=create_icp_agent(product.get('product_name'), product.get('description')),
