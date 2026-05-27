@@ -385,7 +385,7 @@ services:
     restart: always
     ports:
       - "8001:8000"
-    networks:
+    networks: 
       - app-net
     environment:
       - APIFY_TOKEN=${APIFY_TOKEN}
