@@ -44,6 +44,7 @@ class Config:
 
     # Services
     LEAD_GENERATOR_URL = os.getenv("LEAD_GENERATOR_URL", "http://lead-generator:8000")
+    LEAD_SCRAPER_GOOGLE_URL = os.getenv("LEAD_SCRAPER_GOOGLE_URL", "http://lead-scrapper-google:8000")
     BACKEND_URL = os.getenv("BACKEND_URL", "http://backend-api:8080")
     BACKEND_API_KEY = os.getenv("BACKEND_API_KEY", "")
 
