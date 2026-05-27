@@ -125,14 +125,14 @@ def extraer_contactos(page, url: str, phone_patterns: list, country_code: str) -
 
     # Nombre: H1 o título
     try:
-        h1 = page.locator("h1").first.inner_text(timeout=3000).strip()
+        h1 = page.locator("h1").first.inner_text(timeout=1500).strip()
         lead.nombre = h1[:80] if h1 else lead.titulo
     except Exception:
         lead.nombre = lead.titulo
 
     # Contenido de texto de la página + atributos href
     try:
-        text = page.inner_text("body", timeout=5000)
+        text = page.inner_text("body", timeout=2500)
     except Exception:
         text = ""
 
@@ -185,11 +185,11 @@ def extraer_contactos(page, url: str, phone_patterns: list, country_code: str) -
     # ── Intentar página de contacto si no hallamos nada ───────────────────────
     if not lead.telefono and not lead.email:
         base = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
-        for path in ["/contacto", "/contact", "/contactanos", "/nosotros"]:
+        for path in ["/contacto", "/contact"]:
             try:
-                page.goto(base + path, wait_until="domcontentloaded", timeout=10000)
-                time.sleep(1)
-                extra_text = page.inner_text("body", timeout=4000)
+                page.goto(base + path, wait_until="domcontentloaded", timeout=4000)
+                time.sleep(0.5)
+                extra_text = page.inner_text("body", timeout=2000)
                 extra_html = page.content()
                 combo = extra_text + "\n" + extra_html
 
@@ -322,8 +322,8 @@ def scrape(
                 print(f"[{i}/{len(result_links)}] {short}")
 
             try:
-                page.goto(url, wait_until="domcontentloaded", timeout=15000)
-                time.sleep(1.5)
+                page.goto(url, wait_until="domcontentloaded", timeout=6000)
+                time.sleep(0.5)
             except Exception as e:
                 if verbose:
                     print(f"         ⚠️  No se pudo cargar: {e}")
