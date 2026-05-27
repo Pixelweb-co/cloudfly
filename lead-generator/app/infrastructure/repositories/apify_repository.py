@@ -115,7 +115,7 @@ class LocalGoogleScraper:
                             
                     logger.warning(f"✅ [LOCAL-SCRAPER] DuckDuckGo Scraper found {len(leads)} leads!")
         except Exception as e:
-            logger.error(f"❌ [LOCAL-SCRAPER] DuckDuckGo Scraper failed: {e}")
+            logger.error(f"❌ [LOCAL-SCRAPER] DuckDuckGo Scraper failed: {str(e)}", exc_info=True)
             
         # Strategy 2: Google Search Fallback (if DDG returned nothing)
         if not leads:
@@ -126,17 +126,16 @@ class LocalGoogleScraper:
                     resp = await client.get(google_url, headers=headers)
                     if resp.status_code == 200:
                         html = resp.text
-                        results = re.findall(r'<a href="(https?://[^"]+)"[^>]*><h3[^>]*>(?:<div[^>]*>)?(?:<span[^>]*>)?(.*?)(?:</span>)?(?:</div>)?</h3>', html)
+                        
+                        # Extract H3 headings from Google Search
+                        h3s = re.findall(r'<h3[^>]*>(.*?)</h3>', html, re.DOTALL)
                         
                         phone_pattern = re.compile(r'\b(?:\+?57)?\s?(?:3[0-9]{2}|[1-7][0-9]{2})\s?[0-9]{3}\s?[0-9]{4}\b|\b3[0-9]{2}[0-9]{7}\b')
                         seen_phones = set()
                         seen_names = set()
                         
-                        for link_url, title_html in results:
-                            if "google.com" in link_url or "youtube.com" in link_url:
-                                continue
-                                
-                            title = re.sub(r'<[^>]+>', '', title_html).strip()
+                        for h3_html in h3s:
+                            title = re.sub(r'<[^>]+>', '', h3_html).strip()
                             title = urllib.parse.unquote(title)
                             
                             if not title or len(title) < 3 or title.lower() in seen_names:
@@ -144,8 +143,17 @@ class LocalGoogleScraper:
                                 
                             seen_names.add(title.lower())
                             
-                            phones = phone_pattern.findall(html)
+                            # Find the nearest non-google link in an 800-character window around the H3 heading
+                            pos = html.find(h3_html)
+                            surrounding = html[max(0, pos-400):min(len(html), pos+400)]
+                            links = re.findall(r'href="([^"]+)"', surrounding)
+                            clean_links = [l for l in links if "google.com" not in l and "http" in l]
+                            
+                            link_url = clean_links[0] if clean_links else ""
+                            
+                            # Extract phone number near this heading if possible
                             phone = None
+                            phones = phone_pattern.findall(surrounding)
                             for p in phones:
                                 p_clean = "".join(filter(str.isdigit, p))
                                 if len(p_clean) >= 7 and p_clean not in seen_phones:
@@ -179,7 +187,7 @@ class LocalGoogleScraper:
                                 
                         logger.warning(f"✅ [LOCAL-SCRAPER] Google Scraper found {len(leads)} leads!")
             except Exception as e:
-                logger.error(f"❌ [LOCAL-SCRAPER] Google Fallback failed: {e}")
+                logger.error(f"❌ [LOCAL-SCRAPER] Google Fallback failed: {str(e)}", exc_info=True)
                 
         return leads
 
