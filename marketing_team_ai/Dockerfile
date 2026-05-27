@@ -10,14 +10,16 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar requirements primero (cache Docker)
-COPY requirements.txt .
+COPY marketing_team_ai/requirements.txt .
 
 # Instalar dependencias
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copiar proyecto
-COPY . .
+# Copiar proyecto y el modulo de servicios del agente antiguo para resolver dependencias
+COPY marketing_team_ai/ .
+COPY marketing_agent/services/ ./services/
+
 
 # Puerto
 EXPOSE 8000
