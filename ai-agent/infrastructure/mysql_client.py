@@ -341,6 +341,7 @@ class AsyncMySQLClient:
                 return []
 
             placeholders = ", ".join(["%s"] * len(advisor_ids))
+            print(f"DEBUG: placeholders for SQL IN clause: {placeholders}")  # Debug log
             sql = f"""
                 SELECT DISTINCT c.phone
                 FROM users u
