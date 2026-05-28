@@ -215,6 +215,8 @@ class AIAgentApp:
                     contact_id=payload.contact_id,
                     tenant_id=payload.tenant_id,
                 )
+
+                print("DEBUG: advisor_phones =", advisor_phones)  # Debug log to check assigned advisors
                 notify_phones = advisor_phones
                 recipient_type = "assigned_advisors"
 
