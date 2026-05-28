@@ -331,6 +331,8 @@ class AsyncMySQLClient:
             )
             row = await cur.fetchone()
 
+            print(f"DEBUG: Raw assigned_user_ids value: {row.get('assigned_user_ids') if row else 'No contact found'}")  # Debug log
+
             if not row:
                 return []
 
