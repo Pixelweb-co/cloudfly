@@ -339,13 +339,13 @@ class AsyncMySQLClient:
             sql = f"""
                 SELECT DISTINCT c.phone
                 FROM users u
-                INNER JOIN contacts c ON c.id = u.contact_id
-                WHERE u.tenant_id = %s
-                  AND u.id IN ({placeholders})
+                LEFT JOIN contacts c ON c.id = u.contact_id
+                WHERE u.id IN ({placeholders})
+                  AND c.tenant_id = %s
                   AND c.phone IS NOT NULL
                   AND TRIM(c.phone) <> ''
             """
-            await cur.execute(sql, (tenant_id, *advisor_ids))
+            await cur.execute(sql, (*advisor_ids, tenant_id))
             rows = await cur.fetchall()
             return [r["phone"] for r in rows if r.get("phone")]
 
@@ -357,9 +357,11 @@ class AsyncMySQLClient:
         sql = """
             SELECT DISTINCT c.phone
             FROM users u
-            INNER JOIN contacts c ON c.id = u.contact_id
-            WHERE u.tenant_id = %s
-              AND u.role_id IN (2, 3)
+            JOIN user_roles ur ON u.id = ur.user_id
+            JOIN roles r ON ur.role_id = r.id
+            LEFT JOIN contacts c ON c.id = u.contact_id
+            WHERE u.customer_id = %s
+              AND r.id IN (2, 3)
               AND c.phone IS NOT NULL
               AND TRIM(c.phone) <> ''
         """
