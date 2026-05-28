@@ -12,7 +12,8 @@ from typing import AsyncGenerator, Optional, List, Dict, Any
 import aiomysql
 
 from application.config import config
-from domain.models import ContactPipelineState, PipelineStage
+from domain.campaign_context import is_likely_campaign_outbound_echo
+from domain.models import CampaignContext, ContactPipelineState, PipelineStage
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,91 @@ class AsyncMySQLClient:
 
         # Fallback: comma-separated values.
         return [int(part.strip()) for part in value.split(",") if part.strip().isdigit()]
+
+    async def get_last_campaign_send_message(
+        self, contact_id: int, tenant_id: int
+    ) -> Optional[str]:
+        """Last campaign body sent to this contact (for outbound-echo detection)."""
+        sql = """
+            SELECT c.message
+            FROM campaign_send_logs csl
+            INNER JOIN campaigns c ON c.id = csl.campaign_id
+            WHERE csl.contact_id = %s
+              AND c.tenant_id = %s
+              AND csl.status IN ('SENT', 'DELIVERED', 'READ')
+              AND csl.sent_at >= NOW() - INTERVAL 14 DAY
+            ORDER BY csl.sent_at DESC
+            LIMIT 1
+        """
+        async with self.readonly() as cur:
+            await cur.execute(sql, (contact_id, tenant_id))
+            row = await cur.fetchone()
+        if not row or not row.get("message"):
+            return None
+        return str(row["message"])
+
+    async def is_campaign_outbound_echo(
+        self, contact_id: int, tenant_id: int, message_text: str
+    ) -> bool:
+        """
+        True if inbound text matches the last campaign message we sent (echo / duplicate).
+        Does not affect normal chats without campaign history.
+        """
+        campaign_msg = await self.get_last_campaign_send_message(contact_id, tenant_id)
+        return is_likely_campaign_outbound_echo(message_text, campaign_msg)
+
+    async def get_campaign_context_for_contact(
+        self,
+        contact_id: int,
+        tenant_id: int,
+        company_id: Optional[int] = None,
+    ) -> Optional[CampaignContext]:
+        """
+        Latest campaign outreach for a contact on the campaign's sending list.
+        Returns None if the contact has no recent campaign send — normal AI flow applies.
+        """
+        sql = """
+            SELECT
+                c.id              AS campaign_id,
+                c.name            AS campaign_name,
+                c.message         AS campaign_message,
+                c.status          AS campaign_status,
+                c.product_id      AS product_id,
+                c.media_url       AS media_url,
+                c.media_type      AS media_type,
+                csl.sent_at       AS sent_at,
+                p.product_name    AS product_name,
+                p.description     AS product_description
+            FROM campaign_send_logs csl
+            INNER JOIN campaigns c ON c.id = csl.campaign_id
+            INNER JOIN sending_list_contacts slc
+                ON slc.sending_list_id = c.sending_list_id
+               AND slc.contact_id = csl.contact_id
+               AND slc.status = 'ACTIVE'
+            LEFT JOIN productos p ON p.id = c.product_id
+            WHERE csl.contact_id = %s
+              AND c.tenant_id = %s
+              AND c.status IN ('RUNNING', 'COMPLETED')
+              AND csl.status IN ('SENT', 'DELIVERED', 'READ')
+              AND csl.sent_at >= NOW() - INTERVAL 90 DAY
+        """
+        params: list = [contact_id, tenant_id]
+        if company_id is not None:
+            sql += " AND c.company_id = %s"
+            params.append(company_id)
+        sql += " ORDER BY csl.sent_at DESC LIMIT 1"
+
+        async with self.readonly() as cur:
+            await cur.execute(sql, params)
+            row = await cur.fetchone()
+
+        if not row:
+            return None
+
+        sent_at = row.get("sent_at")
+        if sent_at is not None and hasattr(sent_at, "isoformat"):
+            row = {**row, "sent_at": sent_at.isoformat()}
+        return CampaignContext.from_row(row)
 
     async def get_contact_pipeline_state(
         self, contact_id: int, tenant_id: int

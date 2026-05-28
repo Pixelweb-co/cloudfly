@@ -74,6 +74,65 @@ class ContactPipelineState:
 
 
 @dataclass
+class CampaignContext:
+    """
+    Active marketing campaign context for a contact who received a campaign message
+    and is now replying. Used only to enrich the LLM prompt; does not change routing.
+    """
+    campaign_id: int
+    campaign_name: str
+    campaign_message: str
+    campaign_status: str
+    sent_at: Optional[str] = None
+    product_id: Optional[int] = None
+    product_name: Optional[str] = None
+    product_description: Optional[str] = None
+    media_url: Optional[str] = None
+    media_type: Optional[str] = None
+
+    @classmethod
+    def from_row(cls, row: dict) -> "CampaignContext":
+        return cls(
+            campaign_id=int(row["campaign_id"]),
+            campaign_name=str(row.get("campaign_name") or ""),
+            campaign_message=str(row.get("campaign_message") or ""),
+            campaign_status=str(row.get("campaign_status") or ""),
+            sent_at=str(row["sent_at"]) if row.get("sent_at") else None,
+            product_id=int(row["product_id"]) if row.get("product_id") else None,
+            product_name=row.get("product_name"),
+            product_description=row.get("product_description"),
+            media_url=row.get("media_url"),
+            media_type=row.get("media_type"),
+        )
+
+    def to_prompt_block(self) -> str:
+        lines = [
+            "[CONTEXTO DE CAMPAÑA DE MARKETING]",
+            f"Campaña: {self.campaign_name} (ID {self.campaign_id}, estado {self.campaign_status})",
+        ]
+        if self.sent_at:
+            lines.append(f"Mensaje de campaña enviado al contacto: {self.sent_at}")
+        if self.campaign_message:
+            lines.append(f"Texto enviado en la campaña:\n{self.campaign_message}")
+        if self.product_name:
+            product_line = f"Producto promocionado: {self.product_name}"
+            if self.product_id:
+                product_line += f" (ID {self.product_id})"
+            lines.append(product_line)
+        if self.product_description:
+            lines.append(f"Descripción: {self.product_description}")
+        lines.extend([
+            "",
+            "INSTRUCCIONES DE SEGUIMIENTO:",
+            "- El cliente está respondiendo después de recibir esta campaña; continúa ese hilo comercial.",
+            "- No repitas el mensaje masivo literalmente; responde a lo que el cliente acaba de escribir.",
+            "- Usa search_products_semantically si necesitas detalle del producto de la campaña.",
+            "- Mantén el mismo tono comercial y objetivo de conversión de la campaña.",
+        ])
+        return "\n".join(lines)
+
+
+@dataclass
 class TokenUsage:
     """Tracks OpenAI token consumption per call."""
     prompt_tokens: int = 0

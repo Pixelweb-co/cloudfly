@@ -158,6 +158,16 @@ class AIAgentApp:
                 logger.warning("⚠️ [AI_VISION_FAIL] Image analysis failed", extra=log_ctx)
                 payload.message_text = "[Imagen no procesada]"
 
+        # ②.2 Campaign: skip if inbound is echo of our own campaign outbound (edge case)
+        if await self.db.is_campaign_outbound_echo(
+            payload.contact_id, payload.tenant_id, payload.message_text
+        ):
+            logger.info(
+                "📢 [AI_CAMPAIGN_SKIP] Outbound campaign echo — no AI response",
+                extra=log_ctx,
+            )
+            return
+
         # ② Rate limiting
         if not await self.redis.check_and_increment_rate_limit(payload.tenant_id):
             logger.error("🚫 [AI_RATE_LIMIT] Daily quota exceeded for tenant", extra=log_ctx)
@@ -180,6 +190,18 @@ class AIAgentApp:
                 payload.contact_id, payload.tenant_id
             )
 
+            # ⑤.1 Campaign context (optional — normal flow when None)
+            campaign_context = await self.db.get_campaign_context_for_contact(
+                payload.contact_id,
+                payload.tenant_id,
+                payload.company_id,
+            )
+            if campaign_context:
+                logger.info(
+                    "📢 [AI_CAMPAIGN_CTX] Follow-up mode for campaign",
+                    extra={**log_ctx, "campaign_id": campaign_context.campaign_id},
+                )
+
             # ⑥ Generate AI response
             logger.info("🤖 [AI_STEP_6] calling LLM (OpenAI)...", extra=log_ctx)
             response_text, pipeline_update, handoff_request, token_usage = await self.ai.generate_response(
@@ -191,6 +213,7 @@ class AIAgentApp:
                 history,
                 pipeline_state,
                 payload.message_id,
+                campaign_context=campaign_context,
             )
             logger.info(f"✅ [AI_STEP_6_OK] LLM responded. Tokens: {token_usage}", extra=log_ctx)
 
@@ -216,7 +239,6 @@ class AIAgentApp:
                     tenant_id=payload.tenant_id,
                 )
 
-                print("DEBUG: advisor_phones =", advisor_phones)  # Debug log to check assigned advisors
                 notify_phones = advisor_phones
                 recipient_type = "assigned_advisors"
 

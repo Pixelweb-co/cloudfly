@@ -30,7 +30,7 @@ from tenacity import (
 )
 
 from application.config import config
-from domain.models import ChatMessage, ContactPipelineState, TokenUsage
+from domain.models import CampaignContext, ChatMessage, ContactPipelineState, TokenUsage
 from domain.exceptions import RetryableError, NonRetryableError
 from token_tracker import TokenTracker
 
@@ -624,6 +624,7 @@ class AIService:
         history: List[ChatMessage],
         pipeline_state: Optional[ContactPipelineState],
         message_id: str = "unknown",
+        campaign_context: Optional[CampaignContext] = None,
     ) -> tuple[str, Optional[Dict], Optional[Dict], TokenUsage]:
         """
         Builds the prompt and calls OpenAI in a tool execution loop.
@@ -675,6 +676,13 @@ class AIService:
         # Append current datetime to system prompt
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
         system_prompt += f"\n\n[CONTEXTO DEL SISTEMA]\nFecha y hora actual: {now_str}\nUsa esta fecha como referencia para 'hoy', 'mañana', etc."
+
+        if campaign_context:
+            system_prompt += f"\n\n{campaign_context.to_prompt_block()}"
+            logger.info(
+                "Campaign follow-up context injected",
+                extra={**log_ctx, "campaign_id": campaign_context.campaign_id},
+            )
 
         messages: List[Dict] = [{"role": "system", "content": system_prompt}]
         for h in history:
