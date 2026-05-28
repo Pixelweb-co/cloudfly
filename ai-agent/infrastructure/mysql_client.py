@@ -360,7 +360,7 @@ class AsyncMySQLClient:
             JOIN user_roles ur ON u.id = ur.user_id 
             JOIN roles r ON ur.role_id = r.id
             LEFT JOIN contacts c ON c.id = u.contact_id
-            WHERE u.customer_id = %s
+            WHERE u.customer_id = %s 
               AND r.id IN (2, 3)
               AND c.phone IS NOT NULL
               AND TRIM(c.phone) <> ''
