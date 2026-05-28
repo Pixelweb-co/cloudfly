@@ -357,7 +357,7 @@ class AsyncMySQLClient:
         sql = """
             SELECT DISTINCT c.phone
             FROM users u
-            JOIN user_roles ur ON u.id = ur.user_id
+            JOIN user_roles ur ON u.id = ur.user_id 
             JOIN roles r ON ur.role_id = r.id
             LEFT JOIN contacts c ON c.id = u.contact_id
             WHERE u.customer_id = %s
