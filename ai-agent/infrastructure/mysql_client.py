@@ -344,15 +344,18 @@ class AsyncMySQLClient:
 
             placeholders = ", ".join(["%s"] * len(advisor_ids))
             print(f"DEBUG: placeholders for SQL IN clause: {placeholders}")  # Debug log
-            sql = f"""
-                SELECT DISTINCT c.phone
-                FROM users u
-                LEFT JOIN contacts c ON c.id = u.contact_id
-                WHERE u.id IN ({placeholders})
-                  AND c.tenant_id = %s
-                  AND c.phone IS NOT NULL
-                  AND TRIM(c.phone) <> ''
-            """
+           
+    sql = f"""
+    SELECT DISTINCT c.phone
+    FROM users u
+    INNER JOIN contacts c 
+        ON c.id = u.contact_id
+    WHERE u.id IN ({placeholders})
+      AND u.customer_id = %s
+      AND c.phone IS NOT NULL
+      AND TRIM(c.phone) <> ''
+"""
+
 
             print(f"DEBUG: Executing SQL to fetch advisor phones: {sql} with advisor_ids={advisor_ids} and tenant_id={tenant_id}")  # Debug log
 
