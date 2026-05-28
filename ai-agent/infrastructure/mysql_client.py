@@ -318,6 +318,9 @@ class AsyncMySQLClient:
         return True
 
     async def get_contact_assigned_advisors(self, contact_id: int, tenant_id: int) -> List[str]:
+        
+        print(f"DEBUG: Fetching assigned advisors for contact_id={contact_id}, tenant_id={tenant_id}")  # Debug log
+
         """
         Return advisor phone numbers assigned to a contact via contacts.assigned_user_ids.
         """
