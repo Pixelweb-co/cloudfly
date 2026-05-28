@@ -350,6 +350,9 @@ class AsyncMySQLClient:
                   AND c.phone IS NOT NULL
                   AND TRIM(c.phone) <> ''
             """
+
+            print(f"DEBUG: Executing SQL to fetch advisor phones: {sql} with advisor_ids={advisor_ids} and tenant_id={tenant_id}")  # Debug log
+
             await cur.execute(sql, (*advisor_ids, tenant_id))
             rows = await cur.fetchall()
             return [r["phone"] for r in rows if r.get("phone")]
