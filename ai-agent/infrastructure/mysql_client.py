@@ -340,6 +340,8 @@ class AsyncMySQLClient:
             if not advisor_ids:
                 return []
 
+            print(f"DEBUG: Parsed advisor IDs: {advisor_ids}")  # Debug log
+
             placeholders = ", ".join(["%s"] * len(advisor_ids))
             print(f"DEBUG: placeholders for SQL IN clause: {placeholders}")  # Debug log
             sql = f"""
