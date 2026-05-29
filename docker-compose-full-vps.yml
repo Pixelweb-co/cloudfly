@@ -47,6 +47,7 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     networks:
       - kafka-net
 
@@ -391,21 +392,30 @@ services:
       - APIFY_TOKEN=${APIFY_TOKEN}
       - APIFY_BASE_URL=https://api.apify.com/v2
 
+  # Kafka consumer workers — escalar: docker compose up -d --scale lead-scrapper-google=3
   lead-scrapper-google:
     build:
       context: ./lead-scrapper-google
       dockerfile: Dockerfile
-    container_name: lead-scrapper-google
     restart: always
-    ports:
-      - "8002:8000"
+    command: ["python3", "worker.py"]
     networks:
       - app-net
+      - kafka-net
+    depends_on:
+      - kafka
+      - db
     security_opt:
       - seccomp:unconfined
     shm_size: '2gb'
     environment:
       - PYTHONUNBUFFERED=1
+      - KAFKA_HOST=kafka:9092
+      - DB_HOST=mysql
+      - DB_DATABASE=cloud_master
+      - DB_USERNAME=root
+      - DB_PASSWORD=widowmaker
+      - LOG_LEVEL=INFO
 
   marketing-agent:
     build:
@@ -424,16 +434,19 @@ services:
       - DB_USERNAME=${DB_USERNAME:-root}
       - DB_PASSWORD=${DB_PASSWORD:-widowmaker}
       - KAFKA_HOST=${KAFKA_HOST:-kafka}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_HOST:-kafka}:9092
       - EVOLUTION_API_URL=${EVOLUTION_API_URL:-http://evolution-api:8080}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - AUTHENTICATION_API_KEY=${AUTHENTICATION_API_KEY}
       - BACKEND_API_KEY=${AUTHENTICATION_API_KEY}
       - LEAD_GENERATOR_URL=http://lead-generator:8000
-      - LEAD_SCRAPER_GOOGLE_URL=http://lead-scrapper-google:8000
     networks:
       - app-net
       - kafka-net
+    depends_on:
+      - kafka
+      - db
 
 
   # ====================

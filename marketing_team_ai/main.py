@@ -2,6 +2,8 @@ import logging
 import time
 
 from flows.autonomous_flow import AutonomousMarketingFlow
+from kafka.results_consumer import start_results_consumer_background
+from services.lead_search_job_service import LeadSearchJobService
 
 logging.basicConfig(
     level=logging.INFO,
@@ -11,6 +13,8 @@ logging.basicConfig(
 logger = logging.getLogger("cloudfly_main")
 
 def run_loop():
+    LeadSearchJobService.ensure_schema()
+    start_results_consumer_background()
 
     flow = AutonomousMarketingFlow()
 

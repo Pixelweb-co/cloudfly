@@ -4,7 +4,7 @@ import requests
 import os
 from datetime import datetime, timedelta
 
-from crews.marketing_crew import build_analysis_crew, build_campaign_crew
+from crews.marketing_crew import build_analysis_crew
 from tools.mysql_tool import MySQLTool
 from tools.redis_tool import RedisTool
 from services.prospector_service import ProspectorService
@@ -329,98 +329,26 @@ class AutonomousMarketingFlow:
 
                     logger.info(f"🎯 Processing category: '{category_name}' for product: {product.get('product_name')} (country: {category_country})")
 
-                    # 1. Fetch leads
-                    leads = self.prospector_service.fetch_leads_from_generator(
+                    # 1. Async lead search via Kafka (no HTTP al scraper)
+                    context = {
+                        "company": company,
+                        "product": product,
+                        "category_name": category_name,
+                        "category_country": category_country,
+                    }
+                    request_id = self.prospector_service.submit_lead_search_request(
                         keyword=category_name,
                         country=category_country,
-                        limit=5
+                        limit=5,
+                        company_id=company["id"],
+                        product_id=product.get("id"),
+                        tenant_id=company["tenant_id"],
+                        context=context,
                     )
-                    if not leads:
-                        logger.warning(f"No leads found for category {category_name}")
-                        continue
-
-                    # Phase 2: Qualification & Copywriting Crew
-                    campaign_crew = build_campaign_crew(
-                        company=company,
-                        product=product,
-                        leads=leads
+                    logger.info(
+                        "📤 Lead search queued request_id=%s category='%s' — "
+                        "qualification/copywriting al recibir lead_search_results",
+                        request_id,
+                        category_name,
                     )
-                    campaign_result = campaign_crew.kickoff()
-                    
-                    campaign_raw = campaign_crew.tasks[1].output.raw.strip()
-                    if campaign_raw.startswith("```json"):
-                        campaign_raw = campaign_raw[7:]
-                    if campaign_raw.endswith("```"):
-                        campaign_raw = campaign_raw[:-3]
-                    campaign_raw = campaign_raw.strip()
-
-                    try:
-                        campaign_json = json.loads(campaign_raw)
-                        logger.info("✅ Campaign copywriting parsed as JSON!")
-                    except Exception:
-                        logger.warning(f"Campaign copywriting output is not valid JSON: {campaign_raw}")
-                        continue
-
-                    message_body = campaign_json.get("message")
-                    if not message_body:
-                        logger.warning("WhatsApp campaign message body is empty. Skipping.")
-                        continue
-
-                    # Extract qualified leads list from qualification task
-                    qual_raw = campaign_crew.tasks[0].output.raw.strip()
-                    if qual_raw.startswith("```json"):
-                        qual_raw = qual_raw[7:]
-                    if qual_raw.endswith("```"):
-                        qual_raw = qual_raw[:-3]
-                    qual_raw = qual_raw.strip()
-
-                    try:
-                        qualified_leads = json.loads(qual_raw)
-                        if isinstance(qualified_leads, dict) and "qualified_leads" in qualified_leads:
-                            qualified_leads = qualified_leads["qualified_leads"]
-                    except Exception:
-                        qualified_leads = leads
-
-                    # 2. Get/create list & Link contacts
-                    sending_list_id = self.get_or_create_sending_list(company['tenant_id'], company['id'], category_name)
-                    contact_ids = self.save_qualified_leads_to_crm(company['tenant_id'], company['id'], sending_list_id, qualified_leads)
-                    
-                    if not contact_ids:
-                        logger.warning("No new unique contacts saved for list. Skipping campaign.")
-                        continue
-
-                    # 3. Create Campaign and Schedule for 2 days (48 hours) later!
-                    scheduled_at = datetime.now() + timedelta(days=2)
-                    
-                    campaign_id = self.create_campaign_in_db(
-                        tenant_id=company['tenant_id'],
-                        company_id=company['id'],
-                        category_name=category_name,
-                        sending_list_id=sending_list_id,
-                        channel_id=channel_id,
-                        message_body=message_body,
-                        product_id=product.get('id'),
-                        scheduled_at=scheduled_at
-                    )
-
-                    if campaign_id:
-                        # 4. Schedule event in scheduler-service calendar
-                        self.call_scheduler_service(
-                            tenant_id=company['tenant_id'],
-                            company_id=company['id'],
-                            campaign_id=campaign_id,
-                            campaign_name=f"{product.get('product_name')} - {category_name}",
-                            scheduled_at=scheduled_at
-                        )
-                        
-                        # 5. Redis sync context
-                        self.sync_redis_campaign_context(
-                            contact_ids=contact_ids,
-                            campaign_id=campaign_id,
-                            product_id=product.get('id'),
-                            company_id=company['id']
-                        )
-                        logger.info(f"🎉 Fully completed autonomous workflow for product '{product.get('product_name')}' and category '{category_name}'!")
-                    else:
-                        logger.error("Failed to create campaign record.")or("Failed to create campaign record.")
 

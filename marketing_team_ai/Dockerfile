@@ -16,10 +16,10 @@ COPY marketing_team_ai/requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copiar proyecto y el modulo de servicios del agente antiguo para resolver dependencias
-COPY marketing_team_ai/ .
-COPY marketing_agent/services/ ./services/
+# Copiar proyecto; servicios de marketing_team_ai tienen prioridad (Kafka pipeline)
 COPY marketing_agent/models/ ./models/
+COPY marketing_agent/services/ ./services/
+COPY marketing_team_ai/ .
 
 
 

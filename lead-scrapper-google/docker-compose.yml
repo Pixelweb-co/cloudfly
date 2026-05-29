@@ -1,7 +1,9 @@
 services:
-  lead-scrapper-google:
+  # Health / docs opcional
+  api:
     build: .
     image: lead-scrapper-google
+    command: ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - "8000:8000"
     environment:
@@ -10,8 +12,21 @@ services:
       - seccomp:unconfined
     shm_size: "2gb"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+
+  # Consumer Kafka — escalar con: docker compose up --scale worker=3
+  worker:
+    build: .
+    image: lead-scrapper-google
+    command: ["python3", "worker.py"]
+    environment:
+      - PYTHONUNBUFFERED=1
+      - KAFKA_HOST=${KAFKA_HOST:-kafka}
+      - DB_HOST=${DB_HOST:-mysql}
+      - DB_DATABASE=${DB_DATABASE:-cloud_master}
+      - DB_USERNAME=${DB_USERNAME:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-widowmaker}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    security_opt:
+      - seccomp:unconfined
+    shm_size: "2gb"
+    restart: unless-stopped

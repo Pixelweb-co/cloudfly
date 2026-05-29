@@ -44,6 +44,8 @@ class Config:
 
     # Services
     LEAD_GENERATOR_URL = os.getenv("LEAD_GENERATOR_URL", "http://lead-generator:8000")
+    # Lead scraper: event-driven via Kafka (no HTTP sync)
+    KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS") or os.getenv("KAFKA_HOST", "kafka:9092")
     LEAD_SCRAPER_GOOGLE_URL = os.getenv("LEAD_SCRAPER_GOOGLE_URL", "http://lead-scrapper-google:8000")
     BACKEND_URL = os.getenv("BACKEND_URL", "http://backend-api:8080")
     BACKEND_API_KEY = os.getenv("BACKEND_API_KEY", "")
