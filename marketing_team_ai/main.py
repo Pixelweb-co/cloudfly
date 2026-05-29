@@ -13,7 +13,8 @@ logging.basicConfig(
 logger = logging.getLogger("cloudfly_main")
 
 def run_loop():
-    LeadSearchJobService.ensure_schema()
+    # TODO: Uncomment this when the schema is ready
+    #   LeadSearchJobService.ensure_schema()
     start_results_consumer_background()
 
     flow = AutonomousMarketingFlow()
