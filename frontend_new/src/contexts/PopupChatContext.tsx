@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useSocket } from './SocketContext'
 import { Contact } from '@/types/marketing/contactTypes'
 import { Message } from '@/types/apps/chatTypes'
-import axiosInstance from '@/utils/axiosInstance'
+import { contactService } from '@/services/marketing/contactService'
 
 export interface PopupChat {
   contact: Contact
@@ -85,8 +85,7 @@ export const PopupChatProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   const fetchContactAndOpenPopup = async (contactId: string | number) => {
     try {
-      const response = await axiosInstance.get(`/api/contacts/${contactId}`)
-      const contact = response.data.data || response.data
+      const contact = await contactService.getContactById(Number(contactId))
       
       setActivePopups(prev => {
         // Double check it wasn't added while fetching

@@ -2,6 +2,19 @@ import axios from 'axios';
 
 const CHAT_API_URL = process.env.NEXT_PUBLIC_CHAT_API_URL || 'https://chat.cloudfly.com.co';
 
+const getChatAuthParams = () => {
+  if (typeof window === 'undefined') return { tenantId: null, companyId: null, jwt: null }
+  try {
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}')
+    const tenantId = userData?.customerId || userData?.tenant_id || userData?.tenantId
+    const companyId = userData?.activeCompanyId || userData?.company_id || userData?.companyId
+    const jwt = localStorage.getItem('jwt')
+    return { tenantId, companyId, jwt }
+  } catch {
+    return { tenantId: null, companyId: null, jwt: null }
+  }
+}
+
 export interface ChatMessage {
   id: string | number;
   conversationId: string | number;
@@ -23,18 +36,17 @@ export const chatService = {
    * NEW: Points to chat.cloudfly.com.co directly for history
    */
   getMessages: async (contactUuid: string, tenantId: string | number): Promise<ChatMessage[]> => {
-    const companyId = typeof window !== 'undefined' ? (localStorage.getItem('activeCompanyId') || localStorage.getItem('companyId')) : null;
+    const { companyId, jwt } = getChatAuthParams()
     
     const response = await axios.get(`${CHAT_API_URL}/api/chat/messages/${contactUuid}`, {
       params: { tenantId, companyId, limit: 50 },
       headers: {
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('jwt') : ''}`,
+        'Authorization': `Bearer ${jwt || ''}`,
         'X-Tenant-Id': tenantId,
         'X-Company-Id': companyId || ''
       }
     });
     
-    // Normalize response: if it uses 'content' instead of 'body'
     return response.data.map((msg: any) => ({
       ...msg,
       body: msg.body || msg.content,
@@ -47,12 +59,12 @@ export const chatService = {
    * Get historical messages by numeric contactId (fallback when uuid is missing)
    */
   getMessagesByContactId: async (contactId: number, tenantId: string | number): Promise<ChatMessage[]> => {
-    const companyId = typeof window !== 'undefined' ? (localStorage.getItem('activeCompanyId') || localStorage.getItem('companyId')) : null;
+    const { companyId, jwt } = getChatAuthParams()
     
     const response = await axios.get(`${CHAT_API_URL}/api/chat/messages/by-contact/${contactId}`, {
       params: { tenantId, companyId, limit: 50 },
       headers: {
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('jwt') : ''}`,
+        'Authorization': `Bearer ${jwt || ''}`,
         'X-Tenant-Id': tenantId,
         'X-Company-Id': companyId || ''
       }

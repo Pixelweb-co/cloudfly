@@ -50,7 +50,9 @@ public class ContactService {
 
     public Mono<ContactEntity> findById(Long id, Long tenantId, Long companyId) {
         return contactRepository.findById(id)
-                .filter(contact -> contact.getTenantId().equals(tenantId) && contact.getCompanyId().equals(companyId));
+                .filter(contact -> contact.getTenantId() != null
+                        && contact.getTenantId().equals(tenantId)
+                        && (companyId == null || companyId.equals(contact.getCompanyId())));
     }
 
     public Mono<ContactEntity> create(ContactEntity contact, Long tenantId, Long companyId) {

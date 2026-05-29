@@ -9,7 +9,7 @@ import { Pipeline, PipelineKanbanCard as PipelineKanbanCardType } from '@/types/
 import { Icon } from '@iconify/react'
 import { useSocket } from '@/contexts/SocketContext'
 import { usePopupChat } from '@/contexts/PopupChatContext'
-import axiosInstance from '@/utils/axiosInstance'
+import { contactService } from '@/services/marketing/contactService'
 
 interface Props {
   pipelineId: number
@@ -136,8 +136,7 @@ export default function PipelineKanbanBoard({ pipelineId }: Props) {
     if (!card.contactId) return
     try {
       // Fetch the full contact to get the uuid required by ChatInterface
-      const res = await axiosInstance.get(`/api/contacts/${card.contactId}`)
-      const fullContact = res.data?.data || res.data
+      const fullContact = await contactService.getContactById(card.contactId)
       openPopup(fullContact)
     } catch (err) {
       console.error('Error cargando contacto para el chat:', err)
