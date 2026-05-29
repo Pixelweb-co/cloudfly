@@ -23,8 +23,8 @@ class EvolutionService:
             return False
 
     def _send_presence(self, phone: str, presence: str):
-        url = f"{self.api_url}/chat/updatePresence/{self.instance}"
-        payload = {"number": phone, "presence": presence}
+        url = f"{self.api_url}/chat/sendPresence/{self.instance}"
+        payload = {"number": phone, "presence": presence, "delay": 5000}
         try:
             requests.post(url, json=payload, headers=self.headers, timeout=10)
         except Exception:

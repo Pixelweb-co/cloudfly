@@ -54,10 +54,11 @@ public class EvolutionService {
      * the number as "typing..." before the actual message arrives.
      */
     private Mono<Void> sendPresence(String instanceName, String phone, String apiKey) {
-        String url = apiUrl + "/chat/updatePresence/" + instanceName;
+        String url = apiUrl + "/chat/sendPresence/" + instanceName;
         Map<String, Object> body = new HashMap<>();
         body.put("number", phone);
         body.put("presence", "composing");
+        body.put("delay", 5000);
 
         return webClientBuilder.build().post()
                 .uri(url)

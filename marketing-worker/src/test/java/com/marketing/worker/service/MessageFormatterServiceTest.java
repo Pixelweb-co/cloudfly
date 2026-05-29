@@ -28,7 +28,7 @@ class MessageFormatterServiceTest {
     private MessageFormatterService messageFormatterService;
 
     @Test
-    void formatMessage_withProductDetails_includesChatLink() {
+    void formatMessage_withProductDetails() {
         Long contactId = 123L;
         Long productId = 456L;
 
@@ -64,11 +64,11 @@ class MessageFormatterServiceTest {
         assertTrue(result.contains("A great product"));
         assertTrue(result.contains("💰 Precio: $90"));
         assertTrue(result.contains("SKU: TEST-SKU"));
-        assertTrue(result.contains("💬 Chatea con nosotros: https://dashboard.cloudfly.com.co/contacts/" + contactId));
+        assertFalse(result.contains("Chatea con nosotros"));
     }
 
     @Test
-    void formatMessage_withoutProductDetails_includesChatLink() {
+    void formatMessage_withoutProductDetails() {
         Long contactId = 456L;
 
         ContactEntity contact = ContactEntity.builder()
@@ -88,11 +88,11 @@ class MessageFormatterServiceTest {
 
         assertNotNull(result);
         assertTrue(result.contains("Hi Jane Doe!"));
-        assertTrue(result.contains("💬 Chatea con nosotros: https://dashboard.cloudfly.com.co/contacts/" + contactId));
+        assertFalse(result.contains("Chatea con nosotros"));
     }
 
     @Test
-    void formatMessage_withProductIdButProductNotFound_includesChatLink() {
+    void formatMessage_withProductIdButProductNotFound() {
         Long contactId = 789L;
         Long productId = 999L;
 
@@ -115,7 +115,7 @@ class MessageFormatterServiceTest {
 
         assertNotNull(result);
         assertTrue(result.contains("Hello Bob Smith!"));
-        assertTrue(result.contains("💬 Chatea con nosotros: https://dashboard.cloudfly.com.co/contacts/" + contactId));
+        assertFalse(result.contains("Chatea con nosotros"));
     }
 
     @Test
@@ -157,27 +157,6 @@ class MessageFormatterServiceTest {
         assertTrue(result.contains("Beneficios para tu equipo."));
         assertFalse(result.contains("Nota interna del sistema"));
         assertFalse(result.contains("no enviar esto"));
-    }
-
-    @Test
-    void formatMessage_withNullContactId_doesNotAppendChatLink() {
-        ContactEntity contact = ContactEntity.builder()
-                .id(null)
-                .name("Null ID")
-                .email("null@example.com")
-                .phone("1111111111")
-                .build();
-
-        CampaignEntity campaign = CampaignEntity.builder()
-                .id(4L)
-                .message("Hello {{nombre}}!")
-                .productId(null)
-                .build();
-
-        String result = messageFormatterService.formatMessage(campaign, contact).block();
-
-        assertNotNull(result);
-        assertTrue(result.contains("Hello Null ID!"));
         assertFalse(result.contains("Chatea con nosotros"));
     }
 }
