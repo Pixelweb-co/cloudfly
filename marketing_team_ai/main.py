@@ -34,7 +34,7 @@ def run_loop():
 
         logger.info("Waiting 10 minutes...")
 
-        time.sleep(600)
+        time.sleep(60)
 
 if __name__ == "__main__":
     run_loop()
