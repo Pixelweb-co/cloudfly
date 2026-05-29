@@ -12,7 +12,7 @@ from typing import AsyncGenerator, Optional, List, Dict, Any
 import aiomysql
 
 from application.config import config
-from domain.campaign_context import is_likely_campaign_outbound_echo
+from domain.campaign_context import echo_check_from_row
 from domain.models import CampaignContext, ContactPipelineState, PipelineStage
 
 logger = logging.getLogger(__name__)
@@ -108,14 +108,18 @@ class AsyncMySQLClient:
         # Fallback: comma-separated values.
         return [int(part.strip()) for part in value.split(",") if part.strip().isdigit()]
 
-    async def get_last_campaign_send_message(
+    async def get_last_campaign_send_for_echo(
         self, contact_id: int, tenant_id: int
-    ) -> Optional[str]:
-        """Last campaign body sent to this contact (for outbound-echo detection)."""
+    ) -> Optional[Dict[str, Any]]:
+        """Last campaign send metadata for outbound-echo detection."""
         sql = """
-            SELECT c.message
+            SELECT
+                c.message AS campaign_message,
+                p.product_name AS product_name,
+                TIMESTAMPDIFF(SECOND, csl.sent_at, NOW()) AS seconds_since_send
             FROM campaign_send_logs csl
             INNER JOIN campaigns c ON c.id = csl.campaign_id
+            LEFT JOIN productos p ON p.id = c.product_id
             WHERE csl.contact_id = %s
               AND c.tenant_id = %s
               AND csl.status IN ('SENT', 'DELIVERED', 'READ')
@@ -125,20 +129,17 @@ class AsyncMySQLClient:
         """
         async with self.readonly() as cur:
             await cur.execute(sql, (contact_id, tenant_id))
-            row = await cur.fetchone()
-        if not row or not row.get("message"):
-            return None
-        return str(row["message"])
+            return await cur.fetchone()
 
     async def is_campaign_outbound_echo(
         self, contact_id: int, tenant_id: int, message_text: str
     ) -> bool:
         """
-        True if inbound text matches the last campaign message we sent (echo / duplicate).
-        Does not affect normal chats without campaign history.
+        True if Kafka payload is the formatted campaign outbound (fromMe echo),
+        not a real contact reply. Uses template text, product block, and dashboard link.
         """
-        campaign_msg = await self.get_last_campaign_send_message(contact_id, tenant_id)
-        return is_likely_campaign_outbound_echo(message_text, campaign_msg)
+        row = await self.get_last_campaign_send_for_echo(contact_id, tenant_id)
+        return echo_check_from_row(row, message_text, contact_id)
 
     async def get_campaign_context_for_contact(
         self,
