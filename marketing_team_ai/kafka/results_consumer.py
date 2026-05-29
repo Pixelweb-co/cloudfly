@@ -53,7 +53,8 @@ def _maybe_republish_retry(event: dict) -> None:
 
 
 def _run_consumer() -> None:
-    LeadSearchJobService.ensure_schema()
+    # TODO: Uncomment this when the schema is ready
+    #   LeadSearchJobService.ensure_schema()
     consumer = create_results_consumer()
     consume_forever(consumer, [TOPIC_RESULTS, TOPIC_ERRORS], _handle_message)
 
