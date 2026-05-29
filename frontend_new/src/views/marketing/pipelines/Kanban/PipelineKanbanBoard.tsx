@@ -8,6 +8,8 @@ import { pipelineService } from '@/services/marketing/pipelineService'
 import { Pipeline, PipelineKanbanCard as PipelineKanbanCardType } from '@/types/marketing/pipelineTypes'
 import { Icon } from '@iconify/react'
 import { useSocket } from '@/contexts/SocketContext'
+import { usePopupChat } from '@/contexts/PopupChatContext'
+import axiosInstance from '@/utils/axiosInstance'
 
 interface Props {
   pipelineId: number
@@ -15,6 +17,7 @@ interface Props {
 
 export default function PipelineKanbanBoard({ pipelineId }: Props) {
   const { socket, isConnected } = useSocket()
+  const { openPopup } = usePopupChat()
   const [pipeline, setPipeline] = useState<Pipeline | null>(null)
   const [boardData, setBoardData] = useState<Record<string, PipelineKanbanCardType[]>>({})
   const [loading, setLoading] = useState(true)
@@ -126,6 +129,33 @@ export default function PipelineKanbanBoard({ pipelineId }: Props) {
       console.error('Error toggling chatbot:', err)
     } finally {
       setUpdatingCardId(null)
+    }
+  }
+
+  const handleCardClick = async (card: PipelineKanbanCardType) => {
+    if (!card.contactId) return
+    try {
+      // Fetch the full contact to get the uuid required by ChatInterface
+      const res = await axiosInstance.get(`/api/contacts/${card.contactId}`)
+      const fullContact = res.data?.data || res.data
+      openPopup(fullContact)
+    } catch (err) {
+      console.error('Error cargando contacto para el chat:', err)
+      // Fallback: open with partial data (history won't load without uuid)
+      openPopup({
+        id: card.contactId,
+        name: card.name,
+        phone: card.phone || '',
+        avatarUrl: card.avatarUrl,
+        type: 'LEAD',
+        stage: '',
+        tenantId: 0,
+        companyId: 0,
+        isActive: true,
+        chatbotEnabled: card.chatbotEnabled || false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      } as any)
     }
   }
 
@@ -255,6 +285,7 @@ export default function PipelineKanbanBoard({ pipelineId }: Props) {
                         isUpdating={isUpdating}
                         isError={isError}
                         borderColor={isUpdating ? stage.color : 'transparent'}
+                        onClick={() => handleCardClick(card)}
                         onToggleChatbot={() => handleToggleChatbot(card)}
                       />
                     </Box>

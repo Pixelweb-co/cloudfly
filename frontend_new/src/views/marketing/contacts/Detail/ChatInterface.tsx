@@ -184,28 +184,36 @@ export default function ChatInterface({ contact, isNew, isPopup = false }: Props
   // Fetch history
   useEffect(() => {
     const fetchHistory = async () => {
-      if (contact?.uuid && !isNew) {
-        setLoading(true)
-        try {
-          const user = userMethods.getUserLogin()
-          const tenantId = user?.customerId || user?.tenant_id
+      if (isNew || !contact) return
+      setLoading(true)
+      try {
+        const user = userMethods.getUserLogin()
+        const tenantId = user?.customerId || user?.tenant_id
 
-          if (!tenantId) {
-            console.warn('No tenantId found for history fetch')
-            return
-          }
-
-          const history = await chatService.getMessages(contact.uuid, tenantId)
-          setMessages(history)
-        } catch (error) {
-          console.error('Error fetching chat history:', error)
-        } finally {
-          setLoading(false)
+        if (!tenantId) {
+          console.warn('No tenantId found for history fetch')
+          return
         }
+
+        let history: ChatMessage[] = []
+
+        if (contact.uuid) {
+          // Primary: fetch by uuid
+          history = await chatService.getMessages(contact.uuid, tenantId)
+        } else if (contact.id) {
+          // Fallback: fetch by numeric contactId
+          history = await chatService.getMessagesByContactId(Number(contact.id), tenantId)
+        }
+
+        setMessages(history)
+      } catch (error) {
+        console.error('Error fetching chat history:', error)
+      } finally {
+        setLoading(false)
       }
     }
     fetchHistory()
-  }, [contact?.uuid, isNew])
+  }, [contact?.uuid, contact?.id, isNew])
 
   // Handler for sending
   const handleSend = async () => {

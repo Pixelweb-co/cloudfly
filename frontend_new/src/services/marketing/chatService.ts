@@ -26,7 +26,7 @@ export const chatService = {
     const companyId = typeof window !== 'undefined' ? (localStorage.getItem('activeCompanyId') || localStorage.getItem('companyId')) : null;
     
     const response = await axios.get(`${CHAT_API_URL}/api/chat/messages/${contactUuid}`, {
-      params: { tenantId, limit: 50 },
+      params: { tenantId, companyId, limit: 50 },
       headers: {
         'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('jwt') : ''}`,
         'X-Tenant-Id': tenantId,
@@ -35,6 +35,29 @@ export const chatService = {
     });
     
     // Normalize response: if it uses 'content' instead of 'body'
+    return response.data.map((msg: any) => ({
+      ...msg,
+      body: msg.body || msg.content,
+      mediaType: msg.mediaType || msg.messageType,
+      sentAt: msg.sentAt || msg.createdAt || new Date().toISOString()
+    }));
+  },
+
+  /**
+   * Get historical messages by numeric contactId (fallback when uuid is missing)
+   */
+  getMessagesByContactId: async (contactId: number, tenantId: string | number): Promise<ChatMessage[]> => {
+    const companyId = typeof window !== 'undefined' ? (localStorage.getItem('activeCompanyId') || localStorage.getItem('companyId')) : null;
+    
+    const response = await axios.get(`${CHAT_API_URL}/api/chat/messages/by-contact/${contactId}`, {
+      params: { tenantId, companyId, limit: 50 },
+      headers: {
+        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('jwt') : ''}`,
+        'X-Tenant-Id': tenantId,
+        'X-Company-Id': companyId || ''
+      }
+    });
+    
     return response.data.map((msg: any) => ({
       ...msg,
       body: msg.body || msg.content,

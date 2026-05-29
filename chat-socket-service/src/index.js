@@ -139,6 +139,38 @@ app.post('/api/contacts/:contactId/chatbot-toggle', async (req, res) => {
 });
 
 /**
+ * Obtener últimos mensajes de un contacto por ID numérico (fallback cuando uuid es nulo)
+ * GET /api/chat/messages/by-contact/:contactId?tenantId=X&companyId=Y&limit=50
+ */
+app.get('/api/chat/messages/by-contact/:contactId', async (req, res) => {
+    try {
+        const { contactId } = req.params;
+        const tenantId = req.query.tenantId;
+        const companyId = req.query.companyId || req.headers['x-company-id'];
+        const limit = parseInt(req.query.limit) || 50;
+
+        if (!tenantId || !companyId) {
+            return res.status(400).json({ error: 'tenantId and companyId are required' });
+        }
+
+        // Verificar que el contacto existe
+        const [contacts] = await db.execute(
+            'SELECT id FROM contacts WHERE id = ? AND tenant_id = ? AND company_id = ?',
+            [contactId, tenantId, companyId]
+        );
+        if (contacts.length === 0) {
+            return res.status(404).json({ error: 'Contact not found' });
+        }
+
+        const messages = await chatService.getMessageHistory(tenantId, companyId, contacts[0].id, limit);
+        res.json(messages);
+    } catch (error) {
+        logger.error(`Error fetching messages by contactId: ${error.message}`);
+        res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+});
+
+/**
 
  * Obtener últimos mensajes de un contacto por UUID
  * GET /api/chat/messages/:contactUuid?tenantId=X&limit=10
