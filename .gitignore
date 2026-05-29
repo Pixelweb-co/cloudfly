@@ -30,6 +30,10 @@ frontend_log.txt
 *.log
 
 
+# Traefik / Let's Encrypt (secretos en servidor)
+acme.json
+certs/acme.json
+
 # Local Configs & Backups
 .cloudflared/
 backup-service/public/*.json

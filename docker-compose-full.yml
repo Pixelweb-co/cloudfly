@@ -74,6 +74,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.api.rule=Host(`api.cloudfly.com.co`)"
       - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls=true"
       - "traefik.http.routers.api.tls.certresolver=le"
       - "traefik.http.services.api.loadbalancer.server.port=8080"
       - "traefik.docker.network=cloudfly_app-net"
@@ -118,6 +119,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.billing.rule=Host(`billing.cloudfly.com.co`)"
       - "traefik.http.routers.billing.entrypoints=websecure"
+      - "traefik.http.routers.billing.tls=true"
       - "traefik.http.routers.billing.tls.certresolver=le"
       - "traefik.http.services.billing.loadbalancer.server.port=8080"
 
@@ -163,6 +165,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`dashboard.cloudfly.com.co`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls=true"
       - "traefik.http.routers.frontend.tls.certresolver=le"
       - "traefik.http.services.frontend.loadbalancer.server.port=3000"
       - "traefik.docker.network=cloudfly_app-net"
@@ -231,6 +234,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.eapi.rule=Host(`eapi.cloudfly.com.co`)"
       - "traefik.http.routers.eapi.entrypoints=websecure"
+      - "traefik.http.routers.eapi.tls=true"
       - "traefik.http.routers.eapi.tls.certresolver=le"
       - "traefik.http.services.eapi.loadbalancer.server.port=8080"
   
@@ -275,6 +279,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.chatsocket.rule=Host(`chat.cloudfly.com.co`)"
       - "traefik.http.routers.chatsocket.entrypoints=websecure"
+      - "traefik.http.routers.chatsocket.tls=true"
       - "traefik.http.routers.chatsocket.tls.certresolver=le"
       - "traefik.http.services.chatsocket.loadbalancer.server.port=3001"
 
@@ -355,6 +360,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.n8n.rule=Host(`autobot.cloudfly.com.co`)"
       - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls=true"
       - "traefik.http.routers.n8n.tls.certresolver=le"
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
 
@@ -372,28 +378,18 @@ services:
       - app-net
 
   traefik:
-    image: traefik:v2.11
+    image: traefik:v3.1
     container_name: traefik
     restart: always
     ports:
       - "80:80"
       - "443:443"
     command:
-      - "--log.level=DEBUG"
-      - "--api.dashboard=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      - "--certificatesresolvers.le.acme.email=web@cloudfly.com.co"
-      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
-      - "--certificatesresolvers.le.acme.httpchallenge=true"
-      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+      - "--configFile=/etc/traefik/traefik.yml"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik:/letsencrypt
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ${TRAEFIK_CERTS_DIR:-/apps/cloudfly/certs}:/letsencrypt
     networks:
       - app-net
 

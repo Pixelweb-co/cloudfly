@@ -960,7 +960,7 @@ SECRET_KEY_BASE=<secret>
 **Let's Encrypt**:
 - Renovación automática
 - Challenge HTTP en puerto 80
-- Certificados almacenados en `/sellerbot/traefik/acme.json`
+- Certificados almacenados en `/apps/cloudfly/certs/acme.json`
 
 ### Redes Docker
 

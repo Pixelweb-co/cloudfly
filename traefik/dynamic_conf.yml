@@ -11,7 +11,8 @@ http:
     api-https:
       rule: "Host(`api.cloudfly.com.co`)"
       service: api-host
-      tls: {}
+      tls:
+        certResolver: le
       entryPoints:
         - websecure
 
@@ -26,7 +27,8 @@ http:
     frontend-https:
       rule: "Host(`dashboard.cloudfly.com.co`)"
       service: frontend-host
-      tls: {}
+      tls:
+        certResolver: le
       entryPoints:
         - websecure
       middlewares:

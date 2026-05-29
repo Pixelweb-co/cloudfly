@@ -175,28 +175,11 @@ services:
       - "80:80"
       - "443:443"
     command:
-      - "--log.level=DEBUG"
-      - "--api.dashboard=true"
-
-      # EntryPoints
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-
-      # Docker provider
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=cloudfly_app-net"
-
-      # ACME / Let's Encrypt (resolver 'le')
-      - "--certificatesresolvers.le.acme.email=web@cloudfly.com.co"
-      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
-      - "--certificatesresolvers.le.acme.httpchallenge=true"
-      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+      - "--configFile=/etc/traefik/traefik.yml"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /sellerbot/traefik:/letsencrypt
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ${TRAEFIK_CERTS_DIR:-/apps/cloudfly/certs}:/letsencrypt
     networks:
       - app-net
 
