@@ -32,9 +32,9 @@ def run_loop():
         except Exception as e:
             logger.exception(e)
 
-        logger.info("Waiting 10 minutes...")
+        logger.info("Waiting 10 seconds...")
 
-        time.sleep(60)
+        time.sleep(10)
 
 if __name__ == "__main__":
     run_loop()
