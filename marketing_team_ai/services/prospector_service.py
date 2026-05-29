@@ -91,7 +91,7 @@ class ProspectorService:
         country: str = "Colombia",
         state: str = None,
         city: str = None,
-        limit: int = 10,
+        limit: int = 50,
         company_id: int = None,
         product_id: int = None,
         tenant_id: int = None,
