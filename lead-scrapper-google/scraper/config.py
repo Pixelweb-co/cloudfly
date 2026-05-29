@@ -57,7 +57,24 @@ SKIP_NETLOC_FRAGMENTS = (
     "linkedin.",
     "gstatic.",
     "googleusercontent.",
+    # Portales de datos / gobierno / enciclopedias (no son fichas de negocio)
+    "datos.gov",
+    "data.gov",
+    "wikipedia.",
+    "wikimedia.",
+    "archive.org",
+    "github.com",
+    "schemas.microsoft",
+    "schema.org",
 )
+
+# Dominios que no aportan leads B2C aunque pasen el filtro general
+SKIP_HOST_EXACT = {
+    "datos.gov.co",
+    "www.datos.gov.co",
+    "www.wikipedia.org",
+    "es.wikipedia.org",
+}
 
 SKIP_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".gif", ".svg", ".zip", ".mp4", ".webp"}
 

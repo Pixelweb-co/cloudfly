@@ -48,6 +48,9 @@ def scrape(
 
         result_links = result_links[:max_links]
         logger.info("Collected %s google links query='%s'", len(result_links), query)
+        for n, link in enumerate(result_links, 1):
+            mode = "directory" if is_directory(link) else "single"
+            logger.info("  [%s/%s] %s → %s", n, len(result_links), mode, link[:100])
         if verbose:
             print(f"\n📋  {len(result_links)} enlaces. Procesando…\n")
 
@@ -55,6 +58,8 @@ def scrape(
             if dedup.url_seen(url):
                 logger.debug("Skip duplicate result url='%s'", url)
                 continue
+
+            logger.info("Processing [%s/%s] url='%s'", i, len(result_links), url)
 
             if verbose:
                 short = url[:72] + ("…" if len(url) > 72 else "")

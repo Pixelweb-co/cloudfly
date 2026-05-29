@@ -1,17 +1,43 @@
+import logging
 from urllib.parse import unquote, urlparse
 
 from playwright.sync_api import Page
 
 from scraper.browser import dismiss_cookie_banner, goto, page_html
-from scraper.config import GOOGLE_TIMEOUT_MS, SKIP_EXTENSIONS, SKIP_NETLOC_FRAGMENTS
+from scraper.config import (
+    GOOGLE_TIMEOUT_MS,
+    SKIP_EXTENSIONS,
+    SKIP_HOST_EXACT,
+    SKIP_NETLOC_FRAGMENTS,
+)
+from scraper.directory import is_directory
+
+logger = logging.getLogger("lead_scraper.google")
 
 
 def debe_saltar(url: str) -> bool:
     parsed = urlparse(url)
-    if any(d in parsed.netloc for d in SKIP_NETLOC_FRAGMENTS):
+    host = parsed.netloc.lower()
+    if host in SKIP_HOST_EXACT:
+        return True
+    if any(d in host for d in SKIP_NETLOC_FRAGMENTS):
         return True
     path = parsed.path.lower()
-    return any(path.endswith(ext) for ext in SKIP_EXTENSIONS)
+    if any(path.endswith(ext) for ext in SKIP_EXTENSIONS):
+        return True
+    # Datasets / APIs abiertas
+    if any(seg in path for seg in ("/dataset", "/datasets", "/api/", "/resource/")):
+        return True
+    return False
+
+
+def prioritize_links(links: list[str]) -> list[str]:
+    """Directorios primero para extraer muchos leads sin visitar cada web."""
+    directories = [u for u in links if is_directory(u)]
+    rest = [u for u in links if u not in directories]
+    if directories:
+        logger.info("Prioritized %s directory URLs before %s other links", len(directories), len(rest))
+    return directories + rest
 
 
 def collect_google_links(page: Page, query: str, pages: int, verbose: bool) -> list[str]:
@@ -35,14 +61,17 @@ def collect_google_links(page: Page, query: str, pages: int, verbose: bool) -> l
         for href in _extract_hrefs_from_html(html):
             if href.startswith("/url?q="):
                 href = unquote(href.split("/url?q=")[1].split("&")[0])
-            if not href.startswith("http") or debe_saltar(href):
+            if not href.startswith("http"):
+                continue
+            if debe_saltar(href):
+                logger.debug("Skip google result url='%s'", href)
                 continue
             key = href.rstrip("/").lower()
             if key not in seen:
                 seen.add(key)
                 links.append(href)
 
-    return links
+    return prioritize_links(links)
 
 
 def _extract_hrefs_from_html(html: str) -> list[str]:

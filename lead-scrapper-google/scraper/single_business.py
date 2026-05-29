@@ -1,8 +1,11 @@
+import logging
 from urllib.parse import urlparse
 
 from playwright.sync_api import Page
 
 from scraper.browser import goto, page_html, page_text
+
+logger = logging.getLogger("lead_scraper.single")
 from scraper.config import CONTACT_PAGE_TIMEOUT_MS, NAV_TIMEOUT_MS
 from scraper.models import Lead
 from scraper.regex_utils import (
@@ -21,8 +24,11 @@ def scrape_single_business(
 ) -> Lead:
     lead = Lead(sitio_web=url, fuente=url, ciudad=ciudad)
 
+    logger.info("Loading single business url='%s'", url)
     if not goto(page, url, NAV_TIMEOUT_MS):
+        logger.warning("Failed to load single business url='%s'", url)
         return lead
+    logger.debug("Loaded single business url='%s'", url)
 
     try:
         lead.titulo = (page.title() or "")[:100]
