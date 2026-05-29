@@ -17,8 +17,12 @@ const ChatPopupsContainer: React.FC = () => {
   } = usePopupChat()
 
   const handleFabClick = () => {
-    // If there are unread messages, we could open the last active popup
-    // For now, let's just clear count if clicked
+    const minimized = activePopups.filter(p => p.state === 'minimized')
+    if (minimized.length > 0) {
+      openPopup(minimized[minimized.length - 1].contact)
+    } else if (activePopups.length > 0) {
+      openPopup(activePopups[activePopups.length - 1].contact)
+    }
     clearUnreadCount()
   }
 

@@ -7,7 +7,13 @@ import type { Socket } from 'socket.io-client';
 import { io } from 'socket.io-client'
 
 import type { Message } from '@/types/apps/chatTypes'
+import type { Contact } from '@/types/marketing/contactTypes'
 import { userMethods } from '@/utils/userMethods'
+import {
+  normalizeInboundSocketMessage,
+  type ConversationUpdatedPayload,
+  isInboundUnreadConversationUpdate
+} from '@/utils/normalizeSocketPayload'
 
 // Redux
 import { useDispatch } from 'react-redux'
@@ -17,10 +23,19 @@ import { fetchDashboardData } from '@/redux/slices/dashboardSlice'
 import type { AppDispatch } from '@/redux/store'
 import { toast } from 'react-hot-toast'
 
+export interface InboundChatNotification {
+    seq: number
+    message: Message
+    contact?: Contact
+    source: 'new-message' | 'conversation-updated'
+}
+
 interface SocketContextType {
     socket: Socket | null
     isConnected: boolean
     messages: Message[]
+    /** Último mensaje entrante (para popups / badge en dashboard) */
+    lastInbound: InboundChatNotification | null
     sendMessage: (conversationId: string, body: string, messageType?: string, platform?: string) => void
     joinConversation: (conversationId: string) => void
     leaveConversation: (conversationId: string) => void
@@ -44,7 +59,23 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     const [socket, setSocket] = useState<Socket | null>(null)
     const [isConnected, setIsConnected] = useState(false)
     const [messages, setMessages] = useState<Message[]>([])
+    const [lastInbound, setLastInbound] = useState<InboundChatNotification | null>(null)
+    const inboundSeqRef = React.useRef(0)
     const dispatch = useDispatch<AppDispatch>()
+
+    const pushInboundNotification = (
+        message: Message,
+        source: InboundChatNotification['source'],
+        contact?: Contact
+    ) => {
+        inboundSeqRef.current += 1
+        setLastInbound({
+            seq: inboundSeqRef.current,
+            message,
+            contact,
+            source
+        })
+    }
 
     useEffect(() => {
         const connectSocket = () => {
@@ -100,17 +131,54 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
             // Deduplication: track recent notification keys to prevent double toasts
             const recentNotifications = new Set<string>()
 
-            socketInstance.on('new-message', (message: Message) => {
-                console.log('🆕 Mensaje recibido por socket:', message)
-                setMessages((prev) => {
-                    const exists = prev.some(m => m.id === message.id)
-                    if (exists) return prev
-                    return [...prev, message]
-                })
+            socketInstance.on('new-message', (payload: unknown) => {
+                console.log('🆕 Mensaje recibido por socket:', payload)
 
-                if ((message as any).direction === 'INBOUND') {
+                const normalized = normalizeInboundSocketMessage(payload)
+                if (normalized) {
+                    const { message, contact } = normalized
+                    setMessages((prev) => {
+                        const exists = prev.some(m => m.id === message.id)
+                        if (exists) return prev
+                        return [...prev, message]
+                    })
+                    pushInboundNotification(message, 'new-message', contact)
                     dispatch(fetchUnreadSummary())
+                } else {
+                    const legacy = payload as Message
+                    if (legacy?.id != null) {
+                        setMessages((prev) => {
+                            const exists = prev.some(m => m.id === legacy.id)
+                            if (exists) return prev
+                            return [...prev, legacy]
+                        })
+                        if (String((legacy as any).direction || '').toUpperCase() === 'INBOUND') {
+                            pushInboundNotification(legacy, 'new-message')
+                            dispatch(fetchUnreadSummary())
+                        }
+                    }
                 }
+                refreshDashboard()
+            })
+
+            socketInstance.on('conversation-updated', (payload: ConversationUpdatedPayload) => {
+                console.log('💬 Conversación actualizada:', payload)
+                if (!isInboundUnreadConversationUpdate(payload)) return
+
+                const message: Message = {
+                    id: Date.now(),
+                    conversationId: payload.conversationId || '',
+                    contactId: payload.contactId,
+                    direction: 'INBOUND',
+                    messageType: 'TEXT',
+                    body: payload.lastMessage || '',
+                    status: 'RECEIVED',
+                    sentAt: payload.updatedAt || new Date().toISOString(),
+                    createdAt: payload.updatedAt || new Date().toISOString()
+                }
+
+                pushInboundNotification(message, 'conversation-updated')
+                dispatch(fetchUnreadSummary())
                 refreshDashboard()
             })
 
@@ -233,7 +301,7 @@ return
 
     return (
         <SocketContext.Provider value={{
-            socket, isConnected, messages, sendMessage, joinConversation,
+            socket, isConnected, messages, lastInbound, sendMessage, joinConversation,
             leaveConversation, subscribePlatform, markAsRead, startTyping, stopTyping,
             subscribeDashboard, unsubscribeDashboard
         }}>

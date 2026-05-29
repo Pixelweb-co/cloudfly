@@ -1,11 +1,11 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react'
+import React, { createContext, useContext, useEffect, useState, ReactNode, useRef, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import { useSocket } from './SocketContext'
 import { Contact } from '@/types/marketing/contactTypes'
-import { Message } from '@/types/apps/chatTypes'
 import { contactService } from '@/services/marketing/contactService'
+import { mapSocketContact } from '@/utils/normalizeSocketPayload'
 
 export interface PopupChat {
   contact: Contact
@@ -23,88 +23,71 @@ interface PopupChatContextType {
 
 const PopupChatContext = createContext<PopupChatContextType | undefined>(undefined)
 
+/** No abrir popup si el usuario ya está en la ficha de ese contacto */
+function isViewingContactDetail(pathname: string, contactId: number | string): boolean {
+  return new RegExp(`/marketing/contacts/${contactId}(/|$)`).test(pathname)
+}
+
 export const PopupChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [activePopups, setActivePopups] = useState<PopupChat[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const pathname = usePathname()
-  const { messages } = useSocket()
-  
-  // Use a ref to track processed messages to avoid double-processing
-  const processedMessageIds = useRef<Set<string | number>>(new Set())
+  const { lastInbound } = useSocket()
+  const processedInboundSeq = useRef(0)
 
-  // This effect listens to new messages arriving in SocketContext
-  useEffect(() => {
-    if (messages.length === 0) return
-
-    const lastMessage = messages[messages.length - 1]
-    
-    // Check if we already processed this message
-    if (processedMessageIds.current.has(lastMessage.id)) return
-    
-    // Only process inbound messages
-    if (lastMessage.direction === 'OUTBOUND') {
-      processedMessageIds.current.add(lastMessage.id)
-      return
-    }
-
-    processedMessageIds.current.add(lastMessage.id)
-
-    // Check if the current route is the contact's detail page
-    // Route usually looks like: /marketing/contacts/56
-    // We need the contactId from the message. The message might have contactId or conversationId
-    const messageContactId = (lastMessage as any).contactId || (lastMessage as any).contact?.id
-
-    if (messageContactId && pathname.includes(`/marketing/contacts/${messageContactId}`)) {
-      // User is currently viewing this contact, do not open popup
-      return
-    }
-
-    // Increment unread count
-    setUnreadCount(prev => prev + 1)
-
-    // Open or update popup
-    if (messageContactId) {
-      // Check if popup already exists
-      const exists = activePopups.some(p => p.contact.id == messageContactId)
-      if (exists) {
-        // Just make sure it's open
-        setActivePopups(prev => prev.map(p => p.contact.id == messageContactId ? { ...p, state: 'open' } : p))
-      } else {
-        // We need to fetch the contact details if we don't have them in the message
-        // If the message brings contact data, use it
-        const contactData = (lastMessage as any).contact
-        if (contactData) {
-          setActivePopups(prev => [...prev, { contact: contactData, state: 'open' }])
-        } else {
-          // Fetch from API
-          fetchContactAndOpenPopup(messageContactId)
-        }
-      }
-    }
-  }, [messages, pathname]) // Run when messages or pathname changes
-
-  const fetchContactAndOpenPopup = async (contactId: string | number) => {
-    try {
-      const contact = await contactService.getContactById(Number(contactId))
-      
-      setActivePopups(prev => {
-        // Double check it wasn't added while fetching
-        if (prev.some(p => p.contact.id == contactId)) return prev
-        return [...prev, { contact, state: 'open' }]
-      })
-    } catch (error) {
-      console.error('Error fetching contact for popup:', error)
-    }
-  }
-
-  const openPopup = (contact: Contact) => {
+  const openPopupForContact = useCallback((contact: Contact) => {
     setActivePopups(prev => {
       const exists = prev.some(p => p.contact.id === contact.id)
       if (exists) {
-        return prev.map(p => p.contact.id === contact.id ? { ...p, state: 'open' } : p)
+        return prev.map(p => (p.contact.id === contact.id ? { ...p, state: 'open' as const } : p))
       }
       return [...prev, { contact, state: 'open' }]
     })
+  }, [])
+
+  const fetchContactAndOpenPopup = useCallback(
+    async (contactId: string | number) => {
+      try {
+        const contact = await contactService.getContactById(Number(contactId))
+        setActivePopups(prev => {
+          if (prev.some(p => p.contact.id == contactId)) {
+            return prev.map(p => (p.contact.id == contactId ? { ...p, state: 'open' as const } : p))
+          }
+          return [...prev, { contact, state: 'open' }]
+        })
+      } catch (error) {
+        console.error('Error fetching contact for popup:', error)
+      }
+    },
+    []
+  )
+
+  // Mensaje entrante no leído → abrir popup en dashboard
+  useEffect(() => {
+    if (!lastInbound) return
+    if (lastInbound.seq === processedInboundSeq.current) return
+    processedInboundSeq.current = lastInbound.seq
+
+    const { message, contact: embeddedContact } = lastInbound
+    const contactId = message.contactId ?? embeddedContact?.id
+    if (!contactId) return
+
+    if (isViewingContactDetail(pathname, contactId)) {
+      return
+    }
+
+    setUnreadCount(prev => prev + 1)
+
+    const mapped = embeddedContact || mapSocketContact(message as unknown as Record<string, unknown>)
+    if (mapped) {
+      openPopupForContact(mapped)
+    } else {
+      fetchContactAndOpenPopup(contactId)
+    }
+  }, [lastInbound, pathname, openPopupForContact, fetchContactAndOpenPopup])
+
+  const openPopup = (contact: Contact) => {
+    openPopupForContact(contact)
   }
 
   const closePopup = (contactId: number | string) => {
@@ -112,7 +95,7 @@ export const PopupChatProvider: React.FC<{ children: ReactNode }> = ({ children 
   }
 
   const minimizePopup = (contactId: number | string) => {
-    setActivePopups(prev => prev.map(p => p.contact.id == contactId ? { ...p, state: 'minimized' } : p))
+    setActivePopups(prev => prev.map(p => (p.contact.id == contactId ? { ...p, state: 'minimized' } : p)))
   }
 
   const clearUnreadCount = () => {
@@ -120,14 +103,16 @@ export const PopupChatProvider: React.FC<{ children: ReactNode }> = ({ children 
   }
 
   return (
-    <PopupChatContext.Provider value={{
-      activePopups,
-      openPopup,
-      closePopup,
-      minimizePopup,
-      unreadCount,
-      clearUnreadCount
-    }}>
+    <PopupChatContext.Provider
+      value={{
+        activePopups,
+        openPopup,
+        closePopup,
+        minimizePopup,
+        unreadCount,
+        clearUnreadCount
+      }}
+    >
       {children}
     </PopupChatContext.Provider>
   )
