@@ -393,8 +393,8 @@ services:
 
   lead-scrapper-google:
     build:
-      context: ./
-      dockerfile: lead_scrapper_google/Dockerfile
+      context: ./lead-scrapper-google
+      dockerfile: Dockerfile
     container_name: lead-scrapper-google
     restart: always
     ports:

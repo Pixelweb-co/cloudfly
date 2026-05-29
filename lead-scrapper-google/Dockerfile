@@ -9,16 +9,11 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY lead_scrapper_google/requirements.txt .
+COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
-
-# Instalar únicamente el navegador Chromium y sus dependencias del sistema
 RUN playwright install --with-deps chromium
 
-COPY business_scraper2.py ./business_scraper.py
-COPY lead_scrapper_google/api.py ./api.py
-
-RUN mkdir -p /app/output
+COPY . .
 
 EXPOSE 8000
 
