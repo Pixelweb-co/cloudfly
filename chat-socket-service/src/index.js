@@ -180,7 +180,7 @@ app.get('/api/chat/messages/:contactUuid', async (req, res) => {
         const { contactUuid } = req.params;
         const tenantId = req.query.tenantId;
         const companyId = req.query.companyId || req.headers['x-company-id'];
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = parseInt(req.query.limit) || 50;
 
         if (!tenantId || !companyId) {
             return res.status(400).json({ error: 'tenantId and companyId are required' });

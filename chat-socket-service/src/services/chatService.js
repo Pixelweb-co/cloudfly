@@ -521,17 +521,21 @@ class ChatService {
 
     /**
      * Obtener historial de mensajes de un contacto
+     * @param {number|string} tenantId
+     * @param {number|string} companyId
+     * @param {number|string} contactId
+     * @param {number} limit
      */
-    async getMessageHistory(tenantId, contactId, limit = 10) {
+    async getMessageHistory(tenantId, companyId, contactId, limit = 50) {
         try {
-            const safeLimit = parseInt(limit) || 10;
+            const safeLimit = parseInt(limit) || 50;
             const [messages] = await db.execute(
                 `SELECT m.*, c.name as contact_name, c.phone as contact_phone
                 FROM omni_channel_messages m
                 LEFT JOIN contacts c ON m.contact_id = c.id
-                WHERE m.tenant_id = ? AND m.contact_id = ?
+                WHERE m.tenant_id = ? AND m.company_id = ? AND m.contact_id = ?
                 ORDER BY m.created_at DESC LIMIT ${safeLimit}`,
-                [tenantId, contactId]
+                [tenantId, companyId, contactId]
             );
             return messages.reverse();
         } catch (error) {

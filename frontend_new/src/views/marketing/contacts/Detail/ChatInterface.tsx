@@ -188,21 +188,24 @@ export default function ChatInterface({ contact, isNew, isPopup = false }: Props
       setLoading(true)
       try {
         const user = userMethods.getUserLogin()
-        const tenantId = user?.customerId || user?.tenant_id
+        const tenantId = contact.tenantId || user?.customerId || user?.tenant_id
+        const companyId =
+          contact.companyId ||
+          user?.activeCompanyId ||
+          user?.company_id ||
+          user?.companyId
 
-        if (!tenantId) {
-          console.warn('No tenantId found for history fetch')
+        if (!tenantId || !companyId) {
+          console.warn('No tenantId/companyId for history fetch', { tenantId, companyId, contactId: contact.id })
           return
         }
 
         let history: ChatMessage[] = []
 
         if (contact.uuid) {
-          // Primary: fetch by uuid
-          history = await chatService.getMessages(contact.uuid, tenantId)
+          history = await chatService.getMessages(contact.uuid, tenantId, companyId)
         } else if (contact.id) {
-          // Fallback: fetch by numeric contactId
-          history = await chatService.getMessagesByContactId(Number(contact.id), tenantId)
+          history = await chatService.getMessagesByContactId(Number(contact.id), tenantId, companyId)
         }
 
         setMessages(history)

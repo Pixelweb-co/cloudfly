@@ -35,15 +35,21 @@ export const chatService = {
    * Get historical messages for a conversation
    * NEW: Points to chat.cloudfly.com.co directly for history
    */
-  getMessages: async (contactUuid: string, tenantId: string | number): Promise<ChatMessage[]> => {
-    const { companyId, jwt } = getChatAuthParams()
-    
+  getMessages: async (
+    contactUuid: string,
+    tenantId: string | number,
+    companyId?: string | number | null
+  ): Promise<ChatMessage[]> => {
+    const auth = getChatAuthParams()
+    const resolvedCompanyId = companyId ?? auth.companyId
+    const jwt = auth.jwt
+
     const response = await axios.get(`${CHAT_API_URL}/api/chat/messages/${contactUuid}`, {
-      params: { tenantId, companyId, limit: 50 },
+      params: { tenantId, companyId: resolvedCompanyId, limit: 50 },
       headers: {
         'Authorization': `Bearer ${jwt || ''}`,
         'X-Tenant-Id': tenantId,
-        'X-Company-Id': companyId || ''
+        'X-Company-Id': String(resolvedCompanyId ?? '')
       }
     });
     
@@ -58,15 +64,21 @@ export const chatService = {
   /**
    * Get historical messages by numeric contactId (fallback when uuid is missing)
    */
-  getMessagesByContactId: async (contactId: number, tenantId: string | number): Promise<ChatMessage[]> => {
-    const { companyId, jwt } = getChatAuthParams()
-    
+  getMessagesByContactId: async (
+    contactId: number,
+    tenantId: string | number,
+    companyId?: string | number | null
+  ): Promise<ChatMessage[]> => {
+    const auth = getChatAuthParams()
+    const resolvedCompanyId = companyId ?? auth.companyId
+    const jwt = auth.jwt
+
     const response = await axios.get(`${CHAT_API_URL}/api/chat/messages/by-contact/${contactId}`, {
-      params: { tenantId, companyId, limit: 50 },
+      params: { tenantId, companyId: resolvedCompanyId, limit: 50 },
       headers: {
         'Authorization': `Bearer ${jwt || ''}`,
         'X-Tenant-Id': tenantId,
-        'X-Company-Id': companyId || ''
+        'X-Company-Id': String(resolvedCompanyId ?? '')
       }
     });
     
