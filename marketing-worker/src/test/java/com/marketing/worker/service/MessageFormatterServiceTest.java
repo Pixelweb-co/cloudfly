@@ -10,11 +10,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
 
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,7 +29,6 @@ class MessageFormatterServiceTest {
 
     @Test
     void formatMessage_withProductDetails_includesChatLink() {
-        // Arrange
         Long contactId = 123L;
         Long productId = 456L;
 
@@ -56,23 +56,19 @@ class MessageFormatterServiceTest {
 
         when(productRepository.findById(productId)).thenReturn(Mono.just(product));
 
-        // Act
-        StepVerifier.create(messageFormatterService.formatMessage(campaign, contact))
-                .assertNext(result -> {
-                    assert result.contains("Hello John Doe, check this out!");
-                    assert result.contains("--- 📦 Detalle del Producto ---");
-                    assert result.contains("*Test Product*");
-                    assert result.contains("A great product");
-                    assert result.contains("💰 Precio: $90");
-                    assert result.contains("SKU: TEST-SKU");
-                    assert result.contains("💬 Chatea con nosotros: https://dashboard.cloudfly.com.co/contacts/" + contactId);
-                })
-                .verifyComplete();
+        String result = messageFormatterService.formatMessage(campaign, contact).block();
+
+        assertNotNull(result);
+        assertTrue(result.contains("Hello John Doe, check this out!"));
+        assertTrue(result.contains("*Test Product*"));
+        assertTrue(result.contains("A great product"));
+        assertTrue(result.contains("💰 Precio: $90"));
+        assertTrue(result.contains("SKU: TEST-SKU"));
+        assertTrue(result.contains("💬 Chatea con nosotros: https://dashboard.cloudfly.com.co/contacts/" + contactId));
     }
 
     @Test
     void formatMessage_withoutProductDetails_includesChatLink() {
-        // Arrange
         Long contactId = 456L;
 
         ContactEntity contact = ContactEntity.builder()
@@ -88,19 +84,15 @@ class MessageFormatterServiceTest {
                 .productId(null)
                 .build();
 
-        // Act
-        StepVerifier.create(messageFormatterService.formatMessage(campaign, contact))
-                .assertNext(result -> {
-                    assert result.contains("Hi Jane Doe!");
-                    assert result.contains("💬 Chatea con nosotros: https://dashboard.cloudfly.com.co/contacts/" + contactId);
-                    assert !result.contains("--- 📦 Detalle del Producto ---");
-                })
-                .verifyComplete();
+        String result = messageFormatterService.formatMessage(campaign, contact).block();
+
+        assertNotNull(result);
+        assertTrue(result.contains("Hi Jane Doe!"));
+        assertTrue(result.contains("💬 Chatea con nosotros: https://dashboard.cloudfly.com.co/contacts/" + contactId));
     }
 
     @Test
     void formatMessage_withProductIdButProductNotFound_includesChatLink() {
-        // Arrange
         Long contactId = 789L;
         Long productId = 999L;
 
@@ -119,19 +111,56 @@ class MessageFormatterServiceTest {
 
         when(productRepository.findById(productId)).thenReturn(Mono.empty());
 
-        // Act
-        StepVerifier.create(messageFormatterService.formatMessage(campaign, contact))
-                .assertNext(result -> {
-                    assert result.contains("Hello Bob Smith!");
-                    assert result.contains("💬 Chatea con nosotros: https://dashboard.cloudfly.com.co/contacts/" + contactId);
-                    assert !result.contains("--- 📦 Detalle del Producto ---");
-                })
-                .verifyComplete();
+        String result = messageFormatterService.formatMessage(campaign, contact).block();
+
+        assertNotNull(result);
+        assertTrue(result.contains("Hello Bob Smith!"));
+        assertTrue(result.contains("💬 Chatea con nosotros: https://dashboard.cloudfly.com.co/contacts/" + contactId));
     }
 
     @Test
-    void formatMessage_withNullContactId_includesChatLinkWithNull() {
-        // Arrange
+    void descriptionForWhatsApp_cutsAtInternalNoteMarker() {
+        String full = "Ideal para pymes.\n\nNota interna del sistema: prompt del agente IA.";
+        assert MessageFormatterService.descriptionForWhatsApp(full).equals("Ideal para pymes.");
+        assert MessageFormatterService.descriptionForWhatsApp("Solo público").equals("Solo público");
+        assert MessageFormatterService.descriptionForWhatsApp(null).isEmpty();
+    }
+
+    @Test
+    void formatMessage_withProductDescription_stripsInternalNote() {
+        Long contactId = 200L;
+        Long productId = 201L;
+
+        ContactEntity contact = ContactEntity.builder()
+                .id(contactId)
+                .name("Ana")
+                .build();
+
+        CampaignEntity campaign = CampaignEntity.builder()
+                .id(10L)
+                .message("Hola {{nombre}}")
+                .productId(productId)
+                .build();
+
+        Product product = Product.builder()
+                .id(productId)
+                .productName("Plan Pro")
+                .description("Beneficios para tu equipo.\n\nNota interna del sistema: no enviar esto.")
+                .price(new BigDecimal("50"))
+                .build();
+
+        when(productRepository.findById(productId)).thenReturn(Mono.just(product));
+
+        String result = messageFormatterService.formatMessage(campaign, contact).block();
+
+        assertNotNull(result);
+        assertTrue(result.contains("Beneficios para tu equipo."));
+        assertFalse(result.contains("Nota interna del sistema"));
+        assertFalse(result.contains("no enviar esto"));
+    }
+
+    @Test
+    void formatMessage_withNullContactId_doesNotAppendChatLink() {
         ContactEntity contact = ContactEntity.builder()
                 .id(null)
                 .name("Null ID")
@@ -145,14 +174,10 @@ class MessageFormatterServiceTest {
                 .productId(null)
                 .build();
 
-        // Act
-        StepVerifier.create(messageFormatterService.formatMessage(campaign, contact))
-                .assertNext(result -> {
-                    assert result.contains("Hello Null ID!");
-                    // If ID is null, the link should still be appended but with "null" in URL or handled gracefully.
-                    // Current implementation appends "null" if ID is null.
-                    assert result.contains("💬 Chatea con nosotros: https://dashboard.cloudfly.com.co/contacts/null");
-                })
-                .verifyComplete();
+        String result = messageFormatterService.formatMessage(campaign, contact).block();
+
+        assertNotNull(result);
+        assertTrue(result.contains("Hello Null ID!"));
+        assertFalse(result.contains("Chatea con nosotros"));
     }
 }

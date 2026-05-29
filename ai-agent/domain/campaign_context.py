@@ -106,8 +106,6 @@ def contains_campaign_outbound_markers(text: str, contact_id: int) -> bool:
 
     markers = (
         "chatea con nosotros",
-        "detalle del producto",
-        "--- 📦",
         "💬 chatea",
     )
     lowered = raw.lower()

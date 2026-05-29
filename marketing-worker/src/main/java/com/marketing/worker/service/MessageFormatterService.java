@@ -21,6 +21,9 @@ public class MessageFormatterService {
 
     private static final String DASHBOARD_BASE_URL = "https://dashboard.cloudfly.com.co/contacts/";
 
+    /** Texto a partir de aquí es uso interno (otros servicios); no va a WhatsApp. */
+    private static final String INTERNAL_NOTE_MARKER = "nota interna del sistema";
+
     // Zero-width characters used to make each message unique
     // WhatsApp won't display them but they prevent duplicate detection
     private static final char[] INVISIBLE_CHARS = {
@@ -73,10 +76,10 @@ public class MessageFormatterService {
 
     private String appendProductDetails(String message, Product product) {
         StringBuilder sb = new StringBuilder(message);
-        sb.append("\n\n--- 📦 Detalle del Producto ---");
-        sb.append("\n*").append(product.getProductName()).append("*");
-        if (product.getDescription() != null && !product.getDescription().isEmpty()) {
-            sb.append("\n").append(product.getDescription());
+        sb.append("\n\n*").append(product.getProductName()).append("*");
+        String publicDescription = descriptionForWhatsApp(product.getDescription());
+        if (!publicDescription.isEmpty()) {
+            sb.append("\n").append(publicDescription);
         }
         
         BigDecimal price = product.getSalePrice() != null ? product.getSalePrice() : product.getPrice();
@@ -91,5 +94,19 @@ public class MessageFormatterService {
         }
         
         return sb.toString();
+    }
+
+    /**
+     * Solo la parte pública de la descripción; corta en "nota interna del sistema" (insensible a mayúsculas).
+     */
+    static String descriptionForWhatsApp(String description) {
+        if (description == null || description.isBlank()) {
+            return "";
+        }
+        String lower = description.toLowerCase();
+        String marker = INTERNAL_NOTE_MARKER.toLowerCase();
+        int idx = lower.indexOf(marker);
+        String trimmed = idx >= 0 ? description.substring(0, idx).strip() : description.strip();
+        return trimmed;
     }
 }

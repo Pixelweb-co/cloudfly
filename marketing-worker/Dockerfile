@@ -7,7 +7,8 @@ RUN mvn dependency:go-offline -B || true
 
 # Copy source and build
 COPY src ./src
-RUN mvn clean package -DskipTests -B
+# skip test compile+run (image build); tests use .block() not reactor-test
+RUN mvn clean package -Dmaven.test.skip=true -B
 
 # Execute JAR
 EXPOSE 8080
