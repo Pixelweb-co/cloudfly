@@ -2,6 +2,8 @@
 """Lead scraper — solo API REST (consumida por marketing_team_ai / frontend)."""
 
 import asyncio
+import logging
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
@@ -12,6 +14,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from scraper.engine import scrape
+
+logging.basicConfig(
+    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+logger = logging.getLogger("lead_scraper.api")
 
 app = FastAPI(
     title="Lead Scraper API",
@@ -81,6 +89,13 @@ def build_query(category: str, city: Optional[str], country: str) -> str:
 
 def run_scrape(req: SearchRequest):
     query = build_query(req.category, req.city, req.country)
+    logger.info(
+        "Start scrape query='%s' pages=%s max_links=%s city='%s'",
+        query,
+        req.pages,
+        req.max_links,
+        req.city or "",
+    )
     return scrape(
         query=query,
         pages=req.pages,
@@ -120,8 +135,15 @@ async def search_post(req: SearchRequest):
         loop = asyncio.get_event_loop()
         leads = await loop.run_in_executor(executor, partial(run_scrape, req))
     except Exception as e:
+        logger.exception("Scrape failed query='%s': %s", query, e)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
+    logger.info(
+        "Completed scrape query='%s' total=%s duration_s=%.2f",
+        query,
+        len(leads),
+        time.time() - t0,
+    )
     return SearchResponse(
         query=query,
         total=len(leads),

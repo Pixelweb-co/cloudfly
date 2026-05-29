@@ -1,4 +1,5 @@
 import re
+import logging
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
@@ -13,7 +14,6 @@ from scraper.config import (
 )
 from scraper.models import Lead
 from scraper.regex_utils import (
-    build_phone_patterns,
     extract_emails,
     extract_name_from_card,
     extract_phones,
@@ -21,10 +21,15 @@ from scraper.regex_utils import (
     extract_whatsapp,
 )
 
+logger = logging.getLogger("lead_scraper.directory")
+
 
 def is_directory(url: str) -> bool:
     host = urlparse(url).netloc.lower()
-    return any(domain in host for domain in _directory_domains())
+    detected = any(domain in host for domain in _directory_domains())
+    if detected:
+        logger.debug("Directory detected host='%s' url='%s'", host, url)
+    return detected
 
 
 def _directory_domains() -> tuple[str, ...]:
@@ -42,6 +47,11 @@ def parse_directory_html(
 ) -> list[Lead]:
     soup = BeautifulSoup(html, "html.parser")
     cards = _collect_cards(soup)
+    logger.debug(
+        "Parsing directory html source='%s' cards=%s",
+        source_url,
+        len(cards),
+    )
     leads: list[Lead] = []
 
     for card in cards:
@@ -93,6 +103,7 @@ def _collect_cards(soup: BeautifulSoup) -> list:
                 if eid not in seen_ids:
                     seen_ids.add(eid)
                     cards.append(el)
+    logger.debug("Collected candidate cards=%s", len(cards))
     return cards
 
 
@@ -132,17 +143,24 @@ def scrape_directory_pages(
     url = start_url
     visited_pages: set[str] = set()
 
-    for _ in range(max_pages):
+    for idx in range(max_pages):
         if not url or url in visited_pages:
             break
         visited_pages.add(url)
 
         if not goto(page, url, NAV_TIMEOUT_MS):
+            logger.warning("Directory page load failed url='%s'", url)
             break
 
         html = page_html(page)
         batch = parse_directory_html(html, url, phone_patterns, country_code, ciudad)
         all_leads.extend(batch)
+        logger.info(
+            "Directory page %s parsed url='%s' leads=%s",
+            idx + 1,
+            url,
+            len(batch),
+        )
 
         if verbose:
             print(f"  📂 Directorio {url[:60]}… → {len(batch)} negocios")
@@ -150,7 +168,9 @@ def scrape_directory_pages(
         soup = BeautifulSoup(html, "html.parser")
         next_url = find_next_page_url(soup, url)
         if not next_url or next_url == url:
+            logger.debug("Directory pagination end url='%s'", url)
             break
+        logger.debug("Directory next page from='%s' to='%s'", url, next_url)
         url = next_url
 
     return all_leads

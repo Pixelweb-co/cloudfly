@@ -1,3 +1,5 @@
+import logging
+
 from scraper.browser import launch_browser, new_page
 from scraper.dedup import LeadDedup
 from scraper.directory import is_directory, scrape_directory_pages
@@ -5,6 +7,8 @@ from scraper.google_search import collect_google_links
 from scraper.models import Lead
 from scraper.regex_utils import build_phone_patterns, contacts_complete
 from scraper.single_business import scrape_single_business
+
+logger = logging.getLogger("lead_scraper.worker")
 
 
 def scrape(
@@ -17,6 +21,13 @@ def scrape(
     city: str = "",
     max_directory_pages: int = 5,
 ) -> list[Lead]:
+    logger.info(
+        "Worker started query='%s' pages=%s max_links=%s city='%s'",
+        query,
+        pages,
+        max_links,
+        city or "",
+    )
     phone_patterns = build_phone_patterns(country_code)
     dedup = LeadDedup()
     leads: list[Lead] = []
@@ -32,14 +43,17 @@ def scrape(
         if not result_links:
             if verbose:
                 print("\n❌  No se encontraron enlaces en Google.")
+            logger.warning("No google links found query='%s'", query)
             return leads
 
         result_links = result_links[:max_links]
+        logger.info("Collected %s google links query='%s'", len(result_links), query)
         if verbose:
             print(f"\n📋  {len(result_links)} enlaces. Procesando…\n")
 
         for i, url in enumerate(result_links, 1):
             if dedup.url_seen(url):
+                logger.debug("Skip duplicate result url='%s'", url)
                 continue
 
             if verbose:
@@ -47,18 +61,22 @@ def scrape(
                 print(f"[{i}/{len(result_links)}] {short}")
 
             if is_directory(url):
+                logger.info("Directory mode url='%s'", url)
                 batch = _process_directory(
                     context, url, phone_patterns, country_code, ciudad,
                     max_directory_pages, verbose, dedup, leads,
                 )
                 if verbose and batch:
                     print(f"         ✅ directorio → {batch} leads nuevos")
+                logger.info("Directory processed url='%s' new_leads=%s", url, batch)
             else:
+                logger.info("Single mode url='%s'", url)
                 _process_single(
                     context, url, phone_patterns, country_code, ciudad,
                     verbose, dedup, leads,
                 )
 
+    logger.info("Worker finished query='%s' total_leads=%s", query, len(leads))
     return leads
 
 
@@ -80,13 +98,25 @@ def _process_directory(
             page, url, phone_patterns, country_code, ciudad,
             max_pages=max_directory_pages, verbose=verbose,
         )
+        logger.info("Parsed directory raw_count=%s url='%s'", len(raw), url)
         for lead in raw:
             if lead.sitio_web and not contacts_complete(lead):
+                logger.debug(
+                    "Enrich candidate name='%s' website='%s'",
+                    lead.nombre,
+                    lead.sitio_web,
+                )
                 _enrich_from_website(
                     context, lead, phone_patterns, country_code, ciudad,
                     verbose, dedup,
                 )
             if not dedup.accept_lead(lead):
+                logger.debug(
+                    "Discard lead duplicate/no-contact name='%s' email='%s' phone='%s'",
+                    lead.nombre,
+                    lead.email,
+                    lead.telefono or lead.whatsapp,
+                )
                 continue
             leads.append(lead)
             added += 1
@@ -116,12 +146,20 @@ def _process_single(
     if not contacts_complete(lead):
         if verbose:
             print("         — sin contacto")
+        logger.debug("No contact found single url='%s'", url)
         return
 
     if not dedup.accept_lead(lead):
+        logger.debug("Discard single lead duplicate url='%s'", url)
         return
 
     leads.append(lead)
+    logger.info(
+        "Lead added single name='%s' phone='%s' email='%s'",
+        lead.nombre,
+        lead.telefono or lead.whatsapp,
+        lead.email,
+    )
     if verbose:
         parts = []
         if lead.telefono:
@@ -146,6 +184,7 @@ def _enrich_from_website(
 ) -> None:
     web = lead.sitio_web
     if not web or dedup.url_seen(web):
+        logger.debug("Skip enrich website='%s' (empty/seen)", web or "")
         return
 
     page = new_page(context)
@@ -160,6 +199,13 @@ def _enrich_from_website(
         lead.whatsapp = enriched.whatsapp
     if enriched.email and not lead.email:
         lead.email = enriched.email
+    logger.info(
+        "Enriched lead name='%s' website='%s' phone='%s' email='%s'",
+        lead.nombre,
+        web,
+        lead.telefono or lead.whatsapp,
+        lead.email,
+    )
     if verbose and contacts_complete(lead):
         print(f"         ↳ enriquecido desde web: {web[:50]}…")
 
