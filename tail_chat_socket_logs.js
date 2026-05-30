@@ -11,9 +11,9 @@ const config = {
 };
 
 conn.on('ready', () => {
-  const cmd = 'docker logs --tail 50 chat_socket 2>&1';
-  console.log(`📋 Chat-socket-service logs:\n`);
-  conn.exec(cmd, (err, stream) => {
+  console.log('📡 Tailing chat-socket-service logs in real-time...');
+  console.log('   Envía un mensaje desde un contacto externo para verificar el fix.\n');
+  conn.exec('docker logs --tail 10 -f chat_socket 2>&1', (err, stream) => {
     if (err) throw err;
     stream.on('close', () => conn.end());
     stream.on('data', (d) => process.stdout.write(d));
