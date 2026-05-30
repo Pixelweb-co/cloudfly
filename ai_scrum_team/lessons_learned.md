@@ -210,3 +210,18 @@ Este archivo registra errores históricos y lecciones aprendidas para que el equ
 *   **Fallo Detectado**: `litellm.BadRequestError: GroqException - {"error":{"message":"Failed to call a function. Please adjust your prompt. See 'failed_generation' for more details.","type":"invalid_request_error","code":"tool_use_failed","failed_generation":"\u003cfunction=read_code_file{\"filepath\": \"C:\\\\\\\\apps\\\\\\\\cloudfly\\\\\\\\docker-compose-full-vps.yml\"}\u003c/function\u003e\n"}}
 `
 *   **Lección y Acción Correctiva**: Cuando ocurra este error, el equipo debe re-evaluar la sintaxis o variables en juego, limpiar el búfer de rate limits, rotar las claves del pool de OpenRouter de inmediato y simplificar el volumen de datos consultado para reducir la carga de tokens.
+
+
+## 🔄 Autocorrección y Aprendizaje Continuo (2026-05-30 12:57:08) - Área: CrewExecution
+*   **Fallo Detectado**: `Invalid response from LLM call - None or empty.`
+*   **Lección y Acción Correctiva**: Cuando ocurra este error, el equipo debe re-evaluar la sintaxis o variables en juego, limpiar el búfer de rate limits, rotar las claves del pool de OpenRouter de inmediato y simplificar el volumen de datos consultado para reducir la carga de tokens.
+
+
+## 🔄 Autocorrección y Aprendizaje Continuo (2026-05-30 13:01:46) - Área: CrewExecution
+*   **Fallo Detectado**: `LLM context length exceeded. Original error: Error code: 400`
+*   **Lección y Acción Correctiva**: Cuando ocurra este error, el equipo debe re-evaluar la sintaxis o variables en juego, limpiar el búfer de rate limits, rotar las claves del pool de OpenRouter de inmediato y simplificar el volumen de datos consultado para reducir la carga de tokens.
+
+
+## 🔄 Autocorrección y Aprendizaje Continuo (2026-05-30 14:03:20) - Área: Resume-CLOUD-178
+*   **Fallo Detectado**: `Invalid response from LLM call - None or empty.`
+*   **Lección y Acción Correctiva**: Cuando ocurra este error, el equipo debe re-evaluar la sintaxis o variables en juego, limpiar el búfer de rate limits, rotar las claves del pool de OpenRouter de inmediato y simplificar el volumen de datos consultado para reducir la carga de tokens.

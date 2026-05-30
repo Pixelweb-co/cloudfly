@@ -1,11 +1,9 @@
 from crewai import Agent
-from langchain_openai import ChatOpenAI
-import os
+import logging
 
-llm = ChatOpenAI(
-    model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-    temperature=0.7
-)
+from agents.llm_config import llm
+
+logger = logging.getLogger("cloudfly_ai")
 
 copywriter_agent = Agent(
     role="WhatsApp Marketing Copywriter",

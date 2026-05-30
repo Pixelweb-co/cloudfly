@@ -25,7 +25,7 @@ class ProspectorService:
 
     def normalize_keyword(self, keyword: str) -> str:
         if not keyword:
-            return keyword
+            return ""
         keyword = re.sub(r"\[.*?\]", "", keyword).lower()
         keyword = self._remove_accents(keyword)
         for n in (
@@ -35,9 +35,11 @@ class ProspectorService:
             keyword = re.sub(n, "", keyword)
         keyword = re.sub(r"[\,\.\;\:\"\(\)\[\]]", "", keyword)
         keyword = re.sub(r"\s+", " ", keyword).strip()
+        if not keyword:
+            return ""
         words = keyword.split()
         if not words:
-            return keyword
+            return ""
         first = words[0]
         if len(words) >= 3 and words[1] == "de":
             return f"{first} de {words[2]}"

@@ -1,41 +1,45 @@
 import os
+from dotenv import load_dotenv
+
+# Load environment variables BEFORE creating LLM instances
+_env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+load_dotenv(dotenv_path=_env_path)
+
 import crewai.llms.cache as _crewai_cache
-# Monkeypatch to prevent crewai from injecting unsupported 'cache_breakpoint' into Groq/OpenAI requests
+# Monkeypatch to prevent crewai from injecting unsupported 'cache_breakpoint' into OpenAI requests
 _crewai_cache.mark_cache_breakpoint = lambda msg: msg
 
 from crewai import Agent, LLM
 from tools import get_jira_tools
 
-# --- Resilient LLM Configurations with Fallbacks (100% Free) ---
+# ── LLM Configurations (100% Free via OpenRouter) ─────────────────────
+# Primary:   openrouter/owl-alpha
+# Secondary: z-ai/glm-4.5-air:free
+# Embeddings: nvidia/llama-nemotron-embed-vl-1b-v2:free
 
-# Ollama local (always available offline)
-local_backup = LLM(
-    model="ollama/qwen2.5-coder:7b",
-    base_url="http://localhost:11434",
-    temperature=0.0
-)
+OPENROUTER_BASE = "https://openrouter.ai/api/v1"
+OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or "sk-or-placeholder"
 
-# --- Resilient LLM Configurations with Fallbacks (100% Free & Verified on OpenRouter) ---
-
-# Product Owner, Scrum Master, QA, DevOps, and Architect (Uses OpenRouter Owl Alpha - Highly available free model)
-po_sm_llm = LLM(
-    model="openrouter/openrouter/owl-alpha",
-    base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY"),
+# General-purpose LLM (Product Owner, QA, DevOps, Architect, Technical Writer, Scrum Master)
+owl_alpha_llm = LLM(
+    model="openrouter/owl-alpha",
+    base_url=OPENROUTER_BASE,
+    api_key=OPENROUTER_KEY,
     temperature=0.2
 )
 
-# Software Developers (Uses OpenRouter Owl Alpha - Highly available free model)
-coder_llm = LLM(
-    model="openrouter/openrouter/owl-alpha",
-    base_url="https://openrouter.ai/api/v1",
-    api_key=os.getenv("OPENROUTER_API_KEY"),
+# Developer LLM (Software Developer, Frontend Developer) — GLM 4.5 Air for code generation
+glm_coder_llm = LLM(
+    model="z-ai/glm-4.5-air:free",
+    base_url=OPENROUTER_BASE,
+    api_key=OPENROUTER_KEY,
     temperature=0.1
 )
 
-# Mapping variables to preserve compatibility with existing CrewAI Agent definitions
-openrouter_llm = po_sm_llm  # General role fallback
-local_llm = po_sm_llm       # Manager role fallback
+# Alias for backward compatibility
+openrouter_llm = owl_alpha_llm
+local_llm = owl_alpha_llm
+coder_llm = glm_coder_llm
 
 jira_tools = get_jira_tools()
 
@@ -61,7 +65,7 @@ scrum_master = Agent(
     allow_delegation=True # Crucial for the manager in a hierarchical process
 )
 
-# 3. Software Developer (Uses OpenRouter Owl Alpha for fast, free, and robust code generation)
+# 3. Software Developer (Uses GLM 4.5 Air for high-quality code generation)
 software_developer = Agent(
     role='Senior Software Developer',
     goal='Write clean, efficient, and robust code for any application layer, including configurations, scripts, and business logic.',
@@ -121,7 +125,7 @@ technical_writer = Agent(
     max_iter=25
 )
 
-# 8. Senior Frontend Developer (Uses OpenRouter Owl Alpha for premium Next.js UI development)
+# 8. Senior Frontend Developer (Uses GLM 4.5 Air for premium Next.js UI development)
 frontend_developer = Agent(
     role='Senior Frontend Developer',
     goal='Design and build beautiful, highly interactive, responsive, and state-of-the-art web user interfaces in Next.js, React, TypeScript, and CSS/Tailwind inside the frontend_new directory.',

@@ -35,22 +35,20 @@ class Config:
     DB_PORT = int(os.getenv("DB_PORT", "3306"))
     DB_NAME = os.getenv("DB_DATABASE", "cloud_master")
     DB_USER = os.getenv("DB_USERNAME", "root")
-    DB_PASSWORD = os.getenv("DB_PASSWORD", "widowmaker")
+    DB_PASSWORD = os.getenv("DB_PASSWORD")
 
     # Redis configuration
     REDIS_HOST = os.getenv("REDIS_HOST", "redis_server")
     REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
-    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "Elian2020#")
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
 
     # Services
     LEAD_GENERATOR_URL = os.getenv("LEAD_GENERATOR_URL", "http://lead-generator:8000")
-    # Lead scraper: event-driven via Kafka (no HTTP sync)
     KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS") or os.getenv("KAFKA_HOST", "kafka:9092")
     LEAD_SCRAPER_GOOGLE_URL = os.getenv("LEAD_SCRAPER_GOOGLE_URL", "http://lead-scrapper-google:8000")
     BACKEND_URL = os.getenv("BACKEND_URL", "http://backend-api:8080")
     BACKEND_API_KEY = os.getenv("BACKEND_API_KEY", "")
 
-    
     # Evolution API (WhatsApp)
     EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL", "http://evolution-api:8080")
     EVOLUTION_API_KEY = os.getenv("EVOLUTION_API_KEY", "")
@@ -59,7 +57,7 @@ class Config:
     TENANT_ID = int(os.getenv("TENANT_ID", "1"))
     COMPANY_ID = int(os.getenv("COMPANY_ID", "1"))
 
-    # Anti‑spam settings
+    # Anti-spam settings
     MIN_DELAY_MS = int(os.getenv("MIN_DELAY_MS", "3000"))
     MAX_DELAY_MS = int(os.getenv("MAX_DELAY_MS", "12000"))
     BATCH_SIZE = int(os.getenv("BATCH_SIZE", "20"))
@@ -72,4 +70,17 @@ class Config:
     ]
     if not OPENROUTER_KEYS_POOL and OPENROUTER_API_KEY:
         OPENROUTER_KEYS_POOL = [OPENROUTER_API_KEY]
+
+    @classmethod
+    def validate(cls):
+        """Validate that critical configuration is present at startup."""
+        missing = []
+        if not cls.DB_PASSWORD:
+            missing.append("DB_PASSWORD")
+        if not cls.REDIS_PASSWORD:
+            missing.append("REDIS_PASSWORD")
+        if missing:
+            raise ConfigurationError(
+                f"Missing required environment variables: {', '.join(missing)}"
+            )
 

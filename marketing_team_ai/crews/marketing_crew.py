@@ -1,6 +1,6 @@
 from crewai import Task, Crew, Process
 
-from agents.icp_agent import icp_agent, create_icp_agent
+from agents.icp_agent import create_icp_agent
 from agents.qualification_agent import qualification_agent
 from agents.copywriter_agent import copywriter_agent
 from agents.researcher_agent import researcher_agent
@@ -44,7 +44,7 @@ def build_analysis_crew(company, product):
     )
 
     return Crew(
-        agents=[researcher_agent, icp_agent],
+        agents=[researcher_agent, create_icp_agent(product.get('product_name'), product.get('description'))],
         tasks=[research_task, analyze_task],
         process=Process.sequential,
         verbose=True

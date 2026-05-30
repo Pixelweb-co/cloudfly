@@ -61,7 +61,11 @@ class LeadSearchPipeline:
         campaign_crew = build_campaign_crew(company=company, product=product, leads=leads)
         campaign_crew.kickoff()
 
-        campaign_raw = campaign_crew.tasks[1].output.raw.strip()
+        task_output = campaign_crew.tasks[1].output
+        if not task_output or not task_output.raw:
+            logger.warning("request_id=%s campaign task returned empty output", request_id)
+            return
+        campaign_raw = task_output.raw.strip()
         if campaign_raw.startswith("```json"):
             campaign_raw = campaign_raw[7:]
         if campaign_raw.endswith("```"):

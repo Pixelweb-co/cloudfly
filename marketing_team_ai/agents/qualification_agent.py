@@ -1,11 +1,6 @@
 from crewai import Agent
-from langchain_openai import ChatOpenAI
-import os
 
-llm = ChatOpenAI(
-    model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-    temperature=0.2
-)
+from agents.llm_config import llm
 
 qualification_agent = Agent(
     role="Lead Qualification Expert",

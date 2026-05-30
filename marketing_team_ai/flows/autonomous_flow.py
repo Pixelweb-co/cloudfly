@@ -18,10 +18,19 @@ class AutonomousMarketingFlow:
         self.prospector_service = ProspectorService()
         self.scheduler_url = os.getenv("SCHEDULER_SERVICE_URL", "http://scheduler-service:8080")
 
-    def get_active_companies(self):
+    def _execute_query(self, query, params=None, dictionary=False):
+        """Execute a query with guaranteed connection cleanup."""
         conn = MySQLTool.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(dictionary=dictionary)
+        try:
+            cursor.execute(query, params or ())
+            results = cursor.fetchall()
+            return results
+        finally:
+            cursor.close()
+            conn.close()
 
+    def get_active_companies(self):
         query = '''
         SELECT c.id, c.tenant_id, c.name,
                cl.business_type,
@@ -31,19 +40,9 @@ class AutonomousMarketingFlow:
         JOIN clientes cl ON c.tenant_id = cl.id
         WHERE c.status = 1
         '''
-
-        cursor.execute(query)
-        companies = cursor.fetchall()
-
-        cursor.close()
-        conn.close()
-
-        return companies
+        return self._execute_query(query, dictionary=True)
 
     def get_products(self, tenant_id, company_id):
-        conn = MySQLTool.get_connection()
-        cursor = conn.cursor(dictionary=True)
-
         query = '''
         SELECT id, product_name, description
         FROM productos
@@ -51,50 +50,37 @@ class AutonomousMarketingFlow:
         AND company_id = %s
         AND status IN ('ACTIVE', 'PUBLISHED')
         '''
-
-        cursor.execute(query, (tenant_id, company_id))
-        products = cursor.fetchall()
-
-        cursor.close()
-        conn.close()
-
-        return products
+        return self._execute_query(query, (tenant_id, company_id), dictionary=True)
 
     def get_active_whatsapp_channel(self, tenant_id, company_id):
-        conn = MySQLTool.get_connection()
-        cursor = conn.cursor()
         query = '''
         SELECT id FROM channels 
         WHERE tenant_id = %s AND company_id = %s AND platform = 'WHATSAPP' AND status = 1 
         LIMIT 1
         '''
-        cursor.execute(query, (tenant_id, company_id))
-        row = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        return row[0] if row else None
+        rows = self._execute_query(query, (tenant_id, company_id))
+        return rows[0][0] if rows else None
 
     def get_or_create_sending_list(self, tenant_id, company_id, name):
         conn = MySQLTool.get_connection()
         cursor = conn.cursor()
-        query_find = "SELECT id FROM sending_lists WHERE tenant_id = %s AND company_id = %s AND name = %s LIMIT 1"
-        cursor.execute(query_find, (tenant_id, company_id, name))
-        row = cursor.fetchone()
-        if row:
+        try:
+            query_find = "SELECT id FROM sending_lists WHERE tenant_id = %s AND company_id = %s AND name = %s LIMIT 1"
+            cursor.execute(query_find, (tenant_id, company_id, name))
+            row = cursor.fetchone()
+            if row:
+                return row[0]
+
+            query_insert = """
+                INSERT INTO sending_lists (tenant_id, company_id, name, description, status)
+                VALUES (%s, %s, %s, %s, 'ACTIVE')
+            """
+            cursor.execute(query_insert, (tenant_id, company_id, name, f"Lista automática para {name}"))
+            conn.commit()
+            return cursor.lastrowid
+        finally:
             cursor.close()
             conn.close()
-            return row[0]
-        
-        query_insert = """
-            INSERT INTO sending_lists (tenant_id, company_id, name, description, status)
-            VALUES (%s, %s, %s, %s, 'ACTIVE')
-        """
-        cursor.execute(query_insert, (tenant_id, company_id, name, f"Lista automática para {name}"))
-        conn.commit()
-        list_id = cursor.lastrowid
-        cursor.close()
-        conn.close()
-        return list_id
 
     def save_qualified_leads_to_crm(self, tenant_id, company_id, sending_list_id, leads):
         conn = MySQLTool.get_connection()
@@ -123,23 +109,28 @@ class AutonomousMarketingFlow:
         try:
             for lead in leads:
                 name = lead.get("name", "Cliente Frío")
-                phone = ''.join(filter(str.isdigit, lead.get("phone", "")))
+                raw_phone = lead.get("phone", "")
+                phone = ''.join(filter(str.isdigit, raw_phone))
                 if not phone:
                     continue
-                
+
+                # Check with both the normalized phone and the raw phone to avoid duplicates
                 cursor.execute(query_check_contact, (tenant_id, company_id, phone))
                 contact_row = cursor.fetchone()
+                if not contact_row and raw_phone != phone:
+                    cursor.execute(query_check_contact, (tenant_id, company_id, raw_phone))
+                    contact_row = cursor.fetchone()
                 if contact_row:
                     contact_id = contact_row[0]
                 else:
                     cursor.execute(query_insert_contact, (tenant_id, company_id, name, phone))
                     contact_id = cursor.lastrowid
-                
+
                 cursor.execute(query_check_list_contact, (sending_list_id, contact_id))
                 if not cursor.fetchone():
                     cursor.execute(query_insert_list_contact, (sending_list_id, contact_id))
                     saved_ids.append(contact_id)
-            
+
             conn.commit()
             if saved_ids:
                 query_update_counter = "UPDATE sending_lists SET total_contacts = total_contacts + %s WHERE id = %s"
@@ -157,7 +148,6 @@ class AutonomousMarketingFlow:
     def create_campaign_in_db(self, tenant_id, company_id, category_name, sending_list_id, channel_id, message_body, product_id, scheduled_at):
         conn = MySQLTool.get_connection()
         cursor = conn.cursor()
-        
         query = """
             INSERT INTO campaigns (
                 tenant_id, company_id, name, description, status,
@@ -166,23 +156,20 @@ class AutonomousMarketingFlow:
         """
         name = f"Campaña Autónoma - {category_name}"
         description = f"Campaña de prospección automatizada para {category_name}"
-        
         try:
             cursor.execute(query, (
                 tenant_id, company_id, name, description,
                 channel_id, sending_list_id, message_body, product_id, scheduled_at
             ))
             conn.commit()
-            campaign_id = cursor.lastrowid
-            cursor.close()
-            conn.close()
-            return campaign_id
+            return cursor.lastrowid
         except Exception as e:
             logger.error(f"Error creating campaign in DB: {e}")
             conn.rollback()
+            return None
+        finally:
             cursor.close()
             conn.close()
-            return None
 
     def sync_redis_campaign_context(self, contact_ids, campaign_id, product_id, company_id):
         try:
@@ -268,8 +255,12 @@ class AutonomousMarketingFlow:
                 result = analysis_crew.kickoff()
                 logger.info(f"Crew kickoff results: {result}")
 
-                # Parse strategist task output
-                analysis_raw = analysis_crew.tasks[1].output.raw.strip()
+                # Parse strategist task output with null safety
+                task_output = analysis_crew.tasks[1].output
+                if not task_output or not task_output.raw:
+                    logger.warning("B2B analysis task returned empty output, skipping.")
+                    continue
+                analysis_raw = task_output.raw.strip()
                 if analysis_raw.startswith("```json"):
                     analysis_raw = analysis_raw[7:]
                 if analysis_raw.endswith("```"):
@@ -303,6 +294,10 @@ class AutonomousMarketingFlow:
                         norm_name = self.prospector_service.normalize_keyword(name)
                     except Exception:
                         norm_name = name
+
+                    if not norm_name or not norm_name.strip():
+                        logger.warning(f"Empty category name after normalization, skipping: '{name}'")
+                        continue
 
                     normalized_categories.append({
                         'category': norm_name,
