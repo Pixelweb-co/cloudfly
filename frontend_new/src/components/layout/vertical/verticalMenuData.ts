@@ -1,6 +1,12 @@
 // Vertical Menu Data
 export const verticalMenuData = [
     {
+        label: 'Hola Mundo',
+        icon: 'rocket-launch',
+        route: '/hola-mundo',
+        roles: ['MANAGER', 'ADMIN', 'USER']
+    },
+    {
         label: 'Comunicaciones',
         icon: 'chat',
         route: '#',
