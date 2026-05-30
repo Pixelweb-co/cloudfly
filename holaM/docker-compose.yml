@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  hola-mundo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hola-mundo
+    restart: "no"
