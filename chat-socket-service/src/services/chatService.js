@@ -51,12 +51,10 @@ class ChatService {
         const externalMsgId = data.key.id;
 
         // 0. FILTER: No groups, No status, No echoes (fromMe)
-        /* COMENTADO TEMPORALMENTE PARA PRUEBAS (REACTIVAR EN PRODUCCIÓN)
         if (data.key.fromMe) {
             logger.info(`ℹ️ [WEBHOOK_SKIP] Message is an echo (fromMe=true) from ${remoteJid}. Ignoring.`);
             return;
         }
-        */
 
         if (remoteJid && remoteJid.endsWith('@g.us')) {
             logger.info(`ℹ️ [WEBHOOK_SKIP] Group message detected (${remoteJid}). Ignoring.`);
