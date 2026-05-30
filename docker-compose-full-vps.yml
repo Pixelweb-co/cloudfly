@@ -466,7 +466,7 @@ services:
       - N8N_HOST=autobot.cloudfly.com.co
       - N8N_PROTOCOL=https
       - N8N_PORT=5678
-      - WEBHOOK_URL=https://autobot.cloudfly.com.co/
+      - WEBHOOT_URL=https://autobot.cloudfly.com.co/
       - N8N_EDITOR_BASE_URL=https://autobot.cloudfly.com.co
       - NODE_ENV=production
       - N8N_SECURE_COOKIE=true
@@ -517,6 +517,46 @@ services:
     depends_on:
       - kafka
       - db
+
+  # ============================================
+  # IA MARKETING OPERATION MODULE (CLOUD-199)
+  # ============================================
+  ia-marketing-operation:
+    build:
+      context: ./ia_marketing_operation
+      dockerfile: Dockerfile
+    container_name: ia-marketing-operation
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - TZ=America/Bogota
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=cloud_master
+      - DB_USERNAME=root
+      - DB_PASSWORD=widowmaker
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - REDIS_HOST=redis_server
+      - REDIS_PASSWORD=Elian2020#
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - BACKEND_API_URL=http://backend-api:8080
+      - EVOLUTION_API_URL=http://evolution-api:8080
+      - SSH_HOST=89.117.147.134
+      - SSH_PORT=10622
+      - SSH_USER=root
+    networks:
+      - app-net
+      - kafka-net
+    depends_on:
+      - mysql
+      - kafka
+      - redis
+    volumes:
+      - ./ia_marketing_operation/outputs:/app/outputs
 
   traefik:
     image: traefik:v3.6.7
