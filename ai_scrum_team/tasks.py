@@ -187,9 +187,10 @@ frontend_development_task = Task(
     2. Write modern TypeScript and clean Next.js 14 code (App Router structure). Avoid ad-hoc styling; utilize the established global CSS and design system.
     3. Ensure proper multi-tenant isolation by persistency and retrieval of \'activeTenantId\' and \'activeCompanyId\' from localStorage or routing.
     4. You MUST use the 'Write Code To File' tool to save all your frontend files strictly inside the "C:\\apps\\cloudfly\\frontend_new" directory structure.
-    5. Write an automated unit or integration test script for your UI files if required.
-    6. Post a summary of your frontend changes in a Jira comment on the relevant Jira Issue Keys, starting with "🤖 **Frontend Developer**: " to identify yourself.
-    7. Before passing to DevOps/QA, use the 'Commit Code' tool to save your changes to Git.
+    5. CRITICAL: When exploring the frontend_new directory, you MUST exclude the "node_modules" folder from all reviews and file listings. Never read, list, or modify files inside node_modules. Use 'List Directory Files' with directory="frontend_new" and ignore any node_modules entries.
+    6. Write an automated unit or integration test script for your UI files if required.
+    7. Post a summary of your frontend changes in a Jira comment on the relevant Jira Issue Keys, starting with "🤖 **Frontend Developer**: " to identify yourself.
+    8. Before passing to DevOps/QA, use the 'Commit Code' tool to save your changes to Git.
     ''',
     expected_output='All React/Next.js files and UI components written to frontend_new. A Jira comment must be added.',
     agent=frontend_developer
@@ -213,9 +214,10 @@ marketing_task = Task(
        - Blog post outlines
        - Feature announcement copy
     4. If the sprint feature involves frontend/UI changes, create or update marketing-related UI components (hero sections, CTA banners, testimonials, pricing tables) in the "frontend_new" directory.
-    5. Use the 'Write Code To File' tool to save all marketing content and assets to disk.
-    6. Post a summary of your marketing strategy and assets in a detailed Jira comment on the relevant Jira Issue Keys.
-    7. Always start your comments with "🤖 **Marketing Specialist**: " to identify yourself.
+    5. CRITICAL: When working in the frontend_new directory, you MUST exclude the "node_modules" folder from all reviews and file listings. Never read, list, or modify files inside node_modules.
+    6. Use the 'Write Code To File' tool to save all marketing content and assets to disk.
+    7. Post a summary of your marketing strategy and assets in a detailed Jira comment on the relevant Jira Issue Keys.
+    8. Always start your comments with "🤖 **Marketing Specialist**: " to identify yourself.
     ''',
     expected_output='Marketing strategy document, content assets, and optionally frontend marketing components saved to disk. A Jira comment with the marketing summary.',
     agent=marketing_specialist

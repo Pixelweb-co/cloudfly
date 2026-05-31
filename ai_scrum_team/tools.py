@@ -292,9 +292,9 @@ def list_directory_files(directory: str = "") -> str:
     try:
         tree = []
         for root, dirs, files in os.walk(target_dir):
-            # Skip hidden folders or build artifacts if any
-            dirs[:] = [d for d in dirs if not d.startswith('.')]
-            
+            # Skip hidden folders, build artifacts, and node_modules
+            dirs[:] = [d for d in dirs if not d.startswith('.') and d != 'node_modules']
+
             level = root.replace(target_dir, '').count(os.sep)
             indent = ' ' * 4 * level
             subfolder = os.path.basename(root)

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Box,
   Typography,
@@ -96,37 +96,111 @@ const MarketingLiveDashboardPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
 
   // -----------------------------------------------------------------------
-  // Initial data load via REST
+  // Initial data load via REST with AbortController cleanup
+  // -----------------------------------------------------------------------
+  // CLOUD-218: AbortController prevents state updates on unmounted component.
+  // The controller is created before the async call and aborted on unmount,
+  // which cancels any in-flight REST request. The error handler guards
+  // against AbortError so that intentional cancellation does not set error state.
   // -----------------------------------------------------------------------
 
-  const loadInitialData = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
+  useEffect(() => {
+    const controller = new AbortController()
 
-      // TODO: Resolve tenantId and companyId from auth context / session
-      // For now using default tenant 1 — replace with actual auth context lookup
-      const tenantId = 1
-      const companyId: number | undefined = undefined
+    const loadInitialData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
 
-      // Fetch initial action history via REST (provides data before WebSocket connects)
-      const history = await marketingHistoryService.getActionHistory(tenantId, 50, 0, companyId)
-      if (history) {
+        // TODO: Resolve tenantId and companyId from auth context / session
+        // For now using default tenant 1 — replace with actual auth context lookup
+        const tenantId = 1
+        const companyId: number | undefined = undefined
+
+        // Fetch initial action history via REST with AbortSignal
         // The socket hook will receive real-time updates via WebSocket,
         // but the REST data serves as the initial fallback.
-        // For now, we just verify the endpoint is reachable.
+        const history = await marketingHistoryService.getActionHistory(
+          tenantId,
+          50,
+          0,
+          companyId,
+          controller.signal
+        )
+        if (history) {
+          // REST data loaded successfully — socket events will take over
+          // for real-time updates from this point forward.
+        }
+      } catch (err) {
+        // Do NOT set error state if the request was intentionally cancelled
+        // by the AbortController (component unmounted during in-flight request).
+        if ((err as Error).name !== 'AbortError') {
+          console.error('[MarketingLiveDashboard] Initial load error:', err)
+          setError('Error al cargar los datos iniciales. Usando modo offline.')
+        }
+      } finally {
+        setLoading(false)
       }
-    } catch (err) {
-      console.error('[MarketingLiveDashboard] Initial load error:', err)
-      setError('Error al cargar los datos iniciales. Usando modo offline.')
-    } finally {
-      setLoading(false)
     }
+
+    loadInitialData()
+
+    // Cleanup: abort any in-flight request when component unmounts
+    return () => controller.abort()
   }, [])
 
+  // -----------------------------------------------------------------------
+  // Manual reconnect handler — triggers both WS reconnect and REST refetch
+  // -----------------------------------------------------------------------
+
+  const handleReconnect = () => {
+    reconnect()
+    // Trigger a fresh REST load by toggling a state key or calling the effect again.
+    // Since the useEffect has an empty dependency array, we use a refreshKey approach.
+    setRefreshKey(prev => prev + 1)
+  }
+
+  // Use a refreshKey to allow manual re-fetch from the reconnect button
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  // Separate useEffect for manual reconnection that depends on refreshKey
   useEffect(() => {
+    if (refreshKey === 0) return // Skip initial mount (handled by the main useEffect above)
+
+    const controller = new AbortController()
+
+    const loadInitialData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        const tenantId = 1
+        const companyId: number | undefined = undefined
+
+        const history = await marketingHistoryService.getActionHistory(
+          tenantId,
+          50,
+          0,
+          companyId,
+          controller.signal
+        )
+        if (history) {
+          // REST re-fetch successful after manual reconnect
+        }
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('[MarketingLiveDashboard] Re-fetch error:', err)
+          setError('Error al recargar los datos. Usando modo offline.')
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+
     loadInitialData()
-  }, [loadInitialData])
+
+    return () => controller.abort()
+  }, [refreshKey])
 
   // -----------------------------------------------------------------------
   // Derived stats
@@ -186,10 +260,7 @@ const MarketingLiveDashboardPage: React.FC = () => {
             variant='outlined'
             size='small'
             startIcon={<RefreshCw size={16} />}
-            onClick={() => {
-              reconnect()
-              loadInitialData()
-            }}
+            onClick={handleReconnect}
           >
             Reconectar
           </Button>

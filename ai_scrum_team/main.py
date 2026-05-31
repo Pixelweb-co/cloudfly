@@ -309,32 +309,52 @@ def generate_codebase_context(sprint_goal=""):
     context.append("NO intentes explorar el árbol completo manualmente — céntrate en completar la tarea del sprint.")
     return "\n".join(context)
 
-def summarize_context_with_ollama(raw_context: str, label: str = "contexto") -> str:
+def compact_with_owl_alpha(raw_context: str, label: str = "contexto") -> str:
     """
-    Uses local Ollama (llama3.2) to compress a large context string into a concise
-    summary of max ~2000 tokens. Falls back to truncation if Ollama is unavailable.
-    Logs elapsed time so we can measure Ollama's summarization speed.
+    Uses the configured model (MODEL_DEFAULT from .env) to compress a large context 
+    string into a concise summary of max ~600 tokens. Falls back to truncation if the API is unavailable.
     """
     import time
     import requests
 
     MAX_CHARS_BEFORE_SUMMARY = 6000  # ~1500 tokens — only summarize if larger
-    OPENROUTER_BASE = "https://openrouter.ai/api/v1"
-    OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
+    
+    # Leer configuración del modelo desde .env
+    model_default = os.getenv("MODEL_DEFAULT", "openrouter/owl-alpha")
+    if "/" in model_default:
+        provider, model_name = model_default.split("/", 1)
+    else:
+        provider = "openrouter"
+        model_name = model_default
+    
+    # Configurar según proveedor
+    if provider == "openai":
+        api_base = "https://api.openai.com/v1"
+        api_key = os.getenv("OPENAI_API_KEY") or ""
+        llm_model = model_name
+    elif provider == "groq":
+        api_base = "https://openrouter.ai/api/v1"
+        api_key = os.getenv("GROQ_API_KEY") or os.getenv("OPENROUTER_API_KEY") or ""
+        llm_model = f"groq/{model_name}"
+    else:
+        api_base = "https://openrouter.ai/api/v1"
+        api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
+        llm_model = f"openrouter/{model_name}"
 
     original_chars = len(raw_context)
-    print(f"\n📏 [Context Manager]: '{label}' tiene {original_chars} chars ({original_chars//4} tokens aprox.)")
+    print(f"\n📏 [Context Compactor]: '{label}' tiene {original_chars} chars ({original_chars//4} tokens aprox.)")
+    print(f"🤖 [Context Compactor]: Usando {llm_model} via {provider}")
 
     if original_chars <= MAX_CHARS_BEFORE_SUMMARY:
-        print(f"✅ [Context Manager]: Contexto dentro del límite — no se requiere resumen.")
+        print(f"✅ [Context Compactor]: Contexto dentro del límite — no se requiere resumen.")
         return raw_context
 
-    print(f"⚠️  [Context Manager]: Contexto grande. Resumiendo con owl-alpha...")
+    print(f"⚠️  [Context Compactor]: Contexto grande. Resumiendo con {llm_model}...")
 
     prompt = (
         f"Eres un asistente técnico. Resume el siguiente contexto de forma concisa en español, "
         f"manteniendo TODA la información técnica clave (nombres de endpoints, rutas de archivos, "
-        f"errores específicos, IDs de tickets, stack tecnológico). "
+        f"errores específicos, IDs de tickets, stack tecnológico, comentarios de agentes). "
         f"Solo devuelve el resumen, sin introducciones.\n\n"
         f"CONTEXTO:\n{raw_context[:12000]}\n\nRESUMEN CONCISO:"
     )
@@ -342,13 +362,13 @@ def summarize_context_with_ollama(raw_context: str, label: str = "contexto") -> 
     t_start = time.time()
     try:
         resp = requests.post(
-            f"{OPENROUTER_BASE}/chat/completions",
+            f"{api_base}/chat/completions",
             headers={
-                "Authorization": f"Bearer {OPENROUTER_KEY}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             },
             json={
-                "model": "openrouter/owl-alpha",
+                "model": llm_model,
                 "messages": [{"role": "user", "content": prompt}],
                 "max_tokens": 600,
                 "temperature": 0.1
@@ -362,22 +382,82 @@ def summarize_context_with_ollama(raw_context: str, label: str = "contexto") -> 
             summary = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
             summary_chars = len(summary)
             compression = round((1 - summary_chars / original_chars) * 100, 1)
-            print(f"✅ [Context Manager]: Resumen generado en {elapsed}s")
+            print(f"✅ [Context Compactor]: Resumen generado en {elapsed}s")
             print(f"   📉 Compresión: {original_chars} → {summary_chars} chars ({compression}% reducción)")
-            return f"[RESUMEN AUTOMATICO por owl-alpha en {elapsed}s]:\n{summary}"
+            return f"[RESUMEN AUTOMATICO por {llm_model} en {elapsed}s]:\n{summary}"
         else:
-            print(f"❌ [Context Manager]: owl-alpha respondió {resp.status_code} en {elapsed}s — usando truncado.")
+            print(f"❌ [Context Compactor]: {llm_model} respondió {resp.status_code} en {elapsed}s — usando truncado.")
     except requests.exceptions.Timeout:
         elapsed = round(time.time() - t_start, 2)
-        print(f"⏱️  [Context Manager]: Timeout tras {elapsed}s — usando truncado.")
+        print(f"⏱️  [Context Compactor]: Timeout tras {elapsed}s — usando truncado.")
     except Exception as ex:
         elapsed = round(time.time() - t_start, 2)
-        print(f"❌ [Context Manager]: Error ({ex}) en {elapsed}s — usando truncado.")
+        print(f"❌ [Context Compactor]: Error ({ex}) en {elapsed}s — usando truncado.")
 
     # Emergency fallback: hard truncate
     truncated = raw_context[:MAX_CHARS_BEFORE_SUMMARY]
-    print(f"✂️  [Context Manager]: Contexto truncado a {len(truncated)} chars como fallback.")
+    print(f"✂️  [Context Compactor]: Contexto truncado a {len(truncated)} chars como fallback.")
     return truncated
+
+
+def compact_sprint_context(sprint_state: dict, sprint_goal: str, jira_backlog_context: str) -> str:
+    """
+    Compacts all the sprint context (Jira stories, comments, status) into a concise
+    summary using owl-alpha. This is called AFTER the Scrum Master reviews Jira and
+    BEFORE passing context to the agent crew.
+    
+    :param sprint_state: dict from analyse_sprint_state() with state, issues, resume_context
+    :param sprint_goal: the sprint goal string
+    :param jira_backlog_context: raw Jira context string
+    :return: compacted context string ready for agent consumption
+    """
+    import time
+    t_start = time.time()
+    
+    state = sprint_state.get("state", "unknown")
+    issues = sprint_state.get("issues", [])
+    resume_ctx = sprint_state.get("resume_context", {})
+    
+    # Build a structured but compact representation
+    compact_parts = []
+    compact_parts.append(f"OBJETIVO DEL SPRINT: {sprint_goal}")
+    compact_parts.append(f"ESTADO: {state}")
+    compact_parts.append(f"ISSUES RELEVANTES: {len(issues)}")
+    
+    # Add issue summaries (max 5 issues, truncated)
+    for i, issue in enumerate(issues[:5]):
+        key = issue.get("key", "Unknown")
+        summary = issue.get("summary", "Sin título")
+        status = issue.get("status", "Unknown")
+        compact_parts.append(f"\n  [{key}] {summary} (status: {status})")
+        
+        # Add resume context (comments) if available — truncated
+        if key in resume_ctx:
+            rctx = resume_ctx[key]
+            description = rctx.get("description", "")
+            if description:
+                compact_parts.append(f"  Descripción: {description[:200]}")
+            comments = rctx.get("comments", [])
+            if comments:
+                compact_parts.append(f"  Comentarios recientes:")
+                for c in comments[-3:]:  # last 3 comments only
+                    c_short = c[:150] + "..." if len(c) > 150 else c
+                    compact_parts.append(f"    - {c_short}")
+    
+    # Add raw Jira context (truncated)
+    if jira_backlog_context:
+        compact_parts.append(f"\nCONTEXTO JIRA ADICIONAL:")
+        compact_parts.append(jira_backlog_context[:1000])
+    
+    raw_compact = "\n".join(compact_parts)
+    
+    # Use owl-alpha to further compact if still too large
+    result = compact_with_owl_alpha(raw_compact, label="sprint context")
+    
+    elapsed = round(time.time() - t_start, 1)
+    print(f"📦 [Sprint Context] Compactado en {elapsed}s")
+    
+    return result
 
 
 def run_sprint():
@@ -1303,14 +1383,23 @@ Historial de Comentarios:
         # ── Generate codebase context for user-provided goal ─────────────
         print("[🤖 Scrum Master]: Generando contexto del código fuente...")
         raw_codebase_ctx = generate_codebase_context(current_sprint_goal)
-        codebase_context = summarize_context_with_ollama(raw_codebase_ctx, label="codebase context")
+        codebase_context = compact_with_owl_alpha(raw_codebase_ctx, label="codebase context")
+
+        # ── Compact sprint context (Jira stories + comments + state) ─────
+        print("[🤖 Scrum Master]: Compactando contexto global del sprint...")
+        compacted_jira_context = compact_sprint_context(
+            sprint_state, 
+            current_sprint_goal, 
+            jira_backlog_context
+        )
 
         try:
             if USE_PARALLEL:
-                execute_crew_parallel(current_sprint_goal, codebase_context, jira_backlog_context)
+                execute_crew_parallel(current_sprint_goal, codebase_context, compacted_jira_context)
             else:
-                execute_crew_locally(current_sprint_goal, codebase_context, jira_backlog_context)
+                execute_crew_locally(current_sprint_goal, codebase_context, compacted_jira_context)
             sprint_number += 1
+
         except Exception as crew_err:
             print(f"\n❌ [Scrum Master]: Error crítico durante la ejecución del Crew: {crew_err}")
             record_lesson_learned(crew_err, "CrewExecution")

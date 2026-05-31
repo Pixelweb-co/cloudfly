@@ -277,216 +277,94 @@ C:\apps\cloudfly\
 ├── docs/                         # Documentación
 ├── certs/                        # Certificados SSL
 └── developmentAI/                # Configuraciones de desarrollo VoIP/IA FreeSWITCH
-```
 
 ## Despliegue en Producción
 
 El archivo principal para despliegue en producción es `docker-compose-full-vps.yml`.
 
+### Despliegue en Ambiente Local
+
+Para desarrollo local, se debe crear un archivo `docker-compose-full-local.yml` basado en `docker-compose-full-vps.yml` con las siguientes diferencias:
+
+#### Diferencias clave respecto a la versión VPS:
+
+1. **Sin Traefik**: No se necesita proxy inverso ni SSL en ambiente local. Se elimina completamente el servicio `traefik` y todas sus dependencias (certificados, configuración dinámica, entrypoints SSL).
+
+2. **Acceso directo por puerto**: Cada servicio expone su puerto directamente sin pasar por Traefik:
+   - `backend-api` → puerto `8080`
+   - `frontend` → puerto `3000`
+   - `evolution-api` → puerto `8081`
+   - `chat-socket-service` → puerto `3001`
+   - `qdrant` → puerto `6333`
+   - `redis` → puerto `6379`
+   - `postgres` → puerto `5432`
+   - `mysql` → puerto `3306`
+   - `kafka` → puerto `9092`
+
+3. **Sin redes internas de Traefik**: Se simplifican las redes, eliminando las configuraciones de `traefik-public` y usando solo `default`, `kafka-net` y `app-net`.
+
+4. **Sin volúmenes de certificados**: Se eliminan los montajes de `./certs` y configuración de Let's Encrypt.
+
+5. **Perfiles de Spring en desarrollo**: Los servicios Java usan `SPRING_PROFILES_ACTIVE=development` en lugar de `production`.
+
+6. **Sin restricciones de recursos**: Se eliminan los `deploy.resources.limits` ya que en local no son necesarios.
+
+#### Estructura del archivo:
+
+```yaml
+# docker-compose-full-local.yml
+# Basado en docker-compose-full-vps.yml
+# Diferencias: Sin Traefik, acceso directo por puerto, perfil development
+
+services:
+  db:
+    # ... (igual que VPS)
+    
+  backend-api:
+    # ... (igual que VPS pero con:)
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=development
+    # Sin labels de Traefik
+    
+  frontend:
+    # ... (igual que VPS pero con:)
+    ports:
+      - "3000:3000"
+    # Sin labels de Traefik
+    
+  evolution-api:
+    # ... (igual que VPS pero con:)
+    ports:
+      - "8081:8080"
+    # Sin labels de Traefik
+    
+  # ... (resto de servicios sin Traefik)
+  
+  # NO incluir servicio traefik
+  # NO incluir volúmenes de certs
+  # NO incluir red traefik-public
+```
+
+#### Comandos para desarrollo local:
+
+```bash
+# Iniciar todo el stack local
+docker-compose -f docker-compose-full-local.yml up -d
+
+# Ver logs de un servicio específico
+docker-compose -f docker-compose-full-local.yml logs -f backend-api
+
+# Detener todo
+docker-compose -f docker-compose-full-local.yml down
+```
+
 ### Servicios Clave en Producción
 
-1. **db** - MySQL 8.0 (base de datos maestra `cloud_master`)
-2. **zookeeper** & **kafka** - Confluent Platform 7.4.0 (bus de eventos)
-3. **backend-api** - Servicio backend reactivo (construido desde `./backend_new`)
-4. **frontend** - Aplicación Next.js (construida desde `./frontend_new/`)
-5. **evolution-api** - Integración WhatsApp Business
-6. **chat-socket-service** - Servicio de chat en tiempo real
-7. **postgres** - Base de datos para vector/embeddings
-8. **qdrant** - Base de datos vectorial para memoria semántica
-9. **redis** - Caché y pub/sub
-10. **billing-service** - Microservicio de facturación Go
-11. **scheduler-service** - Servicio de programación Java
-12. **notification-service** - Servicio de notificaciones Java
-13. **marketing-worker** - Servicio de ejecución de marketing Java
-14. **ai-agent** - Servicio de agentes de IA Python
-15. **lead-generator** - Servicio de generación de leads Python
-16. **traefik** - Proxy inverso con SSL automático
 
-### Configuración de Red
-- Tres redes definidas: `default`, `kafka-net`, `app-net`
-- Servicios se comunican mediante nombres de host de Docker
-- Puerto expuesto para backend-api: 8080
-- Puerto expuesto para frontend: 3000
-- Puerto expuesto para evolution-api: 8080
+````
+<userPrompt>
+Provide the fully rewritten file, incorporating the suggested code change. You must produce the complete file.
+</userPrompt>
 
-### Variables de Entorno Clave
-Definidas en `.env` y sobrescritas por `.env.vps`:
-- `JWT_SECRET` - Secreto para firma de tokens JWT
-- `EVOLUTION_API_KEY` - Key para API de Evolution (WhatsApp)
-- `SPRING_PROFILES_ACTIVE=production` - Perfil de Spring activo
-- Zonas horarias: `America/Bogota` para todos los servicios
-
-### Volúmenes Persistentes
-- `persistent_master` - Almacenamiento persistente para datos MySQL
-- `./uploads:/uploads` - Montaje para archivos subidos
-
-## Patrones Arquitectónicos Notables
-
-### a) Arquitectura de Microservicios Reactivos
-- El backend utiliza **Spring WebFlux + R2DBC** para acceso completamente no bloqueante y reactivo a la base de datos MySQL.
-- Kafka sirve como columna vertebral de eventos asíncrona conectando todos los microservicios.
-- El sistema está diseñado para alta escalabilidad y baja latencia.
-
-### b) Multi-Tenant SaaS (Jerarquía Tenant/Empresa)
-- Nivel doble de aislamiento de datos: **Tenant** (cuenta corporativa) y **Company** (sucursal/ubicación).
-- Todas las consultas a la base de datos incluyen filtrado por `tenant_id`; opcional `company_id` para acceso a nivel de sucursal.
-- Roles: ADMIN/MANAGER ven todas las empresas; USER está restringido a la empresa asignada.
-- Persistencia de contexto mediante `localStorage` (`activeTenantId`, `activeCompanyId`).
-
-### c) Diseño Primero con IA
-- Agentes de IA autónomos (Ventas, Soporte) potenciados por OpenAI/LLMs con memoria semántica vía Qdrant + pgvector.
-- Trabajadores vectoriales para indexación de datos no estructurados.
-- Equipo de IA de marketing con orquestación de múltiples agentes (patrón estilo CrewAI).
-- Soporte multi-LLM: OpenAI, Groq, OpenRouter (con agrupación/rotación de claves).
-
-### d) Enfoque Primero en WhatsApp
-- Integración de Evolution API para mensajería empresarial de WhatsApp.
-- Chat en tiempo real vía Socket.IO con pub/sub respaldado por Redis y transmisión de eventos Kafka.
-- Chatwoot (Ruby on Rails) para plataforma completa de engagement al cliente.
-
-### e) Estrategia de Frontend Dual
-- Dos aplicaciones Next.js 14 en paralelo (`frontend/` y `frontend_new/`), indicando una migración/refactor en progreso.
-- La versión más reciente tiene una estructura de vista más modular organizada por dominio de negocio (dashboard, ventas, marketing, administración, automatización).
-- Redux Toolkit para gestión de estado en ambas.
-
-### f) Enfoque en el Mercado Colombiano
-- Facturación electrónica DIAN (facturación electrónica) integrada como microservicio.
-- Nómina electrónica colombiana con módulo de contabilidad completo (libro mayor, libro diario, balance general).
-- Códigos tributarios colombianos (códigos DANE) y cumplimiento regulatorio incorporados.
-
-### g) Persistencia Poliglota
-- MySQL 8.0 para datos transaccionales maestros.
-- PostgreSQL + pgvector para embeddings vectoriales de IA.
-- Redis para caché y pub/sub en tiempo real.
-- Qdrant para búsqueda vectorial dedicada.
-
-### h) Infraestructura
-- Traefik v3.6.7 como router de borde con SSL automático de Let's Encrypt.
-- Portainer para gestión de contenedores.
-- Prometheus + Grafana para monitoreo.
-- Terraform para infraestructura como código.
-- Múltiples archivos Docker Compose para diferentes entornos (local, completo, VPS, monitoreo).
-
-### i) Extensa Herramienta de Automatización
-- 100+ scripts JavaScript/TypeScript/Python para devops, depuración, despliegue, migraciones de base de datos y pruebas en la raíz del proyecto.
-- Servidor de automatización de workflows n8n para construcción visual de workflows.
-- Scripts de prueba basados en Selenium y raspadores.
-
-### j) Lógica de Negocio SaaS
-- Gestión de suscripciones con planes.
-- Integración de pasarela de pago Wompi (pasarela de pago colombiana) mediante el servicio de facturación Go.
-- Programador de facturación para facturas recurrentes.
-
-## Puntos de Entrada de la API
-
-### Backend API (puerto 8080)
-- `/api/auth` - Endpoints de autenticación
-- `/api/users` - Gestión de usuarios
-- `/api/companies` - Gestión de empresas/tenants
-- `/api/contacts` - Gestión de contactos/leads
-- `/api/deals` - Gestión de oportunidades de venta
-- `/api/products` - Gestión de productos/inventario
-- `/api/orders` - Gestión de órdenes de venta
-- `/api/invoices` - Gestión de facturas
-- `/api/appointments` - Gestión de citas/calendario
-- `/api/marketing` - Endpoints de campañas de marketing
-- `/api/webhooks` - Endpoints de webhook externos
-
-### Servicio de Socket Chat (puerto implícito vía Traefik)
-- Eventos Socket.IO para mensajería en tiempo real
-- Namespaces: `/chat`, `/notifications`, etc.
-
-### Servicio de Facturación Go
-- Endpoints para procesamiento de pagos, gestión de suscripciones, integración Wompi
-
-## Consideraciones de Seguridad
-
-### Autenticación y Autorización
-- JWT basado para autenticación de API
-- Protección de rutas basada en roles (ADMIN, MANAGER, USER)
-- Filtrado multi-tenant en todas las consultas de base de datos
-- Sesiones seguras con cookies HttpOnly
-
-### Protección de Datos
-- Encriptación en reposo para información sensible (configurable)
-- Comunicación HTTPS mediante terminación SSL en Traefik
-- Validación y sanitización de entradas para prevenir inyección
-- Políticas de Seguridad de Contenido (CSP) configurables
-
-### Seguridad de Infraestructura
-- Escaneo de imágenes de Docker para vulnerabilidades
-- Actualizaciones regulares de dependencias de seguridad
-- Configuración de firewall (puertos necesarios solo expuestos)
-- Registro y monitoreo de eventos de seguridad
-
-## Escalabilidad y Rendimiento
-
-### Escalabilidad Horizontal
-- Servicios diseñados para ejecución de múltiples instancias
-- Kafka permite procesamiento distribuido de eventos
-- Redis soporta clustering para caché distribuida
-- Qdrant soporta clustering para búsqueda vectorial
-
-### Optimización de Rendimiento
-- Acceso a base de datos no bloqueante/reactivo (WebFlux + R2DBC)
-- Caché de múltiples niveles (Redis, caché de aplicación)
-- Procesamiento asíncrono mediante Kafka
-- Índices de base de datos optimizados para consultas comunes
-- CDN para assets estáticos (configurable)
-
-## Monitoreo y Observabilidad
-
-### Métricas
-- Prometheus para recolección de métricas de servicios
-- Endpoints `/actuator/prometheus` en servicios Java
-- Métricas personalizadas para métricas de negocio (ventas, registros, etc.)
-
-### Registro
-- Estructura de registro JSON consistente entre servicios
-- Niveles de registro configurables (DEBUG, INFO, WARN, ERROR)
-- Agregación de logs mediante stack ELK o similar (configurable)
-
-### Trazabilidad
-- Propagación de contexto de trazabilidad entre servicios
-- IDs de solicitud únicos para seguimiento de extremo a extremo
-- Integración con sistemas de trazabilidad (Jaeger, Zipkin) (configurable)
-
-### Salud y Listo
-- Endpoints de salud (`/actuator/health`) para todos los servicios
-- Endpoints de listo para orquestación de Kubernetes/Docker Swarm
-- Verificaciones de dependencias (DB, Kafka, Redis) en los checks de salud
-
-## Pruebas y Calidad
-
-### Estrategia de Pruebas
-- Pruebas unitarias para lógica de negocio
-- Pruebas de integración para servicios API
-- Pruebas de extremo a extremo para flujos críticos de usuario
-- Pruebas de carga para validación de escalabilidad
-- Pruebas de seguridad para validación de vulnerabilidades
-
-### Calidad de Código
-- Revisión de código mediante pull requests
-- Análisis estático de código (SonarQube o similar) (configurable)
-- Formateo automático de código (Prettier, Google Java Format)
-- Linters para JavaScript/TypeScript/Python/Go/Java
-
-## Plan de Ruta y Futuro Trabajo
-
-### Mejoras Próximas
-1. **Migración completa a frontend_new** - Eliminar el frontend heredado
-2. **Expansión de capacidades de IA** - Más tipos de agentes, mejor memoria
-3. **Mejoras en analítica** - Dashboards avanzados, ML predictivo
-4. **Integraciones ampliadas** - Más pasarelas de pago, plataformas CRM
-5. **Optimizaciones de rendimiento** - Caché avanzado, indexing de BD
-6. **Mejoras de observabilidad** - Trazabilidad distribuida completa
-7. **Características de cumplimiento** - Certificaciones adicionales, auditorías
-
-### Escalabilidad del Equipo
-- Arquitectura de microservicios permite desarrollo independiente por equipo
-- Contratos de API bien definidos entre servicios
-- Pipelines de CI/CD para despliegues automatizados
-- Pruebas de contrato para asegurar compatibilidad entre servicios
-
----
-*Este documento especifica el estado actual de la plataforma CloudFly AI a partir de julio de 2024. Los componentes específicos, versiones y arquitectura pueden evolucionar con el desarrollo continuo.*

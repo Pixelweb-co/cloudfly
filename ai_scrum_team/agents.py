@@ -12,27 +12,55 @@ _crewai_cache.mark_cache_breakpoint = lambda msg: msg
 from crewai import Agent, LLM
 from tools import get_jira_tools
 
-# ── LLM Configurations (100% Free via OpenRouter) ─────────────────────
-# Primary:   openrouter/owl-alpha
-# Secondary: openrouter/owl-alpha
-# Embeddings: nvidia/llama-nemotron-embed-vl-1b-v2:free
+# ── LLM Configurations ──────────────────────────────────────────────────
+# Modelo configurable via .env MODEL_DEFAULT
+# Formato: proveedor/modelo (ej: openrouter/owl-alpha, openai/gpt-4o, groq/llama-3.1-70b-versatile)
 
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or "sk-or-placeholder"
 
+# Leer modelo por defecto del .env
+MODEL_DEFAULT = os.getenv("MODEL_DEFAULT", "openrouter/owl-alpha")
+
+# Parsear proveedor y modelo
+if "/" in MODEL_DEFAULT:
+    provider, model_name = MODEL_DEFAULT.split("/", 1)
+else:
+    provider = "openrouter"
+    model_name = MODEL_DEFAULT
+
+# Configurar según proveedor
+if provider == "openai":
+    # OpenAI directo
+    llm_model = model_name
+    llm_base_url = "https://api.openai.com/v1"
+    llm_api_key = os.getenv("OPENAI_API_KEY") or OPENROUTER_KEY
+elif provider == "groq":
+    # Groq
+    llm_model = f"groq/{model_name}"
+    llm_base_url = OPENROUTER_BASE
+    llm_api_key = os.getenv("GROQ_API_KEY") or OPENROUTER_KEY
+else:
+    # OpenRouter (default)
+    llm_model = f"openrouter/{model_name}"
+    llm_base_url = OPENROUTER_BASE
+    llm_api_key = OPENROUTER_KEY
+
+print(f"🤖 [Model Config]: Usando {llm_model} via {provider}")
+
 # General-purpose LLM (Product Owner, QA, DevOps, Architect, Technical Writer, Scrum Master)
 owl_alpha_llm = LLM(
-    model="openrouter/owl-alpha",
-    base_url=OPENROUTER_BASE,
-    api_key=OPENROUTER_KEY,
+    model=llm_model,
+    base_url=llm_base_url,
+    api_key=llm_api_key,
     temperature=0.2
 )
 
-# Developer LLM (Software Developer, Frontend Developer) — Owl Alpha via OpenRouter
+# Developer LLM (Software Developer, Frontend Developer)
 glm_coder_llm = LLM(
-    model="openrouter/owl-alpha",
-    base_url=OPENROUTER_BASE,
-    api_key=OPENROUTER_KEY,
+    model=llm_model,
+    base_url=llm_base_url,
+    api_key=llm_api_key,
     temperature=0.1
 )
 
