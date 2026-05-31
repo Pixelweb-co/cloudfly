@@ -19,13 +19,16 @@ import { act } from 'react-dom/test-utils'
 // ---------------------------------------------------------------------------
 
 // Mock the socket hook
+const mockReconnect = jest.fn()
 jest.mock('@/hooks/useMarketingAgentsSocket', () => ({
   useMarketingAgentsSocket: () => ({
     agents: [],
     connections: [],
     recentEvents: [],
     isConnected: true,
-    reconnect: jest.fn()
+    connectionStatus: 'connected' as const,
+    lastUpdate: null,
+    reconnect: mockReconnect
   })
 }))
 
@@ -65,7 +68,8 @@ jest.mock('lucide-react', () => {
     RefreshCw: (props: any) => React.createElement('svg', props),
     Users: (props: any) => React.createElement('svg', props),
     Activity: (props: any) => React.createElement('svg', props),
-    Zap: (props: any) => React.createElement('svg', props)
+    Zap: (props: any) => React.createElement('svg', props),
+    Loader: (props: any) => React.createElement('svg', props)
   }
 })
 
@@ -99,6 +103,7 @@ describe('CLOUD-219: AbortController Cleanup Verification', () => {
     container = document.createElement('div')
     document.body.appendChild(container)
     mockGetActionHistory.mockReset()
+    mockReconnect.mockReset()
     // Default: resolve immediately with empty data
     mockGetActionHistory.mockResolvedValue({
       agents: [],

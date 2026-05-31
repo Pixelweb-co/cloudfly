@@ -13,7 +13,12 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  Info
+  Info,
+  Search,
+  Send,
+  BarChart3,
+  Users,
+  GitBranch
 } from 'lucide-react'
 import type { MarketingActionEvent } from '@/types/marketing/aiMarketing'
 
@@ -25,41 +30,53 @@ const ACTION_CONFIG: Record<
   string,
   { color: string; bgColor: string; icon: React.ReactNode; label: string }
 > = {
-  CAMPAIGN_CREATED: {
+  lead_search_started: {
     color: '#3b82f6',
     bgColor: '#eff6ff',
-    icon: <Zap size={14} />,
-    label: 'Campaña creada'
+    icon: <Search size={14} />,
+    label: 'Búsqueda iniciada'
   },
-  CAMPAIGN_SENT: {
+  lead_search_completed: {
     color: '#10b981',
     bgColor: '#ecfdf5',
     icon: <CheckCircle2 size={14} />,
-    label: 'Campaña enviada'
+    label: 'Búsqueda completada'
   },
-  LEAD_QUALIFIED: {
+  campaign_created: {
     color: '#8b5cf6',
     bgColor: '#f5f3ff',
-    icon: <CheckCircle2 size={14} />,
-    label: 'Lead calificado'
+    icon: <Zap size={14} />,
+    label: 'Campaña creada'
   },
-  MESSAGE_SENT: {
+  message_sent: {
     color: '#06b6d4',
     bgColor: '#ecfeff',
-    icon: <Info size={14} />,
+    icon: <Send size={14} />,
     label: 'Mensaje enviado'
   },
-  ERROR: {
+  analysis_completed: {
+    color: '#f59e0b',
+    bgColor: '#fffbeb',
+    icon: <BarChart3 size={14} />,
+    label: 'Análisis completado'
+  },
+  crew_kickoff: {
+    color: '#ec4899',
+    bgColor: '#fdf2f8',
+    icon: <Users size={14} />,
+    label: 'Equipo iniciado'
+  },
+  flow_transition: {
+    color: '#6366f1',
+    bgColor: '#eef2ff',
+    icon: <GitBranch size={14} />,
+    label: 'Transición de flujo'
+  },
+  error: {
     color: '#ef4444',
     bgColor: '#fef2f2',
     icon: <AlertCircle size={14} />,
     label: 'Error'
-  },
-  WAITING: {
-    color: '#f59e0b',
-    bgColor: '#fffbeb',
-    icon: <Clock size={14} />,
-    label: 'En espera'
   }
 }
 
@@ -159,7 +176,7 @@ const MarketingHistoryTimeline: React.FC<MarketingHistoryTimelineProps> = ({ eve
         >
           <Stack spacing={1.5}>
             {events.map((event, index) => {
-              const config = ACTION_CONFIG[event.actionType] || DEFAULT_CONFIG
+              const config = ACTION_CONFIG[event.type] || DEFAULT_CONFIG
               const isLatest = index === events.length - 1
 
               return (
@@ -211,7 +228,7 @@ const MarketingHistoryTimeline: React.FC<MarketingHistoryTimelineProps> = ({ eve
                       </Typography>
                     </Stack>
                     <Typography variant='body2' sx={{ fontWeight: 500, color: 'text.primary' }}>
-                      {event.agentName}
+                      {event.title}
                     </Typography>
                     <Typography variant='caption' color='text.secondary'>
                       {event.description}

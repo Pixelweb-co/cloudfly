@@ -27,11 +27,20 @@ module.exports = {
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    // Force React development build for act() support
     '^react$': require.resolve('react'),
     '^react-dom$': require.resolve('react-dom'),
     '^react-dom/test-utils$': require.resolve('react-dom/test-utils')
   },
   testPathIgnorePatterns: ['/node_modules/', '/.next/'],
-  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts']
+  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts'],
+  // Ensure React uses development build for act() support
+  globals: {
+    'ts-jest': {
+      tsconfig: {
+        jsx: 'react-jsx'
+      }
+    }
+  },
+  // Force React development mode so act() works in tests
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js']
 }

@@ -21,7 +21,8 @@ import {
   RefreshCw,
   Users,
   Activity,
-  Zap
+  Zap,
+  Loader
 } from 'lucide-react'
 import { useMarketingAgentsSocket } from '@/hooks/useMarketingAgentsSocket'
 import { marketingHistoryService } from '@/services/marketing/marketingHistoryService'
@@ -31,22 +32,47 @@ import MarketingHistoryTimeline from '@/views/marketing/ai-operation/MarketingHi
 import type { MarketingAgent, AgentConnection, MarketingActionEvent } from '@/types/marketing/aiMarketing'
 
 // ---------------------------------------------------------------------------
-// Connection status chip
+// Connection status chip — now uses connectionStatus from hook
 // ---------------------------------------------------------------------------
 
-const ConnectionChip: React.FC<{ connected: boolean }> = ({ connected }) => (
-  <Chip
-    icon={connected ? <Wifi size={16} /> : <WifiOff size={16} />}
-    label={connected ? 'Conectado' : 'Desconectado'}
-    size='small'
-    sx={{
-      bgcolor: connected ? '#ecfdf5' : '#fef2f2',
-      color: connected ? '#10b981' : '#ef4444',
-      fontWeight: 600,
-      '& .MuiChip-icon': { color: 'inherit' }
-    }}
-  />
-)
+const ConnectionChip: React.FC<{ connectionStatus: 'connected' | 'disconnected' | 'reconnecting' }> = ({ connectionStatus }) => {
+  const config = {
+    connected: {
+      icon: <Wifi size={16} />,
+      label: 'Conectado',
+      bgColor: '#ecfdf5',
+      color: '#10b981'
+    },
+    disconnected: {
+      icon: <WifiOff size={16} />,
+      label: 'Desconectado',
+      bgColor: '#fef2f2',
+      color: '#ef4444'
+    },
+    reconnecting: {
+      icon: <Loader size={16} />,
+      label: 'Reconectando...',
+      bgColor: '#fffbeb',
+      color: '#f59e0b'
+    }
+  }
+
+  const c = config[connectionStatus] || config.disconnected
+
+  return (
+    <Chip
+      icon={c.icon}
+      label={c.label}
+      size='small'
+      sx={{
+        bgcolor: c.bgColor,
+        color: c.color,
+        fontWeight: 600,
+        '& .MuiChip-icon': { color: 'inherit' }
+      }}
+    />
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Stat card
@@ -84,13 +110,23 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, value, color }) => (
 // ---------------------------------------------------------------------------
 
 const MarketingLiveDashboardPage: React.FC = () => {
+  // -----------------------------------------------------------------------
+  // Resolve tenantId and companyId from auth context / session
+  // TODO: Replace with actual auth context lookup (useSession, useAuth, etc.)
+  // For now using default tenant 1 — this should come from the authenticated user
+  // -----------------------------------------------------------------------
+  const tenantId = 1
+  const companyId: number | undefined = undefined
+
   const {
     agents,
     connections,
-    recentEvents,
+    events,
     isConnected,
+    connectionStatus,
+    lastUpdate,
     reconnect
-  } = useMarketingAgentsSocket()
+  } = useMarketingAgentsSocket({ tenantId, companyId })
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -111,11 +147,6 @@ const MarketingLiveDashboardPage: React.FC = () => {
       try {
         setLoading(true)
         setError(null)
-
-        // TODO: Resolve tenantId and companyId from auth context / session
-        // For now using default tenant 1 — replace with actual auth context lookup
-        const tenantId = 1
-        const companyId: number | undefined = undefined
 
         // Fetch initial action history via REST with AbortSignal
         // The socket hook will receive real-time updates via WebSocket,
@@ -147,7 +178,7 @@ const MarketingLiveDashboardPage: React.FC = () => {
 
     // Cleanup: abort any in-flight request when component unmounts
     return () => controller.abort()
-  }, [])
+  }, [tenantId, companyId])
 
   // -----------------------------------------------------------------------
   // Manual reconnect handler — triggers both WS reconnect and REST refetch
@@ -174,9 +205,6 @@ const MarketingLiveDashboardPage: React.FC = () => {
         setLoading(true)
         setError(null)
 
-        const tenantId = 1
-        const companyId: number | undefined = undefined
-
         const history = await marketingHistoryService.getActionHistory(
           tenantId,
           50,
@@ -200,7 +228,7 @@ const MarketingLiveDashboardPage: React.FC = () => {
     loadInitialData()
 
     return () => controller.abort()
-  }, [refreshKey])
+  }, [refreshKey, tenantId, companyId])
 
   // -----------------------------------------------------------------------
   // Derived stats
@@ -253,14 +281,20 @@ const MarketingLiveDashboardPage: React.FC = () => {
           <Typography variant='body2' color='text.secondary'>
             Estado en tiempo real del equipo de marketing — agentes, flujo de trabajo y historial de acciones.
           </Typography>
+          {lastUpdate && (
+            <Typography variant='caption' color='text.secondary' sx={{ mt: 0.5, display: 'block' }}>
+              Última actualización: {new Date(lastUpdate).toLocaleTimeString('es-CO')}
+            </Typography>
+          )}
         </Box>
         <Stack direction='row' spacing={1.5} alignItems='center'>
-          <ConnectionChip connected={isConnected} />
+          <ConnectionChip connectionStatus={connectionStatus} />
           <Button
             variant='outlined'
             size='small'
             startIcon={<RefreshCw size={16} />}
             onClick={handleReconnect}
+            disabled={connectionStatus === 'reconnecting'}
           >
             Reconectar
           </Button>
@@ -374,7 +408,7 @@ const MarketingLiveDashboardPage: React.FC = () => {
 
         {/* History Timeline */}
         <Grid item xs={12} lg={5}>
-          <MarketingHistoryTimeline events={recentEvents} />
+          <MarketingHistoryTimeline events={events} />
         </Grid>
       </Grid>
     </Box>

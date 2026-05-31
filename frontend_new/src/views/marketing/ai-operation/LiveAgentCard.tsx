@@ -14,16 +14,17 @@ import {
   Play,
   Pause,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Clock
 } from 'lucide-react'
-import type { MarketingAgent, MarketingAgentStatus } from '@/types/marketing/aiMarketing'
+import type { MarketingAgent, AgentStatus } from '@/types/marketing/aiMarketing'
 
 // ---------------------------------------------------------------------------
 // Status configuration
 // ---------------------------------------------------------------------------
 
 const STATUS_CONFIG: Record<
-  MarketingAgentStatus,
+  AgentStatus,
   { color: string; bgColor: string; icon: React.ReactNode; label: string }
 > = {
   idle: {
@@ -41,7 +42,7 @@ const STATUS_CONFIG: Record<
   waiting: {
     color: '#f59e0b',
     bgColor: '#fffbeb',
-    icon: <AlertCircle size={16} />,
+    icon: <Clock size={16} />,
     label: 'Esperando'
   },
   error: {
@@ -49,6 +50,12 @@ const STATUS_CONFIG: Record<
     bgColor: '#fef2f2',
     icon: <AlertCircle size={16} />,
     label: 'Error'
+  },
+  completed: {
+    color: '#10b981',
+    bgColor: '#ecfdf5',
+    icon: <CheckCircle2 size={16} />,
+    label: 'Completado'
   }
 }
 
@@ -112,24 +119,29 @@ const LiveAgentCard: React.FC<LiveAgentCardProps> = ({ agent }) => {
         {/* Header: Avatar + Name + Status Chip */}
         <Stack direction='row' spacing={1.5} alignItems='center' sx={{ mb: 2 }}>
           <Avatar
-            src={agent.avatarUrl}
+            src={agent.avatar}
             sx={{
               width: 44,
               height: 44,
-              bgcolor: config.color,
+              bgcolor: agent.color || config.color,
               fontSize: '1rem',
               fontWeight: 700
             }}
           >
-            {agent.name.charAt(0).toUpperCase()}
+            {agent.displayName?.charAt(0) || agent.name.charAt(0).toUpperCase()}
           </Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography
               variant='subtitle1'
               sx={{ fontWeight: 600, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
             >
-              {agent.name}
+              {agent.displayName || agent.name}
             </Typography>
+            {agent.role && (
+              <Typography variant='caption' color='text.secondary' sx={{ display: 'block' }}>
+                {agent.role}
+              </Typography>
+            )}
             <Chip
               icon={config.icon}
               label={config.label}

@@ -73,7 +73,7 @@ export const marketingHistoryService = {
    * @param page      - Page number for pagination (default: 0)
    * @param companyId - Optional company identifier for scoped queries
    * @param signal    - Optional AbortSignal for request cancellation
-   * @returns MarketingHistoryResponse with recent action events
+   * @returns MarketingHistoryResponse with action events
    */
   async getActionHistory(
     tenantId: number,
@@ -97,10 +97,10 @@ export const marketingHistoryService = {
       return data
     } catch (error: unknown) {
       if (isAbortError(error)) {
-        return { agents: [], connections: [], recentEvents: [], generatedAt: new Date().toISOString() }
+        return { events: [], total: 0, hasMore: false }
       }
       console.error('[marketingHistoryService] getActionHistory error:', error)
-      return { agents: [], connections: [], recentEvents: [], generatedAt: new Date().toISOString() }
+      return { events: [], total: 0, hasMore: false }
     }
   },
 

@@ -13,7 +13,8 @@
 
 import React from 'react'
 import '@testing-library/jest-dom'
-import { render, screen, waitFor, act } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import { act } from 'react-dom/test-utils'
 import { marketingHistoryService } from '@/services/marketing/marketingHistoryService'
 
 // ---------------------------------------------------------------------------
@@ -33,7 +34,7 @@ jest.mock('@mui/material', () => {
   }
   return {
     Box: createMock('Box'),
-    Typography: createMock('Typography'),
+    Typography: createMock('Typography', 'span'),
     Grid: createMock('Grid'),
     Paper: createMock('Paper'),
     Chip: createMock('Chip', 'span'),
@@ -42,7 +43,10 @@ jest.mock('@mui/material', () => {
     CircularProgress: React.forwardRef((props: Record<string, unknown>, ref: unknown) =>
       React.createElement('div', { ...props, 'data-testid': 'circular-progress', ref, role: 'progressbar' })
     ),
-    Button: createMock('Button'),
+    Button: React.forwardRef((props: Record<string, unknown>, ref: unknown) => {
+      const { children, onClick, startIcon, ...rest } = props
+      return React.createElement('button', { ...rest, 'data-testid': 'Button', ref, onClick }, children)
+    }),
     Divider: createMock('Divider'),
     Fade: createMock('Fade'),
     Zoom: createMock('Zoom'),
@@ -61,6 +65,7 @@ jest.mock('lucide-react', () => {
     Users: createIcon('Users'),
     Activity: createIcon('Activity'),
     Zap: createIcon('Zap'),
+    Loader: createIcon('Loader'),
   }
 })
 
@@ -79,13 +84,16 @@ jest.mock('@/services/marketing/marketingHistoryService', () => ({
 // ---------------------------------------------------------------------------
 // Mock the socket hook
 // ---------------------------------------------------------------------------
+const mockReconnect = jest.fn()
 jest.mock('@/hooks/useMarketingAgentsSocket', () => ({
   useMarketingAgentsSocket: () => ({
     agents: [],
     connections: [],
     recentEvents: [],
     isConnected: true,
-    reconnect: jest.fn(),
+    connectionStatus: 'connected' as const,
+    lastUpdate: null,
+    reconnect: mockReconnect,
   })
 }))
 
@@ -114,6 +122,17 @@ jest.mock('@/views/marketing/ai-operation/MarketingHistoryTimeline', () => ({
 import MarketingLiveDashboardPage from './page'
 
 // ---------------------------------------------------------------------------
+// Helper to wrap render in act() for React 18 compatibility
+// ---------------------------------------------------------------------------
+function renderWithAct(ui: React.ReactElement) {
+  let result: ReturnType<typeof render>
+  act(() => {
+    result = render(ui)
+  })
+  return result!
+}
+
+// ---------------------------------------------------------------------------
 // Test Suite
 // ---------------------------------------------------------------------------
 describe('MarketingLiveDashboardPage — AbortController cleanup (CLOUD-218)', () => {
@@ -132,7 +151,7 @@ describe('MarketingLiveDashboardPage — AbortController cleanup (CLOUD-218)', (
       generatedAt: new Date().toISOString()
     })
 
-    render(React.createElement(MarketingLiveDashboardPage))
+    renderWithAct(React.createElement(MarketingLiveDashboardPage))
 
     await waitFor(() => {
       expect(marketingHistoryService.getActionHistory).toHaveBeenCalledTimes(1)
@@ -150,7 +169,7 @@ describe('MarketingLiveDashboardPage — AbortController cleanup (CLOUD-218)', (
       generatedAt: new Date().toISOString()
     })
 
-    render(React.createElement(MarketingLiveDashboardPage))
+    renderWithAct(React.createElement(MarketingLiveDashboardPage))
 
     await waitFor(() => {
       expect(marketingHistoryService.getActionHistory).toHaveBeenCalled()
@@ -169,7 +188,7 @@ describe('MarketingLiveDashboardPage — AbortController cleanup (CLOUD-218)', (
     abortError.name = 'AbortError'
     ;(marketingHistoryService.getActionHistory as jest.Mock).mockRejectedValueOnce(abortError)
 
-    render(React.createElement(MarketingLiveDashboardPage))
+    renderWithAct(React.createElement(MarketingLiveDashboardPage))
 
     await waitFor(() => {
       expect(
@@ -183,7 +202,7 @@ describe('MarketingLiveDashboardPage — AbortController cleanup (CLOUD-218)', (
       new Error('Network error')
     )
 
-    render(React.createElement(MarketingLiveDashboardPage))
+    renderWithAct(React.createElement(MarketingLiveDashboardPage))
 
     await waitFor(() => {
       expect(
@@ -203,7 +222,7 @@ describe('MarketingLiveDashboardPage — AbortController cleanup (CLOUD-218)', (
     })
     ;(marketingHistoryService.getActionHistory as jest.Mock).mockReturnValueOnce(delayedPromise)
 
-    const { unmount } = render(React.createElement(MarketingLiveDashboardPage))
+    const { unmount } = renderWithAct(React.createElement(MarketingLiveDashboardPage))
 
     // Unmount while request is still in-flight
     act(() => {
@@ -240,7 +259,7 @@ describe('MarketingLiveDashboardPage — AbortController cleanup (CLOUD-218)', (
       generatedAt: new Date().toISOString()
     })
 
-    render(React.createElement(MarketingLiveDashboardPage))
+    renderWithAct(React.createElement(MarketingLiveDashboardPage))
 
     await waitFor(() => {
       expect(marketingHistoryService.getActionHistory).toHaveBeenCalledWith(
@@ -261,7 +280,7 @@ describe('MarketingLiveDashboardPage — AbortController cleanup (CLOUD-218)', (
       generatedAt: new Date().toISOString()
     })
 
-    render(React.createElement(MarketingLiveDashboardPage))
+    renderWithAct(React.createElement(MarketingLiveDashboardPage))
 
     // Initially loading — CircularProgress should be visible
     expect(screen.getByRole('progressbar')).toBeInTheDocument()
@@ -280,7 +299,7 @@ describe('MarketingLiveDashboardPage — AbortController cleanup (CLOUD-218)', (
       generatedAt: new Date().toISOString()
     })
 
-    render(React.createElement(MarketingLiveDashboardPage))
+    renderWithAct(React.createElement(MarketingLiveDashboardPage))
 
     await waitFor(() => {
       // The ConnectionChip renders a Chip with label="Conectado"
@@ -303,7 +322,7 @@ describe('MarketingLiveDashboardPage — AbortController cleanup (CLOUD-218)', (
       generatedAt: new Date().toISOString()
     })
 
-    render(React.createElement(MarketingLiveDashboardPage))
+    renderWithAct(React.createElement(MarketingLiveDashboardPage))
 
     await waitFor(() => {
       expect(marketingHistoryService.getActionHistory).toHaveBeenCalledTimes(1)

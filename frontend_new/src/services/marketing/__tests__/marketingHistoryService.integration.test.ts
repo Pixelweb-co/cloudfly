@@ -213,3 +213,38 @@ export const integrationTestConfig = {
  * [ ] No 500 errors
  * [ ] Response time < 2000ms for all endpoints
  */
+
+// =============================================================================
+// Minimal test to satisfy Jest's "at least one test" requirement
+// This file is primarily a documentation/template file for manual integration testing.
+// =============================================================================
+
+describe('marketingHistoryService integration test template (CLOUD-216)', () => {
+  it('should export integration test configuration', () => {
+    expect(integrationTestConfig).toBeDefined()
+    expect(integrationTestConfig.API_BASE).toBe('https://api.cloudfly.com.co/api/v1/marketing')
+    expect(integrationTestConfig.endpoints.liveStatus).toBe('/agents/live-status')
+    expect(integrationTestConfig.endpoints.history).toBe('/agents/history')
+    expect(integrationTestConfig.endpoints.connections).toBe('/agents/connections')
+    expect(integrationTestConfig.endpoints.agentTasks).toBe('/agents/{agentId}/tasks')
+  })
+
+  it('should have correct test parameters', () => {
+    expect(integrationTestConfig.testParams.tenantId).toBe(1)
+    expect(integrationTestConfig.testParams.companyId).toBe(1)
+    expect(integrationTestConfig.testParams.limit).toBe(10)
+    expect(integrationTestConfig.testParams.page).toBe(0)
+    expect(integrationTestConfig.testParams.agentId).toBe('1')
+  })
+
+  it('should document all 4 REST endpoints', () => {
+    const endpoints = integrationTestConfig.endpoints
+    expect(Object.keys(endpoints)).toHaveLength(4)
+  })
+
+  it('should define expected status codes', () => {
+    expect(integrationTestConfig.expectedStatusCodes.success).toBe(200)
+    expect(integrationTestConfig.expectedStatusCodes.unauthorized).toBe(401)
+    expect(integrationTestConfig.expectedStatusCodes.notFound).toBe(404)
+  })
+})

@@ -275,3 +275,23 @@ Este archivo registra errores históricos y lecciones aprendidas para que el equ
 ## 🔄 Autocorrección y Aprendizaje Continuo (2026-05-30 22:30:56) - Área: Resume-CLOUD-216
 *   **Fallo Detectado**: `'NoneType' object is not subscriptable`
 *   **Lección y Acción Correctiva**: Cuando ocurra este error, el equipo debe re-evaluar la sintaxis o variables en juego, limpiar el búfer de rate limits, rotar las claves del pool de OpenRouter de inmediato y simplificar el volumen de datos consultado para reducir la carga de tokens.
+
+
+## 🔄 Autocorrección y Aprendizaje Continuo (2026-05-30 23:08:14) - Área: Resume-CLOUD-212
+*   **Fallo Detectado**: `'NoneType' object is not subscriptable`
+*   **Lección y Acción Correctiva**: Cuando ocurra este error, el equipo debe re-evaluar la sintaxis o variables en juego, limpiar el búfer de rate limits, rotar las claves del pool de OpenRouter de inmediato y simplificar el volumen de datos consultado para reducir la carga de tokens.
+
+
+## 🔄 Autocorrección y Aprendizaje Continuo (2026-05-31 08:03:49) - Área: Resume-CLOUD-213
+*   **Fallo Detectado**: `'NoneType' object is not subscriptable`
+*   **Lección y Acción Correctiva**: Cuando ocurra este error, el equipo debe re-evaluar la sintaxis o variables en juego, limpiar el búfer de rate limits, rotar las claves del pool de OpenRouter de inmediato y simplificar el volumen de datos consultado para reducir la carga de tokens.
+
+
+## 🔄 Autocorrección y Aprendizaje Continuo (2026-05-31 08:12:51) - Área: Resume-CLOUD-212
+*   **Fallo Detectado**: `'NoneType' object is not subscriptable`
+*   **Lección y Acción Correctiva**: Cuando ocurra este error, el equipo debe re-evaluar la sintaxis o variables en juego, limpiar el búfer de rate limits, rotar las claves del pool de OpenRouter de inmediato y simplificar el volumen de datos consultado para reducir la carga de tokens.
+
+
+## 🔄 Autocorrección y Aprendizaje Continuo (2026-05-31 09:08:58) - Área: Resume-CLOUD-207
+*   **Fallo Detectado**: `'NoneType' object is not subscriptable`
+*   **Lección y Acción Correctiva**: Cuando ocurra este error, el equipo debe re-evaluar la sintaxis o variables en juego, limpiar el búfer de rate limits, rotar las claves del pool de OpenRouter de inmediato y simplificar el volumen de datos consultado para reducir la carga de tokens.

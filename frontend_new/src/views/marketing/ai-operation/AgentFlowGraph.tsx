@@ -15,6 +15,17 @@ const V_GAP = 80
 const SVG_PADDING = 40
 
 // ---------------------------------------------------------------------------
+// Data flow color mapping
+// ---------------------------------------------------------------------------
+
+const DATA_FLOW_COLORS: Record<string, string> = {
+  leads: '#3b82f6',
+  analysis: '#8b5cf6',
+  messages: '#06b6d4',
+  context: '#f59e0b'
+}
+
+// ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
@@ -29,7 +40,7 @@ interface AgentFlowGraphProps {
 
 const AgentFlowGraph: React.FC<AgentFlowGraphProps> = ({ agents, connections }) => {
   // -----------------------------------------------------------------------
-  // Compute node positions in a simple grid layout
+  // Compute node positions — use agent.position if available, otherwise grid
   // -----------------------------------------------------------------------
 
   const cols = Math.max(1, Math.ceil(Math.sqrt(agents.length)))
@@ -37,19 +48,31 @@ const AgentFlowGraph: React.FC<AgentFlowGraphProps> = ({ agents, connections }) 
   const nodePositions = useMemo(() => {
     const map: Record<string, { x: number; y: number }> = {}
     agents.forEach((agent, index) => {
-      const col = index % cols
-      const row = Math.floor(index / cols)
-      map[agent.id] = {
-        x: SVG_PADDING + col * (CARD_WIDTH + H_GAP) + CARD_WIDTH / 2,
-        y: SVG_PADDING + row * (CARD_HEIGHT + V_GAP) + CARD_HEIGHT / 2
+      if (agent.position && typeof agent.position.x === 'number' && typeof agent.position.y === 'number') {
+        // Use position from agent data
+        map[agent.id] = {
+          x: SVG_PADDING + agent.position.x,
+          y: SVG_PADDING + agent.position.y
+        }
+      } else {
+        // Fallback to grid layout
+        const col = index % cols
+        const row = Math.floor(index / cols)
+        map[agent.id] = {
+          x: SVG_PADDING + col * (CARD_WIDTH + H_GAP) + CARD_WIDTH / 2,
+          y: SVG_PADDING + row * (CARD_HEIGHT + V_GAP) + CARD_HEIGHT / 2
+        }
       }
     })
     return map
   }, [agents, cols])
 
-  const svgWidth = SVG_PADDING * 2 + cols * (CARD_WIDTH + H_GAP) - H_GAP
-  const rows = Math.max(1, Math.ceil(agents.length / cols))
-  const svgHeight = SVG_PADDING * 2 + rows * (CARD_HEIGHT + V_GAP) - V_GAP
+  // Calculate SVG dimensions based on actual positions
+  const positions = Object.values(nodePositions)
+  const maxX = positions.length > 0 ? Math.max(...positions.map(p => p.x)) + CARD_WIDTH / 2 + SVG_PADDING : 800
+  const maxY = positions.length > 0 ? Math.max(...positions.map(p => p.y)) + CARD_HEIGHT / 2 + SVG_PADDING : 600
+  const svgWidth = Math.max(800, maxX)
+  const svgHeight = Math.max(600, maxY)
 
   // -----------------------------------------------------------------------
   // Helper: build a curved SVG path between two points
@@ -110,26 +133,34 @@ const AgentFlowGraph: React.FC<AgentFlowGraphProps> = ({ agents, connections }) 
         </defs>
 
         {/* Draw connections */}
-        {connections.map((conn, idx) => {
-          const fromPos = nodePositions[conn.from]
-          const toPos = nodePositions[conn.to]
+        {connections.map((conn) => {
+          const fromPos = nodePositions[conn.sourceAgentId]
+          const toPos = nodePositions[conn.targetAgentId]
           if (!fromPos || !toPos) return null
 
           const pathD = buildPath(fromPos.x, fromPos.y, toPos.x, toPos.y)
 
           // Check if either agent is working → animate the flow
-          const fromAgent = agents.find(a => a.id === conn.from)
-          const toAgent = agents.find(a => a.id === conn.to)
-          const isActive =
+          const fromAgent = agents.find(a => a.id === conn.sourceAgentId)
+          const toAgent = agents.find(a => a.id === conn.targetAgentId)
+          const isActive = conn.active && (
             fromAgent?.status === 'working' || toAgent?.status === 'working'
+          )
+
+          // Determine stroke color based on dataFlow
+          const strokeColor = isActive
+            ? 'url(#flowGradient)'
+            : (conn.dataFlow && DATA_FLOW_COLORS[conn.dataFlow])
+              ? DATA_FLOW_COLORS[conn.dataFlow]
+              : '#cbd5e1'
 
           return (
-            <g key={`conn-${idx}`}>
+            <g key={conn.id || `${conn.sourceAgentId}-${conn.targetAgentId}`}>
               {/* Connection line */}
               <path
                 d={pathD}
                 fill='none'
-                stroke={isActive ? 'url(#flowGradient)' : '#cbd5e1'}
+                stroke={strokeColor}
                 strokeWidth={isActive ? 3 : 2}
                 markerEnd='url(#arrowhead)'
                 strokeDasharray={isActive ? 'none' : '6 4'}
@@ -159,7 +190,8 @@ const AgentFlowGraph: React.FC<AgentFlowGraphProps> = ({ agents, connections }) 
           const statusColor =
             agent.status === 'working' ? '#3b82f6' :
             agent.status === 'waiting' ? '#f59e0b' :
-            agent.status === 'error' ? '#ef4444' : '#94a3b8'
+            agent.status === 'error' ? '#ef4444' :
+            agent.status === 'completed' ? '#10b981' : '#94a3b8'
 
           return (
             <g key={agent.id}>
@@ -194,7 +226,7 @@ const AgentFlowGraph: React.FC<AgentFlowGraphProps> = ({ agents, connections }) 
                 fontWeight={700}
                 fill='#1e293b'
               >
-                {agent.name}
+                {agent.displayName || agent.name}
               </text>
               {/* Current task (truncated) */}
               <text

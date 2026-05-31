@@ -7,6 +7,7 @@
 //   3. AbortSignal cancellation is handled silently
 //   4. Non-abort errors return empty defaults
 //   5. Backward compatibility (no signal param still works)
+//   6. New MarketingHistoryResponse shape (events, total, hasMore)
 // =============================================================================
 
 // We mock axiosInstance so no real HTTP calls are made
@@ -87,7 +88,18 @@ describe('marketingHistoryService', () => {
   describe('getLiveAgents', () => {
     it('should call GET /api/v1/marketing/agents/live-status with tenantId', async () => {
       const fakeData = {
-        agents: [{ id: '1', name: 'Agent-1', status: 'idle', currentTask: 'Waiting', lastActivity: '2025-01-01T00:00:00' }],
+        agents: [{
+          id: '1',
+          name: 'Agent-1',
+          displayName: 'Agente de Prueba',
+          role: 'Test Role',
+          status: 'idle' as const,
+          currentTask: null,
+          taskStartedAt: null,
+          lastActivity: '2025-01-01T00:00:00Z',
+          color: '#3b82f6',
+          position: { x: 0, y: 0 }
+        }],
         connections: [],
       }
       mockAxiosGet.mockReturnValueOnce(mockResponse(fakeData))
@@ -149,16 +161,23 @@ describe('marketingHistoryService', () => {
   })
 
   // =========================================================================
-  // 3. getActionHistory
+  // 3. getActionHistory — Updated for new MarketingHistoryResponse shape
   // =========================================================================
 
   describe('getActionHistory', () => {
     it('should call GET /api/v1/marketing/agents/history with tenantId and limit', async () => {
       const fakeData = {
-        agents: [],
-        connections: [],
-        recentEvents: [],
-        generatedAt: '2025-01-01T00:00:00',
+        events: [{
+          id: 'evt-1',
+          type: 'lead_search_started' as const,
+          title: 'Búsqueda iniciada',
+          description: 'Iniciando búsqueda de leads',
+          agentId: 'agent-1',
+          timestamp: '2025-01-01T00:00:00Z',
+          metadata: {}
+        }],
+        total: 1,
+        hasMore: false
       }
       mockAxiosGet.mockReturnValueOnce(mockResponse(fakeData))
 
@@ -175,7 +194,7 @@ describe('marketingHistoryService', () => {
 
     it('should pass custom limit and page', async () => {
       mockAxiosGet.mockReturnValueOnce(mockResponse({
-        agents: [], connections: [], recentEvents: [], generatedAt: '',
+        events: [], total: 0, hasMore: false
       }))
 
       await marketingHistoryService.getActionHistory(42, 10, 2)
@@ -187,7 +206,7 @@ describe('marketingHistoryService', () => {
 
     it('should include companyId when provided', async () => {
       mockAxiosGet.mockReturnValueOnce(mockResponse({
-        agents: [], connections: [], recentEvents: [], generatedAt: '',
+        events: [], total: 0, hasMore: false
       }))
 
       await marketingHistoryService.getActionHistory(42, 50, 0, 7)
@@ -199,7 +218,7 @@ describe('marketingHistoryService', () => {
     it('should pass AbortSignal to axios config', async () => {
       const controller = new AbortController()
       mockAxiosGet.mockReturnValueOnce(mockResponse({
-        agents: [], connections: [], recentEvents: [], generatedAt: '',
+        events: [], total: 0, hasMore: false
       }))
 
       await marketingHistoryService.getActionHistory(42, 50, 0, undefined, controller.signal)
@@ -213,10 +232,9 @@ describe('marketingHistoryService', () => {
 
       const result = await marketingHistoryService.getActionHistory(42)
 
-      expect(result.agents).toEqual([])
-      expect(result.connections).toEqual([])
-      expect(result.recentEvents).toEqual([])
-      expect(result.generatedAt).toBeDefined()
+      expect(result.events).toEqual([])
+      expect(result.total).toBe(0)
+      expect(result.hasMore).toBe(false)
     })
 
     it('should return empty response on generic error', async () => {
@@ -224,9 +242,9 @@ describe('marketingHistoryService', () => {
 
       const result = await marketingHistoryService.getActionHistory(42)
 
-      expect(result.agents).toEqual([])
-      expect(result.connections).toEqual([])
-      expect(result.recentEvents).toEqual([])
+      expect(result.events).toEqual([])
+      expect(result.total).toBe(0)
+      expect(result.hasMore).toBe(false)
     })
   })
 
@@ -236,7 +254,14 @@ describe('marketingHistoryService', () => {
 
   describe('getAgentConnections', () => {
     it('should call GET /api/v1/marketing/agents/connections with tenantId', async () => {
-      const fakeData = [{ from: '1', to: '2', label: 'feeds into' }]
+      const fakeData = [{
+        id: 'conn-1',
+        sourceAgentId: 'agent-1',
+        targetAgentId: 'agent-2',
+        label: 'feeds into',
+        dataFlow: 'leads' as const,
+        active: true
+      }]
       mockAxiosGet.mockReturnValueOnce(mockResponse(fakeData))
 
       const result = await marketingHistoryService.getAgentConnections(42)
@@ -282,7 +307,15 @@ describe('marketingHistoryService', () => {
   describe('getAgentTasks', () => {
     it('should call GET /api/v1/marketing/agents/{agentId}/tasks', async () => {
       const fakeData = [
-        { id: '1', agentId: 'agent-1', agentName: 'Agent-1', actionType: 'WORKFLOW_EXECUTION', description: 'Done', timestamp: '2025-01-01T00:00:00' },
+        {
+          id: 'evt-1',
+          type: 'lead_search_started' as const,
+          title: 'Tarea de búsqueda',
+          description: 'Buscando leads cualificados',
+          agentId: 'agent-1',
+          timestamp: '2025-01-01T00:00:00Z',
+          metadata: {}
+        },
       ]
       mockAxiosGet.mockReturnValueOnce(mockResponse(fakeData))
 
@@ -369,10 +402,10 @@ describe('marketingHistoryService', () => {
 
     it('getActionHistory works without page, companyId, and signal', async () => {
       mockAxiosGet.mockReturnValueOnce(mockResponse({
-        agents: [], connections: [], recentEvents: [], generatedAt: '',
+        events: [], total: 0, hasMore: false
       }))
       const result = await marketingHistoryService.getActionHistory(1)
-      expect(result.agents).toEqual([])
+      expect(result.events).toEqual([])
     })
 
     it('getAgentConnections works without signal', async () => {
