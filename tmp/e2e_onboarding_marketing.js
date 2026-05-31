@@ -17,7 +17,7 @@ const logging = require('selenium-webdriver/lib/logging');
 const BASE_URL = 'https://dashboard.cloudfly.com.co';
 const SSH_KEY = 'C:\\Users\\Edwin\\.ssh\\id_rsa_cloudfly';
 const VPS = 'root@109.205.182.94';
-const DB_PASS = 'widowmaker';
+const DB_PASS = process.env.DB_PASSWORD || '';
 const DB_NAME = 'cloud_master';
 
 // Mail Server (Hestia)

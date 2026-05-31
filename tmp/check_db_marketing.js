@@ -1,7 +1,7 @@
 const { execSync } = require('child_process');
 const SSH_KEY = 'C:\\Users\\Edwin\\.ssh\\id_rsa_cloudfly';
 const API_VPS = 'root@109.205.182.94';
-const DB_PASS = 'widowmaker';
+const DB_PASS = process.env.DB_PASSWORD || '';
 const DB_NAME = 'cloud_master';
 
 function runSshSql(sql) {

@@ -11,8 +11,8 @@ const config = {
 
 conn.on('ready', () => {
   const sql = "SELECT id, title, start_time, end_time, status FROM calendar_events ORDER BY start_time DESC LIMIT 5; SELECT id, event_id, execute_at, status, notification_sent FROM scheduled_jobs ORDER BY execute_at DESC LIMIT 5;";
-  const cmd = `docker exec -i mysql mysql -uroot -pwidowmaker cloud_master -e "${sql}"`;
-  
+  const cmd = `docker exec -i mysql mysql -uroot -p${process.env.DB_PASSWORD || ''} cloud_master -e "${sql}"`;
+
   conn.exec(cmd, (err, stream) => {
     if (err) throw err;
     stream.on('close', () => {

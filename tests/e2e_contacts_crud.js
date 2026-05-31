@@ -24,7 +24,7 @@ async function runTest() {
         console.log('🔑 Logging in...');
         await driver.wait(until.elementLocated(By.name('username')), 10000);
         await driver.findElement(By.name('username')).sendKeys('pipe_1775608262000');
-        await driver.findElement(By.name('password')).sendKeys('widowmaker');
+        await driver.findElement(By.name('password')).sendKeys(process.env.TEST_USER_PASSWORD || '');
         await driver.findElement(By.css('button[type="submit"]')).click();
 
         // Wait for dashboard

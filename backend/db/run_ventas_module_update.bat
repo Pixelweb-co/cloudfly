@@ -3,7 +3,7 @@ echo Actualizando modulo VENTAS con menu completo...
 echo Conectando a contenedor docker 'mysql'...
 
 :: Pipe content from host file to mysql inside docker container
-type "c:\apps\cloudfly\backend\db\update_module_ventas.sql" | docker exec -i mysql mysql -u root -pwidowmaker cloud_master
+type "c:\apps\cloudfly\backend\db\update_module_ventas.sql" | docker exec -i mysql mysql -u root -p%DB_PASSWORD% cloud_master
 
 if %ERRORLEVEL% NEQ 0 (
     echo.

@@ -3,7 +3,7 @@ echo Actualizando modulo ADMINISTRACION con menu DIAN (Docker)...
 echo Conectando a contenedor docke 'mysql'...
 
 :: Pipe content from host file to mysql inside docker container
-type "c:\apps\cloudfly\backend\db\update_module_dian.sql" | docker exec -i mysql mysql -u root -pwidowmaker cloud_master
+type "c:\apps\cloudfly\backend\db\update_module_dian.sql" | docker exec -i mysql mysql -u root -p%DB_PASSWORD% cloud_master
 
 if %ERRORLEVEL% NEQ 0 (
     echo.

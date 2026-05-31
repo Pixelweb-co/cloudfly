@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS token_usage_log (
   conn.exec(`cat > ${remotePath} << 'EOF'\n${sqlContent}\nEOF\n`, (err, stream) => {
     if (err) throw err;
     stream.on('close', () => {
-      const cmd = `docker exec -i mysql mysql -uroot -pwidowmaker < ${remotePath}`;
+      const cmd = `docker exec -i mysql mysql -uroot -p${process.env.DB_PASSWORD || ''} < ${remotePath}`;
       conn.exec(cmd, (err, execStream) => {
         if (err) throw err;
         execStream.on('close', () => {

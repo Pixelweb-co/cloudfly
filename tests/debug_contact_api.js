@@ -5,7 +5,7 @@
 async function runCrudTest() {
     const API = 'https://api.cloudfly.com.co';
     const USER = 'pipe_1775608262000';
-    const PASS = 'widowmaker';
+    const PASS = process.env.TEST_USER_PASSWORD || '';
 
     console.log('=== CONTACTS API CRUD TEST ===\n');
 
