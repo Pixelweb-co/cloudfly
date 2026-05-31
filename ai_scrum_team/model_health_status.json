@@ -1,15 +1,10 @@
 {
   "healthiest_model": "openrouter/owl-alpha",
-  "last_check": "2026-05-30T15:27:16.863666",
+  "last_check": "2026-05-30T20:12:23.605412",
   "models_status": {
     "openrouter/owl-alpha": {
       "status": "healthy",
-      "latency": 12.0
-    },
-    "z-ai/glm-4.5-air:free": {
-      "status": "rate_limited",
-      "latency": 0.45,
-      "error": "429 Rate Limit"
+      "latency": 2.41
     }
   }
 }

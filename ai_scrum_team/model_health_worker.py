@@ -20,10 +20,8 @@ STATUS_PATH = os.path.join(BASE_DIR, "model_health_status.json")
 
 # ── Active Models (all via OpenRouter) ─────────────────────────────────
 # Primary:   openrouter/owl-alpha
-# Secondary: z-ai/glm-4.5-air:free
 CANDIDATE_MODELS = [
     "openrouter/owl-alpha",
-    "z-ai/glm-4.5-air:free",
 ]
 DEFAULT_MODEL = "openrouter/owl-alpha"
 

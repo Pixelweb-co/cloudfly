@@ -1,12 +1,62 @@
 import os
 import json
 import subprocess
+import threading
+import time
+import sys
 from typing import Type, List, Dict, Any
 from crewai.tools import BaseTool, tool
 from langchain_community.utilities.jira import JiraAPIWrapper
 
 # Ensure JIRA_CLOUD is set for the API Wrapper
 os.environ["JIRA_CLOUD"] = "True"
+
+# ── Background Process Registry ────────────────────────────────────────
+# Shared registry for tracking background commands across tool calls.
+# Key: PID (int), Value: dict with process info
+_bg_process_registry: Dict[int, dict] = {}
+_bg_registry_lock = threading.Lock()
+
+def _register_bg_process(pid: int, proc: subprocess.Popen, command: str):
+    """Register a background process in the shared registry."""
+    with _bg_registry_lock:
+        _bg_process_registry[pid] = {
+            "process": proc,
+            "command": command,
+            "output": [],
+            "done": False,
+            "exit_code": None,
+            "start_time": time.time()
+        }
+
+def _update_bg_output(pid: int, line: str):
+    """Append output line to a background process."""
+    with _bg_registry_lock:
+        if pid in _bg_process_registry:
+            _bg_process_registry[pid]["output"].append(line)
+
+def _mark_bg_done(pid: int, exit_code: int):
+    """Mark a background process as completed."""
+    with _bg_registry_lock:
+        if pid in _bg_process_registry:
+            _bg_process_registry[pid]["done"] = True
+            _bg_process_registry[pid]["exit_code"] = exit_code
+
+def _get_bg_task(pid: int) -> dict:
+    """Get a background task by PID."""
+    with _bg_registry_lock:
+        return _bg_process_registry.get(pid)
+
+def _remove_bg_task(pid: int):
+    """Remove a completed task from the registry."""
+    with _bg_registry_lock:
+        _bg_process_registry.pop(pid, None)
+
+def _get_all_bg_pids() -> list:
+    """Get list of all tracked PIDs."""
+    with _bg_registry_lock:
+        return list(_bg_process_registry.keys())
+
 
 # Initialize the wrapper globally so tools can use it
 try:
@@ -323,26 +373,134 @@ def read_jira_issue(issue_key: str) -> str:
         return f"Error reading issue {issue_key}: {str(e)}"
 
 @tool("Execute Console Command")
-def execute_console_command(command: str) -> str:
+def execute_console_command(command: str, background: bool = False, timeout_seconds: int = 120) -> str:
     """
-    Execute an arbitrary terminal/console command in the developmentAI workspace.
-    Use this to run tests, inspect logs (e.g. docker logs), or install dependencies.
-    :param command: The exact terminal command to run (e.g., 'docker-compose logs pbx').
+    Execute a PowerShell command on the Windows development machine (C:\\apps\\cloudfly).
+    IMPORTANT: This is a Windows environment — use ONLY PowerShell commands (Get-ChildItem, not dir; docker-compose, not docker compose).
+    Use this to run tests, inspect logs (Get-Content), install dependencies (pip install, npm install), manage Docker (docker-compose), or run Python scripts.
+    If you get an error you don't understand, use the 'Web Search' tool to search for the error message and find a fix (e.g. search: "npm error EPERM Windows", "docker-compose port already in use", "pip install access denied Windows", etc.).
+    
+    :param command: The exact PowerShell command to run.
+    :param background: If True, runs the command asynchronously in a background thread and returns immediately with a process ID. Use 'Check Background Task' tool to retrieve results later. Default False.
+    :param timeout_seconds: Maximum time to wait for the command to complete (default 120s). For long-running commands like builds or npm install, increase this.
     """
-    try:
-        workspace_dir = r"C:\apps\cloudfly"
-        result = subprocess.run(
-            command,
-            shell=True,
-            cwd=workspace_dir,
-            capture_output=True,
-            encoding='utf-8',
-            errors='replace'
+    workspace_dir = r"C:\apps\cloudfly"
+    ps_command = f"Set-Location -Path '{workspace_dir}'; {command}"
+
+    # ── Background mode: launch and return immediately ──────────────────
+    if background:
+        def _run_bg():
+            try:
+                proc = subprocess.Popen(
+                    ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_command],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    encoding='utf-8',
+                    errors='replace',
+                    cwd=workspace_dir
+                )
+                pid = proc.pid
+                _register_bg_process(pid, proc, command)
+                for line in iter(proc.stdout.readline, ''):
+                    if line:
+                        _update_bg_output(pid, line)
+                proc.wait()
+                _mark_bg_done(pid, proc.returncode)
+            except Exception as e:
+                _register_bg_process(-1, None, command)
+                _update_bg_output(-1, str(e))
+                _mark_bg_done(-1, -1)
+
+        thread = threading.Thread(target=_run_bg, daemon=True)
+        thread.start()
+        time.sleep(0.5)
+        pids = _get_all_bg_pids()
+        newest_pid = pids[-1] if pids else "unknown"
+        return (
+            f"🚀 [Background] Command launched asynchronously (PID: {newest_pid}).\n"
+            f"Command: {command}\n"
+            f"Use 'Check Background Task' tool with PID {newest_pid} to retrieve results when ready.\n"
+            f"The agent can continue working while this runs."
         )
-        output = result.stdout + "\n" + result.stderr
-        return f"Command executed. Exit code: {result.returncode}\nOutput:\n{output.strip()}"
+
+    # ── Foreground mode: run with polling (non-blocking reads) ──────────
+    try:
+        process = subprocess.Popen(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_command],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            encoding='utf-8',
+            errors='replace',
+            cwd=workspace_dir,
+            bufsize=1
+        )
+
+        start_time = time.time()
+        output_accumulated = []
+
+        while process.poll() is None:
+            elapsed = int(time.time() - start_time)
+            if elapsed >= timeout_seconds:
+                process.terminate()
+                return f"⏱️ Command timed out after {timeout_seconds}s.\nPartial Output:\n" + "".join(output_accumulated)
+
+            try:
+                line = process.stdout.readline()
+                if line:
+                    output_accumulated.append(line)
+                    sys.stdout.write(f"  [Console]: {line}")
+                    sys.stdout.flush()
+            except Exception:
+                pass
+
+            time.sleep(1)
+
+        remaining = process.stdout.read()
+        if remaining:
+            output_accumulated.append(remaining)
+
+        exit_code = process.returncode
+        complete_output = "".join(output_accumulated).strip()
+
+        if exit_code == 0:
+            return f"✅ Command completed successfully (exit code 0).\nOutput:\n{complete_output}"
+        else:
+            return f"❌ Command completed with exit code {exit_code}.\nOutput:\n{complete_output}"
+
     except Exception as e:
         return f"Failed to execute command: {str(e)}"
+
+
+@tool("Check Background Task")
+def check_background_task(pid: int) -> str:
+    """
+    Check the status and output of a background command launched with 'Execute Console Command' (background=True).
+    :param pid: The process ID returned by the background execution.
+    """
+    task = _get_bg_task(pid)
+    if task is None:
+        return f"Error: No background task found with PID {pid}. Available PIDs: {_get_all_bg_pids()}"
+
+    output = "".join(task.get("output", []))
+
+    if task.get("done"):
+        exit_code = task.get("exit_code", "unknown")
+        elapsed = round(time.time() - task.get("start_time", time.time()), 1)
+        _remove_bg_task(pid)
+        return (
+            f"✅ Background task (PID {pid}) completed in {elapsed}s.\n"
+            f"Command: {task.get('command', 'unknown')}\n"
+            f"Exit code: {exit_code}\n"
+            f"Output:\n{output}"
+        )
+    else:
+        elapsed = round(time.time() - task.get("start_time", time.time()), 1)
+        return (
+            f"⏳ Background task (PID {pid}) still running ({elapsed}s elapsed)...\n"
+            f"Command: {task.get('command', 'unknown')}\n"
+            f"Partial output so far:\n{output[-500:] if output else '(no output yet)'}"
+        )
+
 
 def no_cache(*args, **kwargs):
     """Function to completely disable caching for a tool."""
@@ -432,12 +590,12 @@ def wait_seconds(seconds: int) -> str:
 @tool("Execute Command and Wait")
 def execute_command_and_wait(command: str, is_vps: bool = False, expected_output: str = "", timeout_seconds: int = 120) -> str:
     """
-    Executes a local command or a VPS SSH command asynchronously, polls and waits for its completion
-    every 2 seconds, verifies the exit code or search string, and returns once finished.
+    Executes a local PowerShell command or a VPS SSH command asynchronously, polls and waits for its completion.
+    IMPORTANT: Local commands run on Windows via PowerShell. Use ONLY PowerShell syntax (not cmd.exe or bash).
     Useful for running builds, starting services, or executing long-running migrations and verifying results.
-    :param command: The exact command to run.
-    :param is_vps: If True, executes the command on the CloudFly VPS via SSH. If False, runs locally.
-    :param expected_output: Optional string to look for in the output to declare early success (e.g., 'Successfully compiled' or 'healthy').
+    :param command: The exact PowerShell command to run (local) or bash command (if is_vps=True).
+    :param is_vps: If True, executes the command on the CloudFly VPS via SSH (Linux/bash). If False, runs locally (Windows/PowerShell).
+    :param expected_output: Optional string to look for in the output to declare early success.
     :param timeout_seconds: Maximum time to wait in seconds (default 120).
     """
     import subprocess
@@ -460,12 +618,18 @@ def execute_command_and_wait(command: str, is_vps: bool = False, expected_output
     print(f"⏳ Esperando terminación y verificando resultados (Timeout: {timeout_seconds}s)...")
     
     try:
-        # Start the process in the background (asynchronous)
+        # Start the process in the background (asynchronous) via PowerShell on Windows
+        if is_vps:
+            popen_cmd = final_cmd
+            popen_shell = True
+        else:
+            popen_cmd = ["powershell", "-NoProfile", "-NonInteractive", "-Command", f"Set-Location -Path '{cwd}'; {final_cmd}"]
+            popen_shell = False
         process = subprocess.Popen(
-            final_cmd,
-            shell=True,
+            popen_cmd,
+            shell=popen_shell,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, # Merge stdout and stderr
+            stderr=subprocess.STDOUT,
             encoding='utf-8',
             errors='replace',
             cwd=cwd,
@@ -520,7 +684,7 @@ def get_jira_tools():
     Returns native CrewAI tools for Jira to avoid Pydantic validation errors 
     with LangChain community tools. Also disables tool caching globally.
     """
-    all_tools = [jql_query, create_issue, get_projects, write_code_to_file, docker_manage, test_endpoint, comment_issue, transition_issue, web_search, list_directory_files, read_code_file, read_jira_issue, execute_console_command, commit_code, ask_human_clarification, execute_vps_ssh_command, wait_seconds, execute_command_and_wait]
+    all_tools = [jql_query, create_issue, get_projects, write_code_to_file, docker_manage, test_endpoint, comment_issue, transition_issue, web_search, list_directory_files, read_code_file, read_jira_issue, execute_console_command, check_background_task, commit_code, ask_human_clarification, execute_vps_ssh_command, wait_seconds, execute_command_and_wait]
     
     # Force disable caching on every tool to avoid 'from cache' ghost results
     for t in all_tools:

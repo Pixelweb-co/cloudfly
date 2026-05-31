@@ -14,7 +14,7 @@ from tools import get_jira_tools
 
 # ── LLM Configurations (100% Free via OpenRouter) ─────────────────────
 # Primary:   openrouter/owl-alpha
-# Secondary: z-ai/glm-4.5-air:free
+# Secondary: openrouter/owl-alpha
 # Embeddings: nvidia/llama-nemotron-embed-vl-1b-v2:free
 
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
@@ -28,9 +28,9 @@ owl_alpha_llm = LLM(
     temperature=0.2
 )
 
-# Developer LLM (Software Developer, Frontend Developer) — GLM 4.5 Air for code generation
+# Developer LLM (Software Developer, Frontend Developer) — Owl Alpha via OpenRouter
 glm_coder_llm = LLM(
-    model="z-ai/glm-4.5-air:free",
+    model="openrouter/owl-alpha",
     base_url=OPENROUTER_BASE,
     api_key=OPENROUTER_KEY,
     temperature=0.1
@@ -137,3 +137,14 @@ frontend_developer = Agent(
     max_iter=25
 )
 
+# 9. Marketing Specialist (Uses OpenRouter Owl Alpha for campaign strategy and content)
+marketing_specialist = Agent(
+    role='Marketing Specialist & Growth Hacker',
+    goal='Design and execute marketing campaigns, create compelling content, analyze market trends, and drive user acquisition and engagement for CloudFly products.',
+    backstory='You are a creative and data-driven marketing expert. You specialize in digital marketing, content strategy, SEO, social media campaigns, and growth hacking techniques. You use web search to analyze competitors and market trends. You create landing pages, email campaigns, social media content, and marketing automation workflows. You always align marketing efforts with the product roadmap defined by the Product Owner.',
+    llm=openrouter_llm,
+    tools=jira_tools,
+    verbose=True,
+    allow_delegation=False,
+    max_iter=25
+)

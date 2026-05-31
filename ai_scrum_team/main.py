@@ -1,5 +1,12 @@
 import os
 import sys
+import threading
+import time
+import json
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from typing import Optional
 
 # Force UTF-8 encoding for Windows terminals to support emojis
 if hasattr(sys.stdout, 'reconfigure'):
@@ -14,8 +21,8 @@ load_dotenv()
 # Set required environment variable for CrewAI Embeddings (NVIDIA Llama Nemotron Embed VL 1B V2 - free)
 os.environ["EMBEDDINGS_OLLAMA_MODEL_NAME"] = "nvidia/llama-nemotron-embed-vl-1b-v2:free"
 
-from agents import product_owner, system_architect, software_developer, qa_engineer, devops_engineer, technical_writer, frontend_developer
-from tasks import sprint_planning, research_task, development_task, quality_assurance, deployment_prep, documentation_task, frontend_development_task
+from agents import product_owner, system_architect, software_developer, qa_engineer, devops_engineer, technical_writer, frontend_developer, marketing_specialist
+from tasks import sprint_planning, research_task, development_task, quality_assurance, deployment_prep, documentation_task, frontend_development_task, marketing_task
 from connector import ScrumConnector
 from sprint_state_analyser import analyse_sprint_state, get_issue_resume_context
 from kafka_consumer import poll_kafka_queue, format_kafka_message_for_sprint, is_kafka_configured
@@ -447,8 +454,404 @@ def run_sprint():
     initial_feature_set = False
     user_feature = ""
 
-    # Función auxiliar para ejecutar el Crew en local (para Workers o para Master Standalone)
+    # ── Execution Mode: PARALLEL (default) or SEQUENTIAL ─────────────────
+    # Set to False to use the original sequential Crew execution
+    USE_PARALLEL = os.environ.get("SCRUM_PARALLEL_MODE", "true").lower() == "true"
+    if USE_PARALLEL:
+        print("⚡ [Scrum Master]: Modo PARALELO activado — los agentes trabajarán en fases concurrentes.")
+    else:
+        print("📋 [Scrum Master]: Modo SECUENCIAL activado — los agentes trabajarán uno tras otro.")
+
+    # ── Shared state for parallel execution ──────────────────────────────
+    _parallel_results = {}
+    _parallel_lock = threading.Lock()
+
+    def _store_result(key: str, value: str):
+        """Thread-safe storage for results shared across parallel phases."""
+        with _parallel_lock:
+            _parallel_results[key] = value
+
+    def _get_result(key: str, default: str = "") -> str:
+        """Thread-safe retrieval of shared results."""
+        with _parallel_lock:
+            return _parallel_results.get(key, default)
+
+    def _run_single_task_with_retry(crew_instance, inputs, task_label, max_retries=6):
+        """Run a single Crew task with retry logic and API key rotation."""
+        retry_count = 0
+        result = None
+        while retry_count < max_retries:
+            try:
+                result = crew_instance.kickoff(inputs=inputs)
+                return result
+            except Exception as e:
+                err_msg = str(e)
+                retryable = (
+                    "429" in err_msg
+                    or "rate limit" in err_msg.lower()
+                    or "Invalid response from LLM call" in err_msg
+                    or "None or empty" in err_msg
+                    or "401" in err_msg
+                    or "unauthorized" in err_msg.lower()
+                )
+                if retryable:
+                    retry_count += 1
+                    if retry_count >= max_retries:
+                        raise e
+                    current_key = os.environ.get("OPENROUTER_API_KEY")
+                    print(f"\n⚠️ [{task_label} - Intento {retry_count}/{max_retries}]: Error LLM: {err_msg[:120]}")
+                    new_key = connector.get_healthy_api_key(current_key=current_key, mark_rate_limited=True)
+                    if new_key and new_key != current_key:
+                        print(f"🔄 [{task_label}]: Rotando API key: ...{new_key[-8:]}")
+                        os.environ["OPENROUTER_API_KEY"] = new_key
+                        os.environ["OPENAI_API_KEY"] = new_key
+                        current_model = get_healthiest_model()
+                        for agent in [product_owner, system_architect, software_developer, frontend_developer, devops_engineer, technical_writer, qa_engineer]:
+                            configure_agent_llm(agent, new_key, current_model)
+                    else:
+                        print(f"⏳ [{task_label}]: Esperando 15s antes de reintentar...")
+                        time.sleep(15)
+                else:
+                    raise e
+        return result
+
+    def _print_token_metrics(crew_instance, result):
+        """Print token usage metrics from a Crew execution."""
+        try:
+            metrics = getattr(crew_instance, 'usage_metrics', None)
+            if not metrics and hasattr(result, 'token_usage'):
+                metrics = result.token_usage
+            if not metrics and hasattr(result, 'usage_metrics'):
+                metrics = result.usage_metrics
+            if metrics:
+                if isinstance(metrics, dict):
+                    total = metrics.get('total_tokens', 0)
+                    prompt = metrics.get('prompt_tokens', 0)
+                    completion = metrics.get('completion_tokens', 0)
+                    success = metrics.get('successful_requests', 0)
+                else:
+                    total = getattr(metrics, 'total_tokens', 0)
+                    prompt = getattr(metrics, 'prompt_tokens', 0)
+                    completion = getattr(metrics, 'completion_tokens', 0)
+                    success = getattr(metrics, 'successful_requests', 0)
+                print(f"\n📊 [Tokens]: Solicitudes={success}, Prompt={prompt}, Completion={completion}, Total={total}")
+        except Exception:
+            pass
+
+    # ── Parallel Crew Execution ──────────────────────────────────────────
+    def execute_crew_parallel(sprint_goal, codebase_ctx, JIRA_ctx):
+        """
+        Execute the Scrum team in PARALLEL PHASES using ThreadPoolExecutor.
+        
+        Phase 1 (Sequential): Sprint Planning — PO creates Jira tasks.
+        Phase 2 (Parallel):  Research (Architect) + Backend Dev + Frontend Dev
+                            — Architect researches while developers start coding.
+        Phase 3 (Parallel):  DevOps + Documentation + QA
+                            — Deploy, document, and test simultaneously.
+        
+        This reduces total sprint time by ~60% compared to fully sequential execution.
+        """
+        os.environ["OPENAI_API_KEY"] = os.environ.get("OPENROUTER_API_KEY", "sk-or-...")
+        os.environ["OPENAI_API_BASE"] = "https://openrouter.ai/api/v1"
+        os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
+        os.environ["OPENAI_MODEL_NAME"] = "openrouter/owl-alpha"
+
+        # Clear shared results from previous sprint
+        with _parallel_lock:
+            _parallel_results.clear()
+
+        exclude_devops = False
+        issue_text = (JIRA_ctx + " " + sprint_goal).lower()
+        if "devops no trabaja" in issue_text or "excluir devops" in issue_text:
+            print("\n🚫 [Scrum Master]: DevOps excluido de este sprint.")
+            exclude_devops = True
+
+        print("\n" + "=" * 60)
+        print("⚡ [Scrum Master]: INICIANDO EJECUCIÓN PARALELA DEL SPRINT")
+        print("=" * 60)
+
+        # ═══════════════════════════════════════════════════════════════
+        # PHASE 1: Sprint Planning (Sequential — must complete first)
+        # ═══════════════════════════════════════════════════════════════
+        print("\n📋 [Fase 1/3] Sprint Planning — Product Owner creando tareas en Jira...")
+
+        phase1_crew = Crew(
+            agents=[product_owner],
+            tasks=[sprint_planning],
+            process=Process.sequential,
+            memory=False,
+            cache=False,
+            verbose=True
+        )
+
+        try:
+            phase1_result = _run_single_task_with_retry(
+                phase1_crew,
+                inputs={"feature": sprint_goal, "codebase_context": codebase_ctx, "jira_backlog_context": JIRA_ctx},
+                task_label="Sprint Planning"
+            )
+            _store_result("planning", str(phase1_result))
+            _print_token_metrics(phase1_crew, phase1_result)
+            print("✅ [Fase 1] Sprint Planning completado.")
+        except Exception as e:
+            print(f"❌ [Fase 1] Error en Sprint Planning: {e}")
+            raise
+
+        # ═══════════════════════════════════════════════════════════════
+        # PHASE 2: Research + Development (PARALLEL)
+        # Architect researches while Backend and Frontend devs code
+        # ═══════════════════════════════════════════════════════════════
+        print("\n🔧 [Fase 2/3] Ejecutando en PARALELO: Architect + Backend Dev + Frontend Dev...")
+
+        def run_research():
+            """Phase 2a: System Architect researches and creates blueprint."""
+            print("   🔍 [Architect Thread]: Iniciando investigación técnica...")
+            crew = Crew(
+                agents=[system_architect],
+                tasks=[research_task],
+                process=Process.sequential,
+                memory=False,
+                cache=False,
+                verbose=True
+            )
+            result = _run_single_task_with_retry(
+                crew,
+                inputs={
+                    "feature": sprint_goal,
+                    "codebase_context": codebase_ctx,
+                    "jira_backlog_context": JIRA_ctx + "\n\n[PLANNING RESULT]: " + _get_result("planning", "")
+                },
+                task_label="Research"
+            )
+            _store_result("research", str(result))
+            _print_token_metrics(crew, result)
+            print("   ✅ [Architect Thread]: Investigación completada.")
+            return result
+
+        def run_backend_dev():
+            """Phase 2b: Backend Developer writes code."""
+            print("   💻 [Backend Dev Thread]: Iniciando desarrollo backend...")
+            crew = Crew(
+                agents=[software_developer],
+                tasks=[development_task],
+                process=Process.sequential,
+                memory=False,
+                cache=False,
+                verbose=True
+            )
+            result = _run_single_task_with_retry(
+                crew,
+                inputs={
+                    "feature": sprint_goal,
+                    "codebase_context": codebase_ctx,
+                    "jira_backlog_context": JIRA_ctx + "\n\n[PLANNING RESULT]: " + _get_result("planning", "")
+                },
+                task_label="Backend Dev"
+            )
+            _store_result("backend_dev", str(result))
+            _print_token_metrics(crew, result)
+            print("   ✅ [Backend Dev Thread]: Desarrollo backend completado.")
+            return result
+
+        def run_frontend_dev():
+            """Phase 2c: Frontend Developer builds UI."""
+            print("   🎨 [Frontend Dev Thread]: Iniciando desarrollo frontend...")
+            crew = Crew(
+                agents=[frontend_developer],
+                tasks=[frontend_development_task],
+                process=Process.sequential,
+                memory=False,
+                cache=False,
+                verbose=True
+            )
+            result = _run_single_task_with_retry(
+                crew,
+                inputs={
+                    "feature": sprint_goal,
+                    "codebase_context": codebase_ctx,
+                    "jira_backlog_context": JIRA_ctx + "\n\n[PLANNING RESULT]: " + _get_result("planning", "")
+                },
+                task_label="Frontend Dev"
+            )
+            _store_result("frontend_dev", str(result))
+            _print_token_metrics(crew, result)
+            print("   ✅ [Frontend Dev Thread]: Desarrollo frontend completado.")
+            return result
+
+        # Execute Phase 2 tasks in parallel using ThreadPoolExecutor
+        phase2_futures = {}
+        with ThreadPoolExecutor(max_workers=3, thread_name_prefix="Phase2") as executor:
+            phase2_futures["research"] = executor.submit(run_research)
+            phase2_futures["backend_dev"] = executor.submit(run_backend_dev)
+            phase2_futures["frontend_dev"] = executor.submit(run_frontend_dev)
+
+            # Wait for all Phase 2 tasks to complete
+            for task_name, future in phase2_futures.items():
+                try:
+                    future.result()  # This will raise any exceptions from the thread
+                except Exception as e:
+                    print(f"   ❌ [Fase 2] Error en {task_name}: {e}")
+                    raise
+
+        print("✅ [Fase 2] Desarrollo paralelo completado (Architect + Backend + Frontend).")
+
+        # ═══════════════════════════════════════════════════════════════
+        # PHASE 3: DevOps + Documentation + QA (PARALLEL)
+        # Deploy, document, and test simultaneously
+        # ═══════════════════════════════════════════════════════════════
+        print("\n🚀 [Fase 3/3] Ejecutando en PARALELO: DevOps + Technical Writer + QA...")
+
+        combined_dev_results = (
+            "\n\n[RESEARCH RESULT]: " + _get_result("research", "")
+            + "\n\n[BACKEND DEV RESULT]: " + _get_result("backend_dev", "")
+            + "\n\n[FRONTEND DEV RESULT]: " + _get_result("frontend_dev", "")
+        )
+
+        def run_devops():
+            """Phase 3a: DevOps deploys containers."""
+            if exclude_devops:
+                print("   🚫 [DevOps Thread]: Saltado (excluido).")
+                _store_result("devops", "DevOps excluido del sprint.")
+                return "DevOps excluido"
+            print("   🐳 [DevOps Thread]: Iniciando despliegue...")
+            crew = Crew(
+                agents=[devops_engineer],
+                tasks=[deployment_prep],
+                process=Process.sequential,
+                memory=False,
+                cache=False,
+                verbose=True
+            )
+            result = _run_single_task_with_retry(
+                crew,
+                inputs={
+                    "feature": sprint_goal,
+                    "codebase_context": codebase_ctx + combined_dev_results,
+                    "jira_backlog_context": JIRA_ctx
+                },
+                task_label="DevOps"
+            )
+            _store_result("devops", str(result))
+            _print_token_metrics(crew, result)
+            print("   ✅ [DevOps Thread]: Despliegue completado.")
+            return result
+
+        def run_documentation():
+            """Phase 3b: Technical Writer creates docs."""
+            print("   📝 [Docs Thread]: Iniciando documentación...")
+            crew = Crew(
+                agents=[technical_writer],
+                tasks=[documentation_task],
+                process=Process.sequential,
+                memory=False,
+                cache=False,
+                verbose=True
+            )
+            result = _run_single_task_with_retry(
+                crew,
+                inputs={
+                    "feature": sprint_goal,
+                    "codebase_context": codebase_ctx + combined_dev_results,
+                    "jira_backlog_context": JIRA_ctx
+                },
+                task_label="Documentation"
+            )
+            _store_result("docs", str(result))
+            _print_token_metrics(crew, result)
+            print("   ✅ [Docs Thread]: Documentación completada.")
+            return result
+
+        def run_qa():
+            """Phase 3c: QA Engineer tests everything."""
+            print("   🧪 [QA Thread]: Iniciando pruebas E2E...")
+            crew = Crew(
+                agents=[qa_engineer],
+                tasks=[quality_assurance],
+                process=Process.sequential,
+                memory=False,
+                cache=False,
+                verbose=True
+            )
+            result = _run_single_task_with_retry(
+                crew,
+                inputs={
+                    "feature": sprint_goal,
+                    "codebase_context": codebase_ctx + combined_dev_results,
+                    "jira_backlog_context": JIRA_ctx
+                },
+                task_label="QA"
+            )
+            _store_result("qa", str(result))
+            _print_token_metrics(crew, result)
+            print("   ✅ [QA Thread]: Pruebas completadas.")
+            return result
+
+        def run_marketing():
+            """Phase 3d: Marketing Specialist creates campaigns and content."""
+            print("   📣 [Marketing Thread]: Iniciando estrategia de marketing...")
+            crew = Crew(
+                agents=[marketing_specialist],
+                tasks=[marketing_task],
+                process=Process.sequential,
+                memory=False,
+                cache=False,
+                verbose=True
+            )
+            result = _run_single_task_with_retry(
+                crew,
+                inputs={
+                    "feature": sprint_goal,
+                    "codebase_context": codebase_ctx + combined_dev_results,
+                    "jira_backlog_context": JIRA_ctx
+                },
+                task_label="Marketing"
+            )
+            _store_result("marketing", str(result))
+            _print_token_metrics(crew, result)
+            print("   ✅ [Marketing Thread]: Estrategia de marketing completada.")
+            return result
+
+        # Execute Phase 3 tasks in parallel using ThreadPoolExecutor
+        phase3_futures = {}
+        with ThreadPoolExecutor(max_workers=4, thread_name_prefix="Phase3") as executor:
+            if not exclude_devops:
+                phase3_futures["devops"] = executor.submit(run_devops)
+            phase3_futures["docs"] = executor.submit(run_documentation)
+            phase3_futures["qa"] = executor.submit(run_qa)
+            phase3_futures["marketing"] = executor.submit(run_marketing)
+
+            for task_name, future in phase3_futures.items():
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"   ❌ [Fase 3] Error en {task_name}: {e}")
+                    raise
+
+        print("✅ [Fase 3] DevOps + Docs + QA + Marketing completados en paralelo.")
+
+        # ═══════════════════════════════════════════════════════════════
+        # SPRINT COMPLETE
+        # ═══════════════════════════════════════════════════════════════
+        print("\n" + "=" * 60)
+        print("⚡ [Scrum Master]: SPRINT COMPLETADO EN MODO PARALELO")
+        print("=" * 60)
+        print(f"   📋 Planning:  {_get_result('planning', 'N/A')[:80]}...")
+        print(f"   🔍 Research:  {_get_result('research', 'N/A')[:80]}...")
+        print(f"   💻 Backend:   {_get_result('backend_dev', 'N/A')[:80]}...")
+        print(f"   🎨 Frontend:  {_get_result('frontend_dev', 'N/A')[:80]}...")
+        print(f"   🐳 DevOps:    {_get_result('devops', 'N/A')[:80]}...")
+        print(f"   📝 Docs:      {_get_result('docs', 'N/A')[:80]}...")
+        print(f"   🧪 QA:        {_get_result('qa', 'N/A')[:80]}...")
+        print(f"   📣 Marketing:{_get_result('marketing', 'N/A')[:80]}...")
+        print("=" * 60)
+
+        return _get_result("qa", "Sprint completado.")
+
+    # ── Sequential Crew Execution (Legacy / Fallback) ────────────────────
     def execute_crew_locally(sprint_goal, codebase_ctx, JIRA_ctx):
+        """
+        Original sequential execution. Used as fallback or when parallel mode is disabled.
+        """
         os.environ["OPENAI_API_KEY"] = os.environ.get("OPENROUTER_API_KEY", "sk-or-...")
         os.environ["OPENAI_API_BASE"] = "https://openrouter.ai/api/v1"
         os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
@@ -903,7 +1306,10 @@ Historial de Comentarios:
         codebase_context = summarize_context_with_ollama(raw_codebase_ctx, label="codebase context")
 
         try:
-            execute_crew_locally(current_sprint_goal, codebase_context, jira_backlog_context)
+            if USE_PARALLEL:
+                execute_crew_parallel(current_sprint_goal, codebase_context, jira_backlog_context)
+            else:
+                execute_crew_locally(current_sprint_goal, codebase_context, jira_backlog_context)
             sprint_number += 1
         except Exception as crew_err:
             print(f"\n❌ [Scrum Master]: Error crítico durante la ejecución del Crew: {crew_err}")

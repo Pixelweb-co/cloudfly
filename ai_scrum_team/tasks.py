@@ -1,5 +1,5 @@
 from crewai import Task
-from agents import product_owner, software_developer, system_architect, qa_engineer, devops_engineer, technical_writer, frontend_developer
+from agents import product_owner, software_developer, system_architect, qa_engineer, devops_engineer, technical_writer, frontend_developer, marketing_specialist
 
 # We define the core Scrum tasks dynamically.
 
@@ -72,7 +72,8 @@ development_task = Task(
     CRITICAL 3: You MUST start your comment with "🤖 **Software Developer**: " to identify yourself.
     CRITICAL 4 (SPEC-DRIVEN DEVELOPMENT): If the codebase context includes a specification document (like spec.md, openapi.yaml, etc.), you MUST ensure your generated code complies 100% with that specification. Do not invent endpoints, fields, or features not present in the spec.
     CRITICAL 5: You have access to the 'Execute Console Command' tool. Use it to install dependencies, run scripts, or compile code to verify your work before finishing.
-    CRITICAL 6: STRICT TDD. You MUST write an automated unit test script (e.g. test_*.py or *.test.js) for your code and use 'Execute Console Command' to run it. Do not finish until tests pass.
+    CRITICAL 5b: If 'Execute Console Command' returns an error you don't understand, use the 'Web Search' tool to search for the error and find a fix (e.g. search the exact error message or key parts of it). Then apply the fix and retry.
+    CRITICAL 6: STRICT TDD.You MUST write an automated unit test script (e.g. test_*.py or *.test.js) for your code and use 'Execute Console Command' to run it. Do not finish until tests pass.
     CRITICAL 7: Before passing the code to QA, you MUST use the 'Commit Code' tool to save your changes to Git.
     CRITICAL 8: If the sprint goal contains a LATEST COMMENT from the user, your Jira comment MUST explicitly address the user's feedback and explain how you fixed their specific concern.
     CRITICAL 9: If you are stuck or need a password/key, use the 'Ask Human Clarification' tool.
@@ -93,6 +94,7 @@ deployment_prep = Task(
     CRITICAL 3: You MUST use the 'Comment on Jira Issue' tool to post an update to the Jira Issue Keys stating that containers are running.
     CRITICAL 4: You MUST start your comment with "🤖 **DevOps Engineer**: " to identify yourself.
     CRITICAL 5: You have access to the 'Execute Console Command' tool. Use it to run 'docker-compose logs' to verify the containers are actually healthy and fixing any errors before passing to QA.
+    CRITICAL 5b: If 'Execute Console Command' returns an error you don't understand, use the 'Web Search' tool to search for the error and find a fix. Then apply the fix and retry.
     CRITICAL 6: After verifying the containers are running, you MUST use the 'Transition Jira Issue' tool to change the status of the Jira Issue Keys to 'pruebas'.
     CRITICAL 7: If the sprint goal contains a LATEST COMMENT from the user, your Jira comment MUST acknowledge their feedback.
     ''',
@@ -118,12 +120,14 @@ quality_assurance = Task(
        - Verify database consistency (MySQL and PostgreSQL). Ensure that tables, columns, indexes, and multi-tenant constraints are correctly configured and data is properly isolated.
        - Verify messaging and telephony integrations (Evolution API, FreeSWITCH configurations, Kafka brokers). Ensure queues are active and telephony registrars are registered.
        - Use the 'Execute Console Command' tool to run backend tests (e.g. pytest scripts, JUnit tests, or curl commands) to assert endpoint success and correct JSON response formats.
-       
+       - If any command returns an error you don't understand, use the 'Web Search' tool to search for the error and find a fix. Then apply the fix and retry.
+
     2. FRONTEND TESTING:
        - If the sprint feature involves frontend changes in the active Next.js/React workspace (frontend_new), you MUST write automated E2E tests using Playwright or Cypress to verify UI layouts, interactive flows, forms, and client-side multi-tenant session storage.
        - Use the 'Write Code To File' tool to save the new automated test script strictly inside the active "frontend_new/tests" or "frontend_new/e2e" directory, ending in ".spec.js" or ".spec.ts", and starting with the prefix "AGENTE_DEV_" (e.g. "C:\\apps\\cloudfly\\frontend_new\\tests\\AGENTE_DEV_login.spec.js").
        - Use the 'Execute Console Command' tool to run the newly created frontend tests (e.g. "cd frontend_new && npx playwright test").
-       
+       - If any command returns an error you don't understand, use the 'Web Search' tool to search for the error and find a fix. Then apply the fix and retry.
+
     3. E2E INTEGRATION & SPEC COMPLIANCE:
        - You must verify that the full, multi-tiered data flow behaves perfectly (e.g., frontend action triggers backend api -> backend persists in DB -> pushes to Kafka -> worker processes campaign -> Evolution API sends message).
        - The task should ONLY be considered a SUCCESS if all E2E integration, backend, database, and frontend tests run successfully with 0 failures. If any test fails, it is a FAILURE.
@@ -132,12 +136,14 @@ quality_assurance = Task(
     
     SCENARIO A - SUCCESS (The entire project behaves perfectly, all tests pass, and all specs are met):
     1. You MUST use the 'Transition Jira Issue' tool to change the status of ALL the original Jira Issue Keys to 'Done'.
-    2. You MUST use the 'Comment on Jira Issue' tool to post the final QA sign-off report summarizing all backend, database, messaging, and frontend tests run.
+    2. AFTER transitioning the original issues, you MUST check if any of the original issues have a parent issue (Epic/Historia). For each parent found, use the 'Read Jira Issue' tool to check if ALL of its subtasks are in 'Done' or 'Finalizada' status. If ALL subtasks are done, you MUST also transition the parent issue to 'Done'.
+    3. You MUST use the 'Comment on Jira Issue' tool to post the final QA sign-off report summarizing all backend, database, messaging, and frontend tests run. If you also closed the parent issue, mention this in the comment.
     
     SCENARIO B - FAILURE (Any endpoint failure, database inconsistency, automated test failure, or bug detected):
     1. DO NOT transition the original issues to 'Done'. You MUST use the 'Transition Jira Issue' tool to change the original issue status back to 'To Do' (or keep it 'In Progress').
-    2. DO NOT CREATE ANY NEW JIRA TICKETS. Instead, you MUST use the 'Comment on Jira Issue' tool to post a detailed failure report on the active Jira issue detailing the exact failure, the specific automated test that failed, and relevant logs.
-    3. You MUST explicitly mention the Product Owner Edwin Guevara (`@edwin guevara` or `@Edwin`) in the comment to notify him about the failed validation/tests so he can review the blockers.
+    2. DO NOT transition any parent issues to 'Done' either.
+    3. DO NOT CREATE ANY NEW JIRA TICKETS. Instead, you MUST use the 'Comment on Jira Issue' tool to post a detailed failure report on the active Jira issue detailing the exact failure, the specific automated test that failed, and relevant logs.
+    4. You MUST explicitly mention the Product Owner Edwin Guevara (`@edwin guevara` or `@Edwin`) in the comment to notify him about the failed validation/tests so he can review the blockers.
     
     In BOTH scenarios, ALWAYS start your comments with "🤖 **QA Engineer**: " to identify yourself.
     CRITICAL: If the sprint goal contains a LATEST COMMENT from the user reporting a bug, your Jira comment MUST explicitly confirm to the user whether their specific bug was successfully fixed or if it still fails.
@@ -189,3 +195,28 @@ frontend_development_task = Task(
     agent=frontend_developer
 )
 
+marketing_task = Task(
+    description='''
+    Based on the developed features for "{feature}" and the CURRENT CODEBASE CONTEXT:
+    {codebase_context}
+    
+    Here is the CURRENT JIRA BACKLOG AND ISSUE HISTORY CONTEXT:
+    {jira_backlog_context}
+    
+    Your role is to create marketing assets and strategies for the newly developed features.
+    1. Analyze the feature and identify the target audience, key value propositions, and competitive advantages.
+    2. Use the 'Web Search' tool to research competitor marketing strategies, industry trends, and SEO keywords related to the feature.
+    3. Create compelling marketing content including:
+       - Landing page copy and headlines
+       - Email campaign templates
+       - Social media posts (Twitter/X, LinkedIn, Facebook)
+       - Blog post outlines
+       - Feature announcement copy
+    4. If the sprint feature involves frontend/UI changes, create or update marketing-related UI components (hero sections, CTA banners, testimonials, pricing tables) in the "frontend_new" directory.
+    5. Use the 'Write Code To File' tool to save all marketing content and assets to disk.
+    6. Post a summary of your marketing strategy and assets in a detailed Jira comment on the relevant Jira Issue Keys.
+    7. Always start your comments with "🤖 **Marketing Specialist**: " to identify yourself.
+    ''',
+    expected_output='Marketing strategy document, content assets, and optionally frontend marketing components saved to disk. A Jira comment with the marketing summary.',
+    agent=marketing_specialist
+)
