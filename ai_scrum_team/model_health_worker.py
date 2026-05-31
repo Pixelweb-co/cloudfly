@@ -18,12 +18,36 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 KEYS_POOL_PATH = os.path.join(BASE_DIR, "keys_pool.json")
 STATUS_PATH = os.path.join(BASE_DIR, "model_health_status.json")
 
-# ── Active Models (all via OpenRouter) ─────────────────────────────────
-# Primary:   openrouter/owl-alpha
-CANDIDATE_MODELS = [
-    "openrouter/owl-alpha",
-]
-DEFAULT_MODEL = "openrouter/owl-alpha"
+# ── Active Models ───────────────────────────────────────────────────────
+# Leer modelo por defecto del .env
+MODEL_DEFAULT = os.getenv("MODEL_DEFAULT", "openrouter/owl-alpha")
+
+# Parsear proveedor y modelo
+if "/" in MODEL_DEFAULT:
+    _provider, _model_name = MODEL_DEFAULT.split("/", 1)
+else:
+    _provider = "openrouter"
+    _model_name = MODEL_DEFAULT
+
+# Configurar según proveedor
+if _provider == "openai":
+    HEALTH_API_BASE = "https://api.openai.com/v1"
+    HEALTH_API_KEY = os.getenv("OPENAI_API_KEY") or ""
+    CANDIDATE_MODELS = [MODEL_DEFAULT]
+    DEFAULT_MODEL = MODEL_DEFAULT
+elif _provider == "groq":
+    HEALTH_API_BASE = "https://openrouter.ai/api/v1"
+    HEALTH_API_KEY = os.getenv("GROQ_API_KEY") or os.getenv("OPENROUTER_API_KEY") or ""
+    CANDIDATE_MODELS = [MODEL_DEFAULT]
+    DEFAULT_MODEL = MODEL_DEFAULT
+else:
+    # OpenRouter (default)
+    HEALTH_API_BASE = "https://openrouter.ai/api/v1"
+    HEALTH_API_KEY = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
+    CANDIDATE_MODELS = [MODEL_DEFAULT]
+    DEFAULT_MODEL = MODEL_DEFAULT
+
+print(f"🤖 [Health Worker]: Modelo configurado: {DEFAULT_MODEL} via {_provider}")
 
 
 def load_keys_pool():
@@ -37,6 +61,9 @@ def load_keys_pool():
 
 
 def get_healthy_key_for_testing(keys):
+    # Usar la API key configurada según el proveedor
+    if HEALTH_API_KEY:
+        return HEALTH_API_KEY
     env_key = os.environ.get("OPENROUTER_API_KEY")
     if env_key:
         return env_key
@@ -46,13 +73,12 @@ def get_healthy_key_for_testing(keys):
 
 
 def check_model_health(model_name, api_key):
-    """Check model health via OpenRouter API."""
-    url = "https://openrouter.ai/api/v1/chat/completions"
+    """Check model health via the configured provider API."""
+    url = f"{HEALTH_API_BASE}/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    # Use model name as-is (OpenRouter expects the full model ID)
     payload = {
         "model": model_name,
         "messages": [{"role": "user", "content": "say ok"}],

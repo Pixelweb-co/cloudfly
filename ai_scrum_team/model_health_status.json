@@ -1,6 +1,6 @@
 {
   "healthiest_model": "openrouter/owl-alpha",
-  "last_check": "2026-05-31T09:11:39.937871",
+  "last_check": "2026-05-31T10:14:20.216407",
   "models_status": {
     "openrouter/owl-alpha": {
       "status": "unhealthy",
