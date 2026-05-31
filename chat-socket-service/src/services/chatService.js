@@ -7,7 +7,7 @@ const evolutionClient = require('./evolutionClient');
 const kafkaProducer = require('./kafkaProducer');
 
 class ChatService {
-    /** 
+    /**  
      * Procesar mensaje entrante de Evolution
      * FLOW: Save → Conversation ID → Socket.IO → Chatbot Gate → Buffer/Kafka
      */
